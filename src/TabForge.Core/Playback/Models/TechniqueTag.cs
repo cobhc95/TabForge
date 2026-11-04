@@ -7,6 +7,9 @@ namespace TabForge.Playback;
 /// <summary>The short playing-technique tag shown above a fretboard marker.</summary>
 public static class TechniqueTag
 {
+    /// <summary>The tag of a palm-muted note.</summary>
+    public const string PalmMute = "P.M.";
+
     /// <summary>The most telling technique on a note as a compact tag, in priority order.</summary>
     public static string? From(ICollection<string> t)
     {
@@ -23,7 +26,7 @@ public static class TechniqueTag
         if (t.Contains("Trill")) return "TRILL";
         if (t.Contains("WideVibrato") || t.Contains("Vibrato")) return "VIB";
         if (t.Contains("TremoloPick")) return "TREM";
-        if (t.Contains("PalmMute")) return "P.M.";
+        if (t.Contains("PalmMute")) return PalmMute;
         if (t.Contains("LetRing")) return "L.R.";
         return null;
     }

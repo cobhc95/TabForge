@@ -43,12 +43,9 @@ public static class FretboardRealRules
     /// <summary>True for the strings that are wound on a real set: the thick ones (a guitar's lowest three, a bass's all but the highest).</summary>
     public static bool IsWound(int stringIndex, int strings, bool bass) => bass ? stringIndex >= 1 : stringIndex >= Math.Max(0, strings - 3);
 
-    /// <summary>How many image pixels one coil takes in the wound string textures.</summary>
-    public const int WoundTexturePixelsPerCoil = 8;
-
     /// <summary>The drawn length of one coil in DIPs: larger than true scale, because true-scale coils are too fine to show, and a whole number
     /// (at least two), because a fractional pitch beats against the pixel grid into visible bands.</summary>
-    public static double WindingPitchPx(double stringWidth) => Math.Max(2, Math.Round(stringWidth * 0.8));
+    public static double WindingPitchPx(double stringWidth) => Math.Max(2, Math.Round(stringWidth * 0.6));
 
     /// <summary>The fret wire's drawn width in DIPs from the width of one fret cell (the cell's real length is the guitar's or bass's even cell).</summary>
     public static double WireWidthPx(double cellPx, double cellMm) => Math.Clamp(WireWidthMm * cellPx / cellMm, 1.8, 3.8);

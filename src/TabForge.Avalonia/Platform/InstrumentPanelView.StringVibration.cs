@@ -8,9 +8,9 @@ namespace TabForge.Avalonia.Platform;
 
 // Owns: the fretboard's sounding-string vibration: a monitor-refresh frame loop (TopLevel.RequestAnimationFrame)
 // while a fretboard shows sounding notes, driving the strings' sideways offsets for the notes' duration.
-// The offsets reuse the Core StringVibration curve (one source of truth with the track properties strings);
+// The looks come from Core FretboardStringRing: a soft blur over the note's length and a very slight movement;
 // frames invalidate only (no per-frame allocation, no text changes: labels stay put).
-// Does not own: the curve (Core StringVibration), the playing lists (InstrumentPanelView.Playback.cs) or the drawing.
+// Does not own: the curves (Core FretboardStringRing), the playing lists (InstrumentPanelView.Playback.cs) or the drawing.
 // Tests: TabForge.Avalonia.Tests.InstrumentPanelViewTests.
 // Threads: UI thread only.
 public sealed partial class InstrumentPanelView
@@ -31,14 +31,14 @@ public sealed partial class InstrumentPanelView
         InvalidateVisual();
     }
 
-    private (double Offset, int Fret)? PreviewVibration(int stringIndex)
+    private (double Offset, int Fret, double Blur)? PreviewVibration(int stringIndex)
     {
         if (stringIndex < 0 || stringIndex >= _previewRings.Length) return null;
         var ring = _previewRings[stringIndex];
         if (ring.Started == 0) return null;
         var elapsed = Stopwatch.GetElapsedTime(ring.Started).TotalMilliseconds * _look.VibrationRate;
         if (elapsed >= StringVibration.RingMs) { _previewRings[stringIndex] = default; return null; }
-        return (StringVibration.Offset(elapsed, _look.VibrationPeak), ring.Fret);
+        return (FretboardStringRing.Motion(elapsed, _look.VibrationPeak), ring.Fret, FretboardStringRing.Blur(elapsed, StringVibration.RingMs, _look.VibrationPeak));
     }
 
     private bool HasPreviewVibration()
@@ -87,7 +87,7 @@ public sealed partial class InstrumentPanelView
         }
     }
 
-    /// <summary>The string's sideways offset for a sounding note: the shared vibration curve over the note's
+    /// <summary>The string's very slight sideways offset for a sounding note, over the note's
     /// duration only (zero before its onset and after it ends), driven by the latest frame's phase.</summary>
     private double VibrationOffset(NoteEvent note)
     {
@@ -95,7 +95,14 @@ public sealed partial class InstrumentPanelView
         var elapsed = (_playbackNowMs - note.OnsetMs) + _vibratePhaseMs;
         if (elapsed < 0 || elapsed > note.DurationMs || _look.VibrationPeak <= 0) return 0;
         var curveMs = elapsed * _look.VibrationRate;
-        return curveMs >= StringVibration.RingMs ? 0 : StringVibration.Offset(curveMs, peak: _look.VibrationPeak);
+        return FretboardStringRing.Motion(curveMs, _look.VibrationPeak);
+    }
+
+    /// <summary>The string's blur for a sounding note, from the note's own length and whether it is palm-muted.</summary>
+    private double RingBlur(NoteEvent note)
+    {
+        if (_vibratePhaseMs < 0) return 0;
+        return FretboardStringRing.Blur((_playbackNowMs - note.OnsetMs) + _vibratePhaseMs, note.DurationMs, _look.VibrationPeak, _look.VibrationRate, note.Technique == TechniqueTag.PalmMute);
     }
 
     /// <summary>Sets the frame phase directly; tests drive it without a display frame.</summary>

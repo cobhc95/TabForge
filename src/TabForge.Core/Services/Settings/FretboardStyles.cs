@@ -115,6 +115,5 @@ public static class FretboardStyles
     public static string WoodFile(string wood) => $"fb_wood_{Slug(wood)}.jpg";
     public static string? BindingFile(string binding) => binding == None ? null : $"fb_binding_{Slug(binding)}.jpg";
     public static string InlayFile(string material) => $"fb_inlay_{Slug(material)}.jpg";
-    public static string WoundStringFile(string look) => $"fb_string_{Slug(look)}.png";
     public static string CapoFile(string look, bool partial, bool shadow) => $"fb_capo_{Slug(look)}_{(partial ? "partial" : "full")}{(shadow ? "_shadow" : "")}.png";
 }

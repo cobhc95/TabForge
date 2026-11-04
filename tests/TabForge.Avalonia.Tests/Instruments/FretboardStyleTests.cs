@@ -235,7 +235,7 @@ public class FretboardStyleTests
         var layout = FretboardGeometryRules.Compute(new FretboardGeometryRules.Input(6, 24, 24, 1, leftHanded, 0), new UiRect(0, 0, 1100, 200));
         var draw = new InstrumentFretNumberTests.RecordingDrawContext();
         var scene = new FretboardScene(draw, _ => default, layout, FretboardStyles.DefaultLook, false, new FretboardAssets(), new FretboardInlayPlan());
-        FretboardArtist.DrawStrings(scene, i => i == 1 ? (2, 5) : default);
+        FretboardArtist.DrawStrings(scene, i => i == 1 ? (2, 5, 0) : default);
         var anchor = FretboardGeometryRules.FretX(layout, 5);
         var y = FretboardGeometryRules.StringY(layout, 1);
         var bent = draw.LineOps.Where(l => l.Y1 != l.Y2 && System.Math.Abs(l.Y1 - y) < 3 && System.Math.Abs(l.Y2 - y) < 3).ToArray();
@@ -251,17 +251,27 @@ public class FretboardStyleTests
         Assert.True(numbers.Texts.Count > DrawWith(new EditingSettings()).Texts.Count);
     }
 
-    [AvaloniaFact]
-    public void EveryStringFinishHasAWoundTexture()
-    {
-        var assets = new FretboardAssets();
-        foreach (var look in FretboardStyles.StringLooks) Assert.NotNull(assets.WoundString(look));
-    }
-
     [Theory]
     [InlineData(0.8, 2)]
-    [InlineData(3.4, 3)]
-    [InlineData(4.6, 4)]
+    [InlineData(3.4, 2)]
+    [InlineData(4.6, 3)]
     public void WindingPitchIsAWholeNumberOfAtLeastTwo(double width, double expected) =>
         Assert.Equal(expected, FretboardRealRules.WindingPitchPx(width));
+
+    [Fact]
+    public void ARingFadesOverTheNotesOwnLengthAndClosesAtItsEnd()
+    {
+        const double peak = 1;
+        Assert.Equal(peak * FretboardStringRing.BlurPerPeak, FretboardStringRing.Blur(0, 2000, peak));
+        Assert.Equal(0, FretboardStringRing.Blur(-1, 2000, peak));
+        Assert.Equal(0, FretboardStringRing.Blur(2000, 2000, peak));
+        Assert.True(FretboardStringRing.Blur(1990, 2000, peak) < FretboardStringRing.Blur(1800, 2000, peak));
+        Assert.True(FretboardStringRing.Blur(300, 2000, peak) > FretboardStringRing.Blur(300, 500, peak), "a longer note rings for longer");
+        Assert.True(FretboardStringRing.Blur(200, 2000, peak, muted: true) < FretboardStringRing.Blur(200, 2000, peak) / 4, "a palm mute dies quickly");
+        Assert.Equal(0, FretboardStringRing.Blur(100, 2000, 0));
+    }
+
+    [Fact]
+    public void TheStringBarelyMoves() =>
+        Assert.True(Enumerable.Range(0, 1000).Max(ms => System.Math.Abs(FretboardStringRing.Motion(ms, 3))) <= 3 * FretboardStringRing.MotionShare);
 }

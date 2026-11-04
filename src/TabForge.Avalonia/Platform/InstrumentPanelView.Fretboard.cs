@@ -104,16 +104,16 @@ public sealed partial class InstrumentPanelView
         Controls.FretboardBoardPainter.DrawBehindCapo(d, ink, layout, wood);
 
     /// <summary>The cached vibration delegate: a lambda here would allocate on every frame.</summary>
-    private Func<int, (double Offset, int Fret)>? _wobble;
+    private Func<int, (double Offset, int Fret, double Blur)>? _wobble;
 
-    /// <summary>One string's sideways offset: its sounding note's vibration when playback shows and vibration is on, else still.</summary>
-    internal (double Offset, int Fret) StringWobble(int stringIndex)
+    /// <summary>One string's very slight sideways offset and its blur: its sounding note's vibration when playback shows and vibration is on, else still.</summary>
+    internal (double Offset, int Fret, double Blur) StringWobble(int stringIndex)
     {
         if (_look.VibrationPeak <= 0) return default;
         if (PreviewVibration(stringIndex) is { } preview) return preview;
         if (_playbackShown)
             foreach (var sounding in _playing.Now)
-                if (sounding.StringIndex == stringIndex) return (VibrationOffset(sounding), sounding.Fret);
+                if (sounding.StringIndex == stringIndex) return (VibrationOffset(sounding), sounding.Fret, RingBlur(sounding));
         return default;
     }
 

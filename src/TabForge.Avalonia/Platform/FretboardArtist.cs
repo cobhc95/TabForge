@@ -10,7 +10,7 @@ internal readonly record struct FretboardScene(IDrawContext D, Func<string, UiCo
     FretboardAssets Assets, FretboardInlayPlan Inlays, string InlayColourKey = "InstrumentWhite", double InlayBrightness = 0);
 
 // Owns: the layered, lit drawing of the fretboard itself: the wood (tiled, never stretched) with edge shading and a soft sheen, the binding,
-//   the shaped inlays cut from their material, the bevelled fret wires, the nut and the strings with their cast shadows, all to the
+//   the shaped inlays cut from their material, the bevelled fret wires, the nut and the strings with their cast shadows and ring blur, all to the
 //   real proportions of FretboardRealRules. Every colour is a palette token. A steady frame allocates nothing: shapes are planned once per
 //   layout and look (FretboardInlayPlan) and textures are remembered per look (FretboardAssets).
 // Does not own: the layout (FretboardGeometryRules), the look names (FretboardStyles), the textures' decoding (FretboardAssets), the notes,
@@ -18,6 +18,16 @@ internal readonly record struct FretboardScene(IDrawContext D, Func<string, UiCo
 // Tests: TabForge.Avalonia.Tests.InstrumentPanelViewTests, TabForge.Avalonia.Tests.FretboardStyleTests.
 internal static class FretboardArtist
 {
+    /// <summary>The share of each coil the dark line between coils takes.</summary>
+    private const double WindingLineShare = 0.36;
+
+    /// <summary>How many see-through layers a ringing string's blur is built from, and the opacity of each.</summary>
+    private const int RingBlurLayers = 3;
+    private const double RingBlurLayerOpacity = 0.2;
+
+    /// <summary>The blur's shape, one unit long and one unit high either side of the string; parsed once and scaled to each string.</summary>
+    private static readonly Lazy<IUiPath> RingBlurShape = new(() => new AvaloniaPath(global::Avalonia.Media.Geometry.Parse("M0,0 Q0.5,2 1,0 Q0.5,-2 0,0 Z")));
+
     /// <summary>How many straight pieces the bowed part of a vibrating string is drawn in.</summary>
     private const int BowSegments = 16;
 
@@ -217,93 +227,80 @@ internal static class FretboardArtist
         _ => "FretboardStringSteel",   // Bronze too: a bronze set's plain strings are bare steel.
     };
 
-    /// <summary>The strings, thickest at the bottom, with a cast shadow on the wood. The thick ones are the wound texture; without it, and on the plain strings,
-    /// a drawn body with a winding and a glint along the top stand in. <paramref name="wobble"/> gives each string's sideways offset in DIPs (zero when it is still).</summary>
-    internal static void DrawStrings(in FretboardScene s, Func<int, (double Offset, int Fret)> wobble)
+    /// <summary>The colour of a look's wound strings: a bronze set's are bronze over its bare steel plain strings.</summary>
+    private static string WoundToken(string look) => look == "Bronze" ? "FretboardStringBronze" : StringToken(look);
+
+    /// <summary>The strings, thickest at the bottom, with a cast shadow on the wood. Everything is drawn, so a string stays sharp at any size: the thick ones are a shaded
+    /// wire crossed by coils, the plain ones a wire with a glint. <paramref name="ring"/> gives each string's very slight sideways offset and its blur (zero when it is still).</summary>
+    internal static void DrawStrings(in FretboardScene s, Func<int, (double Offset, int Fret, double Blur)> ring)
     {
         var d = s.D;
         var l = s.Layout;
         var wood = Wood(l, s.Bass);
-        var body = s.Ink(StringToken(s.Look.StringLook));
+        var plain = s.Ink(StringToken(s.Look.StringLook));
+        var woundBody = s.Ink(WoundToken(s.Look.StringLook));
         var castSoft = s.Ink("FretboardStringCastSoft");
         var castHard = s.Ink("FretboardStringCastHard");
+        var shade = s.Ink("FretboardStringShadow");
         var winding = s.Ink("FretboardStringWinding");
         var glint = s.Ink("FretboardStringGlint");
-        var texture = AvaloniaDrawContext.ClipsAreSkipped ? null : s.Assets.WoundString(s.Look.StringLook);
         var start = l.Board.X - FretboardRealRules.NutWidthPx(l.FretWidth, FretboardSizeRules.FretCellMm(s.Bass)) + 0.5;
         for (var i = 0; i < l.Strings; i++)
         {
             var y = FretboardGeometryRules.StringY(l, i);
-            var vibration = wobble(i);
-            var fret = vibration.Fret + l.CapoOf(i);
-            var anchor = fret > 0 ? FretboardGeometryRules.FretX(l, fret) : (l.LeftHanded ? wood.Right : start);
+            var sounding = ring(i);
+            var fret = sounding.Fret + l.CapoOf(i);
+            var anchor = Math.Clamp(fret > 0 ? FretboardGeometryRules.FretX(l, fret) : (l.LeftHanded ? wood.Right : start), start, wood.Right);
             var w = FretboardRealRules.StringWidthPx(i, l.Strings, l.StringGap, s.Bass);
-            var drop = w * 0.65 + 0.9;
-            StringLine(d, new UiStroke(castSoft, w * 2.3, RoundCaps: true), start + 1, wood.Right, y + drop, anchor, vibration.Offset, l.LeftHanded);
-            StringLine(d, new UiStroke(castHard, w * 0.75, RoundCaps: true), start + 0.6, wood.Right, y + drop * 0.8, anchor, vibration.Offset, l.LeftHanded);
             var wound = FretboardRealRules.IsWound(i, l.Strings, s.Bass);
-            if (wound && texture is not null)
+            var body = wound ? woundBody : plain;
+            var drop = w * 0.65 + 0.9;
+            d.Line(new UiStroke(castSoft, w * 2.3, RoundCaps: true), start + 1, y + drop, wood.Right, y + drop);
+            d.Line(new UiStroke(castHard, w * 0.75, RoundCaps: true), start + 0.6, y + drop * 0.8, wood.Right, y + drop * 0.8);
+            if (sounding.Blur > 0) RingBlur(d, body, anchor, l.LeftHanded ? start : wood.Right, y, sounding.Blur);
+            var offset = sounding.Offset;
+            StringLine(d, new UiStroke(body, w), start, wood.Right, y, anchor, offset, l.LeftHanded);
+            if (wound)
             {
-                WoundString(d, texture, start, wood.Right, y, w, anchor, vibration.Offset, l.LeftHanded);
-                continue;
+                StringLine(d, new UiStroke(shade, w * 0.44), start, wood.Right, y + w * 0.28, anchor, offset, l.LeftHanded);
+                StringLine(d, new UiStroke(glint, Math.Max(0.45, w * 0.22)), start, wood.Right, y - w * 0.24, anchor, offset, l.LeftHanded);
+                // A pen's dash lengths count in stroke widths; a bowed run breaks at whole coils, so the coils stay in step along it.
+                var pitch = FretboardRealRules.WindingPitchPx(w);
+                StringLine(d, new UiStroke(winding, w, Dash: pitch * WindingLineShare / w, Gap: pitch * (1 - WindingLineShare) / w), start, wood.Right, y, anchor, offset, l.LeftHanded, pitch);
             }
-            StringLine(d, new UiStroke(body, w), start, wood.Right, y, anchor, vibration.Offset, l.LeftHanded);
-            if (wound) StringLine(d, new UiStroke(winding, w * 0.85, Dash: w * 0.38, Gap: w * 0.42), start, wood.Right, y + w * 0.1, anchor, vibration.Offset, l.LeftHanded);
-            StringLine(d, new UiStroke(glint, Math.Max(0.45, w * 0.22)), start, wood.Right, y - w * 0.26, anchor, vibration.Offset, l.LeftHanded);
+            else StringLine(d, new UiStroke(glint, Math.Max(0.45, w * 0.22)), start, wood.Right, y - w * 0.26, anchor, offset, l.LeftHanded);
         }
     }
 
-    /// <summary>A wound string, the texture alone so it reads the same still or moving: the nut side stays put and the bridge side bows in slices, as <see cref="StringLine"/> does.</summary>
-    private static void WoundString(IDrawContext d, IUiImage texture, double left, double right, double y, double width, double anchor, double offset, bool leftHanded)
+    /// <summary>The soft shape a ringing string blurs into, from the played fret to the board's end and widest midway: three see-through layers of one shared shape.</summary>
+    private static void RingBlur(IDrawContext d, UiColor colour, double anchor, double end, double y, double halfHeight)
     {
-        if (offset == 0)
+        var length = Math.Abs(end - anchor);
+        if (length <= 0) return;
+        var layer = colour.WithOpacity(RingBlurLayerOpacity);
+        d.PushTranslate(Math.Min(anchor, end), y);
+        for (var share = 1.0; share > 0.2; share -= 1.0 / RingBlurLayers)
         {
-            WoundTexture(d, texture, left, left, right, y, width);
-            return;
+            d.PushScale(length, halfHeight * share);
+            d.Path(layer, null, RingBlurShape.Value);
+            d.Pop();
         }
-        anchor = Math.Clamp(anchor, left, right);
-        var end = leftHanded ? left : right;
-        WoundTexture(d, texture, left, leftHanded ? anchor : left, leftHanded ? right : anchor, y, width);
-        for (var n = 0; n < BowSegments; n++)
-        {
-            var a = anchor + (end - anchor) * n / BowSegments;
-            var b = anchor + (end - anchor) * (n + 1) / BowSegments;
-            // Each slice runs a little under the next, so no gap shows where they meet.
-            WoundTexture(d, texture, left, Math.Min(a, b), Math.Max(a, b) + 0.5, y + offset * Math.Sin(Math.PI * (n + 0.5) / BowSegments), width);
-        }
-    }
-
-    /// <summary>The wound texture between two points of a string, repeated from the string's left end at a coil size that suits its width.</summary>
-    private static void WoundTexture(IDrawContext d, IUiImage texture, double origin, double from, double to, double y, double width)
-    {
-        var (imageWidth, _) = FretboardAssets.SizeOf(texture)!.Value;
-        var tile = imageWidth / FretboardRealRules.WoundTexturePixelsPerCoil * FretboardRealRules.WindingPitchPx(width);
-        // Whole-DIP edges: a band that starts between pixels blurs across two of them.
-        var top = Math.Round(y - width / 2);
-        var height = Math.Max(1, Math.Round(y + width / 2) - top);
-        d.PushClip(from, top, to - from, height);
-        for (var x = origin + Math.Floor((from - origin) / tile) * tile; x < to; x += tile) d.Image(texture, x, top, tile, height);
         d.Pop();
     }
 
     /// <summary>The nut side stays still; the bridge side bows smoothly from the played fret to the board edge.</summary>
-    private static void StringLine(IDrawContext d, UiStroke stroke, double left, double right, double y, double anchor, double offset, bool leftHanded)
+    private static void StringLine(IDrawContext d, UiStroke stroke, double left, double right, double y, double anchor, double offset, bool leftHanded, double grid = 0)
     {
         if (offset == 0) { d.Line(stroke, left, y, right, y); return; }
-        anchor = Math.Clamp(anchor, left, right);
         var end = leftHanded ? left : right;
         d.Line(stroke, leftHanded ? right : left, y, anchor, y);
-        BowedLine(d, stroke, anchor, end, y, offset);
-    }
-
-    private static void BowedLine(IDrawContext d, UiStroke stroke, double anchor, double end, double y, double offset)
-    {
         var x0 = anchor;
         var y0 = y;
         for (var n = 1; n <= BowSegments; n++)
         {
             var t = (double)n / BowSegments;
             var x = anchor + (end - anchor) * t;
+            if (grid > 0 && n < BowSegments) x = anchor + Math.Round((x - anchor) / grid) * grid;
             var nextY = y + offset * Math.Sin(Math.PI * t);
             d.Line(stroke, x0, y0, x, nextY);
             x0 = x;

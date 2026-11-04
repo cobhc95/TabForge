@@ -35,7 +35,7 @@ Run it: `chmod +x TabForge-*-linux-x86_64.AppImage`, then `./TabForge-*-linux-x8
 
 ## What's new in 0.9.0
 
-0.9.0 is a stable release. The fretboard's wound strings now use real string textures, with a new Bronze finish. Crash recovery now keeps a song's track inputs, Band layout and audio clip links. It also fixes several shutdown problems and removes a large amount of unused code and files.
+0.9.0 is a stable release. The fretboard's wound strings now have fine coils that stay sharp at any size, with a new Bronze finish, and a sounding string shows a soft blur that rings for the note's own length. Crash recovery now keeps a song's track inputs, Band layout and audio clip links. It also fixes several shutdown problems and removes a large amount of unused code and files.
 
 Full list: the [changelog](CHANGELOG.md#090).
 
