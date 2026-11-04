@@ -35,7 +35,7 @@ for ($i = 0; $i -lt 30 -and -not $runId; $i++) {
     $runId = & gh run list -R $repo --workflow release.yml --branch $tag --limit 1 --json databaseId --jq '.[0].databaseId'
 }
 if (-not $runId) { throw "The release workflow did not start. Check https://github.com/$repo/actions" }
-& gh run watch $runId -R $repo --exit-status --interval 15
+& gh run watch $runId -R $repo --exit-status --interval 5
 $failed = $LASTEXITCODE
 $elapsed = (Get-Date) - $started
 if ($failed) { throw "The release failed after $([int]$elapsed.TotalSeconds)s: https://github.com/$repo/actions/runs/$runId" }
