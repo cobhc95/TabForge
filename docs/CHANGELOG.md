@@ -6,6 +6,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 Stable maintenance release with no new features.
 
+- ASIO: drivers open again. Since 0.8.7 every ASIO driver failed with "Unable to instantiate ASIO" and playback fell back to WASAPI. A driver that really cannot be opened now says so in plain words.
 - Crash recovery: a recovered song keeps its track inputs, Band layout and collapsed mixer groups, and its audio clips still point to the right files.
 - Recording: audio that a slow disk could not finish writing at shutdown is reported as lost instead of the take silently ending short.
 - Audio engine and plug-ins: fixed a timer left running after a stop during connect, plug-ins disposed under a stuck render at shutdown, and a connection leaked by a late plug-in.

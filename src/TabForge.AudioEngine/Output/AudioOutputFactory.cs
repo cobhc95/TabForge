@@ -57,6 +57,16 @@ public static class AudioOutputFactory
             ?? throw new InvalidOperationException("No ASIO driver is installed.");
     }
 
+    /// <summary>Opens ASIO driver <paramref name="name"/>; a driver COM refuses (busy, broken install) fails with a message for the notice bar instead of NAudio's developer hint.</summary>
+    internal static AsioOut CreateAsio(string name)
+    {
+        try { return new AsioOut(name); }
+        catch (System.Runtime.InteropServices.COMException ex)
+        {
+            throw new InvalidOperationException($"The ASIO driver '{name}' could not be opened (0x{ex.HResult:X8}). Another program may be using it, or it may need reinstalling.");
+        }
+    }
+
     /// <summary>Creates and initialises the output for <paramref name="source"/>; returns it with its latency in ms.</summary>
     public static (IWavePlayer Player, int LatencyMs, string Description) Open(EngineConfig config, ISampleProvider source, EngineThreads threads)
     {
@@ -74,7 +84,7 @@ public static class AudioOutputFactory
             case Asio:
             {
                 var name = ResolveAsioName(config.Device);
-                var asio = new AsioOut(name);
+                var asio = CreateAsio(name);
                 bool ok = false, atInit = false;
                 try
                 {

@@ -53,14 +53,14 @@ internal static class AsioProbe
     /// <summary>Opens driver <paramref name="name"/> only to show its control panel, and closes it when the panel call returns.</summary>
     public static void ShowBriefly(string name)
     {
-        using var asio = new AsioOut(name);
+        using var asio = AudioOutputFactory.CreateAsio(name);
         asio.ShowControlPanel();
     }
 
     /// <summary>Opens driver <paramref name="name"/> for this one question and closes it again.</summary>
     public static AsioOffer OpenBriefly(string name, EngineLogWriter log)
     {
-        using var asio = new AsioOut(name);
+        using var asio = AudioOutputFactory.CreateAsio(name);
         return Read(asio, log);
     }
 

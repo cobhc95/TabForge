@@ -17,6 +17,11 @@ public class AudioEngineEntryTests
     /// <summary>A start that opened a window would never exit; this bound fails the test instead of hanging.</summary>
     private static readonly TimeSpan ExitTimeout = TimeSpan.FromSeconds(30);
 
+    /// <summary>The entry point the runtime actually calls must carry [STAThread]: an async Main loses it, the engine's main thread becomes MTA and every ASIO driver refuses to open.</summary>
+    [Fact]
+    public void EntryPointKeepsStaThread() =>
+        Assert.True(typeof(Program).Assembly.EntryPoint!.IsDefined(typeof(STAThreadAttribute), false));
+
     [Fact]
     public async Task AudioEngineStartWithoutSessionExitsAtOnceWithoutWindow()
     {

@@ -24,8 +24,10 @@ public static class Program
     /// <summary>Exit code of a helper-process start that is refused (no session given, or not Windows).</summary>
     public const int AudioEngineRefusedExitCode = 2;
 
+    // Must stay synchronous: on an async Main the compiler's real entry point drops [STAThread] and every process mode runs
+    // on an MTA main thread, where ASIO drivers (apartment-threaded COM objects) refuse to be created.
     [STAThread]
-    public static async Task<int> Main(string[] args)
+    public static int Main(string[] args)
     {
         try
         {
@@ -37,10 +39,10 @@ public static class Program
             if (args.Length > 0 && args[0] == PluginMatrix.Argument)
             {
                 if (!InternalDiagnosticsAllowed) return RefuseInternalDiagnostic(PluginMatrix.Argument);
-                var code = await PluginMatrix.RunAsync(args);
+                var code = PluginMatrix.RunAsync(args).GetAwaiter().GetResult();
                 EndMatrixProcess(code);
             }
-            return await RunAsync(args);
+            return RunAsync(args).GetAwaiter().GetResult();
         }
         catch (Exception ex)
         {
