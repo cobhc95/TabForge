@@ -4,14 +4,16 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ## 0.9.0
 
-Stable maintenance release with no new features.
+Stable release with real wound string textures, tidier dialogs and crash and shutdown fixes.
 
+- Tabs: closing the rightmost tab no longer crashes the program when the window is activated during the close, which could happen while a song played in another tab. Closing a tab in the background no longer switches to it first, so the shown song and its playback carry on.
 - ASIO: drivers open again. Since 0.8.7 every ASIO driver failed with "Unable to instantiate ASIO" and playback fell back to WASAPI. A driver that really cannot be opened now says so in plain words.
 - Crash recovery: a recovered song keeps its track inputs, Band layout and collapsed mixer groups, and its audio clips still point to the right files.
 - Recording: audio that a slow disk could not finish writing at shutdown is reported as lost instead of the take silently ending short.
 - Audio engine and plug-ins: fixed a timer left running after a stop during connect, plug-ins disposed under a stuck render at shutdown, and a connection leaked by a late plug-in.
 - Update check: a check that fails now says so instead of reporting that you are up to date, and a long release list can no longer stop it working. This release is numbered 0.9.0 so that it also reaches people on 0.8.75, who were not offered 0.8.8.
-- The "Plug-in loading slowly" prompt closes with its window, and the IR Loader editor stops checking for updates while hidden.
+- The "Plug-in loading slowly" prompt closes with its window, and the IR Loader editor stops checking for updates while hidden and no longer has a Choose button that opened an empty menu; Browse picks the file.
+- Fretboard: wound strings now use real string textures, with a new Bronze finish, and the Fretboard settings window now matches main Settings: grey cards, the track list's sliders instead of +/- boxes, and Cancel, Apply and OK.
 - Interface: many windows share one set of text sizes and corner radii, and more dialog buttons use the same padding.
 - Removed unused code, settings, documents, tools and artwork. Settings files from earlier versions still load.
 

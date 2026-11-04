@@ -250,4 +250,18 @@ public class FretboardStyleTests
         var numbers = DrawWith(new EditingSettings { FretboardStringNumbers = true });
         Assert.True(numbers.Texts.Count > DrawWith(new EditingSettings()).Texts.Count);
     }
+
+    [AvaloniaFact]
+    public void EveryStringFinishHasAWoundTexture()
+    {
+        var assets = new FretboardAssets();
+        foreach (var look in FretboardStyles.StringLooks) Assert.NotNull(assets.WoundString(look));
+    }
+
+    [Theory]
+    [InlineData(0.8, 2)]
+    [InlineData(3.4, 3)]
+    [InlineData(4.6, 4)]
+    public void WindingPitchIsAWholeNumberOfAtLeastTwo(double width, double expected) =>
+        Assert.Equal(expected, FretboardRealRules.WindingPitchPx(width));
 }

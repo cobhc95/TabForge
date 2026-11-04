@@ -18,6 +18,9 @@ internal readonly record struct FretboardScene(IDrawContext D, Func<string, UiCo
 // Tests: TabForge.Avalonia.Tests.InstrumentPanelViewTests, TabForge.Avalonia.Tests.FretboardStyleTests.
 internal static class FretboardArtist
 {
+    /// <summary>How many straight pieces the bowed part of a vibrating string is drawn in.</summary>
+    private const int BowSegments = 16;
+
     /// <summary>The wood: the string span widened by the margin the outer strings sit in from the edges, as on a real neck.</summary>
     internal static UiRect Wood(in FretboardGeometryRules.Layout layout, bool bass)
     {
@@ -211,11 +214,11 @@ internal static class FretboardArtist
         "Nickel" => "FretboardStringNickel",
         "Gold" => "FretboardStringGold",
         "Black" => "FretboardStringBlack",
-        _ => "FretboardStringSteel",
+        _ => "FretboardStringSteel",   // Bronze too: a bronze set's plain strings are bare steel.
     };
 
-    /// <summary>The strings, thickest at the bottom, with a cast shadow on the wood, a winding on the thick ones and a glint along the top.
-    /// <paramref name="wobble"/> gives each string's sideways offset in DIPs (zero when it is still).</summary>
+    /// <summary>The strings, thickest at the bottom, with a cast shadow on the wood. The thick ones are the wound texture; without it, and on the plain strings,
+    /// a drawn body with a winding and a glint along the top stand in. <paramref name="wobble"/> gives each string's sideways offset in DIPs (zero when it is still).</summary>
     internal static void DrawStrings(in FretboardScene s, Func<int, (double Offset, int Fret)> wobble)
     {
         var d = s.D;
@@ -226,6 +229,7 @@ internal static class FretboardArtist
         var castHard = s.Ink("FretboardStringCastHard");
         var winding = s.Ink("FretboardStringWinding");
         var glint = s.Ink("FretboardStringGlint");
+        var texture = AvaloniaDrawContext.ClipsAreSkipped ? null : s.Assets.WoundString(s.Look.StringLook);
         var start = l.Board.X - FretboardRealRules.NutWidthPx(l.FretWidth, FretboardSizeRules.FretCellMm(s.Bass)) + 0.5;
         for (var i = 0; i < l.Strings; i++)
         {
@@ -237,10 +241,49 @@ internal static class FretboardArtist
             var drop = w * 0.65 + 0.9;
             StringLine(d, new UiStroke(castSoft, w * 2.3, RoundCaps: true), start + 1, wood.Right, y + drop, anchor, vibration.Offset, l.LeftHanded);
             StringLine(d, new UiStroke(castHard, w * 0.75, RoundCaps: true), start + 0.6, wood.Right, y + drop * 0.8, anchor, vibration.Offset, l.LeftHanded);
+            var wound = FretboardRealRules.IsWound(i, l.Strings, s.Bass);
+            if (wound && texture is not null)
+            {
+                WoundString(d, texture, start, wood.Right, y, w, anchor, vibration.Offset, l.LeftHanded);
+                continue;
+            }
             StringLine(d, new UiStroke(body, w), start, wood.Right, y, anchor, vibration.Offset, l.LeftHanded);
-            if (FretboardRealRules.IsWound(i, l.Strings, s.Bass)) StringLine(d, new UiStroke(winding, w * 0.85, Dash: w * 0.38, Gap: w * 0.42), start, wood.Right, y + w * 0.1, anchor, vibration.Offset, l.LeftHanded);
+            if (wound) StringLine(d, new UiStroke(winding, w * 0.85, Dash: w * 0.38, Gap: w * 0.42), start, wood.Right, y + w * 0.1, anchor, vibration.Offset, l.LeftHanded);
             StringLine(d, new UiStroke(glint, Math.Max(0.45, w * 0.22)), start, wood.Right, y - w * 0.26, anchor, vibration.Offset, l.LeftHanded);
         }
+    }
+
+    /// <summary>A wound string, the texture alone so it reads the same still or moving: the nut side stays put and the bridge side bows in slices, as <see cref="StringLine"/> does.</summary>
+    private static void WoundString(IDrawContext d, IUiImage texture, double left, double right, double y, double width, double anchor, double offset, bool leftHanded)
+    {
+        if (offset == 0)
+        {
+            WoundTexture(d, texture, left, left, right, y, width);
+            return;
+        }
+        anchor = Math.Clamp(anchor, left, right);
+        var end = leftHanded ? left : right;
+        WoundTexture(d, texture, left, leftHanded ? anchor : left, leftHanded ? right : anchor, y, width);
+        for (var n = 0; n < BowSegments; n++)
+        {
+            var a = anchor + (end - anchor) * n / BowSegments;
+            var b = anchor + (end - anchor) * (n + 1) / BowSegments;
+            // Each slice runs a little under the next, so no gap shows where they meet.
+            WoundTexture(d, texture, left, Math.Min(a, b), Math.Max(a, b) + 0.5, y + offset * Math.Sin(Math.PI * (n + 0.5) / BowSegments), width);
+        }
+    }
+
+    /// <summary>The wound texture between two points of a string, repeated from the string's left end at a coil size that suits its width.</summary>
+    private static void WoundTexture(IDrawContext d, IUiImage texture, double origin, double from, double to, double y, double width)
+    {
+        var (imageWidth, _) = FretboardAssets.SizeOf(texture)!.Value;
+        var tile = imageWidth / FretboardRealRules.WoundTexturePixelsPerCoil * FretboardRealRules.WindingPitchPx(width);
+        // Whole-DIP edges: a band that starts between pixels blurs across two of them.
+        var top = Math.Round(y - width / 2);
+        var height = Math.Max(1, Math.Round(y + width / 2) - top);
+        d.PushClip(from, top, to - from, height);
+        for (var x = origin + Math.Floor((from - origin) / tile) * tile; x < to; x += tile) d.Image(texture, x, top, tile, height);
+        d.Pop();
     }
 
     /// <summary>The nut side stays still; the bridge side bows smoothly from the played fret to the board edge.</summary>
@@ -250,12 +293,16 @@ internal static class FretboardArtist
         anchor = Math.Clamp(anchor, left, right);
         var end = leftHanded ? left : right;
         d.Line(stroke, leftHanded ? right : left, y, anchor, y);
-        const int segments = 16;
+        BowedLine(d, stroke, anchor, end, y, offset);
+    }
+
+    private static void BowedLine(IDrawContext d, UiStroke stroke, double anchor, double end, double y, double offset)
+    {
         var x0 = anchor;
         var y0 = y;
-        for (var n = 1; n <= segments; n++)
+        for (var n = 1; n <= BowSegments; n++)
         {
-            var t = (double)n / segments;
+            var t = (double)n / BowSegments;
             var x = anchor + (end - anchor) * t;
             var nextY = y + offset * Math.Sin(Math.PI * t);
             d.Line(stroke, x0, y0, x, nextY);

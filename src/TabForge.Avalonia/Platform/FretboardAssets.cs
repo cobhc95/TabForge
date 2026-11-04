@@ -7,7 +7,7 @@ using TabForge.Services;
 
 namespace TabForge.Avalonia.Platform;
 
-// Owns: decoding the shipped fretboard textures (woods, bindings, inlay materials, capos) once each, by file name, for the panel that owns it,
+// Owns: decoding the shipped fretboard textures (woods, bindings, inlay materials, capos, wound strings) once each, by file name, for the panel that owns it,
 //   applying FretboardWoodFinish only to wood, and remembering the texture each part of the current look resolved to,
 //   so a steady frame builds no file names and looks nothing up.
 // Does not own: which texture a look uses (Core FretboardStyles) or the drawing (FretboardArtist).
@@ -15,8 +15,8 @@ namespace TabForge.Avalonia.Platform;
 internal sealed class FretboardAssets
 {
     private readonly ConcurrentDictionary<string, Lazy<IUiImage?>> _images = new();
-    private string? _woodName, _bindingName, _inlayName, _capoName;
-    private IUiImage? _wood, _binding, _inlay, _capo, _capoShadow;
+    private string? _woodName, _bindingName, _inlayName, _capoName, _stringName;
+    private IUiImage? _wood, _binding, _inlay, _capo, _capoShadow, _string;
 
     internal IUiImage? Get(string? file) =>
         file is null ? null : _images.GetOrAdd(file, name => new Lazy<IUiImage?>(() => Load(name))).Value;
@@ -37,6 +37,12 @@ internal sealed class FretboardAssets
     {
         if (name != _inlayName) (_inlayName, _inlay) = (name, Get(FretboardStyles.InlayFile(name)));
         return _inlay;
+    }
+
+    internal IUiImage? WoundString(string look)
+    {
+        if (look != _stringName) (_stringName, _string) = (look, Get(FretboardStyles.WoundStringFile(look)));
+        return _string;
     }
 
     /// <summary>The full capo of a finish, or its cast shadow.</summary>

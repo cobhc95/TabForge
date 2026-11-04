@@ -40,7 +40,7 @@ public static class FretboardStyles
 
     public static readonly IReadOnlyList<string> CapoLooks = new[] { "Black", "Bronze", "Steel" };
 
-    public static readonly IReadOnlyList<string> StringLooks = new[] { "Steel", "Nickel", "Gold", "Black" };
+    public static readonly IReadOnlyList<string> StringLooks = new[] { "Steel", "Nickel", "Gold", "Black", "Bronze" };
 
     /// <summary>How far a sounding string swings: Off draws it still; Mild (the default) is a hair's breadth; Strong is plain to see.</summary>
     public static readonly IReadOnlyList<string> VibrationLevels = new[] { "Off", "Mild", "Medium", "Strong" };
@@ -115,5 +115,6 @@ public static class FretboardStyles
     public static string WoodFile(string wood) => $"fb_wood_{Slug(wood)}.jpg";
     public static string? BindingFile(string binding) => binding == None ? null : $"fb_binding_{Slug(binding)}.jpg";
     public static string InlayFile(string material) => $"fb_inlay_{Slug(material)}.jpg";
+    public static string WoundStringFile(string look) => $"fb_string_{Slug(look)}.png";
     public static string CapoFile(string look, bool partial, bool shadow) => $"fb_capo_{Slug(look)}_{(partial ? "partial" : "full")}{(shadow ? "_shadow" : "")}.png";
 }
