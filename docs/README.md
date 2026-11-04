@@ -1,4 +1,4 @@
-# TabForge 0.8.75
+# TabForge 0.8.8
 
 **A keyboard-driven tablature and notation editor for Windows. Opens GP files (.gp3, .gp4, .gp5, .gpx, .gp) and saves .gp and its own .tforge projects.** Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard / keyboard, an arrangement timeline, audio and MIDI recording, a mixer, VST plug-ins and offline audio and video rendering.
 
@@ -9,17 +9,17 @@
 ## Download
 
 > [!TIP]
-> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.8.75/TabForge-0.8.75-setup.exe)** · no administrator rights needed
+> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.8.8/TabForge-0.8.8-setup.exe)** · no administrator rights needed
 >
-> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.8.75/TabForge-0.8.75-win-x64-portable.zip)** · extract and run `TabForge.exe`
+> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.8.8/TabForge-0.8.8-win-x64-portable.zip)** · extract and run `TabForge.exe`
 >
-> **[SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.8.75/TabForge-0.8.75-SHA256.txt)** · to verify the Windows files
+> **[SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.8.8/TabForge-0.8.8-SHA256.txt)** · to verify the Windows files
 
 Windows 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify your download](#verify-your-download). Older versions: [Releases](https://github.com/cobhc95/TabForge/releases).
 
-### Linux packages (beta, not verified on real hardware)
+### Linux packages (experimental)
 
-The primary Linux download is the AppImage ([`TabForge-0.8.75-x86_64.AppImage`](https://github.com/cobhc95/TabForge/releases/download/v0.8.75/TabForge-0.8.75-x86_64.AppImage)); the gzip archive ([`TabForge-0.8.75-linux-x64.tar.gz`](https://github.com/cobhc95/TabForge/releases/download/v0.8.75/TabForge-0.8.75-linux-x64.tar.gz)) is the fallback. Both include pinned Wine and FFmpeg; Linux remains experimental and has not been verified on real hardware.
+The primary Linux download is the AppImage ([`TabForge-0.8.8-x86_64.AppImage`](https://github.com/cobhc95/TabForge/releases/download/v0.8.8/TabForge-0.8.8-x86_64.AppImage)); the gzip archive ([`TabForge-0.8.8-linux-x64.tar.gz`](https://github.com/cobhc95/TabForge/releases/download/v0.8.8/TabForge-0.8.8-linux-x64.tar.gz)) is the fallback. Both include pinned Wine and FFmpeg; Linux remains experimental and has not been verified on real hardware.
 
 Run it: `chmod +x TabForge-*-x86_64.AppImage`, then `./TabForge-*-x86_64.AppImage`. When FUSE 2 is missing, run with `--appimage-extract-and-run`. On Ubuntu 22.04 and newer you may need `libfuse2` / `libfuse2t64`. The AppImage runs on the glibc it was built on or newer: it is built on the oldest supported distro (Ubuntu 22.04); read `MIN_GLIBC.txt` beside the download for the real minimum number. The host must provide the X11/ALSA/fontconfig/GL libraries listed under "Requires on the host" in the `tools/package-linux.sh` header; Windows plug-ins run through the bundled Wine. Honestly unproven: the Wine build, the distro checks and real-hardware tests are unproven, and size and startup time are not yet measured. No Linux run or proof comes from this machine: no Linux machine or WSL exists here.
 
@@ -33,54 +33,31 @@ Run it: `chmod +x TabForge-*-x86_64.AppImage`, then `./TabForge-*-x86_64.AppImag
 </tr>
 </table>
 
-**Contents:** [Download](#download) · [What's new in 0.8.3](#whats-new-in-083) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
+**Contents:** [Download](#download) · [What's new in 0.8.8](#whats-new-in-088) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
 
-## What's new in 0.8.3
+## What's new in 0.8.8
 
-One Insert menu for everything you add, sections that stretch and close gaps, takes you can drag between lanes and tracks, a live scale readout and tidier media handling. Windows behaves as before: the groundwork for macOS and Linux is in, but only the Windows build ships.
-
-<table>
-<tr>
-<td width="50%" valign="top"><a href="media/screenshots/0.8.3/insert-menu.png"><img src="media/screenshots/0.8.3/insert-menu.png" alt="The Insert menu" width="340"></a><br><b>Insert menu</b><br>Tracks, bars, sections, tempo, time and key changes, repeats, chords, text, lyrics, audio and MIDI files in one place.</td>
-<td width="50%" valign="top"><a href="media/screenshots/0.8.3/stretch-section.png"><img src="media/screenshots/0.8.3/stretch-section.png" alt="Stretching a section past the next one" width="340"></a><br><b>Stretch a section</b><br>Drag its end past the next section: add empty bars, repeat its last bars or add a repeat sign.</td>
-</tr>
-<tr>
-<td valign="top"><a href="media/screenshots/0.8.3/scale-popup.jpg"><img src="media/screenshots/0.8.3/scale-popup.jpg" alt="The scale readout popup" width="220"></a><br><b>Scale readout</b><br>The status bar names the likely scale of the current section and track; click it for alternatives.</td>
-<td valign="top"><a href="media/screenshots/0.8.3/input-menu-armed-pill.jpg"><img src="media/screenshots/0.8.3/input-menu-armed-pill.jpg" alt="The track input menu above an armed track" width="340"></a><br><b>Track inputs</b><br>Pick an audio input, a MIDI input or both. A MIDI keyboard now sounds through the armed track's own instrument.</td>
-</tr>
-</table>
-
-- **Section tools:** stretch a section in either direction, close a gap from the section strip (it asks first when the bars aren't empty), and choose what happens to audio that crosses a section you move.
-- **Takes:** drag audio and MIDI takes to other lanes or tracks (Ctrl copies; below the last track makes a new track). When clips overlap, TabForge offers to move one to a free lane.
-- **Media:** *Copy audio with this song* can keep a song and its audio in one folder; *Find missing audio* searches a folder and its subfolders and relinks every missing clip at once.
-- **MIDI:** keyboard monitoring through the track's instrument and FX, a velocity meter on MIDI-armed tracks, and the piano roll opens the take you click.
-- **Plug-ins:** CLAP plug-ins (opt-in), FX list multi-select with cut, copy and paste, and VST3 meters that update live.
-- **Also:** tidier menus, Full screen (F11), MusicXML files that open again as the same song, video export that ends with the music, an optional SoundFont sound engine and bundled fonts, and .NET 10.
-
-<details><summary>More 0.8.3 pictures</summary>
+0.8.8 is the stable release. It has everything in 0.8.75, plus fixes to the FX chain window with display scaling and to the Load FX Chain dialogue.
 
 <table>
 <tr>
-<td width="50%" valign="top"><a href="media/screenshots/0.8.3/close-gap.png"><img src="media/screenshots/0.8.3/close-gap.png" alt="Close gap on the section strip" width="300"></a><br><b>Close gap</b><br>Right-click an empty area of the section strip.</td>
-<td width="50%" valign="top"><a href="media/screenshots/0.8.3/close-gap-prompt.png"><img src="media/screenshots/0.8.3/close-gap-prompt.png" alt="The Close gap prompt" width="300"></a><br><b>When the bars aren't empty</b><br>Remove them, make them a section, or remove only the empty bars. One undo puts it all back.</td>
+<td width="50%" valign="top"><a href="media/screenshots/0.8.75/fretboard-settings.jpg"><img src="media/screenshots/0.8.75/fretboard-settings.jpg" alt="Fretboard appearance settings, including Flame maple and brightness" width="340"></a><br><b>Fretboard settings</b><br>Five looks, layered wood, shaded binding, material inlays and a brightness control.</td>
+<td width="50%" valign="top"><a href="media/screenshots/0.8.75/track-properties.jpg"><img src="media/screenshots/0.8.75/track-properties.jpg" alt="Track properties with seven-string tuning controls and capo options" width="340"></a><br><b>Track properties and tuning</b><br>Presets for 3 to 10 strings, saved custom tunings and a capo panel. Changes apply when you choose OK.</td>
 </tr>
 <tr>
-<td valign="top"><a href="media/screenshots/0.8.3/audio-crosses-section.png"><img src="media/screenshots/0.8.3/audio-crosses-section.png" alt="The Audio crosses this section prompt" width="300"></a><br><b>Audio crosses this section</b><br>Split the audio and move it with the section, or leave it where it is.</td>
-<td valign="top"><a href="media/screenshots/0.8.3/copy-audio-with-song.png"><img src="media/screenshots/0.8.3/copy-audio-with-song.png" alt="The Copy audio with this song prompt" width="300"></a><br><b>Copy audio with this song</b><br>One song folder, or a Media folder beside the song.</td>
-</tr>
-<tr>
-<td valign="top"><a href="media/screenshots/0.8.3/find-missing-audio.png"><img src="media/screenshots/0.8.3/find-missing-audio.png" alt="The Find missing audio window" width="300"></a><br><b>Find missing audio</b><br>Search a folder and its subfolders, then relink everything found.</td>
-<td valign="top"><a href="media/screenshots/0.8.3/input-pill.png"><img src="media/screenshots/0.8.3/input-pill.png" alt="The track input pill with a MIDI velocity meter" width="300"></a><br><b>Input pill and MIDI meter</b><br>Monitoring and input in one pill; the meter shows MIDI note velocity.</td>
-</tr>
-<tr>
-<td valign="top"><a href="media/screenshots/0.8.3/compact-band-bar.png"><img src="media/screenshots/0.8.3/compact-band-bar.png" alt="The Compact mode bar" width="300"></a><br><b>Compact and Band bars</b><br>The close button sits on the far left, so the right-hand icons stay put.</td>
-<td></td>
+<td valign="top"><a href="media/screenshots/0.8.75/partial-capo.jpg"><img src="media/screenshots/0.8.75/partial-capo.jpg" alt="A partial capo shown on the fretboard" width="340"></a><br><b>Partial capo</b><br>Cover some strings and not others. Up to four partial capos can sit on different strings.</td>
+<td valign="top"></td>
 </tr>
 </table>
 
-</details>
+- **A more lifelike fretboard:** layered wood, true fret spacing, shaded binding, wound strings and material inlays. Tune brightness and scale highlighting in the fretboard settings.
+- **Full and partial capos:** add and drag capos on the fretboard or in Track properties. Notes, playback and score labels follow the effective capo.
+- **More flexible tuning and track setup:** presets for 3 to 10 strings, saved custom tunings, per-string audition and compact Details, Mixer and MIDI cards.
+- **Plug-in workflow:** 32-bit VST2 plug-ins run in a helper process, and bridged VST3 plug-ins can open their own editor. Approve all or selected plug-ins with visible progress and Stop.
+- **Linux packages (experimental):** the AppImage is primary and the `.tar.gz` is a fallback. Both include pinned Wine and an LGPL FFmpeg build for video export.
+- **Fixes:** File > Open no longer waits in a nested message loop, playheads follow display frames, and projects with plug-in paths from another operating system open with a readable notice.
 
-See the [changelog](CHANGELOG.md) for everything.
+Full list: the [changelog](CHANGELOG.md#088).
 
 <details><summary>Earlier in 0.8: Avalonia, selection and loops, piano roll</summary>
 
