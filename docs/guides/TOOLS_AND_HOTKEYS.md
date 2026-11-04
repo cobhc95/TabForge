@@ -500,7 +500,6 @@ Presets are stored as *differences* from the defaults (`HotkeyPresets` in `Servi
 
 ## Mix Table
 - F10: Mix Table for the selected beat (instrument, volume, pan, chorus, reverb, phaser, tremolo, tempo; transition; all tracks). Red dot above the beat in the score and in the timeline lane. Imported from .gp5 automations.
-- **Automation lanes** (headless-tested only, not yet tried in the running app): a strip under every open track row plus Master, toggled at the left of the row number. The item picker chooses the item (volume, pan, effects and instrument steps on a track; tempo and bus levels on Master), with ghost lines for the other items. Click adds a point; points and slopes drag; Alt+click deletes; one undo step per drag. Faders follow the live value at the playhead and never edit. Imported .gp5 mix-table changes arrive as lanes.
 
 ## Context menus from the keyboard
 - **Shift+F10** or the **Menu** key opens the right-click menu of the part that has the focus, with the first item focused (arrow keys move, Enter chooses, Esc closes). A control gesture, not in Shortcuts.

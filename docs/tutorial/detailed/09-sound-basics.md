@@ -171,14 +171,6 @@ A mix point stays in force until the next one. A red dot above the beat in the s
 
 Press `Ctrl+Z` for each change if you want to undo the edit, or close the document tab without saving.
 
-## Draw the change with automation lanes
-
-A mix point jumps from one value to another. An **automation lane** draws the slope in between. Every track row has a small toggle at the left of its number, and the Master lane has one too. Open a lane and a strip appears under the row, with an item picker naming what it shows: volume, pan, effects and instrument steps on a track; tempo and bus levels on Master. The faint lines behind are the lane's other items.
-
-Click the strip to add a point, and drag points in any direction. Points piled on one beat make a brick-wall step. Drag a line between two points to move the whole slope up or down. `Alt+click` a point, or use its menu, to delete it. Every drag is one undo step. While the song plays, the track faders follow the lane's live value at the playhead and cannot be dragged.
-
-Mix-table changes you import from a `.gp5` file arrive as lanes too, drawn from the same values the Mix Table plays. Lanes are new and not yet tried in the running app: they are covered by headless tests only.
-
 ## Choose an audio output
 
 The audio output decides which speakers or headphones TabForge plays through. The defaults are the safe choice. Once the audio engine is running, the right side of the status bar shows the driver, the device, and its delay and buffer.
@@ -210,7 +202,6 @@ If the song still plays nothing, see **Chapter 14: Troubleshooting and FAQ**.
 - Double-click a knob or press `F2` to type an exact value; hold `Ctrl` and click to reset it.
 - The **Mixer** shows every track and group, and the **Master** row sets the whole song.
 - The **Mix Table** (`F10`) changes sound from one beat onwards, marked by a red dot.
-- An **automation lane** draws the change as a line with draggable points. Imported `.gp5` mix changes arrive as lanes. Lanes are not yet tried in the running app.
 - Keep **WASAPI (shared)** and **(Windows default)** until you have a reason to change.
 
 ## What next
