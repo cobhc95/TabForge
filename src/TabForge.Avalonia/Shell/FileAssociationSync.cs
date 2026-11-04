@@ -48,14 +48,20 @@ public sealed class FileAssociationSync
         }
     }
 
+    /// <summary>Whether <paramref name="exePath"/> is TabForge itself: a window hosted by anything else (a test runner, dotnet.exe) must not take over or remove the person's registration.</summary>
+    internal static bool IsAppExecutable(string exePath) =>
+        string.Equals(Path.GetFileName(exePath), "TabForge.exe", StringComparison.OrdinalIgnoreCase);
+
     /// <summary>Applies the setting now and again each time the settings change. When <paramref name="owner"/> is given, the change subscription ends with it.</summary>
     public static void Follow(MainWindowSettings? settings, IFileAssociations associations, Action<string> report, Window? owner = null)
     {
         if (settings is null) return;
         if (!OperatingSystem.IsWindows()) return;
+        var exePath = Environment.ProcessPath ?? "";
+        if (!IsAppExecutable(exePath)) return;
         try
         {
-            var sync = new FileAssociationSync(associations, Environment.ProcessPath ?? "", report);
+            var sync = new FileAssociationSync(associations, exePath, report);
             sync.Apply(settings.Settings.General.AssociateFiles);
             Action<AppSettings> onChanged = changed =>
             {

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using TabForge.Avalonia.Shell;
 using TabForge.Platform;
 using Xunit;
@@ -71,6 +72,30 @@ public class FileAssociationSyncTests
         Assert.Equal(new[] { "is", "unregister" }, fake.Calls);
         Assert.Equal(new[] { FileAssociationText.Removed }, reports);
     }
+
+    /// <summary>A MainWindow built in a test used to register the test runner as the handler for song files in the real registry.</summary>
+    [Fact]
+    public void AWindowHostedByTheTestRunnerLeavesTheRegistrationAlone()
+    {
+        var folder = Directory.CreateTempSubdirectory("tabforge-assoc-").FullName;
+        var fake = new FakeAssociations();
+        try
+        {
+            using var settings = MainWindowSettings.Open(Path.Combine(folder, "settings.json"));
+            FileAssociationSync.Follow(settings, fake, _ => { });
+        }
+        finally { Directory.Delete(folder, true); }
+
+        Assert.Empty(fake.Calls);
+    }
+
+    [Theory]
+    [InlineData(ExePath, true)]
+    [InlineData(@"C:\Build\testhost.exe", false)]
+    [InlineData(@"C:\Program Files\dotnet\dotnet.exe", false)]
+    [InlineData("", false)]
+    public void OnlyTabForgeItselfMayRegister(string exePath, bool expected) =>
+        Assert.Equal(expected, FileAssociationSync.IsAppExecutable(exePath));
 
     [Fact]
     public void ARefusedWriteIsReportedAndLeavesTheRegistrationAsItWas()
