@@ -96,36 +96,6 @@ public sealed class IrLoaderWindowTests
     }
 
     [AvaloniaFact]
-    public void ChooseListsBrowseFirstAndAChosenFileLoadsFromTheHostingWindow()
-    {
-        var dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "tf-irchoose-" + Guid.NewGuid().ToString("N"))).FullName;
-        var wav = Path.Combine(dir, "Room.wav");
-        File.WriteAllBytes(wav, IrWaveFile.Write([CabLikeIr()], 48000));
-        var slot = new PluginSlot { Name = "IR Loader", Path = BuiltinEffects.IrLoaderId, Format = PluginFormats.Builtin, Vendor = BuiltinEffects.Vendor };
-        var track = FxTestKit.Track([slot], "Guitar");
-        var engine = new FxTestKit.FakeEngine();
-        var settings = new PluginSettings { RecentImpulseFiles = { Path.Combine(dir, "Old.wav") } };
-        TopLevel? pickedFor = null;
-        var editor = new IrLoaderEditor(FxTestKit.Host(track, engine, settings), track, slot, (top, _) => { pickedFor = top; return System.Threading.Tasks.Task.FromResult<string?>(wav); });
-        var window = new BuiltinEditorWindow(slot, editor);
-        window.Show();
-
-        var choose = DialogTestKit.Named<Button>(window, "IrChoose" + IrLoaderEffect.FileKey);
-        var menu = Assert.IsType<MenuFlyout>(choose.Flyout);
-        choose.Flyout!.ShowAt(choose);
-        Dispatcher.UIThread.RunJobs();
-        var items = menu.Items.OfType<MenuItem>().ToList();
-        Assert.Equal("Browse…", items[0].Header);
-        Assert.Equal("Old.wav", items[1].Header);
-        items[0].RaiseEvent(new global::Avalonia.Interactivity.RoutedEventArgs(MenuItem.ClickEvent));
-        for (var i = 0; i < 100 && slot.State is null; i++) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(10); }
-        Assert.Same(window, pickedFor);   // the picker belongs to the window that shows the editor
-        Assert.Equal(wav, BuiltinState.Parse(Convert.FromBase64String(slot.State!)).Text[IrLoaderEffect.FileKey]);
-        window.Close();
-        try { Directory.Delete(dir, true); } catch (IOException) { }
-    }
-
-    [AvaloniaFact]
     public void BrowseButtonResolvesTheHostingWindowAndLoadsThePickedFile()
     {
         var dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "tf-irbrowse-" + Guid.NewGuid().ToString("N"))).FullName;

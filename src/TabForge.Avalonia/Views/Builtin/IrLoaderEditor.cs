@@ -18,7 +18,7 @@ using TabForge.Plugins;
 
 namespace TabForge.Avalonia.Views.Fx;
 
-// Owns: the IR Loader's own window: the IR file row (or Left and Right rows) with Choose (browse, recent files), Separate Left / Right, Mix and Gain sliders,
+// Owns: the IR Loader's own window: the IR file row (or Left and Right rows) with Browse, Separate Left / Right, Mix and Gain sliders,
 //   Auto level, Trim silence, the A/B bypass button, the read-only latency / CPU / length / auto-gain line, the status line (a missing file in red),
 //   the waveform and response picture, and dropping a .wav on the window.
 // Does not own: the engine talk, recent files and pictures (IrLoaderEditor.Engine.cs), the picture (IrGraphView), the sound (IrLoaderEffect in the engine).
@@ -111,46 +111,21 @@ public sealed partial class IrLoaderEditor : UserControl
         _sideRows.IsVisible = separate;
     }
 
-    // A file row: its label, the file's path (trimmed in the middle by the column) and Choose, whose menu browses or picks a recent file.
+    // A file row: its label, the file's path (trimmed in the middle by the column) and Browse.
     private StackPanel FileRow(string label, TextBlock path, string key)
     {
-        var choose = new Button { Content = "Choose ▾", Name = "IrChoose" + key, Classes = { AvaloniaDefaultLooks.ButtonLook } };
-        DialogMetrics.WithPadding(choose, DialogMetrics.IrButtonPadding);
-        ToolTip.SetTip(choose, "Browse for a WAV impulse response, or pick one you used before.");
         var browseButton = new Button { Content = "Browse…", Name = "IrBrowse" + key, Classes = { AvaloniaDefaultLooks.ButtonLook } };
         DialogMetrics.WithPadding(browseButton, DialogMetrics.IrButtonPadding);
         ToolTip.SetTip(browseButton, "Open the file browser to pick a WAV impulse response.");
         browseButton.Click += (_, _) => Browse(key);
-        var menu = new MenuFlyout();
-        choose.Flyout = menu;
-        menu.Opening += (_, _) => FillChooseMenu(menu, key);
-        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions($"{DialogMetrics.IrLabelWidth},*,Auto,Auto") };
+        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions($"{DialogMetrics.IrLabelWidth},*,Auto") };
         var name = new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center };
         Grid.SetColumn(path, 1);
-        Grid.SetColumn(choose.WithMargin(DialogMetrics.IrButtonGap), 2);
         grid.Children.Add(name);
         grid.Children.Add(path);
-        grid.Children.Add(choose);
-        Grid.SetColumn(browseButton.WithMargin(DialogMetrics.IrButtonGap), 3);
+        Grid.SetColumn(browseButton.WithMargin(DialogMetrics.IrButtonGap), 2);
         grid.Children.Add(browseButton);
         return new StackPanel { Children = { grid } }.Spaced(DialogMetrics.IrRowGap);
-    }
-
-    private void FillChooseMenu(MenuFlyout menu, string key)
-    {
-        menu.Items.Clear();
-        var browse = new MenuItem { Header = "Browse…" };
-        browse.Click += (_, _) => Browse(key);
-        menu.Items.Add(browse);
-        var recent = _host.PluginSettings.RecentImpulseFiles;
-        if (recent.Count > 0) menu.Items.Add(new Separator());
-        foreach (var file in recent)
-        {
-            var item = new MenuItem { Header = System.IO.Path.GetFileName(file) };
-            ToolTip.SetTip(item, file);
-            item.Click += (_, _) => SetFile(key, file);
-            menu.Items.Add(item);
-        }
     }
 
     // The picker belongs to the window that shows this editor (embedded in the FX chain window or in its own); it opens without blocking the UI.
