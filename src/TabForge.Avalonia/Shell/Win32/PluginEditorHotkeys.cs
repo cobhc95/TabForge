@@ -19,7 +19,7 @@ namespace TabForge.Avalonia.Shell.Win32;
 /// <summary>One per main window, from its opening to its Closed.</summary>
 public sealed class PluginEditorHotkeys : IDisposable
 {
-    private const uint EventForeground = 0x3, EventMenuStart = 0x4, EventMenuPopupEnd = 0x7, EventObjectFocus = 0x8005, GaRootOwner = 3;
+    private const uint EventForeground = 0x3, EventMenuStart = 0x4, EventMenuPopupEnd = 0x7, EventObjectFocus = 0x8005, GwOwner = 4;
     private const int ObjIdCaret = -8, MenuModeFlags = 0x4 | 0x8 | 0x10;   // GUI_INMENUMODE, GUI_SYSTEMMENUMODE, GUI_POPUPMENUMODE
     private const uint ModAlt = 1, ModControl = 2, ModShift = 4, ModWin = 8, ModNoRepeat = 0x4000;
     private const int WmHotkey = 0x312, ClassNameChars = 64;
@@ -38,7 +38,7 @@ public sealed class PluginEditorHotkeys : IDisposable
     [DllImport("user32.dll")] private static extern IntPtr SetWinEventHook(uint min, uint max, IntPtr module, WinEventProc proc, uint process, uint thread, uint flags);
     [DllImport("user32.dll")] private static extern bool UnhookWinEvent(IntPtr hook);
     [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
-    [DllImport("user32.dll")] private static extern IntPtr GetAncestor(IntPtr h, uint flags);
+    [DllImport("user32.dll")] private static extern IntPtr GetWindow(IntPtr h, uint command);
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr h, out uint process);
     [DllImport("user32.dll")] private static extern bool IsWindowEnabled(IntPtr h);
     [DllImport("user32.dll")] private static extern bool GetGUIThreadInfo(uint thread, ref GuiThreadInfo info);
@@ -101,7 +101,9 @@ public sealed class PluginEditorHotkeys : IDisposable
     private static PluginEditorHotkeys? OwnerOfEditor(IntPtr foreground)
     {
         if (foreground == IntPtr.Zero || Attached.Count == 0 || ClassOf(foreground) != EditorClass) return null;
-        var root = GetAncestor(foreground, GaRootOwner);
+        // Walks the owners itself: GA_ROOTOWNER follows GetParent, which skips the owner of a window with a title bar, so a floating editor would find only itself.
+        var root = foreground;
+        for (var owner = GetWindow(root, GwOwner); owner != IntPtr.Zero; owner = GetWindow(root, GwOwner)) root = owner;
         if (ProcessOf(root) != (uint)Environment.ProcessId) return null;
         return Attached.FirstOrDefault(a => a._hwnd == root) ?? Attached[0];
     }
