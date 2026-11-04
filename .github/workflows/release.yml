@@ -124,6 +124,8 @@ jobs:
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
         with:
           global-json-file: global.json
+          cache: true
+          cache-dependency-path: "**/packages.portable.lock.json"
       - name: Install packaging dependencies
         run: |
           sudo apt-get update
