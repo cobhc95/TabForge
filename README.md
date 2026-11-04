@@ -1,12 +1,10 @@
-# TabForge 0.8.7 — review draft
+# TabForge 0.8.7
 
-> CI-only review branch: downloads below still point to the previous public release. The 0.8.7 stable packages await packaging verification and final publication approval. See the [release notes](docs/releases/0.8.7.md). No 0.8.7 release or tag has been published.
+> Stable release. See the [release notes](docs/releases/0.8.7.md) and the [changelog](CHANGELOG.md).
 
 **Find your scale:** automatic detection and best-match suggestions share one choice across the status bar, fretboard and piano roll. Choose the tracks and range to analyse, compare the fit, or keep a manual choice.
 
 **New in 0.8.7:** a detailed, customisable fretboard; full and partial capos; expanded tuning presets and string audition; bridged plug-in support; and experimental Linux AppImage and tar.xz packages with bundled Wine 9.21. See the [changelog](CHANGELOG.md).
-
-The proposed 11-picture fretboard, settings, Track properties and capo gallery will be applied separately; existing pictures are retained on this CI branch.
 
 **A keyboard-driven tablature and notation editor for Windows, with an experimental Linux build. Opens .gp, .gpx, .gp5, .gp4 and .gp3 files and saves .gp and its own .tforge projects, and can save .gp5, .gp4 and .gp3 copies.** Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard / keyboard, an arrangement timeline, audio and MIDI recording, a mixer, VST plug-ins and offline audio and video rendering.
 
@@ -19,26 +17,27 @@ The proposed 11-picture fretboard, settings, Track properties and capo gallery w
 > [!TIP]
 > **Windows**
 >
-> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.8.5/TabForge-0.8.5-setup.exe)** · no administrator rights needed
+> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.8.7/TabForge-0.8.7-setup.exe)** · no administrator rights needed
 >
-> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.8.5/TabForge-0.8.5-win-x64-portable.zip)** · extract and run `TabForge.exe`
+> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.8.7/TabForge-0.8.7-win-x64-portable.zip)** · extract and run `TabForge.exe`
 >
-> **[SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.8.5/TabForge-0.8.5-SHA256.txt)** · to verify both Windows files
+> **[SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.8.7/TabForge-0.8.7-SHA256.txt)** · to verify both Windows files
 
 > [!WARNING]
 > **Linux (experimental)**
 >
-> **[Linux package (tar.gz)](https://github.com/cobhc95/TabForge/releases/download/v0.8.5/TabForge-0.8.5-linux-x64.tar.gz)** · [SHA-256](https://github.com/cobhc95/TabForge/releases/download/v0.8.5/TabForge-0.8.5-linux-x64.tar.gz.sha256) · Ubuntu 22.04 or newer (glibc 2.35+), 64-bit, X11 (Wayland sessions run through XWayland). The SoundFont and ffmpeg are bundled, so sound and Video export work on first run. This build is experimental. It appears fully functional in a Hyper-V Ubuntu VM, which is the only place it has been tried; it has not been tested on real hardware, and Render, microphone input and CLAP plug-ins are not yet confirmed on Linux. Expect rough edges, and please report them.
+> **[AppImage](https://github.com/cobhc95/TabForge/releases/download/v0.8.7/TabForge-0.8.7-x86_64.AppImage)** · the primary Linux package · **[tar.xz](https://github.com/cobhc95/TabForge/releases/download/v0.8.7/TabForge-0.8.7-linux-x64.tar.xz)** · fallback · **[SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.8.7/TabForge-0.8.7-linux-SHA256.txt)** for both · glibc 2.34 or newer, 64-bit, X11 (Wayland sessions run through XWayland). The Wine 9.21 runtime, the Windows plug-in helpers, the SoundFont and a pinned LGPL FFmpeg are bundled, so sound, Windows VST2 / VST3 plug-ins and Video export work on first run, with no separate Wine or FFmpeg install. This build is experimental. It has not been tested on real Linux hardware; distro, XWayland, virtual-audio and upgrade paths are unproven; Render, microphone input and CLAP plug-ins are not yet confirmed on Linux; and some Windows plug-ins have known limits (for example some JUCE 8 editors render black under Wine). See the [release notes](docs/releases/0.8.7.md). Expect rough edges, and please report them.
 
 Windows: 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify your download](#verify-your-download). Older versions: [Releases](https://github.com/cobhc95/TabForge/releases).
 
-**Run it on Linux:**
+**Run the AppImage on Linux:**
 
 ```bash
-tar -xzf TabForge-0.8.5-linux-x64.tar.gz
-cd TabForge
-./TabForge
+chmod +x TabForge-0.8.7-x86_64.AppImage
+./TabForge-0.8.7-x86_64.AppImage
 ```
+
+**Or the tar.xz fallback:** `tar -xJf TabForge-0.8.7-linux-x64.tar.xz`, then run `TabForge.AppDir/AppRun`.
 
 If it does not start, install the usual desktop libraries: `sudo apt install libx11-6 libxext6 libxcursor1 libxrandr2 libxi6 libfontconfig1 libfreetype6 libgl1 libasound2` (on Ubuntu 24.04 the sound package is `libasound2t64`).
 
@@ -52,7 +51,37 @@ If it does not start, install the usual desktop libraries: `sudo apt install lib
 </tr>
 </table>
 
-**Contents:** [Download](#download) · [New since 0.8.3](#new-since-083) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
+**Contents:** [Download](#download) · [New in 0.8.7](#new-in-087) · [New since 0.8.3](#new-since-083) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
+
+## New in 0.8.7
+
+- **A fretboard that looks like an instrument:** layered wood, real fret spacing, wound strings, shaded binding and material inlays. Five presets include Flame maple with green inlays, with brightness and contrast controls in Fretboard settings.
+- **Full and partial capos:** place and drag them on the board or in Track properties. Up to four partial capos can cover different strings; notes, playback and score labels follow them.
+- **Tuning and Track properties:** 3-to-10-string tuning presets, your own saved tunings, per-string audition, and compact Details, Mixer and MIDI cards. Edits stay in the draft until OK.
+- **Plug-ins:** Windows 32-bit VST2 helpers, bridged VST3 editor windows, and Approve all / Approve selected with progress and Stop.
+
+<table>
+<tr>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.7/fretboard-dots.jpg"><img src="docs/media/screenshots/0.8.7/fretboard-dots.jpg" alt="The fretboard with dot inlays" width="215"></a><br><b>Dots</b><br>Dot inlays on dark wood.</td>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.7/fretboard-shark-fins.jpg"><img src="docs/media/screenshots/0.8.7/fretboard-shark-fins.jpg" alt="The fretboard with shark-fin inlays" width="215"></a><br><b>Shark fins</b><br>One of the inlay shapes in Fretboard settings.</td>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.7/fretboard-blocks.jpg"><img src="docs/media/screenshots/0.8.7/fretboard-blocks.jpg" alt="The fretboard with block inlays" width="215"></a><br><b>Blocks</b><br>Block inlays.</td>
+</tr>
+<tr>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.7/fretboard-flame-maple.jpg"><img src="docs/media/screenshots/0.8.7/fretboard-flame-maple.jpg" alt="The fretboard in flame maple" width="215"></a><br><b>Flame maple</b><br>Layered wood with real fret spacing and wound strings.</td>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.7/fretboard-capo-on-board.jpg"><img src="docs/media/screenshots/0.8.7/fretboard-capo-on-board.jpg" alt="A capo on the fretboard at fret 3" width="215"></a><br><b>Capo on the board</b><br>A capo at fret 3; the notes and labels follow it.</td>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.7/track-properties-7-string.jpg"><img src="docs/media/screenshots/0.8.7/track-properties-7-string.jpg" alt="Track properties with a 7-string tuning" width="215"></a><br><b>Track properties</b><br>A 7-string tuning in Drop A, with full and partial capo controls.</td>
+</tr>
+<tr>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.7/settings-fretboard-look.jpg"><img src="docs/media/screenshots/0.8.7/settings-fretboard-look.jpg" alt="Fretboard settings, Look page" width="215"></a><br><b>Fretboard settings: Look</b><br>Presets, wood, binding, inlay shape and material, and brightness.</td>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.7/settings-fretboard-notes.jpg"><img src="docs/media/screenshots/0.8.7/settings-fretboard-notes.jpg" alt="Fretboard settings, Notes and markers page" width="215"></a><br><b>Notes and markers</b><br>Look-ahead notes, note labels, brightness and marker size.</td>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.7/settings-fretboard-layout.jpg"><img src="docs/media/screenshots/0.8.7/settings-fretboard-layout.jpg" alt="Fretboard settings, Layout and size page" width="215"></a><br><b>Layout and size</b><br>Frets shown, board position, string spacing and dock.</td>
+</tr>
+<tr>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.7/settings-fretboard-strings-capo.jpg"><img src="docs/media/screenshots/0.8.7/settings-fretboard-strings-capo.jpg" alt="Fretboard settings, Strings and capo page" width="215"></a><br><b>Strings and capo</b><br>String and capo finish, string vibration and speed.</td>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.7/settings-fretboard-scale-highlight.jpg"><img src="docs/media/screenshots/0.8.7/settings-fretboard-scale-highlight.jpg" alt="Fretboard settings, Scale highlight page" width="215"></a><br><b>Scale highlight</b><br>Dots, rings, cell tint, note names or degrees for the chosen scale.</td>
+<td width="33%" valign="top"></td>
+</tr>
+</table>
 
 ## New since 0.8.3
 
@@ -72,7 +101,7 @@ Built-in effects, a master level meter, techniques that switch an instrument's a
 <tr>
 <td width="33%" valign="top"><a href="docs/media/screenshots/0.8.5/preset-manager.jpg"><img src="docs/media/screenshots/0.8.5/preset-manager.jpg" alt="The preset manager" width="215"></a><br><b>Preset manager</b><br>Reorder presets by dragging, undo a delete, import and export presets as files.</td>
 <td width="33%" valign="top"><a href="docs/media/screenshots/0.8.5/fx-window-eq.png"><img src="docs/media/screenshots/0.8.5/fx-window-eq.png" alt="The EQ inside the FX chain window" width="215"></a><br><b>Effects in the FX window</b><br>Built-in editors open right in the FX chain window. Any plug-in's parameters also show as searchable sliders (right-click › Show generic controls).</td>
-<td width="33%" valign="top"><b>Linux (experimental)</b><br>Songs, sound, VST3 plug-ins, Video export and file drag and drop, in one tar.gz.</td>
+<td width="33%" valign="top"><b>Linux (experimental)</b><br>Songs, sound, Windows VST2 and VST3 plug-ins through the bundled Wine runtime, Video export and file drag and drop, as an AppImage or a tar.xz.</td>
 </tr>
 <tr>
 <td width="33%" valign="top"><a href="docs/media/screenshots/0.8.5/builtin-eq.jpg"><img src="docs/media/screenshots/0.8.5/builtin-eq.jpg" alt="The built-in EQ" width="215"></a><br><b>Built-in effects</b><br>EQ, compressor, limiter, delay and noise gate, listed in Add plug-in as TabForge / Built-in.</td>
@@ -815,12 +844,12 @@ download matches that build.
 
 Each release attaches the installer (`TabForge-<version>-setup.exe`), the portable ZIP (`TabForge-<version>-win-x64-portable.zip`) and SHA-256 checksums. The installer offers a Start menu entry, an optional desktop icon and an optional *"Open .gp and .tforge files with TabForge"* association, for your Windows account only. Songs double-clicked in Explorer open as a new tab in the running TabForge (or a new window; see Settings > General).
 
-The experimental Linux package (`TabForge-<version>-linux-x64.tar.gz`) comes with its own checksum file (`.sha256`); check it with `sha256sum -c`.
+The experimental Linux packages (`TabForge-<version>-x86_64.AppImage` and `TabForge-<version>-linux-x64.tar.xz`) share one checksum file (`TabForge-<version>-linux-SHA256.txt`); check it with `sha256sum -c`.
 
 A `licenses/` folder beside `TabForge.exe` (portable zip and installer) holds the full licence texts of every bundled component. SoundTouch.Net (LGPL-2.1) ships as a separate, replaceable `SoundTouch.Net.dll`; each release attaches its source.
 ## Building from source
 
-Requires the .NET 10 SDK (the version in `global.json`) on Windows. The experimental Linux package is built by `tools/package-linux.sh` on Ubuntu 22.04 or newer.
+Requires the .NET 10 SDK (the version in `global.json`) on Windows. The experimental Linux package is built by `tools/package-linux.sh` on Ubuntu 22.04 or newer (the packaged minimum is glibc 2.34).
 
 ```cmd
 dotnet build src\TabForge.Avalonia\TabForge.Avalonia.csproj -c Release
