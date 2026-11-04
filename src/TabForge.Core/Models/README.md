@@ -23,7 +23,6 @@ Song data and the plain types around it. No WPF, no I/O.
   There is no timeline (blue) range any more. Esc clears white first, then the loop with Loop off (`DocumentEdits.Escape`, one undo step); ruler
   adjusts are one undo step each (`DocumentEdits.EditLoop`). Bar commands ask `Services/SelectionBars` (loop, else score bars, else the selected
   clips' bars on their tracks). Tests: `LoopRegionTests`, `LoopModelTests`, `SelectionLoopLinkTests`.
-- Automation lanes: one lane per track (by stable track id) or master, one parameter each, ordered points with same-time brick-wall steps (`AutomationLane`, `AutomationLaneCommands`, `Playback/AutomationLaneMapper`). `SongProject.AutomationLanes` is optional and omitted when null, so a song without lanes saves byte-identically and old files load with none; `AutomationLaneJsonConverter` bounds and validates the saved points.
 - Partial capos: up to four per track (fret plus string mask) beside the full capo (`PartialCapo`, `PartialCapoRules`: effective capo per string, score capo line). `SongProject.PartialCapos` is omitted when null; only `.tforge` keeps them (not imported from `.gp`/`.gp5`, not written to exports). Tests: `PartialCapoTests`.
 - `TrackOrdering`: display order of tracks.
 
