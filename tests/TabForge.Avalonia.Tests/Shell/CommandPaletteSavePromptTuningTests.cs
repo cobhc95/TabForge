@@ -263,4 +263,8 @@ public class CommandPaletteSavePromptTuningTests
 
     private static void Click(Window window, string buttonName) =>
         Named<Button>(window, buttonName).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+
+    [AvaloniaFact]
+    public void TheSavePromptStaysAbovePluginEditors() =>
+        Assert.True(new SavePromptWindow(SavePromptPresenter.SaveChanges("Song")).Topmost);
 }

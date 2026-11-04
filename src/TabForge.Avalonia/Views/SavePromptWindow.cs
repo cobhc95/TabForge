@@ -36,6 +36,7 @@ public sealed class SavePromptWindow : Window
         MaxWidth = 560;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         ShowInTaskbar = false;
+        Topmost = true;   // a plug-in editor is another process's window, often always-on-top, and would otherwise cover this question
         this[!BackgroundProperty] = new DynamicResourceExtension("PanelBackground");
         this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
         FontSize = DialogMetrics.FontSize;
