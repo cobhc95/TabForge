@@ -91,7 +91,13 @@ public sealed class ScoreClip
     private static void WriteHeadersInFull(JsonTypeInfo info)
     {
         if (info.Type != typeof(ScoreClip) && info.Type != typeof(ScoreClipTrack) && info.Type != typeof(ScoreClipEvent)) return;
-        foreach (var property in info.Properties) property.ShouldSerialize = null;
+        foreach (var property in info.Properties)
+        {
+            // Optional partial capos are left out of a copied track when there are none, as a clip from before them has no key at all.
+            property.ShouldSerialize = info.Type == typeof(ScoreClipTrack) && property.Name == "partialCapos"
+                ? static (_, value) => value is not null
+                : null;
+        }
     }
 
     public string ToJson() => JsonSerializer.Serialize(this, JsonOptions);
