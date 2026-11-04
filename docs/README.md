@@ -757,7 +757,7 @@ Every command can be found in the menus, the command palette and the shortcut se
 
 The downloads are not code-signed, so Windows SmartScreen may warn when you first run
 them. Releases built by the GitHub Actions release workflow from the tagged source come with build attestations
-(`gh attestation verify <file> --repo cobhc95/TabForge`) and SHA-256 checksums, so you can verify that a
+(`gh attestation verify <file> --repo cobhc95/TabForge`), so you can verify that a
 download matches that build.
 
 Each release attaches the installer (`TabForge-<version>-setup.exe`) and the portable ZIP (`TabForge-<version>-win-x64-portable.zip`). The installer offers a Start menu entry, an optional desktop icon and an optional *"Open .gp and .tforge files with TabForge"* association, for your Windows account only. Songs double-clicked in Explorer open as a new tab in the running TabForge (or a new window; see Settings > General).
