@@ -166,8 +166,6 @@ public class SongDocument : IEditableDocument
     /// <summary>Raised when <see cref="DarkPaper"/> changed, so every view of this song repaints on the new paper.</summary>
     public event Action? ScorePaperChanged;
     public int DurationDenominator { get; set; } = 4;
-    public int DurationDots { get; set; }
-    public bool DurationTriplet { get; set; }
     public int TupletNumerator { get; set; }
     public int TupletDenominator { get; set; }
 

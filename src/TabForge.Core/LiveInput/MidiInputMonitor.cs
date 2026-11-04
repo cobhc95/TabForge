@@ -65,8 +65,6 @@ public sealed class MidiInputMonitor : IDisposable
 
     /// <summary>True while a track monitors (the hub client is held when a device is there).</summary>
     public bool IsActive => _targets.Length > 0;
-    /// <summary>The tracks that monitor now.</summary>
-    public IReadOnlyList<TrackModel> MonitoredTracks => _targets.Select(t => t.Track).ToList();
     /// <summary>True while the client holds the MIDI devices.</summary>
     public bool IsOpen => _client.IsOpen;
     /// <summary>True when this monitor is sounding keys for the track now (muted, not monitoring or only metering: false).</summary>

@@ -22,12 +22,6 @@ public static class InstrumentCatalog
 {
     private static readonly Lazy<IReadOnlyList<InstrumentEntry>> _all = new(Build);
 
-    /// <summary>The six quick picks shown at the top of the instrument menu.</summary>
-    public static readonly string[] CommonNames =
-    {
-        "Distortion Guitar", "Clean Electric Guitar", "Acoustic Guitar (Steel)", "Electric Bass (Pick)", "Grand Piano", "Drum Kit (Standard)"
-    };
-
     /// <summary>GM drum kits (program numbers on channel 10, as GS/GM2 synths and the reference use them).</summary>
     private static readonly IReadOnlyList<(string Name, int Program)> DrumKits = new (string Name, int Program)[]
     {

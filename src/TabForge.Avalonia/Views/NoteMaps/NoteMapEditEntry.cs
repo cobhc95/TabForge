@@ -13,9 +13,6 @@ namespace TabForge.Avalonia.Views.NoteMaps;
 /// </summary>
 public static class NoteMapEditEntry
 {
-    /// <summary>The catalog id of the note map processor.</summary>
-    public const string ProcessorType = "noteMap";
-    public const string EditButtonText = "Edit map…";
     public const string EditButtonTip = "See or change which note each drum of the song sends to the instrument";
 
     private const string FromKey = "From";

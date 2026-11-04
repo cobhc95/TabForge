@@ -36,8 +36,6 @@ public sealed partial class FretboardSettingsWindow : Window
         _ => "Scale highlight",
     };
 
-    private static IEnumerable<string> SectionNames() => Enumerable.Range(0, SectionCount).Select(SectionName);
-
     /// <summary>The rail glyph of each section: the Settings glyphs, plus the scale finder.</summary>
     private static string SectionGlyph(int section) => section switch
     {

@@ -44,11 +44,6 @@ public sealed class KeyboardNoteSource : IKeyboardModeNoteSource
     /// <summary>True for a track with notation: a keyboard track, or any other one shown as a keyboard by the player's choice (its sounding pitches).</summary>
     public static bool Suits(TrackModel? track) => track is { HasNotation: true };
 
-    /// <summary>The lane of a MIDI key, or -1 when it is outside the window.</summary>
-    public int LaneOf(int midi) => midi < Lowest || midi > Highest ? -1 : midi - Lowest;
-
-    public static bool IsBlackKey(int midi) => ((midi % 12) + 12) % 12 is 1 or 3 or 6 or 8 or 10;
-
     /// <summary>The notes of track <paramref name="trackIndex"/>. <paramref name="project"/> is read, never changed. Keys outside the 88 are left out; a key played twice at one time is one note.</summary>
     public static KeyboardNoteSource Build(ScoreTimeline timeline, SongProject project, int trackIndex)
     {
@@ -86,16 +81,6 @@ public sealed class KeyboardNoteSource : IKeyboardModeNoteSource
 
     /// <summary>True when any note has a finger written (the finger numbers toggle has something to show).</summary>
     public bool HasFingers => Notes.Any(n => n.Finger > 0);
-
-    /// <summary>The presses the player should make for the notes that start in the virtual stretch [fromV, toV) (virtual time as <see cref="KeyboardModeClock"/> keeps it, a loop unrolled),
-    /// in song seconds, ready for <see cref="KeyboardModeJudge"/>. Without a loop virtual time is song time.</summary>
-    public List<KeyboardModeExpected> ExpectedIn(double fromV, double toV, KeyboardModeLoop? loop)
-    {
-        var placed = new List<KeyboardModePlaced>();
-        KeyboardModeWindow.Collect(this, fromV, toV, loop, placed);
-        return placed.Where(p => p.VirtualMs >= fromV && p.VirtualMs < toV)
-            .Select(p => new KeyboardModeExpected(p.Note.Fret, p.VirtualMs / 1000, p.Note.DurationMs / 1000)).ToList();
-    }
 
     /// <summary>All the presses of the song once through (no loop), only the practised hand's with a hands filter.</summary>
     public List<KeyboardModeExpected> Expected(KeyboardHandsFilter hands = KeyboardHandsFilter.Both) =>

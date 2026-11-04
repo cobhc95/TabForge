@@ -12,7 +12,6 @@ namespace TabForge.Plugins;
 public static class WineBridgeSupport
 {
     public const string Variable = "TABFORGE_WINE";
-    public const string BundleRelativePath = "wine/bin/wine";
     public const string MissingText =
         "This is a Windows 32-bit VST2 plug-in. TabForge's Windows plug-in bridge (Wine) is not included in this build, so it cannot be loaded here.";
     public const string Missing64Text =

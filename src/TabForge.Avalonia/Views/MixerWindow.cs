@@ -18,6 +18,7 @@ using TabForge.Platform;
 using TabForge.Platform.Theme;
 using TabForge.Presenters;
 using TabForge.Services;
+using TabForge.Avalonia.Views.Dialogs;
 
 namespace TabForge.Avalonia.Views;
 
@@ -158,7 +159,7 @@ public sealed partial class MixerWindow : Window
             _topBarChecks.Add(box);
             groupingRow.Children.Add(box);
         }
-        var settings = new Button { Name = "AudioSettings", Content = "Audio & Plug-ins settings…", Padding = new Thickness(10, 3), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top };
+        var settings = new Button { Name = "AudioSettings", Content = "Audio & Plug-ins settings…", Padding = DialogMetrics.ActionButtonPadding, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top };
         settings.Click += (_, _) => { if (_openAudioSettings is null) Report("Audio & Plug-ins settings"); else _openAudioSettings(); };
         ToolWindowParts.NotAvailable(settings, _openAudioSettings is null);
         var top = new DockPanel { Margin = new Thickness(0, 0, 0, 8) };
@@ -181,7 +182,7 @@ public sealed partial class MixerWindow : Window
         var footer = new StackPanel();
         footer.Children.Add(new TextBlock
         {
-            Name = "MixerHint", Text = Hint, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 0), FontSize = 11,
+            Name = "MixerHint", Text = Hint, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 0), FontSize = ChromeMetrics.TextSmall,
             [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted"),
         });
         footer.Children.Add(_status);

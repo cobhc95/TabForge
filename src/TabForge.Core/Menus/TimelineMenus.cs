@@ -58,11 +58,6 @@ public sealed record ClipMenuState(bool HasClip, bool IsMidi, bool CanPaste, boo
 /// </summary>
 public static class TimelineMenus
 {
-    /// <summary>The Preferences row the timeline menus' settings entry scrolls to (the first timeline appearance row).</summary>
-    public const string TimelineSettingsRow = "timeline.individualnotes";
-    /// <summary>The row the section menu's settings entry scrolls to.</summary>
-    public const string SectionSettingsRow = "timeline.brackets";
-
     private static MenuSpec Item(TimelineCommand command, string header, string shortcut = "", bool enabled = true, string? toolTip = null, string? arg = null) =>
         new() { Command = command, Header = header, Shortcut = shortcut, Enabled = enabled, ToolTip = toolTip, Arg = arg };
 
@@ -249,7 +244,7 @@ public static class TimelineMenus
             list.Add(MenuSpec.Separator());
             list.Add(Check(TimelineCommand.ClipMute, "Mute", s.Muted, "state of one clip (saved in the song)", key("Clip.Mute")));
             list.Add(Item(TimelineCommand.ClipProperties, "Properties…", key("Clip.Properties")));
-            // "Advanced notation conversion…" is hidden until it exists (docs/plans/MIDI_TO_TAB_PLAN.md).
+            // "Advanced notation conversion…" is hidden until it exists.
             if (s.IsMidi) list.Add(Item(TimelineCommand.ClipWriteNotation, "Write into the track's notation"));
         }
         else
@@ -318,6 +313,4 @@ public static class TimelineMenus
         }
     }
 
-    /// <summary>Every checkable entry (the setting-like ones), depth first.</summary>
-    public static IEnumerable<MenuSpec> Checkables(IEnumerable<MenuSpec> items) => Leaves(items).Where(i => i.Checkable);
 }

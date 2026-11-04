@@ -32,8 +32,6 @@ public sealed record PluginHostLaunch(string ExecutablePath, string Mode, int Bu
     public const string PluginHostMode = "--plugin-host";
     public const string Vst32HostMode = "--vst32-host";
     public const string Vst32TcpHostMode = "--vst32-host-tcp";
-    /// <summary>The native host's VST2 format token (the Core format catalog is not a dependency of this layer).</summary>
-    private const string Vst2Format = "VST2";
 
     /// <summary>The existing isolation launch: this executable, <c>--plugin-host</c>, one audio slot.</summary>
     public static PluginHostLaunch ForCurrentProcess() => new(System.Environment.ProcessPath ?? "", PluginHostMode);

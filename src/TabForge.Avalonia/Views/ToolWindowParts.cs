@@ -76,7 +76,7 @@ public static class ToolWindowParts
         Grid.SetRow(body, 1);
         return new Border
         {
-            Name = header, Margin = new Thickness(3), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), ClipToBounds = true,
+            Name = header, Margin = new Thickness(3), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(ChromeMetrics.RadiusMedium), ClipToBounds = true,
             // A Grid, not a StackPanel: the body gets the height left under the heading, so a scroll viewer inside it scrolls when the content overflows.
             Child = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), Children = { band, body } },
             [!Border.BorderBrushProperty] = new DynamicResourceExtension("BorderBrush"), [!Border.BackgroundProperty] = new DynamicResourceExtension("Panel2Brush"),

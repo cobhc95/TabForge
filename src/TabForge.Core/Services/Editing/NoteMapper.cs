@@ -120,7 +120,7 @@ public sealed record NoteMapResult(IReadOnlyList<TabCell> Beats, NoteMapReport R
 // Does not own: the paste placement (BarGrid) and the questions asked.
 // Tests: TestPasteCommands.
 /// <summary>
-/// Cross-instrument note mapping for paste (COPY_PASTE_DESIGN.md 3.4 + owner decisions Q2/Q5). Pure and deterministic:
+/// Cross-instrument note mapping for paste. Pure and deterministic:
 /// takes cloned beats in time order and returns new beats for the target; never touches a project.
 /// </summary>
 public static class NoteMapper

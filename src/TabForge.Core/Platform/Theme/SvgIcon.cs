@@ -71,11 +71,6 @@ public sealed record SvgIcon(UiColor PanelTop, UiColor PanelBottom, UiColor Bord
         return new SvgIcon(top, bottom, border, shapes, texts);
     }
 
-    /// <summary>The colour of a frame panel in the light theme: an opaque pale tint of the same hue (a dark translucent tint turns muddy there).</summary>
-    public static UiColor FrameFill(UiColor c, bool light) => light
-        ? new UiColor(255, (byte)(c.R + (255 - c.R) * 0.78), (byte)(c.G + (255 - c.G) * 0.78), (byte)(c.B + (255 - c.B) * 0.78))
-        : c;
-
     /// <summary>
     /// The colour an icon paints with in the given theme. The art is drawn for dark surfaces (pale strokes); on the light theme pale
     /// shapes become the light theme's icon-default token, and coloured art takes a deeper shade of its hue.

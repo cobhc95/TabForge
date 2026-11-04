@@ -27,10 +27,6 @@ public sealed partial class BandTrackPanel
     private static int FirstSystem(TabForge.Views.ScorePageLayout layout, int measures, int measure, int count) =>
         Math.Clamp(layout.SystemForMeasure(Math.Clamp(measure, 0, measures - 1)), 0, Math.Max(0, layout.SystemCount - count));
 
-    /// <summary>The unused room above the tab of the first system of a window of <paramref name="count"/> systems at <paramref name="measure"/>, before the zoom; 0 for an audio track.</summary>
-    internal static double TopCrop(ScorePreviewView staff, int measure, int count) =>
-        PagedLayout(staff) is { } layout ? TopCropFromFirst(staff, FirstSystem(layout, staff.Probe.Track!.Measures.Count, measure, count), count) : 0;
-
     /// <summary>The rows a window of <paramref name="count"/> systems takes when it starts at system <paramref name="first"/> (the page the card
     /// keeps while the playing system is inside it), clamped at the song's end; null for an audio track or a song without bars.</summary>
     internal static (double Top, double Height)? SystemWindowFromFirst(ScorePreviewView staff, int first, int count)

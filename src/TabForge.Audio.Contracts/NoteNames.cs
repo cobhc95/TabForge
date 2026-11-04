@@ -18,9 +18,6 @@ public static class NoteNames
     /// <summary>Pitch class name (sharp spelling) of any MIDI note number, also below 0 and above 127.</summary>
     public static string PitchClass(int midi) => Sharps[PitchClassIndex(midi)];
 
-    /// <summary>Pitch class name in the marker spelling.</summary>
-    public static string MarkerPitchClass(int midi) => Marker[PitchClassIndex(midi)];
-
     /// <summary>Note name with octave in the sharp spelling: 60 is "C4", 69 is "A4", 0 is "C-1".</summary>
     public static string Name(int midi) => PitchClass(midi) + (midi / 12 - 1);
 

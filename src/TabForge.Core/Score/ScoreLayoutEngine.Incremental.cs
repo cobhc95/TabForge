@@ -17,18 +17,6 @@ internal sealed partial class ScoreLayoutEngine
 
     internal string LastRelayoutReason => _incremental.LastRelayoutReason;
 
-    internal void CaptureMeasureRange((int FirstMeasure, int LastMeasure) range) =>
-        _incremental.CapturedMeasureRange = (range.FirstMeasure, range.LastMeasure);
-
-    internal void InvalidatePendingMeasures(bool changed = true, bool useCapturedRange = true)
-    {
-        var range = _incremental.CapturedMeasureRange;
-        _incremental.CapturedMeasureRange = null;
-        if (!changed) return;
-        InvalidateMeasures(useCapturedRange ? range?.First ?? -1 : -1,
-            useCapturedRange ? range?.Last ?? -1 : -1);
-    }
-
     /// <summary>Retains page-width inputs when a known edit changes only a stable range.</summary>
     internal void InvalidateMeasures(int firstMeasure, int lastMeasure)
     {

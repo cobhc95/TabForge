@@ -76,7 +76,6 @@ public sealed class FxEditorController : IDisposable
     /// <summary>Forgets the program names (another plug-in is focused).</summary>
     public void ResetPrograms() { Programs = Array.Empty<string>(); CurrentProgram = -1; }
     public PluginSlot? Docked => _docked;
-    public bool IsFloating(PluginSlot slot) => _floating.Contains(slot);
 
     /// <summary>Marks a plug-in whose engine load is running; its editor opens when the engine reports the chain loaded.</summary>
     public void MarkLoading(PluginSlot slot) => _loading = _host.Engine?.IsRunning == true ? slot : null;

@@ -5,6 +5,7 @@ using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using TabForge.Presenters;
 using TabForge.Avalonia.Views.Dialogs;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views;
 
@@ -35,7 +36,7 @@ public sealed class PluginSaveWindow : Window
                 Content = new StackPanel { Children =
                 {
                     new TextBlock { Text = option.Title, FontWeight = FontWeight.SemiBold },
-                    Tinted(new TextBlock { Text = option.Text, TextWrapping = TextWrapping.Wrap, FontSize = 11 }, "TextSecondary"),
+                    Tinted(new TextBlock { Text = option.Text, TextWrapping = TextWrapping.Wrap, FontSize = ChromeMetrics.TextSmall }, "TextSecondary"),
                 } },
             };
             if (option.Recommended)

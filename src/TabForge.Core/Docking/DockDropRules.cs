@@ -63,17 +63,6 @@ public static class DockDropRules
     public static bool SplitFits(double extent, double newMinimum, double existingMinimum) =>
         extent - SplitterSize >= newMinimum + existingMinimum;
 
-    /// <summary>The share of the target the new panel takes: the edge fraction, held inside what both minimums allow.</summary>
-    public static double SplitFraction(double extent, double newMinimum, double existingMinimum)
-    {
-        var edge = DockLayoutTree.EdgeFraction;
-        var available = extent - SplitterSize;
-        if (available <= 0 || newMinimum + existingMinimum <= 0) return edge;
-        var minFraction = newMinimum / available;
-        var maxFraction = 1 - existingMinimum / available;
-        return minFraction <= maxFraction ? Math.Clamp(edge, minFraction, maxFraction) : edge;
-    }
-
     /// <summary>The rectangle the dropped panel would take: the whole target for the centre, else the fraction of it at that edge.</summary>
     public static UiRect PreviewRect(UiRect target, DockDropZone zone, double fraction)
     {
@@ -100,7 +89,6 @@ public static class FloatingPlacementRules
 {
     private const double FallbackLeft = 180;
     private const double FallbackTop = 140;
-    private const double FrameAllowance = 20;
 
     /// <summary>The saved bounds made finite and usable: a non-finite value falls back, a size never drops below the smaller of its floor and the window minimum.</summary>
     public static UiRect FiniteBounds(double left, double top, double width, double height, double minWidth, double minHeight) =>
@@ -108,10 +96,6 @@ public static class FloatingPlacementRules
             double.IsFinite(top) ? top : FallbackTop,
             Math.Max(Math.Min(240, minWidth), double.IsFinite(width) ? width : Math.Max(320, minWidth)),
             Math.Max(Math.Min(150, minHeight), double.IsFinite(height) ? height : Math.Max(220, minHeight)));
-
-    /// <summary>The largest window size in DIPs that leaves room for the frame inside a work area of the given size.</summary>
-    public static (double Width, double Height) MaxSize(double workWidth, double workHeight) =>
-        (Math.Max(180, workWidth - FrameAllowance), Math.Max(120, workHeight - FrameAllowance));
 
     /// <summary>The window bounds moved and shrunk to lie inside the work area (all in device pixels).</summary>
     public static UiRect FitToWorkArea(UiRect bounds, UiRect work)

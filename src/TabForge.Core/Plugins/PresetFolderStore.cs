@@ -66,7 +66,7 @@ public sealed class PresetFolderStore : IPresetRestorable
 
     public static PresetFolderStore Plugin(PluginSlot slot) => new(PluginLibrary.PresetFolder(slot), PluginFileExtension);
     /// <summary>The presets of the plug-in whose preset folder has that name (<see cref="PluginKey"/>).</summary>
-    public static PresetFolderStore Plugin(string key) => new(Path.Combine(PluginLibrary.Root, PluginFolderName, TabForge.Audio.Contracts.SafeFileNames.SafeFileName(key, "plugin", 64)), PluginFileExtension);
+    public static PresetFolderStore Plugin(string key) => new(Path.Combine(PluginLibrary.Root, PluginFolderName, TabForge.Audio.Contracts.SafeFileNames.SafeFileName(key, "plugin", 80)), PluginFileExtension);
     public static string PluginKey(PluginSlot slot) => Path.GetFileName(PluginLibrary.PresetFolder(slot));
     /// <summary>The plug-ins that have saved presets, as keys for <see cref="Plugin(string)"/>.</summary>
     public static IReadOnlyList<string> PluginKeys() => Folders(Path.Combine(PluginLibrary.Root, PluginFolderName), PluginFileExtension);

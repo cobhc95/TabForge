@@ -100,7 +100,7 @@ public sealed class ColourSquare : ColourSurface
     public void ShowHue(double hue)
     {
         _hue = hue;
-        _hueBrush = new ImmutableSolidColorBrush(Model(ColourChooserPresenter.ColourFromSliders(hue, 100, 100)));
+        _hueBrush = new ImmutableSolidColorBrush(Model(ColourHsv.ColourFromSliders(hue, 100, 100)));
         InvalidateVisual();
     }
 
@@ -138,7 +138,7 @@ public sealed class HueStrip : ColourSurface
     {
         var brush = new LinearGradientBrush { StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative), EndPoint = new RelativePoint(0, 1, RelativeUnit.Relative) };
         for (var i = 0; i <= Stops; i++)
-            brush.GradientStops.Add(new GradientStop(Model(ColourChooserPresenter.ColourFromSliders(i * 60.0, 100, 100)), i / (double)Stops));
+            brush.GradientStops.Add(new GradientStop(Model(ColourHsv.ColourFromSliders(i * 60.0, 100, 100)), i / (double)Stops));
         return brush.ToImmutable();
     }
 }

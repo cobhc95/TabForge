@@ -132,18 +132,12 @@ public sealed class Recorder : IDisposable
     /// <summary>Tests only (recorder built with <c>startWriter: false</c>): runs the disk thread's work until everything queued is written.</summary>
     public void PumpForTests() { while (Pump()) { } }
 
-    /// <summary>Frames the input queue holds.</summary>
-    public long QueueCapacityFrames => _queueMask + 1;
-
     /// <summary>Gaps (stretches of input replaced by silence) written so far and their total length. Final once <see cref="Finish"/> has returned.</summary>
     public long GapCount => Interlocked.Read(ref _gapsWritten);
     public double LostSeconds => Interlocked.Read(ref _lostWritten) / (double)_rate;
 
     /// <summary>One line for the user when input was lost (null: nothing lost); read after <see cref="Finish"/>.</summary>
     public string? LossSummary => GapCount == 0 ? null : $"Recording lost {GapCount} gap{(GapCount == 1 ? "" : "s")}, {LostSeconds:0.0} s in total (disk too slow)";
-
-    /// <summary>Gap markers that could not be kept exactly (merged into an earlier marker or written late): timing after such a gap is approximate.</summary>
-    public long GapOverflows => Interlocked.Read(ref _gapOverflows);
 
     /// <summary>
     /// A reserved final name that does not exist yet ("name.wav", else "name-2.wav", "name-3.wav"…): two armed tracks
@@ -374,7 +368,12 @@ public sealed class Recorder : IDisposable
         // Let the disk thread write everything still queued, then close the files.
         _stopping = true;
         if (_diskThread is null) PumpForTests();
-        else if (_diskThread.IsAlive && _diskThread != Thread.CurrentThread) _diskThread.Join(TimeSpan.FromSeconds(10));
+        else if (_diskThread.IsAlive && _diskThread != Thread.CurrentThread && !_diskThread.Join(TimeSpan.FromSeconds(10)))
+        {
+            // The disk could not keep up: what is still queued will not reach the file, so report it as lost rather than end the take short in silence.
+            var unwritten = Volatile.Read(ref _qWrite) - Volatile.Read(ref _qRead);
+            if (unwritten > 0) ReportDrop(unwritten);
+        }
         return Complete();
     }
 

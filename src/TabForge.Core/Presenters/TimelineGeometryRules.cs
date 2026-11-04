@@ -37,13 +37,6 @@ public static class TimelineGeometryRules
         return Math.Clamp(low - 1, 0, barCount - 1);
     }
 
-    /// <summary>The y inside the rows (from the first row) for a y in the lane control, or -1 above the grid.</summary>
-    public static double RowsYAt(double y, double gridTop, double verticalScroll) => y < gridTop ? -1 : y + verticalScroll - gridTop;
-
-    /// <summary>The measure width at which the whole song exactly fills the viewport (12 when unknown, kept between 1.5 and 12).</summary>
-    public static double FitAllMeasureWidth(double measureWidth, double totalWidth, double viewportWidth) =>
-        totalWidth <= 0 || viewportWidth <= 0 ? 12 : Math.Clamp(measureWidth * viewportWidth / totalWidth, 1.5, 12);
-
     /// <summary>The next measure width: +/-4 px per step at normal sizes, proportional steps near 12 px or less, never beyond fit-all or 90.</summary>
     public static double ZoomStep(double measureWidth, bool zoomIn, double fitAllWidth)
     {
@@ -51,19 +44,4 @@ public static class TimelineGeometryRules
         return Math.Clamp(next, Math.Min(12, fitAllWidth), 90);
     }
 
-    /// <summary>Height that shows the header plus <paramref name="rowsHeight"/> of rows.</summary>
-    public static double PreferredHeight(double rulerHeight, double sectionHeight, double rowsHeight, double addLaneExtra, double topMargin) =>
-        rulerHeight + sectionHeight + rowsHeight + addLaneExtra + 2 + topMargin;
-
-    /// <summary>The preferred height when each of <paramref name="visibleRows"/> rows is <paramref name="rowHeight"/> instead of the current height.</summary>
-    public static double PreferredHeightAt(double preferredHeight, int visibleRows, double rowHeight, double currentRowHeight) =>
-        preferredHeight + visibleRows * (rowHeight - currentRowHeight);
-
-    /// <summary>The track row height that makes the rows fill <paramref name="paneHeight"/>, between the default and the maximum.</summary>
-    public static double RowHeightForPaneHeight(double paneHeight, double preferredHeight, int visibleRows, double currentRowHeight, double minHeight, double maxHeight)
-    {
-        if (visibleRows == 0) return minHeight;
-        var fixedPart = preferredHeight - visibleRows * currentRowHeight;
-        return Math.Clamp((paneHeight - fixedPart) / visibleRows, minHeight, maxHeight);
-    }
 }

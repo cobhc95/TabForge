@@ -219,7 +219,6 @@ public sealed partial class PlaybackEngine
         Volatile.Write(ref _lateNotesDropped, 0);
         _paused = startPaused;
         _running = true;
-        _playbackStartWallMs = _diagnosticClock.Elapsed.TotalMilliseconds;
         if (startPaused) _clock.Reset();
         else _clock.Restart();
 

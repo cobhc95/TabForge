@@ -91,14 +91,6 @@ public sealed partial class PianoRollView
     /// <summary>The scale the roll follows now: the shared pick's effective scale (manual, or the detected one; null on a drum track: it has no scale).</summary>
     internal string? EffectiveScaleHighlight() => SharedReadout_() is { } readout ? readout.Current.Effective.Highlight : null;
 
-    /// <summary>A Settings scale change while the roll shows (or a popup pick): rows, the lock set and the tips follow at once.</summary>
-    public void RefreshScale()
-    {
-        RefreshDerived();
-        Surface.InvalidateVisual();
-        Surface.Playhead.InvalidateVisual();
-    }
-
     private IReadOnlyList<(double Beat, string Title, UiColor Colour)> Sections()
     {
         if (_document is null) return Array.Empty<(double, string, UiColor)>();

@@ -28,8 +28,6 @@ public sealed class ResetAppPlan
 
     public IEnumerable<ResetAppTarget> Targets => Items.SelectMany(item => item.Targets);
 
-    public string SettingsPath => Path.Combine(Folders.Settings, SettingsFileName);
-
     /// <summary>Builds the whole plan, or only <paramref name="only"/> (the confirmed ticks), with counts read now.</summary>
     public static ResetAppPlan Create(IAppFolders folders, IEnumerable<ResetAppItemKind>? only = null)
     {

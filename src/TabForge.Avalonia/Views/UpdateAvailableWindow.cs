@@ -6,6 +6,7 @@ using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using TabForge.Presenters;
 using TabForge.Services;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views;
 
@@ -58,7 +59,7 @@ public sealed class UpdateAvailableWindow : Window
         root.Children.Add(_checkAutomatically);
         root.Children.Add(Muted(new TextBlock
         {
-            Name = "PrivacyText", Text = UpdateAvailablePresenter.PrivacyText, FontSize = 11, TextWrapping = TextWrapping.Wrap,
+            Name = "PrivacyText", Text = UpdateAvailablePresenter.PrivacyText, FontSize = ChromeMetrics.TextSmall, TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(22, 0, 0, 14)
         }));
 

@@ -165,7 +165,7 @@ public sealed partial class MainWindow
         foreach (var top in new Control[] { titleRow, menu, state.CompactStrip }) DockPanel.SetDock(top, Dock.Top);
         var approvals = new MainWindowApprovalNotices(this, state.Songs, state.Settings, state.SyncActiveEngine, state.Registry.Services.Trust);
         approvals.Register(state.Commands);
-        // All persistent notices live on the single top bar; the bottom rows stay docked (tombstones) but hidden.
+        // All persistent notices live on the single top bar; the bottom rows stay docked but hidden.
         state.Autosave.AttachNotificationBar(state.TopBar);
         approvals.AttachNotificationBar(state.TopBar);
         PreferencesActions = new Views.PreferencesRowActions

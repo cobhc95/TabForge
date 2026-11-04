@@ -14,7 +14,7 @@ namespace TabForge.Avalonia;
 //   saved dock layout it starts from, saving the captured layout on the dock's debounced LayoutChanged and on window close, and
 //   saving the Settings window's OK and Apply.
 // Does not own: the file format, bounds and migration (SettingsFileService, SettingsValidator, WorkspaceNormalizer), the layout
-//   rules (DockWorkspaceRules via DockWorkspaceController), the apply order of the other settings (MainSettingsFlow).
+//   rules (DockWorkspaceRules via DockWorkspaceController).
 // Tests: TabForge.Avalonia.Tests.MainWindowSettingsTests.
 /// <summary>Loads the settings file once and keeps the dock layout in it.</summary>
 public sealed class MainWindowSettings : IDisposable

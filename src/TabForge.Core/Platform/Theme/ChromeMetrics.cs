@@ -7,6 +7,12 @@ namespace TabForge.Platform.Theme;
 /// <summary>Chrome sizes and opacities shared by the shells and the views that draw swatches and preview boxes.</summary>
 public static class ChromeMetrics
 {
+    /// <summary>The app's type scale in DIP: use these instead of a literal size.</summary>
+    public const double TextMicro = 9, TextCaption = 10, TextSmall = 11, TextBody = 12, TextDialog = 13, TextEmphasis = 14, TextHeading = 15, TextTitle = 16;
+
+    /// <summary>The app's corner radii in DIP: use these instead of a literal radius.</summary>
+    public const double RadiusTiny = 2, RadiusSmall = 3, RadiusMedium = 4, RadiusLarge = 6, RadiusXLarge = 8;
+
     /// <summary>The height of the title-bar row that holds the caption buttons.</summary>
     public const double CaptionRowHeight = 44;
 

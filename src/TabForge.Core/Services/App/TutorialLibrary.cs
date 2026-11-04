@@ -96,9 +96,6 @@ public sealed class TutorialLibrary
 
     public const string DetailedFolderName = "detailed";
 
-    /// <summary>The folder of a guide: the Detailed Guide is the <c>detailed</c> subfolder of the Basic Guide's folder.</summary>
-    public static string GuideFolder(TutorialGuide guide) => guide == TutorialGuide.Basic ? DefaultFolder() : Path.Combine(DefaultFolder(), DetailedFolderName);
-
     private static bool HasChapters(string folder)
     {
         try { return Directory.Exists(folder) && Directory.EnumerateFiles(folder, "*.md").Any(IsChapterFile); }
@@ -174,37 +171,6 @@ public sealed class TutorialLibrary
         return Chapters.FirstOrDefault(c => c.Id.Equals(name, StringComparison.OrdinalIgnoreCase)
             || c.FileName.Equals(name, StringComparison.OrdinalIgnoreCase)
             || Path.GetFileNameWithoutExtension(c.FileName).Equals(stem, StringComparison.OrdinalIgnoreCase));
-    }
-
-    /// <summary>
-    /// Resolves a Markdown link ("03-slug.md#heading", "#heading" inside the current chapter). Returns false for web links and
-    /// anything that is not a chapter of this tutorial.
-    /// </summary>
-    public bool TryResolveLink(string? href, TutorialChapter? current, out TutorialChapter chapter, out string? headingId)
-    {
-        chapter = null!; headingId = null;
-        if (string.IsNullOrWhiteSpace(href) || href.Contains("://", StringComparison.Ordinal) || href.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase)) return false;
-        var hash = href.IndexOf('#');
-        var file = hash >= 0 ? href[..hash] : href;
-        headingId = hash >= 0 && hash + 1 < href.Length ? href[(hash + 1)..] : null;
-        var target = file.Length == 0 ? current : Find(Uri.UnescapeDataString(file.Replace('\\', '/').Split('/')[^1]));
-        if (target is null) return false;
-        chapter = target;
-        return true;
-    }
-
-    private static readonly System.Text.RegularExpressions.Regex ChapterReference = new(@"^Chapter\s+(\d+)\s*:\s*(.+?)\s*$", System.Text.RegularExpressions.RegexOptions.Compiled | System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-
-    /// <summary>
-    /// A bold "Chapter 9: Shaping the sound" in the text is a cross-reference (the Markdown subset has no links): returns the chapter it
-    /// names, or null when the text is anything else or names no chapter of this tutorial.
-    /// </summary>
-    public TutorialChapter? ResolveChapterReference(string? boldText)
-    {
-        if (string.IsNullOrEmpty(boldText)) return null;
-        var m = ChapterReference.Match(boldText);
-        if (!m.Success || !int.TryParse(m.Groups[1].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var number)) return null;
-        return Chapters.FirstOrDefault(c => c.Number == number && c.Title.Equals(m.Groups[2].Value.TrimEnd('.'), StringComparison.OrdinalIgnoreCase));
     }
 
     // ---- search ----

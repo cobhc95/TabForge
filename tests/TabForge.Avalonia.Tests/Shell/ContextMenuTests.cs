@@ -17,7 +17,7 @@ using Xunit;
 namespace TabForge.Avalonia.Tests;
 
 // Owns: the Avalonia right-click menus built from the Core rows: a row with no Avalonia handler renders disabled, and a row with a handler runs it.
-// Does not own: the rows (the Core menus, pinned by SelfTestMenuGolden), the pixels (ParityShotsTests) or the right-click routing of each view.
+// Does not own: the rows (the Core menus, pinned by SelfTestMenuGolden) or the right-click routing of each view.
 // Tests: this file.
 public class ContextMenuTests
 {

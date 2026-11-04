@@ -20,18 +20,8 @@ public static class ScoreEditorGeometry
 
     public static double TabTop(double staffTop, double staffToTab) => staffTop + staffToTab;
 
-    /// <summary>Vertical scroll for a system: the first system scrolls to the top so the title and tuning block stay in view.</summary>
-    public static double ScrollOffset(int system, double systemTop, double zoom) => system == 0 ? 0 : Math.Max(0, systemTop - 20) * zoom;
-
     /// <summary>Horizontal scroll that shows a bar whose left edge is at x, with a little lead-in.</summary>
     public static double HorizontalOffset(double measureX, double zoom) => Math.Max(0, measureX - 60) * zoom;
-
-    /// <summary>True when the cell lies inside the bar's slots; kept is then the cell clamped at 0. Past the end the caller snaps.</summary>
-    public static bool TryKeepInBar(int cell, int slots, out int kept)
-    {
-        kept = Math.Max(0, cell);
-        return cell < slots;
-    }
 
     /// <summary>True when (measure, cell) lies inside the inclusive range from (m1, c1) to (m2, c2).</summary>
     public static bool IsInRange(int measure, int cell, int m1, int c1, int m2, int c2)
@@ -52,14 +42,4 @@ public static class ScoreEditorGeometry
     /// <summary>An index clamped into [0, count - 1]; 0 when count is 0.</summary>
     public static int ClampIndex(int index, int count) => Math.Clamp(index, 0, Math.Max(0, count - 1));
 
-    /// <summary>The inclusive systems overlapping a viewport (unzoomed page units come from offset / zoom), with one system of margin.</summary>
-    public static (int First, int Last) VisibleSystems(int systems, double verticalOffset, double viewportHeight, double zoom, double header, double systemHeight)
-    {
-        var last = systems - 1;
-        var top = verticalOffset / zoom - systemHeight;
-        var bottom = (verticalOffset + viewportHeight) / zoom + systemHeight;
-        var first = (int)Math.Floor((top - header) / systemHeight);
-        var final = (int)Math.Ceiling((bottom - header) / systemHeight);
-        return (Math.Max(0, first), Math.Min(last, Math.Max(0, final)));
-    }
 }

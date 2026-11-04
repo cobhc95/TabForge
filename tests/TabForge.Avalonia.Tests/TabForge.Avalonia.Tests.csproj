@@ -20,7 +20,6 @@
     <Compile Remove="Shell/DialogVirtualizationTests.cs" />
     <Compile Remove="Video/LiveVideoParityTests.cs" />
     <Compile Remove="Infrastructure/TempRootTests.cs" />
-    <Compile Remove="Capture/ParityShotsTests.cs" />
     <Compile Remove="Video/VideoExportFinishTests.cs" />
     <Compile Remove="Video/VideoExportParityTests.cs" />
     <Compile Remove="Capture/ShotSweepTests.cs" />

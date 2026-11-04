@@ -24,12 +24,6 @@ public sealed record LoadedPluginInfo(byte Format, uint UniqueId, string ClassId
     public const byte None = 0, Vst2 = 1, Vst3 = 2, Clap = 3;
     public static readonly LoadedPluginInfo Unavailable = new(None, 0, "", -1, -1, false, "", "");
 
-    /// <summary>The VST2 unique id as its four characters (most significant byte first); bytes outside printable ASCII become '?'.</summary>
-    public string FourChars => string.Create(4, UniqueId, (span, id) =>
-    {
-        for (var i = 0; i < 4; i++) { var c = (char)((id >> (24 - 8 * i)) & 0xFF); span[i] = c is >= ' ' and <= '~' ? c : '?'; }
-    });
-
     public void Write(BinaryWriter w)
     {
         w.Write(Format); w.Write(UniqueId); w.WriteString(ClassId); w.Write(Inputs); w.Write(Outputs); w.Write(UsesChunks);

@@ -29,8 +29,6 @@ internal sealed class ScorePageLayout
     internal const double MinimumMeasureWidth = 70;
     /// <summary>Breathing room required when admitting a bar to a system (1.0 = minimum readable width).</summary>
     internal const double PreferredPackingFactor = 1.05;
-    /// <summary>Non-final systems are justified to the full width unless that would stretch bars beyond this.</summary>
-    internal const double MaximumExpansionJustified = 2.50;
     /// <summary>A final system this full (natural width / page width) is justified like any other system.</summary>
     internal const double FinalSystemJustifyThreshold = 0.60;
     internal const double MaximumExpansionSingleMeasure = 1.08;

@@ -36,26 +36,11 @@ public static class ClipGesturePresenter
         return nearIn <= nearOut ? ClipGesture.FadeIn : ClipGesture.FadeOut;
     }
 
-    /// <summary>True when the pointer is still inside the click jitter around the press point (the gesture has not started).</summary>
-    public static bool WithinClickJitter(double dx, double dy, double thresholdX, double thresholdY) => Math.Abs(dx) < thresholdX && Math.Abs(dy) < thresholdY;
-
     /// <summary>Keeps the nearest snap candidate within its limit: a candidate at <paramref name="distancePx"/> from the pointer replaces the best when it is within <paramref name="limitPx"/> and strictly nearer.</summary>
     public static void ConsiderSnap(ref double best, ref double bestDistancePx, double candidate, double distancePx, double limitPx)
     {
         if (distancePx <= limitPx && distancePx < bestDistancePx) { best = candidate; bestDistancePx = distancePx; }
     }
-
-    /// <summary>The zone under a dragged clip's centre: -1 above the lanes (the notation row), else the lane index clamped to the last lane. <paramref name="lane"/> is 0 in the notation row.</summary>
-    public static int MoveZone(double offsetFromFirstLane, int lanes, double laneHeight, out int lane)
-    {
-        if (offsetFromFirstLane < 0) { lane = 0; return -1; }
-        lane = Math.Min((int)(offsetFromFirstLane / laneHeight), Math.Max(0, lanes - 1));
-        return lane;
-    }
-
-    /// <summary>A MIDI clip on a track's notation row is written into the score: the row is above the lanes, belongs to a track with lanes that is not an audio track, and the pointer is within the notation height (a group header above does not count).</summary>
-    public static bool OnNotationRow(double offsetFromFirstLane, bool clipIsMidi, int lanes, bool trackIsAudio, double notationHeight) =>
-        offsetFromFirstLane < 0 && clipIsMidi && lanes > 0 && !trackIsAudio && offsetFromFirstLane >= -notationHeight;
 
     /// <summary>Where a moved clip starts: its start at the press plus the drag, never before the song's start.</summary>
     public static double MovedStart(double originStart, double deltaSec) => Math.Max(0, originStart + deltaSec);

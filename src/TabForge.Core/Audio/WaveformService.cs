@@ -125,10 +125,7 @@ public sealed partial class WaveformService : IDisposable
         foreach (var raw in raws.Concat(revokedRaws).Distinct()) RaiseReady(raw);   // timelines ask again
     }
 
-    /// <summary>Files decoded so far (self-test: a blocked path must never get here).</summary>
-    internal int DecodeCount => Volatile.Read(ref _decodeCount);
     internal int CachedCount { get { lock (Gate) return Slots.Count; } }
-    internal long CachedBytes { get { lock (Gate) return Slots.Values.Sum(s => (long)(s.Peaks?.Length ?? 0) * 4); } }
 
     private string KeyOf(string file, MediaContext context)
     {

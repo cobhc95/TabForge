@@ -8,6 +8,7 @@ using TabForge.Avalonia.Platform;
 using TabForge.Models;
 using TabForge.Presenters;
 using TabForge.Avalonia.Views.Dialogs;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views;
 
@@ -59,7 +60,7 @@ public sealed class ClipPropertiesWindow : Window
         var speed = Slide(ClipPropertiesPresenter.Speed, clip.Speed);
         var muted = new CheckBox { Content = ClipPropertiesPresenter.MutedLabel, IsChecked = clip.Muted, Margin = new Thickness(0, 6, 0, 6), VerticalAlignment = VerticalAlignment.Center };
         Row("", muted);
-        var info = new TextBlock { Text = ClipPropertiesPresenter.Note(clip), TextWrapping = TextWrapping.Wrap, FontSize = 11, Margin = new Thickness(0, 10, 0, 10) };
+        var info = new TextBlock { Text = ClipPropertiesPresenter.Note(clip), TextWrapping = TextWrapping.Wrap, FontSize = ChromeMetrics.TextSmall, Margin = new Thickness(0, 10, 0, 10) };
         info[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
 
         var ok = new Button { Content = ClipPropertiesPresenter.OkButton, IsDefault = true, MinWidth = 72, Margin = new Thickness(0, 0, 6, 0) };

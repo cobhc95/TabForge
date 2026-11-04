@@ -35,6 +35,4 @@ internal static class SavedLayoutRules
     public static bool Delete(List<SavedLayout> saved, string name) =>
         saved.RemoveAll(l => string.Equals(l.Name, name, System.StringComparison.OrdinalIgnoreCase)) > 0;
 
-    /// <summary>Removes the saved copies of the built-in layouts, so each built-in is shown again as shipped.</summary>
-    public static void ResetBuiltIns(List<SavedLayout> saved) => saved.RemoveAll(l => DockLayoutCatalog.IsBuiltIn(l.Name));
 }

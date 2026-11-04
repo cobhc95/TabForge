@@ -181,54 +181,9 @@ public static class SectionReorderService
         SectionLayout.Normalize(project);
         return oldToNew;
     }
-    /// <summary>Composes a timeline-to-document bar remap with a subsequent document reorder.</summary>
-    public static int[] ComposeBarRemap(IReadOnlyList<int> prior, IReadOnlyList<int> move)
-    {
-        var composed = new int[prior.Count];
-        for (var index = 0; index < prior.Count; index++)
-        {
-            var current = prior[index];
-            composed[index] = current >= 0 && current < move.Count ? move[current] : current;
-        }
-        return composed;
-    }
-
-    /// <summary>Composes a structural bar mapping and assigns stable timeline ids to inserted bars.</summary>
-    public static int[] ComposeBarRemapWithInsertions(IReadOnlyList<int> prior, IReadOnlyList<int> move,
-        int currentBarCount)
-    {
-        var composed = ComposeBarRemap(prior, move).ToList();
-        var occupied = composed.Where(bar => bar >= 0).ToHashSet();
-        for (var bar = 0; bar < currentBarCount; bar++)
-            if (occupied.Add(bar)) composed.Add(bar);
-        return composed.ToArray();
-    }
 
     private static MeasureModel CloneMeasure(MeasureModel measure) => ProjectService.CloneMeasure(measure);
 
     private static void Renumber(TrackModel track) => BarRangeEditor.Renumber(track);
 
-    /// <summary>
-    /// Converts a saved baseline-to-document mapping to a newly compiled baseline. The current map
-    /// describes old-baseline → new-baseline; its inverse composes each saved old-baseline → target map.
-    /// </summary>
-    public static int[] RebaseBarRemap(IReadOnlyList<int> oldToNewBaseline,
-        IReadOnlyList<int> oldToTarget, int newBaselineBarCount)
-    {
-        var inverse = Enumerable.Repeat(-1, Math.Max(0, newBaselineBarCount)).ToArray();
-        for (var source = 0; source < oldToNewBaseline.Count; source++)
-        {
-            var destination = oldToNewBaseline[source];
-            if (destination >= 0 && destination < inverse.Length) inverse[destination] = source;
-        }
-        var rebased = new int[inverse.Length];
-        for (var destination = 0; destination < inverse.Length; destination++)
-        {
-            var oldSource = inverse[destination];
-            rebased[destination] = oldSource >= 0 && oldSource < oldToTarget.Count
-                ? oldToTarget[oldSource]
-                : destination;
-        }
-        return rebased;
-    }
 }

@@ -5,7 +5,7 @@ namespace TabForge.Services;
 // Tests: TimelinePasteTests.
 
 /// <summary>
-/// What the Paste Special dialog chooses (docs/specs/COPY_PASTE_DESIGN.md 3.6): every answer is explicit, so no question is asked.
+/// What the Paste Special dialog chooses: every answer is explicit, so no question is asked.
 /// <see cref="BeatMode"/> applies to beats clips, <see cref="BarsMode"/> to bars clips; <see cref="Range"/> is set instead when a timeline range is pasted
 /// (then <see cref="Repeat"/> is its repeat count) and <see cref="Remember"/> says the options should start the next window.
 /// </summary>

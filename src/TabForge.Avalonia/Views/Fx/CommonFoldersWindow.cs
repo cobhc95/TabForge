@@ -31,9 +31,9 @@ public sealed class CommonFoldersWindow : Window
         this[!BackgroundProperty] = new DynamicResourceExtension("WindowBackground");
         this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
         _box.Text = string.Join(Environment.NewLine, lines);
-        var save = new Button { Content = "Save", Name = "SaveButton", IsDefault = true, Padding = new Thickness(14, 3), Margin = new Thickness(0, 0, Gap, 0) };
-        var reset = new Button { Content = "Reset to defaults", Name = "ResetButton", Padding = new Thickness(14, 3), Margin = new Thickness(0, 0, Gap, 0) };
-        var cancel = new Button { Content = "Cancel", Name = "CancelButton", IsCancel = true, Padding = new Thickness(14, 3) };
+        var save = new Button { Content = "Save", Name = "SaveButton", IsDefault = true, Padding = DialogMetrics.ActionButtonPadding, Margin = new Thickness(0, 0, Gap, 0) };
+        var reset = new Button { Content = "Reset to defaults", Name = "ResetButton", Padding = DialogMetrics.ActionButtonPadding, Margin = new Thickness(0, 0, Gap, 0) };
+        var cancel = new Button { Content = "Cancel", Name = "CancelButton", IsCancel = true, Padding = DialogMetrics.ActionButtonPadding };
         save.Click += (_, _) => Close(Lines());
         reset.Click += (_, _) => _box.Text = string.Join(Environment.NewLine, VstScannerService.DefaultCommonFolders);
         cancel.Click += (_, _) => Close(null);

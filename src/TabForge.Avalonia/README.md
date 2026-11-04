@@ -28,8 +28,6 @@ The adapters and drawing hosts are listed in `Source/src/TabForge.Avalonia/Platf
 - `Platform/Windows/WindowsProcessExit.cs`: ends the one-shot matrix process without running plug-in DLL detach (kernel32 `TerminateProcess`, `Environment.Exit` fallback). It lives in the Windows platform folder so the portability guard does not count the imports.
 - `Diagnostics/PluginMatrix.Native.Windows.cs`: the Win32 externs (owner window, message pump) the plug-in matrix diagnostics call; every call site is a Windows-only path.
 
-Not added: an `IAppServices` adapter. Its property bag has no Avalonia equivalent, so an adapter would invent its semantics.
-
 ## Score opening
 
 `ScoreOpenFlow` (`Source/src/TabForge.Avalonia/MainWindow/File/ScoreOpenFlow.cs`) opens a score file for the shell: a Guitar Pro file is parsed in the import worker, and a file whose worker cannot start is refused. The tabs and dialogs stay in `MainWindowFile`.

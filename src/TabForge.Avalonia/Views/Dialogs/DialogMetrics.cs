@@ -110,7 +110,7 @@ internal static class DialogMetrics
         MediaListMaxHeight = 150, MediaRelinkListMaxHeight = 220, MediaBarHeight = 8, MediaButtonHeight = 28, MediaSmallText = 12, MediaCorner = 4;
 
     /// <summary>The media windows: the gaps above the Remember box, around the file list, above the bar, a list row's inset, the gap before a detail and a status, the button padding, the outline.</summary>
-    public static readonly Thickness MediaRememberGap = new(0, 8, 0, 0), MediaListGap = new(0, 8, 0, 4), MediaBarGap = new(0, 10, 0, 4), MediaRowInset = new(6, 3),
+    public static readonly Thickness MediaListGap = new(0, 8, 0, 4), MediaBarGap = new(0, 10, 0, 4), MediaRowInset = new(6, 3),
         MediaDetailGap = new(10, 0, 0, 0), MediaStatusGap = new(8, 0), MediaButtonPadding = new(14, 0), MediaFrameGap = new(0, 0, 0, 6), MediaOutline = new(1),
         MediaLayoutHeadingGap = new(0, 10, 0, 4), MediaCardLeftGap = new(0, 0, 4, 8), MediaCardRightGap = new(4, 0, 0, 8);
 
@@ -368,7 +368,7 @@ internal static class DialogMetrics
         ResetAppSpacing = 8, ResetAppConfirmWidth = 150;
 
     /// <summary>The "Reset entire app" dialog: the gap above each step body, before the keep/wiped lists and above the footer.</summary>
-    public static readonly Thickness ResetAppStepGap = new(0, 10, 0, 0), ResetAppListGap = new(0, 6, 0, 0),
+    public static readonly Thickness ResetAppListGap = new(0, 6, 0, 0),
         ResetAppBackupGap = new(0, 12, 0, 0), ResetAppConfirmGap = new(0, 10, 0, 0);
 
     /// <summary>The MIDI processing window and its sibling editors (MidiParamEditors, MidiNoteMapRows, MidiPresetBars, Articulations pane/row):

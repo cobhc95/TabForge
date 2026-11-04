@@ -14,6 +14,13 @@ public static class MediaStoredPaths
     public static IEnumerable<AudioClip> AudioClips(SongProject project) =>
         project.Tracks.SelectMany(t => t.AudioClips).Where(c => !c.IsMidi && !string.IsNullOrWhiteSpace(c.File));
 
+    /// <summary>Rewrites every clip path of a private copy of a song as an absolute path, resolved against <paramref name="baseDirectory"/>.</summary>
+    public static void MakeAbsolute(SongProject project, string? baseDirectory)
+    {
+        foreach (var clip in AudioClips(project))
+            if (Resolve(clip.File, baseDirectory) is { } full) clip.File = full;
+    }
+
     /// <summary>The absolute path a stored path names (relative ones joined to <paramref name="baseDirectory"/>); null when it cannot be told (device form, relative without a base, malformed).</summary>
     public static string? Resolve(string? file, string? baseDirectory)
     {

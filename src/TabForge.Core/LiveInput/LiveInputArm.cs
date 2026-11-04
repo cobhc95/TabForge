@@ -44,9 +44,6 @@ public sealed class LiveInputArm
 
     public void SetMaster(int percent, int pan) { MasterPercent = percent; MasterPan = pan; }
 
-    /// <summary>Capture only: shows live input as on or off in every window without putting anything in the engine.</summary>
-    internal void ShowLit(bool on) { Track.RecordArm = on; Changed?.Invoke(); }
-
     public void Arm()
     {
         if (IsOn) return;

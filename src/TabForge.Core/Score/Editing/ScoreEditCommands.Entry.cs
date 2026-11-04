@@ -114,18 +114,6 @@ public sealed partial class ScoreEditCommands
         if (cell.Notes.Count == 0 || !CloseUpSelection(touched)) NormaliseRests(touched, resize: true);
     }
 
-    /// <summary>After undo / redo: the writing duration takes the value of the note or written rest under the cursor (the toolbar already shows it).</summary>
-    public void FollowCursorBeat()
-    {
-        if (ValueBeat() is not { } beat || HasSelection) return;
-        CurrentDurationDenominator = beat.DurationDenominator;
-        CurrentDots = beat.Dots;
-        CurrentTriplet = beat.IsTriplet;
-        CurrentTupletNumerator = beat.TupletNumerator;
-        CurrentTupletDenominator = beat.TupletDenominator;
-        NotifyState();
-    }
-
     /// <summary>The duration a note on a free slot takes, set as a plain or dotted value (a tuplet mark is cleared); no song edit.</summary>
     public void SetWritingDuration(int denominator, int dots)
     {
@@ -158,27 +146,6 @@ public sealed partial class ScoreEditCommands
         _writingUndo.Push(WritingNow());
     }
 
-    /// <summary>Undo right after "." or the triplet on an empty spot: the writing duration goes back; false when there is no such step (undo the document).</summary>
-    public bool UndoWritingMark()
-    {
-        if (SwapWriting(_writingUndo, _writingRedo)) return true;
-        _writingRedo.Clear();   // a song undo comes after it: Redo redoes the song, never a mark from under it
-        return false;
-    }
-
-    /// <summary>Redo of <see cref="UndoWritingMark"/>; false when the last undo was a song edit (redo the document).</summary>
-    public bool RedoWritingMark() => SwapWriting(_writingRedo, _writingUndo);
-
-    private bool SwapWriting(Stack<(int Measure, int Cell, int Denominator, int Dots, bool Triplet, int TupletNumerator, int TupletDenominator)> from, Stack<(int Measure, int Cell, int Denominator, int Dots, bool Triplet, int TupletNumerator, int TupletDenominator)> to)
-    {
-        if (!from.TryPop(out var state)) return false;
-        if (state.Measure != SelectedMeasure || state.Cell != SelectedCell || HasSelection) { ForgetWritingMarks(); return false; }
-        to.Push(WritingNow());
-        (CurrentDurationDenominator, CurrentDots, CurrentTriplet, CurrentTupletNumerator, CurrentTupletDenominator) = (state.Denominator, state.Dots, state.Triplet, state.TupletNumerator, state.TupletDenominator);
-        NotifyState(); InvalidateVisual();
-        return true;
-    }
-
     /// <summary>As GP5, the first beat of an inserted bar copies the last beat before it (a plain quarter when none comes before).</summary>
     public void WriteLikeBeatBefore(int bar) => WriteLikeBeatBefore(bar, 0);
 
@@ -192,17 +159,4 @@ public sealed partial class ScoreEditCommands
         NotifyState();
     }
 
-    /// <summary>
-    /// After Right, as GP5 (a new beat copies the beat before it): when Right leaves a note or written rest for an empty spot, the writing
-    /// duration becomes that beat's length.
-    /// </summary>
-    public void TakeLengthOfBeatLeft(TabCell? left, IReadOnlyList<TabCell> leftBar)
-    {
-        if (left is null || HasSelection || left.Notes.Count == 0 && !left.IsRest || WritingDuration.Applies(leftBar, left) && !ReferenceEquals(left, _restJustWritten)) return;
-        if (CurrentCell() is { } here && !Placeholder(here)) return;
-        var length = (left.DurationDenominator, left.Dots, left.IsTriplet, left.TupletNumerator, left.TupletDenominator);
-        if ((CurrentDurationDenominator, CurrentDots, CurrentTriplet, CurrentTupletNumerator, CurrentTupletDenominator) == length) return;   // nothing new for the toolbars
-        (CurrentDurationDenominator, CurrentDots, CurrentTriplet, CurrentTupletNumerator, CurrentTupletDenominator) = length;
-        NotifyState();
-    }
 }

@@ -65,8 +65,6 @@ public static class InstrumentPlaybackLists
     public const double DefaultHoldMs = 2600;
     /// <summary>Movements read past the preview horizon, so the lists reach as far.</summary>
     public const int HorizonExtraMovements = 2;
-    /// <summary>How many upcoming movements the panes preview when the caller gives no horizon.</summary>
-    public const int DefaultPreviewHorizon = 6;
 
     /// <summary>
     /// Fills <paramref name="target"/> for the song time <paramref name="nowMs"/>. <paramref name="notes"/> is one track's canonical

@@ -93,7 +93,7 @@ public sealed partial class TabStripView : UserControl
         // The strip is transparent so the title row's chrome colour shows behind it; tabs start 8 px in and hang from the top edge.
         BuildScroller();
         var row = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(8, 0, 0, 0), Children = { _left, _scroll, _right, add } };
-        _dropHighlight = new Border { Name = "TabDropHighlight", IsVisible = false, IsHitTestVisible = false, BorderThickness = new Thickness(DropHighlightBorder), CornerRadius = new CornerRadius(8) };
+        _dropHighlight = new Border { Name = "TabDropHighlight", IsVisible = false, IsHitTestVisible = false, BorderThickness = new Thickness(DropHighlightBorder), CornerRadius = new CornerRadius(ChromeMetrics.RadiusXLarge) };
         _dropHighlight[!Border.BorderBrushProperty] = new DynamicResourceExtension("AccentBrush");
         _dropHighlight[!Border.BackgroundProperty] = new DynamicResourceExtension("AccentSoftBrush");
         _insertMarker = new Rectangle { Name = "TabInsertMarker", IsVisible = false, IsHitTestVisible = false, Width = DropMarkerWidth, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };

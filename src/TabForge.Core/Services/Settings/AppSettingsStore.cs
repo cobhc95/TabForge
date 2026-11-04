@@ -49,9 +49,6 @@ public sealed class AppSettingsStore : IDisposable
         public void Dispose() { lock (_sharedGate) SharedState.Current = previous; }
     }
 
-    /// <summary>App exit: writes a pending debounced save now. Does nothing when the store was never created (headless runs).</summary>
-    internal static void FlushShared() => SharedState.Current?.Flush();
-
     private static AppSettingsStore CreateDefault()
     {
         var store = Open(DefaultPath, TimeSpan.FromMilliseconds(400));
@@ -149,9 +146,6 @@ public sealed class AppSettingsStore : IDisposable
         Settings = settings;
         Changed?.Invoke(source);
     }
-
-    /// <summary>The user reviewed and applied settings after a failed load: from now on they replace the unreadable file.</summary>
-    public void AcceptCurrentAsReplacement() => LoadFailed = false;
 
     /// <summary>
     /// Something changed <see cref="Settings"/>: save after <see cref="SaveDelay"/>, and tell the other windows unless <paramref name="notifyObservers"/> is false

@@ -17,13 +17,6 @@ internal static class SlowTrace
     private const string Area = "ui";
     private static long _lastZoom;
 
-    /// <summary>A timeline zoom step happened now: frame gaps are watched for the next second.</summary>
-    /// <summary>The trace area every slow-path line goes to.</summary>
-    internal const string TraceArea = Area;
-
-    /// <summary>Milliseconds since the last timeline zoom step at <paramref name="now"/> (a Stopwatch timestamp).</summary>
-    internal static double MsSinceZoom(long now) => Stopwatch.GetElapsedTime(Volatile.Read(ref _lastZoom), now).TotalMilliseconds;
-
     public static void ZoomStep() { if (Trace.IsOn(Area)) Volatile.Write(ref _lastZoom, Stopwatch.GetTimestamp()); }
 
     /// <summary>Times the work until disposal; logs it with a short caller chain when it took at least <paramref name="thresholdMs"/>.</summary>

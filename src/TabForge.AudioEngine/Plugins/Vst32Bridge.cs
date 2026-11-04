@@ -65,9 +65,6 @@ public static class Vst32Bridge
         (IsWineVst3Candidate(spec, sixtyFourBit: true) && WineBridgeSupport.Available64) ||
         (IsWineVst3Candidate(spec, sixtyFourBit: false) && WineBridgeSupport.Available);
 
-    /// <summary>True for a 32-bit Windows VST2 PE on Linux, whether or not the Wine bundle is present (the launch owns the refusal).</summary>
-    public static bool IsWineCandidate(PluginSpec spec) => IsWine32Candidate(spec);
-
     /// <summary>True for a 32-bit Windows VST2 PE on Linux, whether or not the Wine bundle is present.</summary>
     public static bool IsWine32Candidate(PluginSpec spec) => OperatingSystem.IsLinux() && Is32BitVst2(spec);
 

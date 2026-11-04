@@ -57,38 +57,6 @@ public static class SectionLayout
             sorted[i].LengthBars = Math.Max(1, End(sorted, i, barCount) - Math.Clamp(sorted[i].MeasureIndex, 0, barCount));
     }
 
-    /// <summary>
-    /// Bars where a section may start when moved as a block (plain drag): it keeps its length and may only
-    /// slide through free (unsectioned) bars, never over its neighbours. Null when it cannot move at all.
-    /// </summary>
-    public static (int Min, int Max)? MoveRange(SongProject project, MarkerModel marker)
-    {
-        var barCount = BarRangeEditor.MaxMeasures(project);
-        var sorted = Sorted(project);
-        var index = sorted.IndexOf(marker);
-        if (index < 0 || barCount <= 0 || marker.LockPosition) return null;
-        var start = Math.Clamp(marker.MeasureIndex, 0, barCount);
-        var length = Math.Max(1, End(sorted, index, barCount) - start);
-        var min = index > 0 ? End(sorted, index - 1, barCount) : 0;
-        var max = (index + 1 < sorted.Count ? sorted[index + 1].MeasureIndex : barCount) - length;
-        return max >= min && (min < start || max > start) ? (min, max) : null;
-    }
-
-    /// <summary>
-    /// Moves a section as a block (plain drag): same length, only into free bars, bars themselves untouched.
-    /// The space it leaves becomes a gap; neighbours keep their own length (they do not grow into it).
-    /// </summary>
-    public static bool MoveMarker(SongProject project, MarkerModel marker, int bar)
-    {
-        if (MoveRange(project, marker) is not var (min, max)) return false;
-        var target = Math.Clamp(bar, min, max);
-        if (target == marker.MeasureIndex) return false;
-        Freeze(project); // explicit lengths: nobody widens into the vacated bars
-        marker.MeasureIndex = target;
-        Normalize(project);
-        return true;
-    }
-
     /// <summary>Drops lengths that just reach the next section (or the end), keeping saved files minimal.</summary>
     public static void Normalize(SongProject project)
     {

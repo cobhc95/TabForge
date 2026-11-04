@@ -208,7 +208,7 @@ public sealed class MainWindowSettingsTests : IDisposable
         Assert.NotNull(settings.Settings);
         var window = new MainWindow(settings);
         window.Show();
-        // N1: the fallback notice appears on the single top bar (the first visible notice); bottom rows stay hidden tombstones.
+        // N1: the fallback notice appears on the single top bar (the first visible notice); bottom rows stay hidden.
         var notice = window.GetLogicalDescendants().OfType<StatusNoticeBarView>().First(v => v.IsVisible);
         Assert.True(notice.IsVisible);
         var text = notice.GetLogicalDescendants().OfType<TextBlock>().First(t => t.Name == "NoticeText").Text ?? "";

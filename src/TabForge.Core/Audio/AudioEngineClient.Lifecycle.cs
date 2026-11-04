@@ -93,8 +93,12 @@ public sealed partial class AudioEngineClient
         }
         Volatile.Write(ref _lastAlive, Stopwatch.GetTimestamp());
         new Thread(() => ReadEvents(pipe)) { IsBackground = true, Name = "TabForge engine events" }.Start();
-        var timer = new Timer(_ => CheckLiveness(pipe, process), null, 1000, 1000);
-        Interlocked.Exchange(ref _liveness, timer)?.Dispose();
+        // Under the gate Cleanup also holds, so a Stop that ran meanwhile cannot leave a timer nobody disposes.
+        lock (_sendGate)
+        {
+            if (!ReferenceEquals(pipe, _pipe)) return;
+            Interlocked.Exchange(ref _liveness, new Timer(_ => CheckLiveness(pipe, process), null, 1000, 1000))?.Dispose();
+        }
     }
 
     private const int ConnectTimeoutMs = 8000;
@@ -232,9 +236,9 @@ public sealed partial class AudioEngineClient
             foreach (var panel in _panelAsked.Values) panel.Asked.TrySetResult("The audio engine stopped before the control panel was shown.");   // a pending ShowAsioPanelAsync must not wait for a reply that cannot come
             _panelAsked.Clear();
         }
-        Interlocked.Exchange(ref _liveness, null)?.Dispose();
         lock (_sendGate)
         {
+            Interlocked.Exchange(ref _liveness, null)?.Dispose();
             _queued = null;
             try { _pipe?.Dispose(); } catch (IOException) { } // swallow: pipe dispose during teardown: the pipe may already be closed.
             _pipe = null;

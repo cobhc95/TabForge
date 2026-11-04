@@ -20,7 +20,7 @@
   <ItemGroup Condition="'$(TargetFramework)'=='net10.0'">
     <Compile Remove="Services\Video\VideoEncoder.cs;Services\Video\VideoEncoder.Writer.cs;Services\Video\VideoEncoder.Finalize.cs;Platform\Windows\*.cs" />
     <Compile Remove="Services\Video\DxgiRegionGrabber.cs;Services\Video\DesktopRegionGrabber.cs" />
-    <Compile Remove="Audio\WindowsMidiLatency.cs;Audio\WindowsPathOffset.cs" />
+    <Compile Remove="Audio\WindowsPathOffset.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Platform\Theme\Looks\*.json" />

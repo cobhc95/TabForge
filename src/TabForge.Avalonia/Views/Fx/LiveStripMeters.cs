@@ -36,8 +36,6 @@ public sealed class LiveStripMeters : Control
     public double InputFraction => _inFraction;
     public double OutputFraction => _outFraction;
     public double InputHold => _holdFraction;
-    public MeterTone InputTone => _inTone;
-    public MeterTone OutputTone => _outTone;
 
     /// <summary>Shows one frame of levels (linear peaks, 0..1+) at <paramref name="nowMs"/>; allocates nothing and repaints only when a bar moved.</summary>
     public void Update(double inputPeak, double outputPeak, double nowMs)

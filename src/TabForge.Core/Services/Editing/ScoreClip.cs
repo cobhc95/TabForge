@@ -7,7 +7,7 @@ using TabForge.Models;
 
 namespace TabForge.Services;
 
-/// <summary>What a clip holds (docs/specs/COPY_PASTE_DESIGN.md 3.1), decided at copy time.</summary>
+/// <summary>What a clip holds, decided at copy time.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<ScoreClipKind>))]
 public enum ScoreClipKind
 {

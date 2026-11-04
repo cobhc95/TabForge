@@ -15,6 +15,7 @@ using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Presenters;
 using TabForge.Services;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views;
 
@@ -107,7 +108,7 @@ public sealed partial class PreferencesWindow
     {
         var block = new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center };
         block[!TextBlock.ForegroundProperty] = new DynamicResourceExtension(accent ? "OnAccentBrush" : "TextMuted");
-        var border = new Border { CornerRadius = new CornerRadius(6), Child = block, VerticalAlignment = VerticalAlignment.Center };
+        var border = new Border { CornerRadius = new CornerRadius(ChromeMetrics.RadiusLarge), Child = block, VerticalAlignment = VerticalAlignment.Center };
         border[!Border.BackgroundProperty] = new DynamicResourceExtension(accent ? "AccentBrush" : "Panel2Brush");
         return border;
     }

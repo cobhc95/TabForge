@@ -28,10 +28,6 @@ public enum ReplaceFileChoice { Replace, KeepBoth, Cancel }
 /// <summary>The wording of the questions the save flow asks that no dialog class owns.</summary>
 public static class SaveFlowText
 {
-    /// <summary>{0} is the existing file's name.</summary>
-    public const string ReplaceFullCopy = "{0} already exists. Replace it with this song's full TabForge copy?";
-    public const string ReplaceButton = "Replace";
-    public const string KeepBothButton = "Keep both";
     /// <summary>A save or export was asked for while another one is still running (its dialogs included).</summary>
     public const string AlreadySaving = "Already saving…";
 }

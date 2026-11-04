@@ -19,7 +19,7 @@ namespace TabForge.Avalonia.Platform;
 /// text boxes, combo boxes, list boxes and separators. Every window inherits these; Core looks only add the hover, pressed, selected and disabled states on top
 /// (AvaloniaDefaultLooks gives plain controls their look class), and the field colours of Fluent's own states are replaced through AvaloniaPalette.FluentFieldBrushNames.
 /// Owns: those base setters for the Avalonia app. Does not own: the state looks (AvaloniaLooks), the brushes (AvaloniaPalette).
-/// Tests: TabForge.Avalonia.Tests.ParityShotsTests (A/B renders of the dialogs that use these controls), PreferencesControlHoverTests.
+/// Tests: TabForge.Avalonia.Tests.PreferencesControlHoverTests.
 /// Size: over 300 lines because every shared form control's base look is one ordered style list; the Settings field rules sit with the others.
 /// </summary>
 public static partial class AvaloniaFormControlStyles
@@ -52,11 +52,6 @@ public static partial class AvaloniaFormControlStyles
     // Every field and button is 24 DIP high with a 1 DIP margin; buttons pad 8,3, text boxes 5,3, combo boxes 6,2, list rows 5,3.
     private const double ControlMinHeight = 24;
     private static readonly Thickness ControlMargin = new(1);
-    private static readonly Thickness ButtonPadding = new(8, 3, 8, 3);
-    private static readonly Thickness TextBoxPadding = new(5, 3, 5, 3);
-    private static readonly Thickness ComboBoxPadding = new(6, 2, 6, 2);
-    private static readonly Thickness ListBoxItemPadding = new(5, 3, 5, 3);
-    private static readonly Thickness TabHeaderPadding = new(12, 0, 12, 0);
     private const double TabHeaderFontSize = 13, TabHeaderHeight = 34, TabHeaderAccentWidth = 2;
     // A list row sits 4 DIP inside the pane edge, so its selected tile is inset and rounded.
     private static readonly Thickness ListBoxItemMargin = new(4, 0);

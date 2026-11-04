@@ -331,7 +331,7 @@ public sealed class InsertMenuTests : IDisposable
 
     private static MenuItem Item(MainWindow main, string id) => main.GetLogicalDescendants().OfType<MenuItem>().Single(m => (m.Tag as string) == id);
 
-    private static IReadOnlyList<MainMenuRow> RowsOf(string menu) => MainMenuTable.WithFeatureRows().Where(g => g.Menu == menu).SelectMany(g => g.Rows).ToList();
+    private static IReadOnlyList<MainMenuRow> RowsOf(string menu) => MainMenuTable.Groups.Where(g => g.Menu == menu).SelectMany(g => g.Rows).ToList();
 
     [AvaloniaFact]
     public void TheMenuBarIsElevenMenusInOrderWithoutSoundAndSections()
@@ -351,7 +351,7 @@ public sealed class InsertMenuTests : IDisposable
     {
         var main = new MainWindow();
         main.Show();
-        var ids = MainMenuTable.CommandRows(MainMenuTable.WithFeatureRows().Where(g => g.Menu == "_Insert")).Select(r => r.CommandId!).ToList();
+        var ids = MainMenuTable.CommandRows(MainMenuTable.Groups.Where(g => g.Menu == "_Insert")).Select(r => r.CommandId!).ToList();
         Assert.All(ids, id => Assert.True(main.CommandTable.Handles(id), id));
         Assert.All(ids, id => Assert.True(Item(main, id).IsEnabled, id));
         main.Close();
@@ -389,7 +389,7 @@ public sealed class InsertMenuTests : IDisposable
     [Fact]
     public void EachCommandIsInTheMenusOnceAndTheMovedRowsLiveWhereTheyWereMoved()
     {
-        var all = MainMenuTable.CommandRows(MainMenuTable.WithFeatureRows()).Select(r => r.CommandId!).ToList();
+        var all = MainMenuTable.CommandRows(MainMenuTable.Groups).Select(r => r.CommandId!).ToList();
         Assert.Equal(all.Count, all.Distinct().Count());
         var moved = new (string Id, string Menu)[]
         {
@@ -399,7 +399,7 @@ public sealed class InsertMenuTests : IDisposable
             ("Section.Add", "_Insert"), ("Note.Chord", "_Insert"), ("Note.Text", "_Insert"), ("Edit.InsertBeat", "_Insert"), ("Track.Add", "_Insert"), ("Bar.Insert", "_Insert"), ("Tool.composition:tempo", "_Insert"),
             ("View.LearnMode", "_View"), ("View.CompactMode", "_View"), ("Tools.PresetManager", "_Tools"),
         };
-        foreach (var (id, menu) in moved) Assert.Contains(id, MainMenuTable.CommandRows(MainMenuTable.WithFeatureRows().Where(g => g.Menu == menu)).Select(r => r.CommandId));
+        foreach (var (id, menu) in moved) Assert.Contains(id, MainMenuTable.CommandRows(MainMenuTable.Groups.Where(g => g.Menu == menu)).Select(r => r.CommandId));
         var gone = new[] { "Transport.PlayPause", "Transport.PlayFromStart", "Transport.Metronome", "Transport.CountIn", "Options.Stylesheet" };
         Assert.All(gone, id => Assert.DoesNotContain(id, all));
     }
@@ -407,7 +407,7 @@ public sealed class InsertMenuTests : IDisposable
     [Fact]
     public void EveryMenuCommandIsCataloguedSoItIsInThePaletteAndTheShortcutList()
     {
-        var all = MainMenuTable.CommandRows(MainMenuTable.WithFeatureRows()).Select(r => r.CommandId!).ToList();
+        var all = MainMenuTable.CommandRows(MainMenuTable.Groups).Select(r => r.CommandId!).ToList();
         Assert.All(all, id => Assert.NotNull(HotkeyCatalog.ById(id)));
     }
 

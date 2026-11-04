@@ -209,8 +209,6 @@ public sealed class MidiPresetBars
 
     /// <summary>The rows of the processor drop-down as (text, is built-in); the closed box shows <see cref="ProcessorShown"/>.</summary>
     internal IReadOnlyList<(string Text, bool BuiltIn)> Listed => ProcessorBox.Items.OfType<Entry>().Skip(1).Where(i => !i.Manage).Select(i => (i.Text, i.BuiltInParams is not null)).ToList();
-    internal string ProcessorShown => (ProcessorBox.SelectedItem as Entry)?.Text ?? "";
-    internal void PickProcessorRow(string text) => ProcessorBox.SelectedItem = ProcessorBox.Items.OfType<Entry>().First(i => i.Text == text);
 
     private void FillProcessor()
     {

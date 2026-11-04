@@ -400,10 +400,6 @@ public sealed partial class BandTrackPanel : Border
         ApplyPlacement();
     }
 
-    /// <summary>Takes the window's fretboard menu on the card's board, naming this card's own track in it.</summary>
-    internal void AttachInstrumentMenu(FretboardContextMenu menu, Action? findScale) =>
-        menu.Attach(Instrument, () => Instrument.Kind, findScale, () => _track);
-
     /// <summary>The card's fretboard toggle button (a test clicks it); the icon is its content.</summary>
     internal Button FretboardButton => _fretboardToggle;
 

@@ -180,7 +180,7 @@ public sealed partial class MixerWindow
             var item = new MenuItem
             {
                 Header = name, ToggleType = MenuItemToggleType.CheckBox, IsChecked = string.Equals(hex, current, StringComparison.OrdinalIgnoreCase),
-                Icon = new Border { Width = 14, Height = 14, CornerRadius = new CornerRadius(3), Background = SwatchBrush(hex) },
+                Icon = new Border { Width = 14, Height = 14, CornerRadius = new CornerRadius(ChromeMetrics.RadiusSmall), Background = SwatchBrush(hex) },
             };
             item.Click += (_, _) => apply(hex);
             menu.Items.Add(item);
@@ -327,14 +327,6 @@ public sealed partial class MixerWindow
     {
         if (_dragMoving is not null) { _dragMoving.RenderTransform = null; _dragMoving.ZIndex = 0; _dragMoving.Opacity = 1; }
         _dragHandle = null; _dragMoving = null; _dragArmed = false;
-    }
-
-    /// <summary>Test seam: moves the dragged panel like PointerMoved without a pointer (counts visual moves, never rebuilds).</summary>
-    internal void SimulateDragVisual(Control moving, double dy)
-    {
-        if (moving.RenderTransform is not TranslateTransform shift) moving.RenderTransform = shift = new TranslateTransform();
-        shift.Y = dy; shift.X = 0;
-        DragVisualMoves++;
     }
 
     private double TopOf(Control element) => element.TranslatePoint(default, _groups)?.Y ?? 0;

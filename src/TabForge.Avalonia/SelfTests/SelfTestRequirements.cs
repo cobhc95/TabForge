@@ -18,7 +18,7 @@ namespace TabForge;
 /// (enforced by <c>Skip(..., name)</c> in their tests) and "all" (every skip is a failure).
 ///
 /// "ci" is an alias for the groups every gate must run: gp-fixtures, synthetic-fixtures, source-hygiene, installer-parity, fuzz, architecture.
-/// windows-ci.yml, release.yml, tools/Package-Release.ps1 and REBUILD.cmd pass only "--require ci".
+/// release.yml, tools/Package-Release.ps1 and REBUILD.cmd pass only "--require ci".
 ///
 /// Registering a test into a group (the whole API):
 ///   Guard-style call in SelfTest.Run:   GuardGroup("fuzz", TestMalformedInputFuzz);
@@ -160,7 +160,7 @@ public static partial class SelfTest
     {
         var root = FindRepositoryRoot();
         if (root is null) { Skip("--require argument strings in CI, release and REBUILD scripts", "no source checkout found", "source-hygiene"); return; }
-        var ciFiles = new[] { @".github\workflows\windows-ci.yml", @".github\workflows\release.yml", @"Source\tools\Package-Release.ps1", @"Source\tools\REBUILD.cmd" };
+        var ciFiles = new[] { @".github\workflows\release.yml", @"Source\tools\Package-Release.ps1", @"Source\tools\REBUILD.cmd" };
         var pattern = new Regex(@"--require[\s'""|,@(]+([A-Za-z][A-Za-z0-9,;\-]*)");
         foreach (var rel in ciFiles)
         {
@@ -176,7 +176,7 @@ public static partial class SelfTest
             Check($"{rel}: does not hand-write the CI group list (--require ci names it)",
                 !text.Contains("gp-fixtures,synthetic-fixtures", StringComparison.Ordinal), "found a literal list of the CI groups");
         }
-        foreach (var rel in new[] { @".github\workflows\fuzz-weekly.yml", @".github\workflows\build-bridge.yml" })
+        foreach (var rel in new[] { @".github\workflows\build-bridge.yml" })
         {
             var path = Path.Combine(root, rel);
             if (!File.Exists(path)) continue;

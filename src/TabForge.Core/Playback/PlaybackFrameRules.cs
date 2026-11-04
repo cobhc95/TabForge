@@ -29,9 +29,6 @@ public sealed class PlaybackFrameRules
     /// <summary>While it plays, every frame draws what is heard now: the scheduler reports on a song-time grid coarser than the display.</summary>
     public static bool DrawsLiveClock(bool isPlaying, bool isPaused) => isPlaying && !isPaused;
 
-    /// <summary>The shown bar for a played bar: the remap entry when it has one, else the bar itself.</summary>
-    public static int RemapBar(int[]? remap, int bar) => remap is not null && bar >= 0 && bar < remap.Length ? remap[bar] : bar;
-
     /// <summary>
     /// Song position being heard: the scheduler position minus the output latency. The latency is wall-clock time and the timeline is
     /// already compiled at the playback speed, so it converts at the clock rate (speed trainer) only.

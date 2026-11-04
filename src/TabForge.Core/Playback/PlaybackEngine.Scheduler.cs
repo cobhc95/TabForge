@@ -10,7 +10,7 @@ using TempoMath = TabForge.Audio.Contracts.TempoMath;
 
 namespace TabForge.Playback;
 
-// Owns: the scheduler loop that sends timed events, the playhead and audible position, section and skip ranges, the trainer tempo rate and the loop bounds.
+// Owns: the scheduler loop that sends timed events, the playhead and audible position, section ranges, the trainer tempo rate and the loop bounds.
 // Does not own: compiling the timeline (ScoreToMidiCompiler.cs) or the output port (PlaybackEngine.MidiOut.cs, PlaybackEngine.Scheduler.Output.cs).
 // Tests: TestNoHangingNotes.
 
@@ -35,23 +35,6 @@ public sealed partial class PlaybackEngine : IDisposable, IPlaybackEngine
         return list;
     }
 
-    private (double Start, double End)[] SkipMs(ScoreTimeline timeline)
-    {
-        var bars = Volatile.Read(ref _skipBars);
-        if (bars.Length == 0) return Array.Empty<(double, double)>();
-        var cache = _skipCache;
-        if (ReferenceEquals(cache.Timeline, timeline) && ReferenceEquals(cache.Bars, bars)) return cache.Ms;
-        var list = new List<(double, double)>();
-        foreach (var bar in timeline.Bars)
-        {
-            if (!bars.Any(r => bar.Bar >= r.Item1 && bar.Bar <= r.Item2)) continue;
-            if (list.Count > 0 && Math.Abs(list[^1].Item2 - bar.StartMs) < 0.5) list[^1] = (list[^1].Item1, bar.EndMs);
-            else list.Add((bar.StartMs, bar.EndMs));
-        }
-        var ms = list.ToArray();
-        _skipCache = (timeline, bars, ms);
-        return ms;
-    }
     private double TrainerRate(int loopsDone)
     {
         var s = Preferences.Loop;
@@ -123,16 +106,14 @@ public sealed partial class PlaybackEngine : IDisposable, IPlaybackEngine
         }
     }
 
-    /// <summary>How far ahead of the clock events may be sent: the dispatch lead, cut at the loop end, the next section's count-in, a skip and a pending arrangement swap.</summary>
-    private double DispatchHorizon(double ms, bool loopEnabled, double loopEndMs, List<double>? sectionMs, int nextSection, (double Start, double End)[] skips)
+    /// <summary>How far ahead of the clock events may be sent: the dispatch lead, cut at the loop end, the next section's count-in and a pending arrangement swap.</summary>
+    private double DispatchHorizon(double ms, bool loopEnabled, double loopEndMs, List<double>? sectionMs, int nextSection)
     {
         var horizon = ms + DispatchLeadMs;
         // Never send notes past the loop end: they belong to the bar after the loop.
         if (loopEnabled) horizon = Math.Min(horizon, loopEndMs - 0.001);
         if (sectionMs is not null && nextSection < sectionMs.Count && sectionMs[nextSection] > ms)
             horizon = Math.Min(horizon, sectionMs[nextSection] - 0.001); // hold notes of the next section until after its count-in
-        foreach (var (skipStart, skipEnd) in skips)
-            if (skipStart > ms) { horizon = Math.Min(horizon, skipStart - 0.001); break; }
         lock (_gate)
         {
             if (_arrangementRefreshRequested && ms < _arrangementRefreshBoundaryMs)

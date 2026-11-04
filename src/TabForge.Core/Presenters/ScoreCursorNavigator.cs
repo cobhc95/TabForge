@@ -75,31 +75,4 @@ public static class ScoreCursorNavigator
     /// <summary>The last written beat of the last bar, as GP5.</summary>
     public static CursorTarget LastBar(IBarCursorStops stops) => new(stops.MeasureCount - 1, stops.LastWritten(stops.MeasureCount - 1));
 
-    /// <summary>The next beat with notes in <paramref name="direction"/> and the string to land on; null when there is none.</summary>
-    public static (CursorTarget Target, int String)? EnteredNote(IBarCursorStops stops, int measure, int cell, int stringIndex, int direction)
-    {
-        var m = measure; var c = cell;
-        for (var guard = 0; guard < 4096; guard++)
-        {
-            if (direction > 0)
-            {
-                c++;
-                if (c > stops.LastCell(m)) { m++; c = 0; }
-                if (m >= stops.MeasureCount) return null;
-            }
-            else
-            {
-                c--;
-                if (c < 0) { m--; if (m < 0) return null; c = stops.LastCell(m); }
-            }
-            var cells = m < stops.MeasureCount ? stops.Cells(m) : Array.Empty<TabCell>();
-            if (m < stops.MeasureCount && c < cells.Count && cells[c].Notes.Count > 0)
-            {
-                var note = cells[c].Notes.OrderByDescending(n => n.StringIndex).FirstOrDefault(n => n.StringIndex == stringIndex)
-                           ?? cells[c].Notes.First();
-                return (new(m, c), note.StringIndex);
-            }
-        }
-        return null;
-    }
 }

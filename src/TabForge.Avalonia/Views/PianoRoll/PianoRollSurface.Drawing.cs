@@ -305,15 +305,6 @@ public sealed partial class PianoRollSurface
         d.DrawText(text, x, (GridTop - text.Height) / 2);
     }
 
-    /// <summary>The lane header's title: the Program lane also names the instrument in force at its last point (the General MIDI name).</summary>
-    internal string LaneTitle()
-    {
-        if (LaneId != PianoRollControllers.Program) return PianoRollControllers.NameOf(LaneId);
-        var value = _points.Count == 0 ? PianoRollControllers.Centre(LaneId)
-            : PianoRollControllers.ValueAt(_points, LaneId, _points[_points.Count - 1].Beat);
-        return $"{PianoRollControllers.NameOf(LaneId)} {value} {GeneralMidi.NameOf(value)}";
-    }
-
     private void DrawLane(IDrawContext d, double width)
     {
         var header = _laneHeaderHover ? Colours.Get("HoverBrush") : Colours.Get("Panel2Brush");

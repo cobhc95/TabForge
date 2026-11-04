@@ -302,23 +302,6 @@ public sealed class LiveInputSession : IDisposable
         catch (Exception ex) { Trace.Error(Trace.Engine, "live input: plug-in states: " + ex.Message); }   // logged: a state read failure must not end the turn-off
     }
 
-    /// <summary>
-    /// The window has closed with live input on. The last window reads the chain's plug-in states (waiting at most the limit) and saves
-    /// it; with another window open live input stays on and that window's close does it.
-    /// </summary>
-    public void SaveStatesOnClose(bool lastWindow)
-    {
-        var track = _arm.Track;
-        try
-        {
-            if (lastWindow) _midi.Stop();
-            if (!lastWindow || !IsOn || track.Rig.Plugins.Count == 0 || !_host.Engine.IsRunning) return;
-            _host.Engine.CollectStates(new[] { track }, StateTimeoutMs);
-            SaveChain();
-        }
-        catch (Exception ex) { Trace.Error(Trace.Engine, "live input: plug-in states on close: " + ex.Message); }   // logged: closing must go on
-    }
-
     /// <summary>Opens the live FX chain window without changing the armed state.</summary>
     public void OpenFx()
     {

@@ -184,13 +184,6 @@ public static partial class ProjectService
     }
 
     // The loop-group to separate-takes migration lives in ProjectService.TakeGroups.cs (partial) to keep this file within its size budget.
-    /// <summary>The JSON text of a .tforge file, gzip or legacy plain (diagnostics and tests).</summary>
-    internal static string ReadJsonText(string path)
-    {
-        var bytes = File.ReadAllBytes(path);
-        if (bytes.Length >= 2 && bytes[0] == 0x1F && bytes[1] == 0x8B) bytes = GunzipBounded(bytes);
-        return System.Text.Encoding.UTF8.GetString(bytes);
-    }
 
     /// <summary>Decompresses a gzip .tforge, refusing anything that expands past the project size limit.</summary>
     internal static byte[] GunzipBounded(byte[] data, long maxBytes = InputLimits.MaxTforgeFileBytes)
@@ -238,19 +231,6 @@ public static partial class ProjectService
         using var sink = new HashingLimitStream(Stream.Null, long.MaxValue);
         SerializeChunked(sink, project, HashOptions);
         return sink.Finish();
-    }
-
-    /// <summary>Self-test: the JSON of one beat cell as the disk form writes it.</summary>
-    internal static byte[] MeasureCell(TabCell cell) => JsonSerializer.SerializeToUtf8Bytes(cell, DiskOptions);
-
-    /// <summary>Diagnostics (`--import-measure`): the JSON size of the project in the disk form (every property) and in the compact in-memory form.</summary>
-    internal static (long Full, long Compact) MeasureJsonBytes(SongProject project)
-    {
-        using var full = new HashingLimitStream(Stream.Null, long.MaxValue, hash: false);
-        SerializeChunked(full, project, DiskOptions);
-        using var compact = new HashingLimitStream(Stream.Null, long.MaxValue, hash: false);
-        SerializeChunked(compact, project, CompactOptions);
-        return (full.Length, compact.Length);
     }
 
     public static string Snapshot(SongProject project)

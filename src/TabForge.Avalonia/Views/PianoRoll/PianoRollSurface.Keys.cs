@@ -159,13 +159,12 @@ public sealed partial class PianoRollSurface
 
     private static PianoRollTool? ToolOf(Key key) => key switch
     {
-        // 26 Oct: Select and Draw merged into the Edit tool (key 1); the keys renumbered. Retired (tombstone): 2 Draw, 3 Erase, 4 Split, 5 Mute, 6 Glue.
+        // 26 Oct: Select and Draw merged into the Edit tool (key 1); the keys renumbered.
         Key.D1 or Key.NumPad1 => PianoRollTool.Select,
         Key.D2 or Key.NumPad2 => PianoRollTool.Erase,
         Key.D3 or Key.NumPad3 => PianoRollTool.Split,
         Key.D4 or Key.NumPad4 => PianoRollTool.Mute,
         Key.D5 or Key.NumPad5 => PianoRollTool.Glue,
-        // Retired 26 Oct (tombstone): key 7 picked the Velocity tool; Alt-drag a note or drag its velocity bar instead.
         _ => null,
     };
 }

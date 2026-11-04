@@ -60,6 +60,4 @@ public sealed class KeyboardModeResult
 
     public bool IsResolved => Grade != KeyboardModeGrade.Pending;
     public bool IsHit => Grade is KeyboardModeGrade.Perfect or KeyboardModeGrade.Good;
-    public bool IsEarly => Grade == KeyboardModeGrade.Good && OffsetMs < 0;
-    public bool IsLate => Grade == KeyboardModeGrade.Good && OffsetMs > 0;
 }

@@ -30,20 +30,10 @@ public static class TrackPropertiesPresenter
         return null;
     }
 
-    public static string PositionError(int trackCount) => $"Track number must be 1–{trackCount + 1}.";
-
     private static bool InRange(string text, int min, int max) => int.TryParse(text, out var v) && v >= min && v <= max;
 
     /// <summary>A blank name keeps the track's name; a typed one is trimmed.</summary>
     public static string ResolvedName(string typed, string current) => string.IsNullOrWhiteSpace(typed) ? current : typed.Trim();
-
-    /// <summary>Drum kits live on channel 9; leaving a kit while 9 is typed returns to the track's own melodic channel, or 0.</summary>
-    public static string ChannelAfterInstrument(bool isDrumKit, string typedChannel, int trackChannel)
-    {
-        if (isDrumKit) return "9";
-        if (typedChannel.Trim() == "9") return trackChannel != 9 ? trackChannel.ToString() : "0";
-        return typedChannel;
-    }
 
     public static int Step(int midi, int delta) => Math.Clamp(midi + delta, LowestNote, HighestNote);
 

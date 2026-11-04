@@ -15,8 +15,6 @@ public sealed class TimelineSettings
     public double TrackListWidth { get; set; } = 532;
     /// <summary>The arrangement timeline's horizontal zoom (1 = the standard bar width); see <see cref="TimelineZoomRules"/>.</summary>
     public double ZoomFactor { get; set; } = TimelineZoomRules.DefaultFactor;
-    /// <summary>Clicking the tuning-fork icon opens the global tuning window (otherwise the type-in box).</summary>
-    public bool TuningIconOpensWindow { get; set; } = true;
     public bool ShowSectionNames { get; set; } = true;
     public bool ShowBarNumbers { get; set; } = true;
     public bool SectionDragAnimation { get; set; } = true;
@@ -24,14 +22,6 @@ public sealed class TimelineSettings
     public bool ShowSectionBrackets { get; set; } = true;
     /// <summary>Give sections with the same base name ("Verse 1" / "Verse 2") the same colour.</summary>
     public bool MatchSimilarSectionColours { get; set; } = true;
-    /// <summary>Order of the arrangement track-control columns (null = default order).</summary>
-    public List<string>? TrackColumnOrder { get; set; }
-    /// <summary>Track columns hidden from the track list (only "volume" and "pan" can be hidden; set in the Mixer).</summary>
-    public List<string> HiddenTrackColumns { get; set; } = new();
-    /// <summary>Widths of the fixed-width track-control columns by id (null = defaults).</summary>
-    public Dictionary<string, double>? TrackColumnWidths { get; set; }
-    /// <summary>Width of the whole track-controls area; 0 = default.</summary>
-    public double TrackControlsWidth { get; set; }
     /// <summary>Resize the track list / arrangement panel to fit all rows when tracks or groups change.</summary>
     public bool AutoFitTrackList { get; set; } = true;
     /// <summary>Height of a track row in the track list and timeline (px). 30 is the default and the minimum; dragging the track list's splitter stretches it (up to 90) while auto-fit is on.</summary>

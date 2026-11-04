@@ -41,7 +41,6 @@ public sealed record FileDialogOptions
 {
     public string? Title { get; init; }
     public string? Filter { get; init; }
-    public int? FilterIndex { get; init; }
     public string? InitialDirectory { get; init; }
     public string? FileName { get; init; }
     public string? DefaultExt { get; init; }

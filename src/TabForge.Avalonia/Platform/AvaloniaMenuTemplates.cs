@@ -19,7 +19,7 @@ namespace TabForge.Avalonia.Platform;
 //   caption padding, the gesture column and its text, the submenu arrow, the popup offsets and the popup border. The item's root border is named
 //   PART_LayoutRoot so the AvaloniaLooks rules of the MenuItem look (hover, disabled) paint it.
 // Does not own: the menu rows (Core), the item colours (the look table), the separator rule (AvaloniaFormControlStyles), or the menu's handlers.
-// Tests: TabForge.Avalonia.Tests.ContextMenuTests and the menu-* and context-* A/B shots (ParityShotsTests).
+// Tests: TabForge.Avalonia.Tests.ContextMenuTests.
 public static class AvaloniaMenuTemplates
 {
     // Tick column of a menu item (App.xaml "icon" presenter): 6 DIP left, 2 DIP right, 14 DIP minimum width.
@@ -33,7 +33,6 @@ public static class AvaloniaMenuTemplates
     private const string RadioGlyph = "●";
     // Header padding of a menu item (App.xaml MenuItem Padding). A top-level header keeps the item's top and bottom padding and takes
     // TopLevelSideInset on both sides instead, so its label sits centred in the shade (the gesture and arrow columns hold no space for it).
-    private static readonly Thickness ItemPadding = new(8, 5, 10, 5);
     private const double TopLevelSideInset = 8;
     // Gesture text (shortcut) column: 11 DIP text, 10 DIP from the right edge.
     private const double GestureFontSize = 11;

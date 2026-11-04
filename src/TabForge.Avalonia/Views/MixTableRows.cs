@@ -6,6 +6,7 @@ using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Presenters;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views;
 
@@ -43,8 +44,8 @@ internal static class MixTableRows
     {
         check.Width = DialogMetrics.MixToggleWidth; check.VerticalAlignment = VerticalAlignment.Center;
         editor.WithMargin(DialogMetrics.MixEditorMargin);
-        var tint = new Border { IsHitTestVisible = false, Opacity = 0.12, CornerRadius = new CornerRadius(4), [!Border.BackgroundProperty] = new DynamicResourceExtension("AccentBrush") };
-        var bar = new Border { Width = DialogMetrics.MixBarWidth, CornerRadius = new CornerRadius(2), IsHitTestVisible = false, [!Border.BackgroundProperty] = new DynamicResourceExtension("AccentBrush") }.WithMargin(DialogMetrics.MixBarMargin);
+        var tint = new Border { IsHitTestVisible = false, Opacity = 0.12, CornerRadius = new CornerRadius(ChromeMetrics.RadiusMedium), [!Border.BackgroundProperty] = new DynamicResourceExtension("AccentBrush") };
+        var bar = new Border { Width = DialogMetrics.MixBarWidth, CornerRadius = new CornerRadius(ChromeMetrics.RadiusTiny), IsHitTestVisible = false, [!Border.BackgroundProperty] = new DynamicResourceExtension("AccentBrush") }.WithMargin(DialogMetrics.MixBarMargin);
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("3,Auto,*,Auto"), MinHeight = DialogMetrics.MixRowMinHeight }.WithMargin(DialogMetrics.MixRowGap);
         Grid.SetColumnSpan(tint, 4);
         Grid.SetColumn(check, 1); Grid.SetColumn(editor, 2); Grid.SetColumn(readout, 3);

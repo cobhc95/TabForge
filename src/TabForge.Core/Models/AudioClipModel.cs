@@ -251,14 +251,6 @@ public static class ClipLanes
         return changed;
     }
 
-    /// <summary>Lane play button: plain click plays only this lane (of those with clips), Ctrl+click toggles it.</summary>
-    public static void ClickPlay(TrackModel track, int lane, bool add)
-    {
-        Ensure(track, lane + 1);
-        if (add) { track.Lanes[lane].Plays = !track.Lanes[lane].Plays; return; }
-        for (var i = 0; i < track.Lanes.Count; i++) track.Lanes[i].Plays = i == lane;
-    }
-
     /// <summary>Removes empty lanes at the bottom (keeps one while armed).</summary>
     public static void Trim(TrackModel track)
     {

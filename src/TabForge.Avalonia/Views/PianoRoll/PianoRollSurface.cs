@@ -90,8 +90,6 @@ public sealed partial class PianoRollSurface : Control
     internal Action? ViewChanged { get; set; }
     internal Action? SelectionChanged { get; set; }
     internal Action<string>? Report { get; set; }
-    /// <summary>The lane header's name was clicked: the view offers the lanes (velocity, CC, pitch bend).</summary>
-    internal Action? LaneMenuRequested { get; set; }
     /// <summary>True when the track has more lanes than velocity (a MIDI track): the lane picker's controller rows are enabled (on a tab track they stay disabled).</summary>
     internal bool LanePicker { get; set; }
 
@@ -99,7 +97,6 @@ public sealed partial class PianoRollSurface : Control
     internal double GridLeft => KeyStripSize;   // one width for piano keys and note names: switching modes never shifts the grid
     /// <summary>The key strip's width in both modes (piano keys: black keys ~62% of it; note names: the name at the right edge).</summary>
     internal const double KeyStripSize = 116;
-    internal const double NamesSize = KeyStripSize;
 
     /// <summary>The key strip shows note names (drum names on a drum track) instead of piano keys (TrackModel.PianoRollNoteNames).</summary>
     internal bool NoteNames

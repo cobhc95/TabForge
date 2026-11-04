@@ -52,8 +52,6 @@ public sealed class PlaybackTransport : IDisposable
     public bool IsPaused => _engine.IsPaused;
     public bool Loop => _loop.On;
 
-    /// <summary>The loop as last pushed (<see cref="ApplyLoop"/>).</summary>
-    public PlaybackLoop LoopState => _loop;
     public bool Metronome => _metronome;
     public bool CountIn => _countIn;
     /// <summary>The relative playback speed the song plays at; DefaultSpeed is the song's own tempo.</summary>

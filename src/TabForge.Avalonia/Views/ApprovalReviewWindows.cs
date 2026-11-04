@@ -10,6 +10,7 @@ using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using TabForge.Plugins;
 using TabForge.Services;
+using TabForge.Avalonia.Views.Dialogs;
 
 namespace TabForge.Avalonia.Views;
 
@@ -166,14 +167,14 @@ public sealed class PluginReviewWindow : Window
             list.Children.Add(box);
         }
 
-        var allow = new Button { Name = "AllowSelectedButton", Content = AllowSelectedText, Padding = new Thickness(12, 3, 12, 3), Margin = new Thickness(0, 0, 6, 0), IsDefault = true };
+        var allow = new Button { Name = "AllowSelectedButton", Content = AllowSelectedText, Padding = DialogMetrics.ActionButtonPadding, Margin = new Thickness(0, 0, 6, 0), IsDefault = true };
         allow.Click += (_, _) =>
         {
             var chosen = boxes.Where(b => b.Box.IsChecked == true).Select(b => b.Path).ToList();
             Close();
             if (chosen.Count > 0) approve(chosen);
         };
-        var keep = new Button { Name = "KeepDisabledButton", Content = KeepDisabledText, Padding = new Thickness(12, 3, 12, 3), IsCancel = true };
+        var keep = new Button { Name = "KeepDisabledButton", Content = KeepDisabledText, Padding = DialogMetrics.ActionButtonPadding, IsCancel = true };
         keep.Click += (_, _) => Close();
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 10, 0, 0) };
         buttons.Children.Add(allow);

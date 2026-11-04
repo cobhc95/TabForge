@@ -131,21 +131,6 @@ public static class MediaAccess
             if (!clip.IsMidi && !string.IsNullOrEmpty(clip.File)) _ = Classified(clip.File, context.BaseDirectory);
     }
 
-    /// <summary>Tests: waits until no background classification is queued or running.</summary>
-    internal static bool WaitResolved(int timeoutMs)
-    {
-        var watch = System.Diagnostics.Stopwatch.StartNew();
-        while (watch.ElapsedMilliseconds < timeoutMs)
-        {
-            if (Queued.IsEmpty && Volatile.Read(ref _resolverRunning) == 0) return true;
-            Thread.Sleep(5);
-        }
-        return false;
-    }
-
-    /// <summary>Forgets remembered classifications (a changed file system, or a test that swaps <see cref="MediaPathPolicy.FileSystem"/>).</summary>
-    public static void ClearCache() => Cache.Clear();
-
     /// <summary>
     /// True when the folder of <paramref name="v"/> was approved for this song: a saved song by an approval stored for exactly its path,
     /// an unsaved song by its own session's approvals. An approval with an empty path (written before unsaved songs had their own scope)

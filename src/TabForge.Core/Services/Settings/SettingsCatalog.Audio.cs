@@ -205,8 +205,6 @@ public static partial class SettingsCatalog
             Choice(Audio, "Metronome", "audio.metrodivision", "Metronome subdivisions", v => au.MetronomeSubdivision = int.Parse(v), () => au.MetronomeSubdivision.ToString(),
                 new[] { "1", "2", "3", "4" }, "Clicks per beat: 1 = quarter notes, 2 = eighths, 3 = triplets, 4 = sixteenths.", "beat subdivision triplet", dependsOn: "audio.metronome"),
 
-            // Tombstone: "timeline.volumestyle" and "timeline.panstyle" (Slider / Knob) are hidden until knob controls are built;
-            // AudioSettings.VolumeKnobs and PanKnobs are kept.
 
             Bool(Timeline, "Track controls", "timeline.autofit", "Auto-resize track list to fit", v => timeline.AutoFitTrackList = v, () => timeline.AutoFitTrackList,
                 "Grow or shrink the track list / arrangement panel so every track and group row fits, when tracks are added or removed and when groups are shown, hidden, collapsed or expanded.", "track list height fit resize groups collapse auto"),

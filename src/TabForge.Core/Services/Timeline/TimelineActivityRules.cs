@@ -68,13 +68,4 @@ public static class TimelineActivityRules
         return new Activity(notes, beats, rests, measure.Cells.Count, notes > 0, miniature.ToArray());
     }
 
-    /// <summary>Opacity of a lane element: <paramref name="normal"/>, moving to <paramref name="silenced"/> as the muted-track dimming setting rises.</summary>
-    public static double FadeBy(double normal, double silenced, double dim) => normal + (silenced - normal) * Math.Clamp(dim, 0, 1);
-
-    /// <summary>The colour moved toward its luma grey by <paramref name="amount"/>, fully opaque.</summary>
-    public static UiColor Desaturate(UiColor c, double amount)
-    {
-        var g = 0.3 * c.R + 0.59 * c.G + 0.11 * c.B;
-        return new UiColor(255, (byte)(c.R + (g - c.R) * amount), (byte)(c.G + (g - c.G) * amount), (byte)(c.B + (g - c.B) * amount));
-    }
 }

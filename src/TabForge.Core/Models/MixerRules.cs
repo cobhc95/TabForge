@@ -151,18 +151,6 @@ public static class MixerRules
         DropStaleChoices(project);
     }
 
-    /// <summary>Sets the app-wide rules (the caller saves the settings) and makes this song follow them (renames carry over).</summary>
-    public static void ApplyAppWide(MixerAppRules app, SongProject project, List<MixerGroupDef> groups, string fallback, IReadOnlyDictionary<string, string>? renamed = null)
-    {
-        var isDefault = fallback == DefaultFallback && SameAs(groups, Defaults());
-        app.Groups = isDefault ? null : groups.Select(g => g.Clone()).ToList();
-        app.Fallback = fallback == DefaultFallback ? null : fallback;
-        project.Mixer.App = app;
-        ApplyRenames(project, renamed);
-        project.Mixer.Rules = null; project.Mixer.Fallback = null;
-        DropStaleChoices(project);
-    }
-
     /// <summary>"Reset to app rules": the song drops its own rules and follows the app-wide ones.</summary>
     public static void ResetToApp(SongProject project)
     {

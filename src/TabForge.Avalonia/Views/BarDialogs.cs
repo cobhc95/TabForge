@@ -12,6 +12,7 @@ using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using TabForge.Presenters;
 using TabForge.Avalonia.Views.Dialogs;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views;
 
@@ -190,7 +191,7 @@ public sealed class MarkerWindow : BarDialogWindow<MarkerAnswer>
             Orientation = Orientation.Horizontal, Spacing = 8,
             Children =
             {
-                new Border { Width = 14, Height = 14, CornerRadius = new CornerRadius(3), VerticalAlignment = VerticalAlignment.Center, Background = Color.TryParse(hex, out var colour) ? new SolidColorBrush(colour) : Brushes.Transparent },
+                new Border { Width = 14, Height = 14, CornerRadius = new CornerRadius(ChromeMetrics.RadiusSmall), VerticalAlignment = VerticalAlignment.Center, Background = Color.TryParse(hex, out var colour) ? new SolidColorBrush(colour) : Brushes.Transparent },
                 new TextBlock { Text = name, VerticalAlignment = VerticalAlignment.Center },
             },
         },

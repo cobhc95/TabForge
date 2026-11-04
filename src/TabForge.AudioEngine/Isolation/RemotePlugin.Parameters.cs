@@ -8,9 +8,6 @@ namespace TabForge.AudioEngine.Isolation;
 // Tests: ClapProtocolTests (wire round trip).
 public sealed partial class RemotePlugin : IPluginParameters
 {
-    /// <summary>The most parameters one reply carries (the reply must stay under the control frame limit).</summary>
-    internal const int MaxWireParameters = PluginParameterWire.MaxCount;
-
     public IReadOnlyList<PluginParameterInfo> GetParameters()
     {
         var data = Ask(CmdListParams, null, MsgParams, 5000);

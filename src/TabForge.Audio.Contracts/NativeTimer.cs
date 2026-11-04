@@ -22,9 +22,6 @@ public static class NativeTimer
     /// <summary>Current number of holders (the resolution is raised while it is above zero).</summary>
     public static int Holds { get { lock (Gate) return _holds; } }
 
-    /// <summary>True while this process holds the 1 ms resolution.</summary>
-    public static bool Raised { get { lock (Gate) return _raised; } }
-
     public static void Acquire()
     {
         lock (Gate)

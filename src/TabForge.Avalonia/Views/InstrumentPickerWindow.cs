@@ -12,6 +12,7 @@ using TabForge.Platform;
 using TabForge.Presenters;
 using TabForge.Services;
 using TabForge.Avalonia.Views.Dialogs;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views;
 
@@ -35,7 +36,7 @@ public sealed class InstrumentPickerWindow : Window
     private readonly InstrumentPickerPresenter _presenter;
     private readonly Action<string>? _onPreview;
     private readonly IUiThread _ui = AvaloniaUiThread.ForApplication();
-    private readonly TextBox _search = new() { Watermark = InstrumentPickerPresenter.SearchHint, Margin = new Thickness(0, 0, 0, 10), FontSize = 14 };
+    private readonly TextBox _search = new() { Watermark = InstrumentPickerPresenter.SearchHint, Margin = new Thickness(0, 0, 0, 10), FontSize = ChromeMetrics.TextEmphasis };
     // Tiles built so far, by catalogue index. Refresh shows or hides each one by the search.
     private readonly Dictionary<int, Border> _tileByIndex = new();
     // Tiles not built yet, in family order, each with the panel it joins.
@@ -157,7 +158,7 @@ public sealed class InstrumentPickerWindow : Window
     {
         var tile = new Border
         {
-            Padding = new Thickness(4, 6, 4, 6), Margin = new Thickness(3), CornerRadius = new CornerRadius(6), Background = AvaloniaPalette.TransparentBrush,
+            Padding = new Thickness(4, 6, 4, 6), Margin = new Thickness(3), CornerRadius = new CornerRadius(ChromeMetrics.RadiusLarge), Background = AvaloniaPalette.TransparentBrush,
             Child = new StackPanel
             {
                 Width = TileWidth,
@@ -165,7 +166,7 @@ public sealed class InstrumentPickerWindow : Window
                 {
                     new InstrumentBadgeView(BadgeSize) { Entry = InstrumentCatalog.Find(_presenter.Entries[index].Name) },
                     new TextBlock { Text = _presenter.Entries[index].Name, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center,
-                        FontSize = 11, Margin = new Thickness(0, 4, 0, 0), MaxHeight = TileNameMaxHeight },
+                        FontSize = ChromeMetrics.TextSmall, Margin = new Thickness(0, 4, 0, 0), MaxHeight = TileNameMaxHeight },
                 },
             },
         };

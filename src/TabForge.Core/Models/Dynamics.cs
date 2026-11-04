@@ -50,9 +50,6 @@ public static class Dynamics
         return best;
     }
 
-    /// <summary>Nearest dynamic name (ppp..fff) for a velocity, used by export.</summary>
-    public static string NearestName(int velocity) => Names[NearestIndex(velocity)];
-
     /// <summary>The velocity playback and export use for a note (always 1..127).</summary>
     public static int Clamp(int velocity) => Math.Clamp(velocity, 1, MidiLimits.Max);
 }

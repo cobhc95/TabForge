@@ -96,9 +96,6 @@ internal static class PianoRollToolbarLayout
         return row;
     }
 
-    /// <summary>The flexible space between a row's left and right ends.</summary>
-    public static Border Flex() => new() { MinWidth = 0 };
-
     /// <summary>Gives a toolbar button the shared height, least width, corner and centred content.</summary>
     public static T StyleButton<T>(T button) where T : Button
     {

@@ -113,7 +113,6 @@ public static partial class SettingsCatalog
                 FretStringSpacings.All,
                 "How far apart the strings are drawn relative to the fret width. Natural keeps real-fretboard proportions in any window shape; Wide stretches up to 1.5x natural.",
                 "fretboard string spacing stretch compact natural wide tall portrait"),
-            // Tombstone: "audio.fretboardstyle" (Fretboard style, 5 layouts) is hidden until the layouts are built; AudioSettings.FretboardStyle is kept.
             Int(Fretboard, "Preview", "editing.horizon", "Look-ahead notes", v => ed.PreviewHorizon = v, () => ed.PreviewHorizon, 1, 10,
                 "Number of upcoming notes to display (not on the drum map).", "horizon preview upcoming", dependsOn: "editing.horizon.enabled"),
             Choice(Fretboard, "Preview", "editing.scale", "Scale highlight", v => ed.ScaleHighlight = v == "Off" ? null : v,

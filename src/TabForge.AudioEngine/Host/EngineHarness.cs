@@ -74,9 +74,6 @@ public static partial class EngineHost
         /// <summary>The engine's song transport (position, tempo, bar map), as the command reader thread writes it.</summary>
         public static Mixing.SongTransport SongTransport => _session.Transport;
 
-        /// <summary>One song owner's transport (0 .. <see cref="SongOwners.Max"/> - 1).</summary>
-        public static Mixing.SongTransport TransportOf(int owner) => _session.Transports[owner];
-
         /// <summary>Feeds one command frame through the engine's reader-side parser; false when it was dropped as malformed.</summary>
         public static bool Command(EngineCommand type, Action<BinaryWriter> payload)
         {
@@ -86,9 +83,6 @@ public static partial class EngineHost
             using var r = new BinaryReader(body);
             return HandleFrame((byte)type, r);
         }
-
-        /// <summary>Armed track slots (SetArm).</summary>
-        public static int ArmedCount => _session.Arms.Count;
 
         public static NullOutput? Output => _session.Player as NullOutput;
         public static MixEngine? Mix => _session.Mix;

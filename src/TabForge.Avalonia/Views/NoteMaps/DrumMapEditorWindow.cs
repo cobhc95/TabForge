@@ -14,6 +14,8 @@ using TabForge.Avalonia.Views.Presets;
 using TabForge.Plugins;
 using TabForge.Presenters;
 using TabForge.Services;
+using TabForge.Platform.Theme;
+using TabForge.Avalonia.Views.Dialogs;
 
 namespace TabForge.Avalonia.Views.NoteMaps;
 
@@ -276,7 +278,7 @@ public sealed class DrumMapEditorWindow : Window
         ToolTip.SetTip(box, $"The note your instrument receives when the song plays {note} {piece} (0 to 127; x: not sent)");
         var heard = new TextBlock { VerticalAlignment = VerticalAlignment.Center };
         var arrow = new TextBlock { Text = "→", VerticalAlignment = VerticalAlignment.Center };
-        var border = new Border { Padding = new Thickness(6, 2, 6, 2), CornerRadius = new CornerRadius(3) };
+        var border = new Border { Padding = new Thickness(6, 2, 6, 2), CornerRadius = new CornerRadius(ChromeMetrics.RadiusSmall) };
         border.Child = Cells(new Thickness(6, 0, 6, 0), Plain(piece), Plain($"{note}  {MusicTheoryService.NoteName(note)}"), arrow, box, heard);
         var row = new SendRow(note, box, heard, border);
         _sends.Add(row);
@@ -353,7 +355,7 @@ public sealed class DrumMapEditorWindow : Window
 
     private static Button Push(string text, string tip)
     {
-        var button = new Button { Content = text, Padding = new Thickness(10, 3, 10, 3), Margin = new Thickness(6, 0, 0, 0) };
+        var button = new Button { Content = text, Padding = DialogMetrics.ActionButtonPadding, Margin = new Thickness(6, 0, 0, 0) };
         ToolTip.SetTip(button, tip);
         return button;
     }

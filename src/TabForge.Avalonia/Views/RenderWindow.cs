@@ -193,7 +193,7 @@ public sealed class RenderWindow : Window
 
     private StackPanel BuildButtons()
     {
-        var video = new Button { Name = "Video", Content = "Video (MP4)…", Padding = new Thickness(14, 4, 14, 4), Margin = new Thickness(0, 0, 8, 0) };
+        var video = new Button { Name = "Video", Content = "Video (MP4)…", Padding = DialogMetrics.ActionButtonPadding, Margin = new Thickness(0, 0, 8, 0) };
         ToolTip.SetTip(video, "Export the song as an MP4 video instead");
         video.Click += (_, _) => { Close(); _openVideoExport?.Invoke(); };
         _cancel.Content = CancelLabel;

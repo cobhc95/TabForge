@@ -21,9 +21,6 @@ public sealed class FontProvider
 
     private volatile bool _bundled = !OperatingSystem.IsWindows();
 
-    /// <summary>True while the bundled set is in use.</summary>
-    public bool IsBundled => _bundled;
-
     /// <summary>Takes the stored source (empty or unknown = the default of this operating system); true when the set in use changed.</summary>
     public bool Configure(string? source)
     {
@@ -38,9 +35,6 @@ public sealed class FontProvider
 
     /// <summary>The stored source for a choice text.</summary>
     public static string SourceOf(string? choice) => string.Equals(choice, SourceChoices[1], StringComparison.Ordinal) ? BundledSource : WindowsSource;
-
-    /// <summary>The interface typeface in use.</summary>
-    public string Sans => _bundled ? BundledSans : WindowsSans;
 
     /// <summary>The fixed-width typeface in use.</summary>
     public string Mono => _bundled ? BundledMono : WindowsMono;

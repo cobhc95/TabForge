@@ -11,6 +11,7 @@ using Avalonia.Media;
 using TabForge.Avalonia.Platform;
 using TabForge.Presenters;
 using TabForge.Services;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views;
 
@@ -48,7 +49,7 @@ internal sealed class TrackStringRow : Grid
         _speaker = Speaker(index);
         _speaker.IsCheckedChanged += (_, _) => { if (!_syncing) loop(index); };
         Line = new Rectangle { Name = $"StringLine{index}", VerticalAlignment = VerticalAlignment.Center, RenderTransform = _shake };
-        _hoverLight = new Border { Name = $"StringHover{index}", IsVisible = false, IsHitTestVisible = false, Opacity = HoverLightOpacity, CornerRadius = new CornerRadius(3),
+        _hoverLight = new Border { Name = $"StringHover{index}", IsVisible = false, IsHitTestVisible = false, Opacity = HoverLightOpacity, CornerRadius = new CornerRadius(ChromeMetrics.RadiusSmall),
             [!Border.BackgroundProperty] = new DynamicResourceExtension("AccentBrush") };
         _glow = new Border { Name = $"StringGlow{index}", Opacity = 0, IsHitTestVisible = false, VerticalAlignment = VerticalAlignment.Center, CornerRadius = new CornerRadius(GlowHeight / 2),
             Height = GlowHeight, Effect = new BlurEffect { Radius = GlowBlur }, [!Border.BackgroundProperty] = new DynamicResourceExtension("AccentBrush") };

@@ -76,24 +76,6 @@ public static class NoteTimeline
     }
 
     /// <summary>
-    /// Notes that have finished within <paramref name="holdMs"/> of <paramref name="ms"/>, newest first
-    /// (a bounded "recent" trace for the fretboard), capped at <paramref name="maxCount"/>.
-    /// </summary>
-    public static List<NoteEvent> RecentlyEnded(NoteEvent[] notes, double ms, double holdMs, int maxCount)
-    {
-        var result = new List<NoteEvent>();
-        var index = FirstIndexAfter(notes, ms) - 1;
-        for (var i = index; i >= 0 && result.Count < maxCount; i--)
-        {
-            var n = notes[i];
-            if (n.EndMs > ms) continue;
-            if (ms - n.EndMs > holdMs) break;
-            result.Add(n);
-        }
-        return result;
-    }
-
-    /// <summary>
     /// True when any note starts or ends inside the half-open window (fromMs, toMs]. A start counts with the same tolerance as
     /// <see cref="SoundingAt"/>, so a note that query already counts at <paramref name="toMs"/> is never missed.
     /// </summary>

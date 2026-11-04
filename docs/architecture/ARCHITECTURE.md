@@ -1,7 +1,7 @@
 # Architecture
 
 TabForge is a notation-first composition workstation (C# / .NET 10, Windows x64) with an audio path: built-in General
-MIDI synth, VST2/VST3 hosting, recording, clips, mixing and offline render. Five projects; one UI process, plus the audio
+MIDI synth, VST2/VST3 hosting, recording, clips, mixing and offline render. Four projects plus the test project; one UI process, plus the audio
 engine process and optional per-plug-in hosts.
 
 "By design" means the code is written to that rule and reviewed against it. It is proven only where a self-test is named.
@@ -10,8 +10,8 @@ engine process and optional per-plug-in hosts.
 
 | Project | Contents | Depends on |
 | --- | --- | --- |
-| `Source/src/TabForge.Core` | UI-framework-free logic (626 .cs files): song model, playback scheduling, audio routing rules, plug-in catalogue and rules, presets, rendering inputs, services without UI-framework types, presenters (window state and commands that a view drives, `Presenters/`, 104 files) | TabForge.AlphaTab 1.8.4-tabforge.4 (alphaTab 1.8.4 with four patches: per-import .gp3/.gp4/.gp5 bar limit, exact gpif mixer volume/balance, gpif trill speed, .gp3-.gp5 link marks without a partner note; source in `Source/vendor/alphatab`); `Source/src/TabForge.Audio.Contracts` (targets `net10.0` and `net10.0-windows`; the Windows-only files listed in its csproj build only for `net10.0-windows`; no UI-framework or app types) |
-| `Source/src/TabForge.Avalonia` | Avalonia 11 preview: `App` (Fluent theme, the Core palette and look styles) and `MainWindow` (94 `MainWindow*.cs` partials, composed in `MainWindow.Compose.cs`); 524 .cs + 5 .axaml source files; test project `TabForge.Avalonia.Tests` | Avalonia packages, `TabForge.Core` |
+| `Source/src/TabForge.Core` | UI-framework-free logic: song model, playback scheduling, audio routing rules, plug-in catalogue and rules, presets, rendering inputs, services without UI-framework types, presenters (window state and commands that a view drives, `Presenters/`, 104 files) | TabForge.AlphaTab 1.8.4-tabforge.4 (alphaTab 1.8.4 with four patches: per-import .gp3/.gp4/.gp5 bar limit, exact gpif mixer volume/balance, gpif trill speed, .gp3-.gp5 link marks without a partner note; source in `Source/vendor/alphatab`); `Source/src/TabForge.Audio.Contracts` (targets `net10.0` and `net10.0-windows`; the Windows-only files listed in its csproj build only for `net10.0-windows`; no UI-framework or app types) |
+| `Source/src/TabForge.Avalonia` | Avalonia 11 preview: `App` (Fluent theme, the Core palette and look styles) and `MainWindow` (a small partial class composed in `MainWindow.Compose.cs`; most `MainWindow*.cs` files are separate classes); C# plus 5 .axaml source files; test project `TabForge.Avalonia.Tests` | Avalonia packages, `TabForge.Core` |
 | `Source/src/TabForge.Audio.Contracts` | Wire contracts: `EngineProtocol` (commands, events, framing, records), `RenderProtocol`, `SharedBlock` (shared-memory layout) | none; targets `net10.0` and `net10.0-windows` (the Windows-only pieces are `net10.0-windows` only, see its folder README) |
 | `Source/src/TabForge.AudioEngine` | Audio output, mixer, track chains, VST2/VST3 hosting, MIDI processors, recorder, clip player, GM synth, offline renderer, isolated plug-in host, native bridges | NAudio 2.2.1, MeltySynth 2.4.1, SoundTouch.Net 2.3.2, native `tfvst3.dll`, native `tfvst32.exe` |
 
@@ -344,7 +344,7 @@ sounding-note queries -> `NoteTimeline`; file beat placement -> `GuitarProImport
 `Isolation/RemotePlugin.cs`.
 
 Guarantees (by design, with the tests that cover them where they exist):
-- The headless suite (`--selftest`; it was gated by the upstream windows-ci workflow, historical: this checkout has no CI config) covers score, timeline, playback, file-format and
+- The headless suite (`--selftest`) covers score, timeline, playback, file-format and
   security logic, including a synthetic `.gp` export-import fixture. It does not exercise real devices, real plug-ins or the running UI.
 - Untrusted inputs are bounded (files, JSON depth, IPC frames, zip inflate). A malformed peer or file is rejected, not trusted.
 - Only the pipes are user-restricted; shared memory uses default ACLs.

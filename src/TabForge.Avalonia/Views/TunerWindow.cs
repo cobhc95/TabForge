@@ -124,9 +124,9 @@ public sealed class TunerWindow : Window
     {
         for (var i = names.Count - 1; i >= 0; i--)
         {
-            var label = new TextBlock { Text = names[i], FontSize = 15, Padding = new Thickness(8, 3, 8, 3) };
+            var label = new TextBlock { Text = names[i], FontSize = ChromeMetrics.TextHeading, Padding = new Thickness(8, 3, 8, 3) };
             label[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
-            var box = new Border { CornerRadius = new CornerRadius(4), BorderThickness = new Thickness(2), Margin = new Thickness(3, 0, 3, 0), Child = label, Tag = i, BorderBrush = _idleBrush };
+            var box = new Border { CornerRadius = new CornerRadius(ChromeMetrics.RadiusMedium), BorderThickness = new Thickness(2), Margin = new Thickness(3, 0, 3, 0), Child = label, Tag = i, BorderBrush = _idleBrush };
             _strings.Children.Add(box);
         }
         _appliedIndex = int.MinValue;   // the new boxes carry only the idle brush; the next Highlight paints them

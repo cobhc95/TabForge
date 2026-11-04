@@ -100,7 +100,7 @@ public sealed class EditingSettings
     public bool FillBarsWithRests { get; set; } = true;
     /// <summary>When deleting notes with the rest fill on: false leaves a rest of the same length, true leaves merged rests.</summary>
     public bool MergeRestsOnDelete { get; set; } = true;
-    /// <summary>Remembered paste answers (docs/specs/COPY_PASTE_DESIGN.md Q1..Q5): "Ask" (default) or an option id, see <see cref="PasteQuestionInfo"/>.</summary>
+    /// <summary>Remembered paste answers: "Ask" (default) or an option id, see <see cref="PasteQuestionInfo"/>.</summary>
     public string PasteBeatsOntoNotes { get; set; } = PasteQuestionInfo.Ask;
     public string PasteOctave { get; set; } = PasteQuestionInfo.Ask;
     public string PasteBarsOntoNotes { get; set; } = PasteQuestionInfo.Ask;

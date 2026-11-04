@@ -25,9 +25,6 @@ public sealed partial class FxChainWindow
     /// <summary>The generic parameter panel (visible while it shows).</summary>
     public FxParameterPanel ParameterPanel => _parameters.Panel;
 
-    /// <summary>Whether the Parameters button is down.</summary>
-    public bool ParametersDown => _parametersDown;
-
     private void WireParameters()
     {
         _parametersButton.Click += (_, _) =>

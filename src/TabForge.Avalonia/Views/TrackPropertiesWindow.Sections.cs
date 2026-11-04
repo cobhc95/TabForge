@@ -12,6 +12,7 @@ using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Documents;
 using TabForge.Models;
 using TabForge.Services;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views;
 
@@ -30,7 +31,7 @@ public sealed partial class TrackPropertiesWindow
     private const string DrumNotationHint = ".gp5 file drum map: GM numbers on the TAB. .gp6/.gp7 file drum map: kit abbreviations (BD, SD, HH…). "
         + "Drum tab: one line per drum with x / o. The staff uses standard drum positions in every preset; the key map above the score shows the same labels.";
     private readonly InstrumentBadgeView _chooserBadge = new(26) { Name = "ChooserBadge", Margin = new Thickness(0, 0, 8, 0) };
-    private readonly TextBlock _chooserName = new() { Name = "ChooserName", FontSize = 12, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+    private readonly TextBlock _chooserName = new() { Name = "ChooserName", FontSize = ChromeMetrics.TextBody, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center };
     private ColourButton _colour = null!;
     private readonly List<string> _recentColours = new();   // this window's picks: it has no settings to keep them in
     private CheckBox _tint = null!, _keepFrets = null!;

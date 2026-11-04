@@ -218,8 +218,6 @@ public static class WiringPresenter
         public const string SidechainInstrumentReason = "Instruments take no audio input";
         /// <summary>Reason: MIDI forwarding is for track plug-ins.</summary>
         public const string MidiOutBusReason = "MIDI forwarding is for track plug-ins";
-        /// <summary>Loop refusal dialog title.</summary>
-        public const string RefusalTitle = "Wiring";
         /// <summary>Loop refusal message format (takes the target label).</summary>
         public const string RefusalFormat = "Connecting to \"{0}\" would make a loop (sidechain / MIDI links must not lead back to this track).";
 

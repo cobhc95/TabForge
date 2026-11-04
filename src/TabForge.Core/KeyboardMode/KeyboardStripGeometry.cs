@@ -116,9 +116,6 @@ public sealed class KeyboardStripGeometry
     public double KeyWidth(int midi) => _w[Math.Clamp(midi, Lowest, Highest)];
     public double KeyCentre(int midi) => KeyX(midi) + KeyWidth(midi) / 2;
 
-    /// <summary>The y of a moment <paramref name="msAhead"/> after the song time (0 is the strip's top, larger is higher up).</summary>
-    public double YAhead(double msAhead) => StripTop - msAhead * PxPerMs;
-
     /// <summary>The key's own outline as polygon points (from the top left, clockwise): a black key's rectangle, or a white key's rectangle minus the black keys over it. Returns the count (at most 8); <paramref name="points"/> needs 8 slots.</summary>
     public int KeyOutline(int midi, Span<UiPoint> points)
     {

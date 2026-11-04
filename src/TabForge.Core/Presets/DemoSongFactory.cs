@@ -4,7 +4,7 @@ using TabForge.Services;
 namespace TabForge.Presets;
 
 // Owns: the precision demo song used by the verification tests and by --gendemo.
-// Does not own: the full demo song (FullDemoSong) and the diagnostic songs (DiagnosticSongFactory).
+// Does not own: the full demo song (FullDemoSong).
 // Tests: no dedicated test class.
 
 /// <summary>

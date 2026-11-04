@@ -24,8 +24,6 @@ public readonly struct Ticks : IEquatable<Ticks>, IComparable<Ticks>
 
     public static readonly Ticks Zero = new(0, 1);
 
-    public static Ticks FromWhole(long ticks) => new(ticks, 1);
-
     private static long Gcd(long a, long b)
     {
         while (b != 0) { var next = a % b; a = b; b = next; }

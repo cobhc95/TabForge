@@ -136,13 +136,6 @@ public static class UiMetrics
     /// <summary>Opens <paramref name="menu"/> under its button, left edges aligned (the dropdown buttons' menus).</summary>
     public static void PlaceUnderLeft(ContextMenu menu) => menu.Placement = PlacementMode.BottomEdgeAlignedLeft;
 
-    /// <summary>Opens <paramref name="content"/> in a flyout to the right of <paramref name="anchor"/>, top edges aligned (the Customize Fretboard panel).</summary>
-    public static Flyout ShowBesideTop(Control anchor, Control content)
-    {
-        var flyout = new Flyout { Content = content, Placement = PlacementMode.RightEdgeAlignedTop };
-        flyout.ShowAt(anchor);
-        return flyout;
-    }
 }
 
 /// <summary>
@@ -173,7 +166,7 @@ public static class ScalePopupLayout
     /// <summary>A small caps muted section label (DETECTED, READ FROM...) with room above it.</summary>
     public static TextBlock SectionLabel(string text)
     {
-        var label = new TextBlock { Text = text, FontSize = 11, FontWeight = FontWeight.SemiBold, Margin = new Thickness(0, SectionTopGap, 0, SectionBottomGap) };
+        var label = new TextBlock { Text = text, FontSize = ChromeMetrics.TextSmall, FontWeight = FontWeight.SemiBold, Margin = new Thickness(0, SectionTopGap, 0, SectionBottomGap) };
         label[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
         return label;
     }
@@ -245,7 +238,7 @@ public static class ScalePopupLayout
 
     private static ToggleButton Skin(ToggleButton button, bool chip)
     {
-        var face = new Border { BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4) };
+        var face = new Border { BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(ChromeMetrics.RadiusMedium) };
         var text = new TextBlock { HorizontalAlignment = HorizontalAlignment.Center };
         face.Child = text;
         var plain = chip ? button.Content : null;

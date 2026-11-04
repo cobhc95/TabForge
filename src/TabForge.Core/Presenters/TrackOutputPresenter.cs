@@ -17,9 +17,6 @@ public static class TrackOutputPresenter
 
     public static string Heading(string trackName) => $"MIDI output device for {trackName}";
 
-    /// <summary>The device id a selection reports; clearing the selection (no value) reports nothing.</summary>
-    public static int? ChosenDeviceId(object? selectedValue) => selectedValue is int id ? id : null;
-
     /// <summary>The mark shown for the track's saved device when it is not connected.</summary>
     public static string MissingDeviceText(string savedName) => $"{savedName} (missing)";
 

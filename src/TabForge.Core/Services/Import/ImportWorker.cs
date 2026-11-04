@@ -74,19 +74,6 @@ public static class ImportWorker
     private const int FlagTestHang = 1, FlagMidiTracks = 2;
 
     /// <summary>
-    /// The in-process parse, used by the background import only after the user agreed for this file (the worker or its
-    /// containment could not be set up; <paramref name="reason"/> says why). The opened score carries a notice.
-    /// </summary>
-    public static SongProject ImportInProcess(string path, List<string> notices, string reason, ImportContext? context = null)
-    {
-        notices.Add($"imported inside TabForge because the protected import process could not start ({reason})");
-        context ??= new ImportContext();
-        var project = GuitarProImporter.Import(path, context);
-        context.AddNoticesTo(notices);
-        return project;
-    }
-
-    /// <summary>
     /// Imports <paramref name="path"/> in a worker process. Runs its waits on the calling thread: call it on a worker
     /// (the app's <c>ScoreOpenFlow.OpenAsync</c> runs it under <c>Task.Run</c>), never on the UI thread. Cancellation and the time budget come from the <paramref name="context"/>, through its
     /// <see cref="ImportGuard"/> (none: not cancellable, default budget). Throws <see cref="ImportWorkerUnavailableException"/> when

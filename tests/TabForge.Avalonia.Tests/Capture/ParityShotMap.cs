@@ -26,11 +26,8 @@ using TabForge.Views.EffectEditors;
 namespace TabForge.Avalonia.Tests;
 
 /// <summary>
-/// Owns: the decision for each parity.capture.json shot base (the shot name without its -dark or -light suffix): the Avalonia window or
-/// pane that renders it, the size in DIP the shot was taken at, the state it reproduces, and for every shot without a twin the reason.
-/// Does not own: the manifest (tests/parity/parity.capture.json), the rendering and the missing list (ParityShotsTests), the pixel
-/// comparison (tools/ab/compare.py).
-/// Tests: ParityShotsTests (every manifest shot must have an entry here).
+/// Owns: the window or pane behind each named shot, the size in DIP it renders at and the state it reproduces, for the shot sweep.
+/// Does not own: the rendering and the checks (ShotSweepTests).
 /// </summary>
 internal static class ParityShotMap
 {
@@ -54,7 +51,7 @@ internal static class ParityShotMap
         ("Help", "_Help", "The Help menu open, cropped to its popup."),
     };
 
-    // Key: the shot base name. Ceiling: one entry per base of parity.capture.json (74 today). Thread: built once by the static
+    // Key: the shot base name. Thread: built once by the static
     // initialiser, read-only afterwards, read on the UI thread by the tests. MenuShots is declared above so Build can read it.
     public static IReadOnlyDictionary<string, ParityEntry> Entries { get; } = Build();
 

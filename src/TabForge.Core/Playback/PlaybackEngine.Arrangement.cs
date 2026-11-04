@@ -21,8 +21,6 @@ public sealed partial class PlaybackEngine : IDisposable, IAudioGrowthRefreshHos
     private sealed record ArrangementRefresh(ScoreTimeline Timeline, double BoundaryMs, SongProject Project, SongSnapshot Snapshot);
     private sealed record LoopRefresh(ScoreTimeline Timeline, SongProject Project, int Seq, SongSnapshot Snapshot);
 
-    internal bool HasReservedArrangementRefresh { get { lock (_gate) return _arrangementRefreshRequested; } }
-
     /// <summary>
     /// Recompiles traversal after the currently playing bar using the live arrangement. The existing
     /// bar and its queued releases remain on the old timeline; the scheduler swaps at that bar's end.
@@ -134,50 +132,6 @@ public sealed partial class PlaybackEngine : IDisposable, IAudioGrowthRefreshHos
                 }
             }
             return true;
-        }
-    }
-
-    /// <summary>
-    /// Reserves the active bar's end on the calling thread before a caller starts a potentially slow audio upload.
-    /// The song copy is also taken here; all timeline compilation runs on that immutable copy.
-    /// </summary>
-    internal bool RefreshArrangementForAudioGrowth(SongProject project, int[] baseToCurrentBar)
-    {
-        var timeline = _timeline;
-        var options = _options;
-        if (!_running || timeline is null || options is null || timeline.Bars.Count == 0 || baseToCurrentBar.Length == 0) return false;
-
-        var snapshot = SongSnapshot.Take(project);
-        AudioGrowthReservation reservation;
-        lock (_gate)
-        {
-            if (!_running || !ReferenceEquals(_timeline, timeline)) return false;
-            var position = Playhead();
-            var activeBar = timeline.BarAt(Math.Min(position.ElapsedMs, timeline.TotalMs));
-            var atFinalBoundary = Math.Abs(activeBar.EndMs - timeline.TotalMs) < 0.01 &&
-                position.ElapsedMs <= timeline.TotalMs + 2.0;
-            if (activeBar.EndMs <= position.ElapsedMs && !atFinalBoundary) return false;
-
-            var sequence = ++_refreshSeq;
-            _arrangementRefreshBoundaryMs = activeBar.EndMs;
-            _arrangementRefreshRequested = true;
-            _arrangementRefreshLive = false;
-            _pendingArrangementRefresh = null;
-            _pendingLoopRefresh = null;
-            reservation = new AudioGrowthReservation(
-                Volatile.Read(ref _generation), sequence, timeline, options.Clone(), activeBar, project, snapshot);
-        }
-
-        try
-        {
-            new AudioGrowthRefreshFlow(this).Start(reservation, baseToCurrentBar.ToArray());
-            return true;
-        }
-        catch (Exception ex) // Not logged: playback path: no logging on this path
-        {
-            ((IAudioGrowthRefreshHost)this).CompleteAudioGrowthRefresh(reservation, null, null, ex.Message);
-            if (ex is OutOfMemoryException) throw;
-            return false;
         }
     }
 

@@ -15,7 +15,4 @@ public readonly record struct FretboardBoardLimits(double MaxBoardWidth, double 
     /// <summary>The realistic caps: a board at most 1180 virtual pixels wide, a string gap at most 34, an aspect of at most 14:1, and a board that clears the legend column.</summary>
     public static FretboardBoardLimits Default => new(1180, FretboardSizeRules.StringGapMaxPx, FretboardSizeRules.AspectMax, ClearsLegend: true);
 
-    /// <summary>The panel's caps: a board at most 1180 virtual pixels wide, the whole content width, and no string-gap or aspect cap
-    /// beyond the panel's own rules. An infinite <see cref="AspectMax"/> turns the aspect clamp off.</summary>
-    public static FretboardBoardLimits WpfPanel => new(1180, double.PositiveInfinity, double.PositiveInfinity, ClearsLegend: false);
 }

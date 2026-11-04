@@ -33,9 +33,6 @@ public static class SoundBankCatalog
     /// <summary>The bank an engine value names, or null for Windows GM, None and the user's own file.</summary>
     public static SoundBank? ForEngine(string? engine) => ById(SoundEngines.BankIdOf(engine));
 
-    /// <summary>Where the bank's source page is (the View licence window's Open source page button).</summary>
-    public static string SourcePageOf(SoundBank bank) => bank.SourcePage;
-
     /// <summary>The licence text the View licence window shows: a licence file beside the downloaded bank if there is one, else the embedded text.</summary>
     public static string LicenceText(SoundBank bank, string? downloadedPath = null)
     {

@@ -349,9 +349,6 @@ public sealed partial class TimelineView : Control
     public static readonly UiColor SectionLabelWhite = new(0xFF, 0xFF, 0xFF, 0xFF);
     public static readonly UiStroke SectionLabelOutline = new(ThemeColours.Blend(ThemeColours.InkDark, ThemeColours.InkLight, 0.1), 0.75);
 
-    /// <summary>The contrast the light ink must reach on the fill to be kept there (WCAG's graphics / large-text minimum); below it the dark ink is taken.</summary>
-    private const double MinLightInkContrast = 3;
-
     private const double SectionFillOpacity = 0.68;
 
     /// <summary>The opacity of a section chip's fill: the section's own colour whole on the light theme, 0.68 over the dark one.</summary>

@@ -19,6 +19,7 @@ using TabForge.Platform;
 using TabForge.Plugins;
 using TabForge.Presenters;
 using TabForge.Services;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views;
 
@@ -48,7 +49,7 @@ public sealed partial class MidiProcessingWindow : Window
     private readonly TextBox _search = new() { Name = "SearchBox", ClipToBounds = true };
     private readonly ListBox _catalog = new() { BorderThickness = DialogMetrics.PresetNoOutline, Name = "CatalogList", ClipToBounds = true };
     private readonly ListBox _list = new() { BorderThickness = DialogMetrics.PresetNoOutline, Name = "ProcessorList", ClipToBounds = true, SelectionMode = SelectionMode.Multiple };
-    private readonly TextBlock _title = new() { FontSize = 15, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap, Name = "TitleText" };
+    private readonly TextBlock _title = new() { FontSize = ChromeMetrics.TextHeading, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap, Name = "TitleText" };
     private readonly TextBlock _description = new() { TextWrapping = TextWrapping.Wrap, Name = "DescriptionText" };
     private readonly TextBlock _parameterNote = new() { TextWrapping = TextWrapping.Wrap, Name = "ParameterNote", IsVisible = false };
     private readonly StackPanel _params = new() { Name = "ParamPanel" };
@@ -67,7 +68,7 @@ public sealed partial class MidiProcessingWindow : Window
     private readonly Button _up = Btn("▲", "Move up (earlier in the chain)", "UpButton");
     private readonly Button _down = Btn("▼", "Move down (later in the chain)", "DownButton");
     private readonly Button _remove = Btn("Remove", "Remove the selected processor (Delete)", "RemoveButton");
-    private readonly TextBox _log = new() { IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, FontFamily = TabForge.Avalonia.Platform.AvaloniaFonts.Family("Consolas"), FontSize = 11, Height = 150, Name = "LogBox" };
+    private readonly TextBox _log = new() { IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, FontFamily = TabForge.Avalonia.Platform.AvaloniaFonts.Family("Consolas"), FontSize = ChromeMetrics.TextSmall, Height = 150, Name = "LogBox" };
     private readonly StackPanel _logPanel = new() { IsVisible = false, Name = "LogPanel" };
     private readonly List<string> _logLines = new();
     private readonly TextBlock _status = ToolWindowParts.Status("StatusLine");

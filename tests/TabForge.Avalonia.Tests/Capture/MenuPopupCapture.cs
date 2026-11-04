@@ -14,8 +14,7 @@ namespace TabForge.Avalonia.Tests;
 
 // Owns: opening one top-level menu of the MainWindow's main menu (MainWindowMenu) in a test and returning the open popup's content, so a
 // parity render can capture the popup itself the way the menu shot does.
-// Does not own: which menu each shot opens (ParityShotMap), the rendering and the saving of the content (ParityShotsTests).
-// Tests: ParityShotsTests.RendersTwinInTheShotThemeAndSize (every menu shot), which fails when a popup does not open.
+// Does not own: which menu each shot opens (ParityShotMap).
 internal static class MenuPopupCapture
 {
     /// <summary>The name MainWindowMenu gives the menu bar.</summary>

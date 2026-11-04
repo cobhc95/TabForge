@@ -46,7 +46,6 @@ public static partial class SettingsCatalog
             Colour(Appearance, "Interface colours", "appearance.playbackhighlightcolour", "Playback highlight colour", v => a.PlaybackHighlightColour = v, () => a.PlaybackHighlightColour,
                 "The colour of the playing notes and line when Playback highlight is Custom.", "playback highlight custom colour playing note colour", "appearance.playbackhighlight", PlaybackHighlightModes.Custom),
             // Playback look: the playing beat, the playing bar, the duration glow and the playback line (moved here from Playback & Practice).
-            // Tombstones: "follow.colour" (Playing note colour) merged into Playback highlight / Playback highlight colour above (FollowSettings.HighlightColour is kept so old files load);
             // "follow.playhead" (Playback line colour) merged there earlier. Both move once in SettingsMigration.
             Bool(Appearance, "Playback look", "follow.highlight", "Tint the playing beat", v => fv.HighlightPlayedBeat = v, () => fv.HighlightPlayedBeat,
                 "Tint the currently sounding beat.", "playing beat note highlight tint"),
@@ -97,7 +96,6 @@ public static partial class SettingsCatalog
                 "Text size in points, before the interface size setting is applied.", "font size text scale", "pt", 1, 0),
             Number(Appearance, "Typography", "appearance.iconsize", "Icon size", v => a.IconSize = v, () => a.IconSize, 10, 22,
                 "Size of toolbar and title-bar icons, in pixels.", "icon px glyph toolbar buttons", "px", 1, 0),
-            // Tombstone: "appearance.toolbaricons" (Show icons on the tool palette) is hidden; the palette is icon-only (no text-label mode exists). AppearanceSettings.ShowToolbarIcons is kept.
 
         };
     }

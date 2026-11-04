@@ -27,13 +27,6 @@ public static class MidiProcessingListPresenter
     /// <summary>A new processor goes right after the selected one, else at the end; the index is kept inside the chain.</summary>
     public static int InsertIndex(int? selectedIndex, int count) => Math.Clamp(selectedIndex is int index ? index + 1 : count, 0, count);
 
-    /// <summary>The index a processor lands on when moved by <paramref name="delta"/>, or null when the move leaves the chain.</summary>
-    public static int? MoveTarget(int from, int delta, int count)
-    {
-        var to = from + delta;
-        return from < 0 || to < 0 || to >= count ? null : to;
-    }
-
     /// <summary>Up needs a row above the selection, Down a row below it, and Remove a selection; with no selection all are off.</summary>
     public static ListButtonStates ButtonStates(int? selectedIndex, int count) => new(
         Up: selectedIndex is int up && up > 0,

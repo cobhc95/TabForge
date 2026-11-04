@@ -19,8 +19,6 @@ public sealed class ResetAppSelection
     public IReadOnlyList<ResetAppItem> Items => Plan.Items;
     public int CheckedCount => _checked.Count;
     public bool CanWipe => CheckedCount > 0;
-    public bool AllChecked => CheckedCount == Items.Count;
-    public bool NoneChecked => CheckedCount == 0;
     /// <summary>Off by default, as the owner asked.</summary>
     public bool BackUpFirst { get; set; }
 

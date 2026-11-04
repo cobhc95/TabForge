@@ -27,8 +27,6 @@ public sealed class PluginSettings
     public string SoundEngine { get; set; } = "";
     /// <summary>The user's own .sf2 file chosen with "Open your own .sf2…": its path on this computer. TabForge never copies, alters or deletes it.</summary>
     public string UserSoundFont { get; set; } = "";
-    /// <summary>Retired (kept so old files load): the engine is on by default and no rule switches it on or off any more.</summary>
-    public bool AutoPlayThroughEngine { get; set; } = true;
     /// <summary>True while "play the whole song through the engine" is on because the automatic rule turned it on (not the user): only then does removing the last plug-in (without ASIO) turn it off again.</summary>
     public bool PlayAllSetAutomatically { get; set; }
     /// <summary>App-wide monitoring effects chain (speaker / room calibration), used by every song that keeps "Use for all projects" ticked. Live output only: never rendered or exported.</summary>

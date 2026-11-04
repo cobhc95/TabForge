@@ -12,6 +12,7 @@ using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using TabForge.Avalonia.Platform;
 using TabForge.Presenters;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views.Fx;
 
@@ -38,7 +39,7 @@ public sealed class FxChainList : Grid
     private readonly ScrollViewer _scroll = new() { HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Name = "ChainScroll" };
     private readonly StackPanel _rows = new() { Name = "ChainRows" };
     private readonly Canvas _layer = new() { IsHitTestVisible = false, ClipToBounds = true };
-    private readonly Border _band = new() { BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(2), IsVisible = false, Opacity = BandOpacity };
+    private readonly Border _band = new() { BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(ChromeMetrics.RadiusTiny), IsVisible = false, Opacity = BandOpacity };
     private readonly Border _line = new() { Height = LineHeight, CornerRadius = new CornerRadius(1), IsVisible = false };
     private readonly TextBlock _badgeText = new() { FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, Text = DropInsideText };
     private readonly Border _badge;
@@ -106,7 +107,6 @@ public sealed class FxChainList : Grid
     public IReadOnlyList<int> SelectedRows => _sel.SelectedRows;
     public IReadOnlyList<object> SelectedTags => SelectedRows.Select(i => _items[i].Tag).ToList();
     public Control RowAt(int i) => _items[i].Chrome;
-    public ScrollViewer Scroller => _scroll;
 
     public int IndexOf(object? tag)
     {
@@ -258,8 +258,6 @@ public sealed class FxChainList : Grid
         }
         _measured = true; _measuredCount = Count;
     }
-
-    internal void InvalidateRowMeasure() => _measured = false;
 
     private static bool KeepsOwnClick(object? source)
     {

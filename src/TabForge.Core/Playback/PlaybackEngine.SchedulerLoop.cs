@@ -52,10 +52,9 @@ public sealed partial class PlaybackEngine
             }
             if (StepRecordCountIn(ref s, generation) == LoopStep.Continue) continue;
             if (StepSectionCountIn(ref s, generation) == LoopStep.Continue) continue;
-            if (StepSkips(ref s, generation, out var skips) == LoopStep.Continue) continue;
             ResyncAfterStall(ref s, generation);
 
-            var horizon = DispatchHorizon(s.Ms, loopEnabled, s.LoopEndMs, s.SectionMs, s.NextSection, skips);
+            var horizon = DispatchHorizon(s.Ms, loopEnabled, s.LoopEndMs, s.SectionMs, s.NextSection);
             DispatchDue(s.Timeline, s.Events, ref s.Index, horizon, s.Ms, s.StartMs, generation);
             s.LastDispatchMs = s.Ms;
             Volatile.Write(ref _sentThroughMs, s.Index > 0 ? Math.Max(s.Ms, s.Events[s.Index - 1].TimeMs) : s.Ms);
@@ -380,25 +379,6 @@ public sealed partial class PlaybackEngine
             s.Ms = at;
             s.Index = FirstIndexAtOrAfter(s.Events, s.Ms);
             s.LastDispatchMs = s.Ms;
-        }
-        return LoopStep.Proceed;
-    }
-
-    /// <summary>Jumps over a skipped area exactly like a seamless loop wrap; Continue when a seek arrived meanwhile.</summary>
-    private LoopStep StepSkips(ref SchedulerState s, int generation, out (double Start, double End)[] skips)
-    {
-        skips = SkipMs(s.Timeline);
-        foreach (var (skipStart, skipEnd) in skips)
-        {
-            if (s.Ms < skipStart || s.Ms >= skipEnd) continue;
-            ReleaseForLoopWrap(s.Timeline);
-            RestoreChannelStateAt(s.Timeline, s.StartMs, skipEnd);
-            if (!TrySetSchedulerAnchor(generation, skipEnd)) return LoopStep.Continue;
-            s.Ms = skipEnd;
-            s.Index = FirstIndexAtOrAfter(s.Events, s.Ms);
-            s.LastDispatchMs = s.Ms;
-            ReportPosition(s.Ms, s.Timeline, generation);
-            break;
         }
         return LoopStep.Proceed;
     }

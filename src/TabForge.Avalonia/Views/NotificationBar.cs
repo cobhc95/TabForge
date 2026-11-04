@@ -27,7 +27,6 @@ public sealed class NotificationBar : IDisposable
     public const string ApprovalTrustSource = "approval-trust";
     public const string ImportSource = "import";
     public const string VideoSource = "video";
-    public const string CheckBarsSource = "checkbars";
     public const string LearnSource = "learn";
     public const string MissingMediaSource = "missing-media";
 
@@ -75,9 +74,6 @@ public sealed class NotificationBar : IDisposable
 
     /// <summary>The shown kind, or null when hidden.</summary>
     public NotificationKind? CurrentKind => _current?.Kind;
-
-    /// <summary>The shown action label, or null when the bar has no action.</summary>
-    public string? CurrentAction => _current?.ActionLabel;
 
     /// <summary>True while the row shows.</summary>
     public bool IsVisible => _view.IsVisible;

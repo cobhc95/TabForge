@@ -8,7 +8,6 @@ public static class PianoRollScaleLock
 {
     public const string TransposeSemitones = "Semitones";
     public const string TransposeScaleSteps = "Scale steps";
-    public static IReadOnlyList<string> TransposeModes { get; } = new[] { TransposeSemitones, TransposeScaleSteps };
 
     public const string StepOff = "Off", StepSnap = "Snap", StepOnlyScale = "Only scale notes";
     public static IReadOnlyList<string> StepFilters { get; } = new[] { StepOff, StepSnap, StepOnlyScale };

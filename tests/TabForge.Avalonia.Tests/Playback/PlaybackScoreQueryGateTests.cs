@@ -53,7 +53,7 @@ public sealed class PlaybackScoreQueryGateTests
         ["PlaybackEngine.Scheduler.cs"] = (1, "Publish: the live song is the identity key of the seek-reuse check, never read there"),
         ["PlaybackEngine.StartWorker.cs"] = (6, "BeginStart/Reseek/Change/StartCompiled: owner-thread entry points that hand the live song through as an identity key; the compile reads the snapshot"),
         ["PlaybackSeekRebuild.cs"] = (9, "TakeSnapshot and the cache key (owner thread); CompilerOptionsFor/LoopEntryMs/KeepStartInsideLoop statics that SongSnapshot calls with its copy"),
-        ["PlaybackEngine.Arrangement.cs"] = (7, "RefreshArrangement entry points (owner thread) and the pending-refresh records that carry the live song as an identity key"),
+        ["PlaybackEngine.Arrangement.cs"] = (6, "RefreshArrangement entry points (owner thread) and the pending-refresh records that carry the live song as an identity key"),
         ["AudioGrowthRefreshFlow.cs"] = (1, "the reservation carries the live song as an identity key; the compile reads the reserved snapshot"),
     };
 

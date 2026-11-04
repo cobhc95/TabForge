@@ -28,9 +28,6 @@ namespace TabForge.Avalonia.Features.Recording.View;
 /// </summary>
 public sealed class ArmedRowLayer : Canvas
 {
-    /// <summary>The level poll's period: about 30 Hz, enough for a meter. The poll runs only while a track is armed and the layer is attached.</summary>
-    public static readonly TimeSpan MeterInterval = TimeSpan.FromMilliseconds(UiTiming.ArmedRowMeterIntervalMs);
-
     /// <summary>A level change smaller than this is not repainted.</summary>
     public const double LevelStep = 0.005;
 

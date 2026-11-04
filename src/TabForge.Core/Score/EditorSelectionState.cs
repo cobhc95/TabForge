@@ -111,26 +111,6 @@ internal sealed class EditorSelectionState
     /// <summary>The anchor and the end as (bar, cell, bar, cell), in the order they were set.</summary>
     public (int m1, int c1, int m2, int c2) Range() => (AnchorMeasure, AnchorCell, EndMeasure, EndCell);
 
-    /// <summary>
-    /// Keeps a range inside a song of <paramref name="barCount"/> bars: a range whose bars are all gone is dropped, an end past the last bar
-    /// moves to that bar's last cell (<paramref name="lastCell"/> is that cell's index).
-    /// </summary>
-    public void Coerce(int barCount, int lastCell)
-    {
-        if (!Selecting) return;
-        var last = barCount - 1;
-        if (last < 0 || Math.Min(AnchorMeasure, EndMeasure) > last) { Clear(); return; }
-        if (AnchorMeasure > last) { AnchorMeasure = last; AnchorCell = lastCell; }
-        if (EndMeasure > last) { EndMeasure = last; EndCell = lastCell; }
-    }
-
-    /// <summary>A key for the hover outline inside bars first..last: zero when the outline is not there, so a system without it keeps its drawing.</summary>
-    public long HoverKeyIn(int first, int last)
-    {
-        if (HoverMeasure < first || HoverMeasure > last || HoverCell < 0) return 0;
-        unchecked { return (HoverMeasure * 1000003L + HoverCell + 1) * 0x2545F491L; }
-    }
-
     /// <summary>Forgets the hovered beat; true when there was one.</summary>
     public bool ClearHover()
     {

@@ -17,9 +17,6 @@ public sealed class AppearanceSettings
     public List<string> RecentColours { get; set; } = new();
     /// <summary>Dark, Light, System, or Custom (retains explicit palette fields).</summary>
     public string ThemeMode { get; set; } = "Dark";
-    /// <summary>1 once the Dark/Light preset palette has been written into the colour fields (older settings
-    /// kept hard-coded theme colours instead).</summary>
-    public int ThemePresetVersion { get; set; }
     /// <summary>The colour settings the user set explicitly (Accent, Panel...), comma separated: a theme preset leaves them as they are, so a custom accent survives a Dark/Light switch.
     /// Reset to preset clears it. A string, so a copy of the settings never shares it.</summary>
     /// <summary>The accent before the switch to Light lightened it (empty = not lightened); switching back to Dark restores it.</summary>
@@ -85,14 +82,8 @@ public sealed class AppearanceSettings
     public string Density { get; set; } = "Compact";
     /// <summary>1 once the move of a saved "Comfortable" to the new Compact default has run (see SettingsMigration).</summary>
     public int DensityVersion { get; set; } = 1;
-    /// <summary>Show icon glyphs on the toolbar (off = text-only buttons).</summary>
-    public bool ShowToolbarIcons { get; set; } = true;
     /// <summary>Score paper: "Dark" or "Light".</summary>
     public string ScorePaper { get; set; } = "Dark";
-    /// <summary>Palette tool ids pinned to the menu-row toolbar, in order.</summary>
-    public List<string> PinnedTools { get; set; } = new();
-    /// <summary>The top bar's icon row, as button ids and "|" separators in order; empty = the default order (Views/IconRow).</summary>
-    public List<string> IconRowOrder { get; set; } = new();
     public bool ShowSectionHeadings { get; set; } = true;
     /// <summary>Engrave dynamics markings (ppp..fff) under the staff where the dynamic changes.</summary>
     public bool ShowDynamics { get; set; } = true;

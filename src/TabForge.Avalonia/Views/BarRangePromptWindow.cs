@@ -12,6 +12,7 @@ using Avalonia.Media;
 using TabForge.Presenters;
 using TabForge.Services;
 using TabForge.Avalonia.Views.Dialogs;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views;
 
@@ -56,7 +57,7 @@ public sealed class BarRangePromptWindow : Window
         ShowClipChoice();
         _scopes = AddGroup(body, ConfirmDialogPresenter.ScopeHeading, "Scope", BarRangePromptPresenter.Scopes, "scope", BarRangePromptPresenter.DefaultScope(allTracks));
 
-        _remember = new CheckBox { Name = "RememberBox", Content = BarRangePromptPresenter.RememberText, FontSize = 12, Margin = new Thickness(0, 12, 0, 0) };
+        _remember = new CheckBox { Name = "RememberBox", Content = BarRangePromptPresenter.RememberText, FontSize = ChromeMetrics.TextBody, Margin = new Thickness(0, 12, 0, 0) };
         _remember[!ForegroundProperty] = new DynamicResourceExtension("TextMuted");
         ToolTip.SetTip(_remember, ConfirmDialogPresenter.RememberToolTip(hasChoices: true));
         body.Children.Add(_remember);

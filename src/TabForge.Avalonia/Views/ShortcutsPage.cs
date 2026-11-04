@@ -12,6 +12,7 @@ using Avalonia.Media;
 using TabForge.Platform;
 using TabForge.Presenters;
 using TabForge.Services;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views;
 
@@ -37,7 +38,7 @@ internal sealed class ShortcutsPage
     private readonly Action _changed;
     private readonly HotkeyEditPresenter _edit;
     private readonly List<Row> _rows = new();
-    private readonly TextBlock _status = new TextBlock { FontSize = 11, TextWrapping = global::Avalonia.Media.TextWrapping.Wrap, IsVisible = false, [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted") };
+    private readonly TextBlock _status = new TextBlock { FontSize = ChromeMetrics.TextSmall, TextWrapping = global::Avalonia.Media.TextWrapping.Wrap, IsVisible = false, [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted") };
     private IReadOnlySet<string>? _scope;   // the command ids this page shows; null = all
     private ComboBox? _preset;
     private bool _refreshing;
@@ -124,12 +125,12 @@ internal sealed class ShortcutsPage
     private Control BuildRow(HotkeyAction action)
     {
         var slots = new[] { SlotButton(action, 1), SlotButton(action, 2) };
-        var feedback = new TextBlock { FontSize = 11, TextWrapping = TextWrapping.Wrap, MaxWidth = 300, IsVisible = false, HorizontalAlignment = HorizontalAlignment.Right,
+        var feedback = new TextBlock { FontSize = ChromeMetrics.TextSmall, TextWrapping = TextWrapping.Wrap, MaxWidth = 300, IsVisible = false, HorizontalAlignment = HorizontalAlignment.Right,
             [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("HotkeyFeedbackText") };
         var reassign = SmallButton(SettingsCatalog.ShortcutReassign, SettingsCatalog.ShortcutReassignLabel(action), () => { if (_edit.Reassign(action.Id)) Changed(); });
         reassign.IsVisible = false;
         var reset = SmallButton(SettingsCatalog.ShortcutReset, SettingsCatalog.ShortcutResetLabel(action), () => { _edit.Reset(action.Id); Changed(); });
-        var tag = new TextBlock { Text = "CUSTOM", FontSize = 10, Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center,
+        var tag = new TextBlock { Text = "CUSTOM", FontSize = ChromeMetrics.TextCaption, Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center,
             [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("HotkeyCustomTag") };
         var controls = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 5, HorizontalAlignment = HorizontalAlignment.Right };
         for (var slot = 1; slot <= 2; slot++)

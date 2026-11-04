@@ -46,7 +46,7 @@ public class MainWindowMenuTests
     {
         var main = Open();
         var items = main.GetLogicalDescendants().OfType<MenuItem>().Where(m => m.Tag is string).ToDictionary(m => (string)m.Tag!);
-        var ids = MainMenuTable.CommandRows(MainMenuTable.WithFeatureRows()).Select(r => r.CommandId!).ToList();
+        var ids = MainMenuTable.CommandRows(MainMenuTable.Groups).Select(r => r.CommandId!).ToList();
         Assert.All(ids, id => Assert.True(items.ContainsKey(id), $"no menu item for {id}"));
         var commands = new MainWindowCommands(main, () => { });
         commands.Add("Tab.New", () => { });
@@ -94,7 +94,7 @@ public class MainWindowMenuTests
     {
         var main = Open();
         var items = main.GetLogicalDescendants().OfType<MenuItem>().Where(m => m.Tag is string).ToDictionary(m => (string)m.Tag!);
-        var ids = MainMenuTable.CommandRows(MainMenuTable.WithFeatureRows()).Select(r => r.CommandId!).Distinct().ToList();
+        var ids = MainMenuTable.CommandRows(MainMenuTable.Groups).Select(r => r.CommandId!).Distinct().ToList();
         // Every menu row has its handler (PDF export is MainWindowScorePdf) except Print and Print preview: they have none, so the menu row, Ctrl+P and the palette all see them as not available.
         var notYetPorted = new[] { "File.Print", "File.PrintPreview" };
         var disabled = ids.Where(id => !items[id].IsEnabled).ToList();
@@ -112,7 +112,7 @@ public class MainWindowMenuTests
         Assert.Equal(MainMenuTable.Groups.Select(g => g.Menu).Distinct().OrderBy(x => x), MainWindowMenu.TopLevelOrder.OrderBy(x => x));
         foreach (var top in tops)
         {
-            var rows = MainMenuTable.WithFeatureRows().Where(g => g.Menu == (string)top.Header!).SelectMany(g => g.Rows).ToList();
+            var rows = MainMenuTable.Groups.Where(g => g.Menu == (string)top.Header!).SelectMany(g => g.Rows).ToList();
             AssertSameTree(rows, top);
         }
         main.Close();

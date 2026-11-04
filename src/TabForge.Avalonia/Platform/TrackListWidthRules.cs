@@ -33,9 +33,6 @@ public static class TrackListWidthRules
     /// <summary>The name column width the default list width leaves.</summary>
     public static double DefaultNameWidth => NameWidthFor(DefaultListWidth);
 
-    /// <summary>The name column width the snug default at the density factor leaves.</summary>
-    public static double DefaultNameWidthFor(double factor) => NameWidthFor(DefaultListWidthFor(factor));
-
     // A saved width equal to either old default (532 or the 600 that followed it) reads as "never changed" and takes the snug default.
     private static bool IsOldDefault(double savedWidth) =>
         savedWidth == ChromeMetrics.TrackListOldDefaultWidth || savedWidth == ChromeMetrics.TrackListDefaultWidth;

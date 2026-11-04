@@ -10,8 +10,6 @@ namespace TabForge.Avalonia.Platform;
 // Does not own: the highlight rules (BarHighlight), the painter (TimelineHighlightPainter) or the gestures that move it (TimelineInputController).
 public sealed partial class TimelineView
 {
-    private readonly List<HighlightRow> _highlightRows = new();
-
     /// <summary>The shown document's bar highlight (set by the input controller); null while no document shows.</summary>
     internal BarHighlight? Highlight { get; set; }
 

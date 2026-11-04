@@ -154,10 +154,6 @@ public static class PreviewToolsMenu
         new VideoExportWindow(DemoSongFactory.Create(), settings, hasSelection: false).ShowDialog(owner);
 
     // The preview loads the guides the app ships; a build without them shows the window's "guide isn't here yet" message.
-    internal static void OpenTutorial(Window owner, TutorialGuide requested = TutorialGuide.Basic) => new TutorialWindow(
-        TutorialLibrary.Load(TutorialLibrary.GuideFolder(TutorialGuide.Basic)),
-        TutorialLibrary.Load(TutorialLibrary.GuideFolder(TutorialGuide.Detailed)),
-        requested).Show(owner);
 
     private static readonly ProjectSettingsResult SampleProjectSettings = new("Demo song", "", "TabForge", "", "", "", "", "",
         120, 4, 4, 0, false, true, "", "", "");

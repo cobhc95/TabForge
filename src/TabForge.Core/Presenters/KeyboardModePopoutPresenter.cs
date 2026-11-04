@@ -10,7 +10,6 @@ public static class KeyboardModePopoutPresenter
 {
     public const string Title = "Keyboard mode: view";
     public const string FullScreenTooltip = "Full screen on or off: F11, and Esc leaves it";
-    public const string NeedsModeStatus = "The keyboard pop-out needs Keyboard mode on";
 
     /// <summary>Opens only when none is open, Keyboard mode is on and the keyboard view is still in the pane.</summary>
     public static bool CanOpen(bool alreadyOpen, bool modeOn, bool keysDetached) => !alreadyOpen && modeOn && !keysDetached;

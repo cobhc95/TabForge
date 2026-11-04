@@ -8,7 +8,7 @@ namespace TabForge.Avalonia.Tests;
 /// <summary>
 /// Owns: where the checkout is on this machine and which file is the demo song in it (the Samples folder's *.gp, "Ashen Meridian" first).
 /// Does not own: what the tests check with those files (each test class).
-/// Tests: ArchitectureScan, DocTruthTests, ParityShotsTests, HotkeyTipTests, RenderParityTests, VideoExportParityTests.
+/// Tests: ArchitectureScan, DocTruthTests, HotkeyTipTests, RenderParityTests, VideoExportParityTests.
 /// </summary>
 internal static class TestRepo
 {

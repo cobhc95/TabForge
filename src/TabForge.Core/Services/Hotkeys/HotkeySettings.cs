@@ -16,9 +16,6 @@ public sealed class HotkeySettings
     /// <summary>Preferences > Editing > "Plus key lengthens notes": swaps the default Longer / Shorter keys (set when settings are applied; not stored here).</summary>
     [JsonIgnore]
     public bool PlusKeyLengthensNotes { get; set; }
-    /// <summary>The old name of <see cref="PlusKeyLengthensNotes"/>.</summary>
-    [JsonIgnore]
-    public bool ReverseDurationKeys { get => PlusKeyLengthensNotes; set => PlusKeyLengthensNotes = value; }
 
     [JsonIgnore]
     public string this[string action]

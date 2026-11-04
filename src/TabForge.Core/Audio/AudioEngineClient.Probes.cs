@@ -15,10 +15,7 @@ namespace TabForge.Audio;
 /// <summary>Diagnostics and probes: plug-in state collection, pitch measurement, the Windows path-offset probe and the hooks the self-tests use.</summary>
 public sealed partial class AudioEngineClient : IDisposable
 {
-    internal void ExpireWarmForTest() => ExpireWarm();
-    internal bool IsParkedForTest(TrackModel track) => _slots.TryGetValue(track, out var slot) && _parkedSince.ContainsKey(slot);
     internal int ChainLoadsSentForTest => Volatile.Read(ref _nextChainLoad);
-    internal bool IdleForTest => _idleSince is not null;
     /// <summary>Self-test hook: a "running" engine with no process or pipe (every Send is dropped), for UI-side bookkeeping tests.</summary>
     internal void AttachFakeForTest() { _stopping = false; IsRunning = true; _fakeLinkUp = true; }
 
@@ -62,8 +59,6 @@ public sealed partial class AudioEngineClient : IDisposable
     internal Action<EngineCommand>? SentForTest { get; set; }
     /// <summary>The last position sent for a song owner id (playing, song seconds), or null when none was sent.</summary>
     internal (bool Playing, double SongSec)? PositionSentForTest(int ownerId) => _songIds.Last(ownerId);
-    /// <summary>Gives every transport id back (earlier tests may still hold documents that keep ids taken).</summary>
-    internal void ResetSongIdsForTest() => _songIds.Clear();
     /// <summary>Self-test tap: the clip list sent for a slot (the owning document's approved clips).</summary>
     internal Action<int, IReadOnlyList<ClipSpec>>? ClipsSentForTest { get; set; }
     /// <summary>Self-test tap: the arm state sent for a slot (armed, input mode, monitor), after SetArm.</summary>
@@ -193,15 +188,6 @@ public sealed partial class AudioEngineClient : IDisposable
         return results;
     }
 
-    /// <summary>Test hook (--probe-audio): ends the engine abruptly, as a crashing plug-in would.</summary>
-    internal void KillEngineForTest()
-    {
-        try { _process?.Kill(); } catch (InvalidOperationException) { } // swallow: test hook: the engine process may already have exited.
-    }
-
-    /// <summary>Test hook: forget earlier crashes (each probe case starts fresh).</summary>
-    internal void ResetCrashCountForTest() => _crashes.Clear();
-
     /// <summary>
     /// Self-test hook (no engine process): publishes <paramref name="shared"/> as a running engine's block, as Start does
     /// (the previously retired block is disposed first), with <paramref name="ui"/> as the UI thread's context and
@@ -216,29 +202,6 @@ public sealed partial class AudioEngineClient : IDisposable
         for (var i = 0; i < slots; i++) _sentChains[i] = "selftest";
         IsRunning = true; _fakeLinkUp = true;
     }
-
-    /// <summary>Self-test hook: starts a real engine process (as Sync does) with <paramref name="config"/>; returns at once (R-08).</summary>
-    internal bool StartForTest(EngineConfig config, SynchronizationContext ui)
-    {
-        _ui = ui;
-        if (!IsRunning && !Start()) return false;
-        _config = config;
-        Send(EngineCommand.Configure, w => w.Write(config));
-        return true;
-    }
-
-    /// <summary>Self-test hook: loads a chain on <paramref name="slot"/> directly (no tracks, no trust check: test plug-ins only).</summary>
-    internal void LoadChainForTest(int slot, List<PluginSpec> specs)
-    {
-        lock (_chainLock) _chainRequests[slot] = _chainRequests.GetValueOrDefault(slot) + 1;
-        ChainLoadProtocol.Send((c, p) => Send(c, p), slot, false, "selftest", specs, Interlocked.Increment(ref _nextChainLoad));
-    }
-
-    /// <summary>Self-test hook: the engine main thread sleeps (honoured only with TABFORGE_ENGINE_TEST_HOOKS=1).</summary>
-    internal void SendTestHangForTest(int seconds) => Send(EngineCommand.TestHang, new TestHangMessage(seconds).Write);
-    /// <summary>Self-test hook: when the engine last proved alive (pong / Ready), Stopwatch ticks.</summary>
-    internal long LastAliveForTest => Volatile.Read(ref _lastAlive);
-    internal bool ConnectedForTest { get { lock (_sendGate) return _pipe is not null && _queued is null; } }
 
     /// <summary>Self-test hook: the engine process ended unexpectedly (what Process.Exited does), on the calling thread.</summary>
     internal void SimulateEngineExitForTest() => OnEngineEnded(_process);

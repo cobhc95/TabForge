@@ -82,12 +82,8 @@ public static class InputLimits
     public const int MaxVstScanEntries = 50_000;
     public const int MaxVstPlugins = 4_096;
     public const int MaxVstScanDepth = 64;
-    public const int MaxDiagnosticRecords = 100_000;
     public const long MaxDiagnosticLogBytes = 8L * 1024 * 1024;
     public const long MaxLayoutLogBytes = 256L * 1024;
-    public const int MaxBundledSvgAssets = 1_024;
-    public const int MaxBundledSvgIndexEntries = 5_000;
-    public const int MaxBundledSvgDirectoryDepth = 32;
     public const long MaxBundledSvgBytes = 1L * 1024 * 1024;
 
     public static byte[] ReadBoundedBytes(string path, long maximumBytes, string fileDescription)

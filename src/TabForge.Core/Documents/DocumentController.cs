@@ -14,9 +14,6 @@ public readonly record struct OpenedScore(SongProject Project, string? SessionPa
 /// <summary>File-level document operations kept separate from window prompts and tab presentation.</summary>
 public sealed class DocumentController
 {
-    /// <summary>The folder whose autosave-named files are read with the recovery size bound (tests point it elsewhere).</summary>
-    public string RecoveryFolder { get; init; } = AutosaveService.DefaultFolder;
-
     public OpenedScore Open(string path) => Open(path, null);
 
     /// <param name="importGuitarPro">Parses a Guitar Pro file (null = <see cref="GuitarProImporter.Import"/> in this process); it may add
@@ -86,17 +83,6 @@ public sealed class DocumentController
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { Services.Trace.Error(Services.Trace.Import, "document open: recover interrupted save: " + ex.Message); }
         return null;
-    }
-    /// <summary>
-    /// Saves a clean Guitar Pro file (nothing TabForge-specific inside, so Guitar Pro reads it exactly as its own)
-    /// plus "song.tfaudio" beside it with the mixer and FX chains, which TabForge re-applies on open.
-    /// Both files are staged completely before either is replaced, and the .tfaudio records the SHA-256 of the .gp it belongs to.
-    /// The song is captured on the calling (UI) thread and written on a worker, so editing can go on meanwhile.
-    /// </summary>
-    public async Task SaveCleanGuitarProWithAudioDataAsync(SongDocument document, string path)
-    {
-        var capture = SaveCapture.Take(document);
-        await SaveCleanPairAsync(document, path, capture);
     }
 
     private static async Task SaveCleanPairAsync(SongDocument document, string path, SaveCapture capture)

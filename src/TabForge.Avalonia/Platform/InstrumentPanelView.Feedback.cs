@@ -23,9 +23,6 @@ public sealed partial class InstrumentPanelView
 
     static InstrumentPanelView() => FocusableProperty.OverrideDefaultValue<InstrumentPanelView>(true);
 
-    /// <summary>The key or pad under the pointer (keyboard and drum map), or null.</summary>
-    internal int? HoveredKey => _hoverKey;
-
     /// <summary>Sets the hovered and pressed key without a pointer (tests).</summary>
     internal void SetFeedbackForTest(int? hover, int? pressed) { _hoverKey = hover; _pressedKey = pressed; InvalidateVisual(); }
 

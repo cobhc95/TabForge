@@ -1,6 +1,6 @@
 # Controllers
 
-Small document-level controllers: selection looping and selection sync across views.
+Small document-level controllers: selection sync across views.
 
 ## Controllers vs Presenters vs Shell
 - Controllers own one document behaviour (no UI types, no window chrome).
@@ -8,13 +8,13 @@ Small document-level controllers: selection looping and selection sync across vi
 - Shell owns window chrome rules (tabs, drag, hit-testing).
 
 ## How to change me
-1. Entry files: `SelectionLoopController.cs`, `SelectionSync.cs`.
+1. Entry files: `SelectionSync.cs`.
 2. Owner class: the controller named by the file.
 3. Tests to run: `SelectionLoopLinkTests`.
 4. Docs to update: `CHANGELOG.md` (list user-visible changes).
 
 ## Key types
-- `SelectionLoopController`, `SelectionSync`: read `Documents`/`Models`, write selection state.
+- `SelectionSync`: read `Documents`/`Models`, write selection state.
 
 ## Must not depend on
 UI frameworks; windows and views (talk to `Presenters`/`Shell` through callers, not directly).

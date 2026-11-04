@@ -28,6 +28,4 @@ public static class ImportStatusPresenter
         return new ImportStatus(true, $"Importing {pendingNames.Count} files…", tooltip, $"Cancel the {pendingNames.Count} imports in progress");
     }
 
-    /// <summary>The status text after the user cancelled an import.</summary>
-    public static string CancelledStatus(string name) => $"Import of {name} cancelled";
 }

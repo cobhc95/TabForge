@@ -14,9 +14,6 @@ namespace TabForge.Avalonia.Views.Dialogs;
 /// <summary>Opens a dialog modally over its owner and gives back the dialog's answer.</summary>
 public static class DialogLauncher
 {
-    /// <summary>The report text <see cref="FireAndReport"/> uses when the dialog could not be shown.</summary>
-    private const string FireAndReportWhat = "The dialog";
-
     /// <summary>
     /// Shows a dialog built by <paramref name="create"/> modally over <paramref name="owner"/> and returns the value it closed with (the
     /// dialog's <c>Close(value)</c> answer). With no owner the window is shown non-modally and the default answer is returned:
@@ -67,16 +64,4 @@ public static class DialogLauncher
     /// <summary>An owned dialog shows no taskbar button of its own (one taskbar entry, the owner's).</summary>
     private static void PrepareOwned(Window window) => window.ShowInTaskbar = false;
 
-    /// <summary>
-    /// Shows a dialog built by <paramref name="create"/> modally over <paramref name="owner"/> without waiting for its answer. The window's
-    /// task is observed, so a failure is reported through <paramref name="report"/> instead of being lost (the same way <see cref="UiTasks"/>
-    /// observes a UI command). With no owner the window is shown non-modally, as in <see cref="Ask{TWindow,TResult}"/>.
-    /// </summary>
-    public static void FireAndReport(Window? owner, Func<Window> create, Action<string> report)
-    {
-        var window = create();
-        if (owner is null) { window.Show(); return; }
-        PrepareOwned(window);
-        UiTasks.Forget(window.ShowDialog(owner), FireAndReportWhat, report);
-    }
 }

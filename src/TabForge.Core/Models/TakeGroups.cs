@@ -11,9 +11,6 @@ public static class TakeGroups
     /// <summary>True when the clip carries a repeat-take group id.</summary>
     public static bool IsGrouped(AudioClip clip) => !string.IsNullOrEmpty(clip.TakeGroupId);
 
-    /// <summary>True when the clip is one part of an old stamped repeat take (T2 build); only the load migration still meets these.</summary>
-    public static bool IsRepeatGroup(AudioClip? clip) => clip is not null && clip.TakeGroupKind == TakeGroupKind.Repeat && !string.IsNullOrEmpty(clip.TakeGroupId);
-
     /// <summary>
     /// Is this clip heard? A clip follows <see cref="AudioClip.Muted"/> (a clip over a repeat plays straight through, the repeat view only folds its drawing).
     /// </summary>
@@ -62,16 +59,4 @@ public static class TakeGroups
                 .ThenBy(member => member.EndSec).ToList();
     }
 
-    /// <summary>
-    /// The 1-based order index (in <see cref="Ordered"/> order) of <paramref name="clip"/> inside its group,
-    /// or null for an ordinary clip.
-    /// </summary>
-    public static int? PassOf(TrackModel track, AudioClip clip)
-    {
-        if (!IsGrouped(clip)) return null;
-        var ordered = Ordered(Members(track, clip));
-        for (var index = 0; index < ordered.Count; index++)
-            if (ReferenceEquals(ordered[index], clip)) return index + 1;
-        return null;
-    }
 }

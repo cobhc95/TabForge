@@ -32,13 +32,13 @@ public sealed partial class IrLoaderEditor
         {
             if (_host.Engine is { } engine) engine.ParametersReceived += OnParameters;
             Ask();
-            _poll.Start();
         };
         DetachedFromVisualTree += (_, _) =>
         {
             _poll.Stop();
             if (_host.Engine is { } e) e.ParametersReceived -= OnParameters;
         };
+        _ = new TabForge.Avalonia.Platform.VisibilityPolling(this, _poll, Ask);
         if (_host.Engine is not { IsRunning: true }) _status.Text = "The audio engine is not running: changes apply when it starts.";
     }
 

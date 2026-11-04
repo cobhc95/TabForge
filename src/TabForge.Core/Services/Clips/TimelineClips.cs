@@ -47,9 +47,6 @@ public static class TimelineClips
     public static ScoreClip CopyBar(SongProject project, int bar, int trackIndex, bool allTracks) =>
         Capture(project, bar, bar, allTracks ? null : trackIndex);
 
-    /// <summary>Bars <paramref name="start"/>..<paramref name="end"/> of every track (the selected area), or of track <paramref name="onlyTrack"/> alone.</summary>
-    public static ScoreClip CopyArea(SongProject project, int start, int end, int onlyTrack = -1) => Capture(project, start, end, onlyTrack < 0 ? null : onlyTrack);
-
     /// <summary>The bars of a section (<paramref name="end"/> exclusive, as <see cref="SectionLayout.TryGetBounds"/> returns it); the section's title and colour stay with the caller.</summary>
     public static ScoreClip CopySection(SongProject project, int start, int end) => Capture(project, start, end - 1, null);
 
@@ -68,20 +65,6 @@ public static class TimelineClips
 
     /// <summary>The timeline pastes whole bars only (a Beats clip belongs to the score cursor).</summary>
     public static bool CanPasteOnTimeline(ScoreClip? clip) => clip is { Kind: ScoreClipKind.Bars } && clip.BarCount > 0;
-
-    /// <summary>
-    /// The clip as the text the score editor's current paste reads (a one-track project snapshot of the first clip track).
-    /// Bridge until the editor's Ctrl+V reads <see cref="ClipboardService"/> directly (chunk C5).
-    /// </summary>
-    public static string ToEditorText(ScoreClip clip)
-    {
-        var source = clip.Tracks[0];
-        return ProjectService.Snapshot(new SongProject
-        {
-            FormatVersion = 2,
-            Tracks = new List<TrackModel> { new() { Measures = source.Bars.Select(ProjectService.CloneMeasure).ToList() } }
-        });
-    }
 
     // ---- Paste ----
 

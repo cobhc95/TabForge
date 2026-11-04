@@ -161,12 +161,9 @@ public sealed partial class PianoRollSurface
             case PianoRollTool.Glue:
                 _pressNote = index;
                 return StartGlue(p, index);
-            // Retired 26 Oct (tombstone): the Velocity tool (key 7). An Alt-drag on a note does its job in the Select tool (below), and the velocity
-            // lane's bars are dragged directly.
             case PianoRollTool.Draw or PianoRollTool.Select when index < 0:   // the Write tool (the pencil; Select) writes: press, hold and drag sets the note's length and pitch
                 return StartDraw();
         }
-        // Retired 26 Oct (tombstone): a left drag on empty grid drew the selection box (now the right button's); a double-click drew a note.
         if (index < 0 && tool == PianoRollTool.Pointer)   // the Select tool: drag a box (Alt = lasso); a click clears; a double-click adds a note; never a drag-write
             return clicks >= 2 ? StartDraw() : StartSelectBox(p, modifiers);
         if (index < 0) return StartDraw();
@@ -420,7 +417,6 @@ public sealed partial class PianoRollSurface
                 var inBox = PianoRollEdits.InBox(Presenter.Notes, BeatAt(box.Left), BeatAt(box.Right), PitchAt(box.Bottom), PitchAt(box.Top));
                 Presenter.Select(Combine(inBox, modifiers | _dragModifiers));   // Shift adds the box, Ctrl toggles it (Explorer-style)
                 SelectionChanged?.Invoke();
-                // Retired 26 Oct (tombstone): a box selection set the loop to its span. In the piano roll a selection never touches the loop;
                 // loops come only from the rulers (the score's drag selection still sets it).
                 break;
             case Gesture.Lasso when _moved:

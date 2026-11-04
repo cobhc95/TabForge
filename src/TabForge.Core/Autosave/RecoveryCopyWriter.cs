@@ -21,22 +21,16 @@ public static class RecoveryCopyWriter
     public static string? Write(SongProject project, string path)
     {
         ArgumentNullException.ThrowIfNull(project);
-        var wasDirty = project.IsDirty;
         string? errors = null;
-        try
-        {
             var toWrite = project;
             try { if (project.Tracks?.Any(t => t?.StartupTemplateId is not null) == true) toWrite = project.WithoutStartupTracks(); }
             catch (Exception ex) { Trace.Error(Trace.Ui, "startup: leave out startup tracks: " + ex.Message); errors = $"Startup tracks could not be left out ({ex.GetType().Name}): {ex.Message}"; }
             try { ProjectValidator.Validate(toWrite); }
             catch (Exception ex) { Trace.Error(Trace.Ui, "recovery: validate copy: " + ex.Message); errors = (errors is null ? "" : errors + Environment.NewLine) + $"{ex.GetType().Name}: {ex.Message}"; }
-            project.IsDirty = false;   // the file on disk records a saved project, as a normal save would
             // PersistBytes is the disk JSON (every property, FormatVersion included), gzip-wrapped: the same format a .tforge save writes,
             // so it is written as is (ProjectService.Load detects the gzip header).
             var persisted = ProjectService.PersistBytes(toWrite, InputLimits.MaxTforgeFileBytes);   // the same bound the recovery reader applies
             FilePathPolicy.WriteAtomically(path, stream => stream.Write(persisted), createDirectory: true);
-        }
-        finally { project.IsDirty = wasDirty; }
         if (errors is not null) WriteErrorList(path, errors);
         return errors;
     }

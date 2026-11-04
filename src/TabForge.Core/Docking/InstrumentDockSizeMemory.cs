@@ -52,13 +52,6 @@ internal static class InstrumentDockSizeMemory
     internal static double PixelsForShare(double share, double available) =>
         available > 0 ? Math.Clamp(share, 0.02, 0.98) * available : 0;
 
-    /// <summary>Share for pixels of an available extent (the default when unmeasured).</summary>
-    internal static double ShareForPixels(double? pixels, double available)
-    {
-        if (pixels is not { } p || !double.IsFinite(p) || available <= 0) return DockLayoutTree.EdgeFraction;
-        return Math.Clamp(p / available, 0.02, 0.98);
-    }
-
     /// <summary>The pixel height to apply: locked wins, then the current height, then the remembered one, then the default.</summary>
     internal static double HeightToApply(double? currentHeight, double? rememberedHeight, double defaultHeight, bool locked, double? lockedHeight)
     {
@@ -72,10 +65,4 @@ internal static class InstrumentDockSizeMemory
     internal static double WidthToApply(double? currentWidth, double? rememberedWidth, double defaultWidth, bool locked, double? lockedWidth) =>
         HeightToApply(currentWidth, rememberedWidth, defaultWidth, locked, lockedWidth);
 
-    /// <summary>Remembers a pixel size: the current one wins, else the old one is kept (never a default).</summary>
-    internal static double? RememberPixels(double? current, double? remembered)
-    {
-        if (current is { } c && double.IsFinite(c) && c > 0) return c;
-        return remembered is { } r && double.IsFinite(r) && r > 0 ? r : remembered;
-    }
 }

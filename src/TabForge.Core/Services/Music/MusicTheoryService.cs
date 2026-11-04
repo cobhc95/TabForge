@@ -82,19 +82,6 @@ public static class MusicTheoryService
     public static string NoteName(int midi) => Audio.Contracts.NoteNames.Name(midi);
 
     // Suggest a fret/string position for a midi pitch on a tuning (high->low list).
-    public static (int stringIndex, int fret) SuggestPosition(IList<int> tuningHighToLow, int midi)
-    {
-        var best = (s: 0, f: midi - tuningHighToLow[0]);
-        var bestScore = int.MaxValue;
-        for (var s = 0; s < tuningHighToLow.Count; s++)
-        {
-            var f = midi - tuningHighToLow[s];
-            if (f < 0 || f > 24) continue;
-            var score = f + Math.Abs(s - tuningHighToLow.Count / 2);
-            if (score < bestScore) { bestScore = score; best = (s, f); }
-        }
-        return best;
-    }
 
     /// <summary>The largest shift, in semitones, that a transpose accepts in either direction.</summary>
     public const int MaxTransposeSemitones = 12;

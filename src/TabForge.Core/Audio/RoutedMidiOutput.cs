@@ -186,9 +186,6 @@ public sealed partial class RoutedMidiOutput : IMidiOutput
         _inner.Close();
     }
 
-    /// <summary>The document that used this output is gone for good: its engine chains are unloaded now, not parked.</summary>
-    public void ReleaseEngineOwner(object owner) => _engine.ReleaseOwner(owner);
-
     public void Dispose() => Close();
 
     /// <summary>Holds Windows MIDI messages until their due time (ordered, one small thread).</summary>

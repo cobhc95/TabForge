@@ -10,20 +10,9 @@ using TempoMath = TabForge.Audio.Contracts.TempoMath;
 
 namespace TabForge.Playback;
 
-// Owns: the engine composition (output, clocks, gates, dispatch record) and the start/stop lifecycle.
+// Owns: the engine composition (output, clocks, gates) and the start/stop lifecycle.
 // Does not own: the scheduler loop (PlaybackEngine.Scheduler.cs), transport requests (PlaybackEngine.Transport.cs), output dispatch (PlaybackEngine.Scheduler.Output.cs).
 // Tests: PlaybackStartHoldTests, PlaybackSeekSwapTests, AudiblePlayheadLatencyRiseTests.
-
-/// <summary>One dispatched MIDI message with the timestamps used to measure scheduling jitter.</summary>
-public readonly record struct DispatchRecord(double StreamMs, double LatencyMs, int TrackIndex, int Status, int Data1, int Data2, int DeviceId)
-{
-    public bool IsNoteOn => (Status & 0xF0) == 0x90 && Data2 > 0;
-    public bool IsNoteOff => (Status & 0xF0) == 0x80 || ((Status & 0xF0) == 0x90 && Data2 == 0);
-    /// <summary>How far after its musical time the message actually left the app (negative = early).</summary>
-    public double AheadMs => -LatencyMs;
-    public override string ToString() =>
-        $"stream={StreamMs:0.000} latency={LatencyMs:0.000} trk={TrackIndex} dev={DeviceId} {Status:X2} {Data1} {Data2}";
-}
 
 /// <summary>
 /// TabForge playback engine: transport plus a single background scheduler thread.
@@ -51,7 +40,6 @@ public sealed partial class PlaybackEngine : IDisposable
     private readonly object _outputGate = new();
     private readonly object _outputOperationGate = new();
     private readonly Stopwatch _clock = new();
-    private readonly Stopwatch _diagnosticClock = Stopwatch.StartNew();
     private readonly ConcurrentDictionary<int, int> _activeMetronomeNotes = new();
     private Task _outputOperationTail = Task.CompletedTask;
 
@@ -95,12 +83,7 @@ public sealed partial class PlaybackEngine : IDisposable
     /// <summary>Writes into this engine's preferences; a running song hears the change on its next click, section or wrap.</summary>
     public void SetPreferences(Action<PlaybackPreferences> write) => write(_preferences);
 
-    private double _playbackStartWallMs;
     private volatile bool _rearm;
-    private volatile bool _diagnostics;
-    private readonly List<DispatchRecord> _dispatchLog = new();
-    private string? _diagnosticPath;
-    private readonly object _logGate = new();
     private ArrangementRefresh? _pendingArrangementRefresh;
     private bool _arrangementRefreshRequested;
     private double _arrangementRefreshBoundaryMs;
@@ -141,51 +124,7 @@ public sealed partial class PlaybackEngine : IDisposable
     internal SongProject? PublishedSongCopy => Volatile.Read(ref _song)?.Snapshot?.Song;
     internal Guid[] PublishedTrackIds => Volatile.Read(ref _song)?.TrackIds ?? Array.Empty<Guid>();
     internal LoopPlayheadHold LoopBoundsHold => _loopHold;
-    internal int SchedulerThreadId => _thread?.ManagedThreadId ?? 0;
     public double TotalMs => _timeline?.TotalMs ?? 0;
-
-    // ---------- diagnostics ----------
-
-    /// <summary>Records every dispatched message (with timestamps) for offline analysis.</summary>
-    public void StartDiagnostics(string? dumpPath = null)
-    {
-        if (!string.IsNullOrWhiteSpace(dumpPath)) dumpPath = FilePathPolicy.OutputFile(dumpPath, "diagnostic log");
-        lock (_logGate) { _dispatchLog.Clear(); _diagnosticPath = dumpPath; }
-        _diagnostics = true;
-    }
-
-    public void StopDiagnostics()
-    {
-        _diagnostics = false;
-        IReadOnlyList<DispatchRecord> copy;
-        string? path;
-        lock (_logGate) { copy = _dispatchLog.ToList(); path = _diagnosticPath; }
-        if (path is null) return;
-        try
-        {
-            FilePathPolicy.WriteAtomically(path, stream =>
-            {
-                using var writer = new StreamWriter(stream, new UTF8Encoding(false), 16 * 1024, leaveOpen: true);
-                var bytesWritten = 0L;
-                foreach (var record in copy)
-                {
-                    var line = record.ToString();
-                    var lineBytes = System.Text.Encoding.UTF8.GetByteCount(line) + Environment.NewLine.Length;
-                    if (bytesWritten + lineBytes > InputLimits.MaxDiagnosticLogBytes)
-                    {
-                        writer.WriteLine("[diagnostic capture truncated at the configured output limit]");
-                        break;
-                    }
-                    writer.WriteLine(line);
-                    bytesWritten += lineBytes;
-                }
-                writer.Flush();
-            }, createDirectory: true);
-        }
-        catch (Exception ex) { Services.Trace.Error(Services.Trace.Playback, "MIDI diagnostic log: save: " + ex.Message); }
-    }
-
-    public IReadOnlyList<DispatchRecord> DispatchLog { get { lock (_logGate) return _dispatchLog.ToList(); } }
 
     // ---------- transport ----------
 
@@ -213,10 +152,6 @@ public sealed partial class PlaybackEngine : IDisposable
     private int[] _sectionStarts = Array.Empty<int>();
     public void SetSectionStarts(IEnumerable<int> bars) => Volatile.Write(ref _sectionStarts, bars.Distinct().OrderBy(b => b).ToArray());
 
-    // Score bars the transport jumps over ("skip playing area"). Mapped to timeline ms lazily.
-    private (int Start, int End)[] _skipBars = Array.Empty<(int, int)>();
-    private (ScoreTimeline? Timeline, (int, int)[] Bars, (double Start, double End)[] Ms) _skipCache;
-    public void SetSkipRanges(IEnumerable<(int Start, int End)> ranges) => Volatile.Write(ref _skipBars, ranges.ToArray());
 
     // Speed-trainer rate applied to the playback clock (1 = compiled speed); changes seamlessly.
     private double _clockRate = 1.0;
@@ -258,9 +193,6 @@ public sealed partial class PlaybackEngine : IDisposable
     }
 
     private int _practiceSilence = -1;
-
-    /// <summary>Track index silenced by practice mode (-1 = none); independent of mute/solo and never saved.</summary>
-    public int PracticeSilence => Volatile.Read(ref _practiceSilence);
 
     /// <summary>
     /// Silences one track's playback (index into the project's tracks; -1 clears) without touching its mute state.
@@ -377,15 +309,11 @@ public sealed partial class PlaybackEngine : IDisposable
         return occurrence is > 1 ? occurrence : null;
     }
 
-    /// <summary>Self-test: this engine currently holds the 1 ms timer resolution.</summary>
-    internal bool HoldsTimerResolution => _timer.IsHeld;
-
     // ---------- preview ----------
 
     public void Dispose()
     {
         Stop();
-        StopDiagnostics();
         // Shutdown is best effort: a failing device must not stop the rest of the cleanup.
         try { EnqueueOutputOperation(_output.Dispose).GetAwaiter().GetResult(); }
         catch (Exception ex) { TabForge.Services.Trace.Error(TabForge.Services.Trace.Engine, "playback: output device dispose failed: " + ex.Message); }

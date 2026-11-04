@@ -68,7 +68,6 @@ public sealed class PasteSpecialPresenter
     /// <summary>The sections of a range paste: "what" only when the range has both tabs and clips; the clip overlap only when it has clips, and not for Merge (which never overlaps).</summary>
     public bool ShowWhat => _range is { HasTabs: true, HasClips: true };
     public bool ShowOverlap => _range is { HasClips: true };
-    public bool OverlapEnabled => Mode != (int)RangePasteMode.Merge;
 
     /// <summary>The octave shift, string and fret, and bar settings belong to a score clip; a copied range pastes bar for bar.</summary>
     public bool ShowNoteOptions => !IsRange;

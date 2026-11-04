@@ -82,7 +82,6 @@ public sealed partial class EditorPaneSwitch
         Host.Children.Add(score);
         Host.Children.Add(PianoRoll);
         if (settings is not null) settings.SettingsChanged += _ => PianoRoll.RefreshNeedle();   // Preferences' "Playback needle" row
-        // Retired 26 Oct (tombstone): the pills floated over both views' top right; MainWindowMenu docks them in the menu row now.
         Pills.Picked += piano => SetView(piano ? TrackEditorView.PianoRoll : TrackEditorView.Score);
         songs.ActiveChanged += () => Watch(songs.Active);
         if (panes.Arrangement is { } arrangement) Follow(arrangement);

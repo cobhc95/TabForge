@@ -29,8 +29,6 @@ namespace TabForge.Avalonia.Platform;
 public sealed partial class InstrumentPanelView
 {
     // Fretboard drawing sizes (virtual DIPs).
-    /// <summary>Above this many frets in view, only the odd frets are left unnumbered; a shorter range numbers every fret.</summary>
-    private const int EveryFretLabelRange = 6;
     /// <summary>The room a fret number needs beyond its own width inside its cell, in DIPs.</summary>
     private const double FretLabelClearance = 4;
     private const double FretNumberTop = 5;

@@ -27,10 +27,7 @@ only; no font file is distributed and the icons are not named "Bravura".
 
 | Group | Path | Made by / how |
 |---|---|---|
-| Detailed fretboard woods (rosewood dark, maple birdseye) | `Assets/Fretboards/wood_*_detailed.png` | Owner-provided photo-based textures shipped with the release for this project; no third-party licence file came with them, so they are recorded here as owner-provided rather than under a named free licence. |
-| Full capo image | `Assets/Fretboards/capo_black_full_v3.png` | Owner-provided artwork shipped with the release for this project, recorded here as owner-provided. |
 | Fretboard looks: woods, bindings, inlay materials, capo finishes | `Assets/Fretboards/fb_wood_*.jpg`, `fb_binding_*.jpg`, `fb_inlay_*.jpg`, `fb_capo_*.png` | Owner-provided texture and capo artwork (the originals stay untouched under Assets/Fretboards/Assets outside the project), downscaled for shipping (woods 1600 px wide, bindings 900 px, inlay materials 384 px, capos half size). Recorded as owner-provided; no third-party licence file came with them. The inlay shapes, wires, nut and strings are drawn in code from theme tokens. |
-| Superseded | `Assets/Fretboards/wood_*_detailed.png`, `capo_black_full_v3.png` | The first two wood textures and the first capo image; the Customize Fretboard looks use the `fb_` files above, so these three are no longer drawn and can be removed from the project. |
 
 ## Not used
 

@@ -73,17 +73,6 @@ public static class TrackOrdering
         return Apply(project, layout, before);
     }
 
-    /// <summary>Track-list group drag: moves <paramref name="count"/> tracks starting at <paramref name="start"/> before track index <paramref name="before"/>.</summary>
-    public static bool MoveRun(SongProject project, int start, int count, int before)
-    {
-        if (start < 0 || count <= 0 || start + count > project.Tracks.Count) return false;
-        var moving = project.Tracks.GetRange(start, count);
-        project.Tracks.RemoveRange(start, count);
-        var insert = before > start ? before - count : before;
-        project.Tracks.InsertRange(Math.Clamp(insert, 0, project.Tracks.Count), moving);
-        return insert != start;
-    }
-
     /// <summary>Moves a track one place up (-1) or down (+1) in the Mixer's order; past the end of its group it joins the neighbouring group.</summary>
     public static bool Nudge(SongProject project, TrackModel track, int direction)
     {

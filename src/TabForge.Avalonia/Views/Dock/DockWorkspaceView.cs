@@ -206,9 +206,6 @@ public sealed class DockWorkspaceView : Grid
         return height;
     }
 
-    /// <summary>Perf E2b (H4/H5): drops the cached natural height of <paramref name="id"/> (its content changed size).</summary>
-    internal void InvalidateNaturalHeight(string id) => _naturalCache.Remove(id);
-
     /// <summary>The least height a half holding the score editor keeps while its splitter is dragged, so the TAB never collapses to a thin strip.</summary>
     internal const double EditorMinimumHeight = 320;
 

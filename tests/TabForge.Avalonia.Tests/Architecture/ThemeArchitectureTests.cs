@@ -43,7 +43,6 @@ public sealed class ThemeArchitectureTests
         "Palette.cs",
         "ThemeColours.cs",
         "UiTokens.cs",
-        "UiStrokes.cs",
         "UiFonts.cs",
         "UiDensity.cs",
         "KeyboardInk.cs",

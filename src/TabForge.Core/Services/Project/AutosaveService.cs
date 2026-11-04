@@ -29,30 +29,11 @@ public static class AutosaveService
     public static string FileFor(string folder, int pid, Guid id, string? songName) =>
         Path.Combine(folder, $"autosave-{pid}-{id:N}-{TabForge.Audio.Contracts.SafeFileNames.SafeFileName(songName, "Untitled", 40)}.tforge");
 
-    /// <summary>
-    /// The file for an emergency copy written after an unexpected error. It uses the autosave name shape with process id 0 (so the next start
-    /// lists it as an orphan and a normal exit never deletes it) and a fresh id, so two songs with the same file name never share a copy.
-    /// </summary>
-    public static string EmergencyFileFor(string folder, string? songName, string stamp) =>
-        Path.Combine(folder, $"autosave-0-{Guid.NewGuid():N}-{TabForge.Audio.Contracts.SafeFileNames.SafeFileName(songName, "Untitled", 40)}-{stamp}.tforge");
-
     public static bool TryParse(string path, out int pid)
     {
         pid = 0;
         var m = NamePattern.Match(Path.GetFileName(path));
         return m.Success && int.TryParse(m.Groups["pid"].Value, out pid);
-    }
-
-    /// <summary>True for a recovery copy TabForge itself wrote: an autosave-named file directly inside <paramref name="folder"/> (the Recovery folder).</summary>
-    public static bool IsRecoveryCopy(string path, string folder)
-    {
-        try
-        {
-            if (!TryParse(path, out _)) return false;
-            var dir = Path.GetDirectoryName(Path.GetFullPath(path));
-            return dir is not null && string.Equals(dir.TrimEnd('\\', '/'), Path.GetFullPath(folder).TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase);
-        }
-        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException) { return false; } // Not logged: path comparison: false means another folder
     }
 
     /// <summary>Deletes an autosave file and its error list; never throws.</summary>
@@ -64,13 +45,6 @@ public static class AutosaveService
             try { if (File.Exists(p)) File.Delete(p); }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Services.Trace.Error(Services.Trace.Ui, "autosave: cleanup: " + ex.Message); }
         }
-    }
-
-    /// <summary>Deletes every autosave file of process <paramref name="pid"/> (normal exit).</summary>
-    public static void DeleteOwn(string folder, int pid)
-    {
-        foreach (var file in Enumerate(folder))
-            if (TryParse(file, out var owner) && owner == pid) Delete(file);
     }
 
     /// <summary>Autosave files whose process is no longer running: what a crash or kill left behind.</summary>

@@ -27,8 +27,6 @@ public sealed class CallbackEpoch
         return Volatile.Read(ref _value);
     }
 
-    public bool InCallback => (Sample() & 1) != 0;
-
     /// <summary>
     /// True once no callback that might hold an object retired at <paramref name="retiredAt"/> is still running:
     /// retired outside a callback (even) means immediately; retired during one (odd) means once that callback has exited.

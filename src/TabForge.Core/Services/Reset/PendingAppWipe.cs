@@ -8,8 +8,6 @@ namespace TabForge.Services.Reset;
 // Owns: the pending-wipe marker written after the window closes and run at the very start of the next launch, before any store opens.
 // Does not own: the plan (ResetAppPlan) or the wipe itself (ResetAppWipe); it rebuilds a fresh plan from the saved item names.
 // Tests: ResetAppPlanTests.
-/// <summary>The outcome of looking for and running a pending wipe.</summary>
-public sealed record PendingAppWipeOutcome(bool Ran, string? Problem, ResetAppWipeResult? Result);
 
 /// <summary>A marker holding only item names, never raw paths: the next start resolves the paths again and revalidates them.</summary>
 public static class PendingAppWipe

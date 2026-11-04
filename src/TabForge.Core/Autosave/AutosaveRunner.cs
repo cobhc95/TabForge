@@ -38,7 +38,7 @@ public sealed class AutosaveRunner
     public bool Busy { get; private set; }
     public double LastCaptureMs { get; private set; }
 
-    private sealed record Job(SongDocument Song, AutosaveState State, ProjectState Snapshot, string Name);
+    private sealed record Job(SongDocument Song, AutosaveState State, SaveCapture Capture, string Name, string? MediaBase);
 
     private enum Outcome { Written, Unchanged, Skipped, Failed }
 
@@ -58,7 +58,7 @@ public sealed class AutosaveRunner
                 var state = _registry.For(song);
                 // Saved (or never changed): no copy needed. Project.IsDirty is the cheap flag; no content hash on the UI thread.
                 if (!song.Project.IsDirty) { state.MarkSaved(); continue; }
-                try { jobs.Add(new Job(song, state, DocumentEdits.CurrentState(song), song.Project.Title)); }
+                try { jobs.Add(new Job(song, state, SaveCapture.Take(song), song.Project.Title, song.Media.BaseDirectory)); }
                 catch (Exception ex) { captureError ??= ex; Services.Trace.Error(Services.Trace.Ui, "autosave: capture: " + ex.Message); }
             }
             LastCaptureMs = watch.Elapsed.TotalMilliseconds;
@@ -107,7 +107,7 @@ public sealed class AutosaveRunner
         var started = false;
         try
         {
-            var fingerprint = job.Snapshot.Fingerprint;
+            var fingerprint = job.Capture.State.Fingerprint;
             lock (state.Gate)
             {
                 if (state.Retired) return (Outcome.Skipped, null);   // closed or moved away while queued
@@ -116,7 +116,8 @@ public sealed class AutosaveRunner
             }
             var path = AutosaveService.FileFor(folder, Environment.ProcessId, state.Id, job.Name);
             // A private song rebuilt from the immutable state: the live model is never read here.
-            var project = new ProjectStateEncoder().Restore(job.Snapshot, live: null, validate: false);
+            var project = job.Capture.Rebuild();
+            MediaStoredPaths.MakeAbsolute(project, job.MediaBase);   // a recovery copy has no folder of its own to resolve relative clip paths against
             writeCopy(project, path);   // temp file + atomic replace: a failure leaves the previous copy as it was
             string? old, adopted;
             lock (state.Gate)

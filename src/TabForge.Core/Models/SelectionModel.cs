@@ -63,14 +63,9 @@ public sealed partial class SelectionModel
     /// </summary>
     public SelectionScope Scope { get; private set; } = SelectionScope.AllTracks;
 
-    /// <summary>The one track the range covers, or -1 when it covers every track.</summary>
-    public int ScopeTrack => Scope == SelectionScope.AllTracks ? -1 : TrackIndex;
-
     /// <summary>Raised after every real change, with the origin of the (last) change.</summary>
     public event EventHandler<SelectionOrigin>? Changed;
 
-    /// <summary>True while <see cref="Changed"/> observers run.</summary>
-    public bool IsNotifying => _notifying;
     /// <summary>How many times <see cref="Changed"/> was raised (tests, diagnostics).</summary>
     public int ChangeCount { get; private set; }
 
@@ -288,11 +283,6 @@ public sealed partial class SelectionModel
     /// <summary>Old→new bar map for <paramref name="count"/> bars inserted before bar <paramref name="at"/>.</summary>
     public static int[] InsertMap(int oldBarCount, int at, int count = 1) =>
         Enumerable.Range(0, Math.Max(0, oldBarCount)).Select(bar => bar < at ? bar : bar + count).ToArray();
-
-    /// <summary>Old→new bar map for bars <paramref name="start"/>…<paramref name="end"/> removed (-1 = removed).</summary>
-    public static int[] RemoveMap(int oldBarCount, int start, int end) =>
-        Enumerable.Range(0, Math.Max(0, oldBarCount))
-            .Select(bar => bar < start ? bar : bar <= end ? -1 : bar - (end - start + 1)).ToArray();
 
     /// <summary>Keeps the range inside a song of <paramref name="barCount"/> bars (undo/redo, loads); clears it when empty.</summary>
     public bool ClampTo(int barCount, int trackCount, SelectionOrigin origin = SelectionOrigin.Document)

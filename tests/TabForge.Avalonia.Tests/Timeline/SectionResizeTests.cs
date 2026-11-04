@@ -17,7 +17,7 @@ namespace TabForge.Avalonia.Tests;
 
 /// <summary>
 /// Owns: dragging a section's edge knob on the ruler: the clamped resize rule (right edge, neighbour clamp, one-bar minimum), the live preview, and the single undo step.
-/// Tests: SectionLayout.ResizeClamped, SectionKnobs, TimelineInputController (section resize).
+/// Tests: SectionLayout.ResizeClamped, TimelineInputController (section resize).
 /// </summary>
 public class SectionResizeTests
 {

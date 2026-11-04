@@ -29,13 +29,6 @@ public static class KeyboardModeWindow
         }
     }
 
-    /// <summary>The song time a virtual time is: itself before the loop end, after it the matching moment of the loop.</summary>
-    public static double RealOf(double virtualMs, KeyboardModeLoop? loop)
-    {
-        if (loop is not { IsUsable: true } l || virtualMs < l.EndMs) return virtualMs;
-        return l.StartMs + (virtualMs - l.EndMs) % l.Length;
-    }
-
     private static void Segment(IKeyboardModeNoteSource source, double fromV, double toV, double realFrom, double realTo, double offset, List<KeyboardModePlaced> into)
     {
         if (toV <= fromV) return;

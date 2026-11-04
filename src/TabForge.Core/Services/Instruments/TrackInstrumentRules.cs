@@ -25,20 +25,4 @@ public static class TrackInstrumentRules
     public static NotationMode Effective(NotationMode mode, TrackModel? track) =>
         track is not null && !track.IsAudio && !HasTab(track) ? NotationMode.StaffOnly : mode;
 
-    /// <summary>Load migration: a guitar or bass track whose strings are the pitch-only ladder (a piano or synth that an import or an old build filed as fretted) becomes a keys track. Returns the count changed.</summary>
-    public static int RepairNonFrettedKinds(SongProject project)
-    {
-        var changed = 0;
-        foreach (var track in project.Tracks)
-        {
-            if (track.Kind is not (TrackKind.Guitar or TrackKind.Bass) || !IsPitchOnlyTuning(track.StringTunings)) continue;
-            if (track.MidiProgram is >= 32 and <= 39 || track.Name.Contains("bass", StringComparison.OrdinalIgnoreCase)) continue;
-            track.Kind = TrackKind.Keys;
-            track.InstrumentName = InstrumentNaming.WithoutStringCount(track.InstrumentName ?? "");
-            track.Capo = 0;
-            track.PartialCapos = null;
-            changed++;
-        }
-        return changed;
-    }
 }

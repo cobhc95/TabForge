@@ -235,6 +235,5 @@ public static partial class VideoExportFlow
 public sealed class VideoFrameTimings
 {
     public double Layout, Bake, Instrument, Band, Render, Copy, Compose, Encode;
-    public int Bakes;
     public int Frames;
 }

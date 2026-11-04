@@ -53,7 +53,7 @@ public sealed partial class PreferencesWindow
             Children =
             {
                 new TextBlock { Text = WindowTitle, FontSize = 20, FontWeight = FontWeight.SemiBold },
-                new TextBlock { Text = "Preferences", FontSize = 12, Margin = new Thickness(0, 2, 0, 0), [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted") },
+                new TextBlock { Text = "Preferences", FontSize = ChromeMetrics.TextBody, Margin = new Thickness(0, 2, 0, 0), [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted") },
             },
         };
         var block = new Border { Width = ChromeMetrics.SettingsRailWidth, Height = ChromeMetrics.SettingsTopRowHeight, Padding = new Thickness(18, 16), BorderThickness = new Thickness(0, 0, 1, 1), Child = caption };

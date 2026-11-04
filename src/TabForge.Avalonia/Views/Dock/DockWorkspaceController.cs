@@ -313,20 +313,6 @@ public sealed partial class DockWorkspaceController : IDockPaneDragHost, IDispos
         using (DeferRefresh()) action();
     }
 
-    /// <summary>
-    /// Perf E2b (H4/H5): shows or hides several panels with one rebuild. False when an id is unknown (the tree is untouched).
-    /// </summary>
-    public bool SetPanelsVisible(IEnumerable<string> ids, bool visible)
-    {
-        var list = ids.ToList();
-        if (list.Any(id => !IsRegistered(id))) return false;
-        using (DeferRefresh())
-        {
-            foreach (var id in list) SetPanelVisible(id, visible);
-        }
-        return true;
-    }
-
     private sealed class RefreshScope : IDisposable
     {
         private readonly DockWorkspaceController _owner;

@@ -13,9 +13,6 @@ public static class CompactModeStripPresenter
     /// <summary>The strip shows while compact mode is on, unless another header (the Band view's) takes its place.</summary>
     public static bool StripShown(bool on, bool otherHeaderShown) => on && !otherHeaderShown;
 
-    /// <summary>The menu row is hidden whenever compact mode is on, whichever header shows.</summary>
-    public static bool MenuRowShown(bool on) => !on;
-
     public static string PillTooltip(string trackName) => "Select " + trackName;
 
     /// <summary>Exactly the selected track's pill is lit.</summary>

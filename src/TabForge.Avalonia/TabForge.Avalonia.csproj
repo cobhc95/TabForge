@@ -34,7 +34,7 @@
     <!-- Inter and JetBrains Mono (SIL OFL): the optional bundled interface fonts, loaded from the app resources. -->
     <AvaloniaResource Include="Assets\Fonts\*.ttf" />
     <!-- Superseded artwork stays in source, not in the application (Assets/ASSETS.md). -->
-    <AvaloniaResource Include="Assets\Fretboards\*.png" Exclude="Assets\Fretboards\wood_rosewood_dark_detailed.png;Assets\Fretboards\wood_maple_birdseye_detailed.png;Assets\Fretboards\capo_black_full_v3.png" />
+    <AvaloniaResource Include="Assets\Fretboards\*.png" />
     <AvaloniaResource Include="Assets\Fretboards\*.jpg" />
     <Content Include="Assets\TabForge.ico" Link="Assets\TabForge.ico" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\Icons\TrackRows\owner-icons.json" Link="Assets\TrackRowIcons\owner-icons.json" CopyToOutputDirectory="PreserveNewest" />

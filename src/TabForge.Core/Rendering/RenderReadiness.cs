@@ -37,9 +37,6 @@ public sealed class ChainReadiness
     /// <summary>Required slots that have not yet reported their generation, ascending.</summary>
     public IReadOnlyList<int> MissingSlots => _required.Where(kv => !Satisfied(kv.Key, kv.Value)).Select(kv => kv.Key).OrderBy(s => s).ToList();
 
-    /// <summary>Required slots that reported and are up to date.</summary>
-    public IReadOnlyList<int> ReadySlots => _required.Where(kv => Satisfied(kv.Key, kv.Value)).Select(kv => kv.Key).OrderBy(s => s).ToList();
-
     /// <summary>Plug-ins of up-to-date required chains that are not loaded (failed, quarantined, blocked).</summary>
     public IReadOnlyList<(int Slot, PluginLoadResult Plugin)> Problems
     {
@@ -77,10 +74,6 @@ public static class RenderStaging
 
     public static string TempPath(string finalPath, string jobId)
         => Path.Combine(Path.GetDirectoryName(finalPath) ?? "", TempName(Path.GetFileName(finalPath), jobId));
-
-    /// <summary>True for a temp file this job created (never a planned final path, never another job's file).</summary>
-    public static bool IsOwnedTemp(string path, string jobId)
-        => Path.GetFileName(path) is var n && n.StartsWith(".", StringComparison.Ordinal) && n.Contains(".tfrender-" + jobId + ".tmp", StringComparison.Ordinal);
 
     /// <summary>
     /// Publishes a finished temp file: an atomic rename to <paramref name="finalPath"/> that never overwrites; when the target

@@ -53,7 +53,6 @@ public sealed partial class InstrumentPanelView : Control
     // The legend column beside the board: now and recent always, plus next and upcoming while previewing (sizes).
     private const double LegendGap = 14;
     private const double LegendTopMinimum = 10;
-    private const int LegendRows = 4;
     private const double LegendRowHeight = 18;
     /// <summary>The legend card: its title row, the room round its contents and its width.</summary>
     private const double LegendTitleHeight = 24, LegendCardPad = 8, LegendCardWidth = 114;
@@ -63,7 +62,6 @@ public sealed partial class InstrumentPanelView : Control
     private const double ButtonStackGap = 4;
     /// <summary>Text on a lit fret marker (black on the lit green), whatever the theme.</summary>
     private static readonly int[] StandardTuning = { 64, 59, 55, 50, 45, 40 };
-    private static readonly int[] InlayFrets = { 3, 5, 7, 9, 12, 15, 17, 19, 21, 24 };
 
     /// <summary>Fade of a note the instrument shows after it stops: quick release (ms), then the trace over the hold.</summary>
     private const double ReleaseFadeMs = 320;

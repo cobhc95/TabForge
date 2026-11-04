@@ -21,18 +21,6 @@ public interface IArrangementRowSource
 /// <summary>Pure row geometry. Static and allocation-free apart from <see cref="GroupRuns"/>. Thread: UI thread.</summary>
 public static class ArrangementRowPresenter
 {
-    /// <summary>The runs of consecutive tracks in one group: (group, first track, track count).</summary>
-    public static List<(string Group, int Start, int Count)> GroupRuns(IReadOnlyList<string> groupOfTrack)
-    {
-        var runs = new List<(string, int, int)>();
-        for (var i = 0; i < groupOfTrack.Count; i++)
-        {
-            if (runs.Count > 0 && runs[^1].Item1 == groupOfTrack[i]) runs[^1] = (runs[^1].Item1, runs[^1].Item2, runs[^1].Item3 + 1);
-            else runs.Add((groupOfTrack[i], i, 1));
-        }
-        return runs;
-    }
-
     /// <summary>Top of a track's row from the first row, group headers and collapsed rows included.</summary>
     public static double RowTop<T>(T rows, int index) where T : IArrangementRowSource
     {

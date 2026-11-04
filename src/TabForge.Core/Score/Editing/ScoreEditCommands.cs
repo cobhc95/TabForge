@@ -253,33 +253,6 @@ public sealed partial class ScoreEditCommands
         return true;
     }
 
-    /// <summary>Notation entry: digits pick the string, the fret is chosen automatically.</summary>
-    public void EnterStringOnStaff(int stringNumber)
-    {
-        var track = Track;
-        var cell = CurrentCell(create: true);
-        if (track is null || cell is null) return;
-        var target = stringNumber == 0 ? BestStringFor(track, cell) : Math.Clamp(stringNumber - 1, 0, track.StringTunings.Count - 1);
-        RunEdit(() =>
-        {
-            ApplyPendingDuration(cell);
-            var note = cell.Notes.FirstOrDefault(n => n.StringIndex == target) ?? new TabNote { StringIndex = target, Velocity = CurrentVelocity };
-            if (!cell.Notes.Contains(note)) cell.Notes.Add(note);
-            note.Fret = note.Fret == 0 ? 5 : note.Fret;
-            note.MidiValue = MidiOf(track, target, note.Fret);
-            PreviewNote(note);
-            FillBarAfterWrite();
-            return true;
-        });
-    }
-
-    private int BestStringFor(TrackModel track, TabCell cell)
-    {
-        var used = cell.Notes.Select(n => n.StringIndex).ToHashSet();
-        for (var s = 0; s < track.StringTunings.Count; s++) if (!used.Contains(s)) return s;
-        return 0;
-    }
-
     // Drum tracks: the number typed is the GM percussion note itself (as in the reference); otherwise tuning + capo + fret.
     internal static int MidiOf(TrackModel track, int stringIndex, int fret) => Services.EditCommands.NoteMidi(track, stringIndex, fret);
 

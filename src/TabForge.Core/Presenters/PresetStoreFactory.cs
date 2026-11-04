@@ -11,11 +11,6 @@ namespace TabForge.Presenters;
 /// <summary>The store of each preset kind, and the file date of a preset that has a file.</summary>
 public sealed class PresetStoreFactory : IPresetStoreFactory
 {
-    // PluginLibrary.PresetFolder sanitises a plug-in name at 80, so the manager has to use the same limit: PresetFolderStore.Plugin
-    // re-sanitises its key at 64 and would open a different folder for a 65-80 character name.
-    private const int PluginKeyMaxLength = 80;
-    private const string PluginKeyFallback = "plugin";
-
     /// <param name="effects">The note-effect presets (they live in the app settings); without them that kind has no store.</param>
     public PresetStoreFactory(IEffectPresetSource? effects = null) => Effects = effects;
 
@@ -28,7 +23,7 @@ public sealed class PresetStoreFactory : IPresetStoreFactory
     /// <summary>The store of a kind; null when the kind needs a key and none is given.</summary>
     public IPresetStore? StoreOf(PresetCatalogKind kind, string? key) => kind switch
     {
-        PresetCatalogKind.PluginPreset => key is { Length: > 0 } ? PluginStore(key) : null,
+        PresetCatalogKind.PluginPreset => key is { Length: > 0 } ? PresetFolderStore.Plugin(key) : null,
         PresetCatalogKind.FxChain => PresetFolderStore.FxChains(),
         PresetCatalogKind.Container => PresetFolderStore.Containers(),
         PresetCatalogKind.MidiChain => PresetFolderStore.MidiChains(),
@@ -50,9 +45,4 @@ public sealed class PresetStoreFactory : IPresetStoreFactory
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException) { return null; }
     }
 
-    // A key from PluginKeys/PluginKey is already a folder name, so sanitising it again is a no-op; a raw plug-in name becomes the
-    // same folder PluginLibrary.PresetFolder writes its presets to.
-    private static PresetFolderStore PluginStore(string key) =>
-        new(Path.Combine(PluginLibrary.Root, PresetFolderStore.PluginFolderName,
-            SafeFileNames.SafeFileName(key, PluginKeyFallback, PluginKeyMaxLength)), PresetFolderStore.PluginFileExtension);
 }

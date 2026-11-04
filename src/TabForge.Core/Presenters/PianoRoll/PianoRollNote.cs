@@ -22,7 +22,7 @@ public enum PianoRollTool
     Split,
     Mute,
     Glue,
-    /// <summary>Retired 26 Oct (tombstone): no button or key picks it any more; Alt-drag a note or drag its velocity bar instead.</summary>
+    /// <summary>No button or key picks it: Alt-drag a note or drag its velocity bar instead.</summary>
     Velocity,
     /// <summary>The Select tool (V; the arrow): selects, moves and resizes notes and writes nothing. <see cref="Select"/> stays the Write tool (the pencil); the old values keep their numbers.</summary>
     Pointer,

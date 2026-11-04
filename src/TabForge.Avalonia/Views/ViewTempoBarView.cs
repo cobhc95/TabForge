@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using TabForge.Presenters;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views;
 
@@ -29,7 +30,7 @@ public sealed class ViewTempoBarView : UserControl
         var grid = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(4, 3) };
         for (var kind = 0; kind < 4; kind++)
         {
-            var caption = _captions[kind] = new TextBlock { FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+            var caption = _captions[kind] = new TextBlock { FontSize = ChromeMetrics.TextBody, VerticalAlignment = VerticalAlignment.Center };
             caption[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
             var button = _buttons[kind] = new Button
             {

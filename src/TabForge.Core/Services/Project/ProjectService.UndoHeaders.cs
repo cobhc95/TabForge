@@ -75,11 +75,4 @@ public static partial class ProjectService
     /// <summary>Compact in-memory JSON of any model object (self-tests compare the undo bar codec against it).</summary>
     internal static byte[] CompactJson<T>(T value) => JsonSerializer.SerializeToUtf8Bytes(value, CompactOptions);
 
-    /// <summary>The JSON property names the in-memory form writes for <paramref name="type"/> (the undo bar codec must cover every one).</summary>
-    internal static IReadOnlyList<string> CompactPropertyNames(Type type) =>
-        CompactOptions.GetTypeInfo(type).Properties
-            .Where(property => property.AttributeProvider?.GetCustomAttributes(typeof(System.Text.Json.Serialization.JsonIgnoreAttribute), true)
-                .OfType<System.Text.Json.Serialization.JsonIgnoreAttribute>()
-                .Any(ignore => ignore.Condition == System.Text.Json.Serialization.JsonIgnoreCondition.Always) != true)
-            .Select(property => property.Name).ToList();
 }

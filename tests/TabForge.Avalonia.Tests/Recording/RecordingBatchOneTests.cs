@@ -70,7 +70,7 @@ public class RecordingBatchOneTests
         main.GetVisualDescendants().OfType<TransportBarView.TransportButton>().First(b => b.Item.CommandId == MainWindowTransportRecord.CommandId);
 
     private static StatusNoticeBarView Notice(MainWindow main) =>
-        // All notifications appear on the single top bar (N1): the first visible notice is the top bar; the bottom rows stay hidden tombstones.
+        // All notifications appear on the single top bar (N1): the first visible notice is the top bar; the bottom rows stay hidden.
         main.GetLogicalDescendants().OfType<StatusNoticeBarView>().First(v => v.IsVisible);
 
     private static string NoticeText(MainWindow main) =>

@@ -14,7 +14,7 @@ public static partial class SelfTest
 #if WINDOWS
     private const int GoldenWidth = 1920, GoldenHeight = 1080, GoldenFps = 60, GoldenFrames = 60;
 
-    // Recorded from the encoder before the frame-copy change (docs/reference/VIDEO_RENDER_SPEED.md, option 2). A different value means the MP4 changed.
+    // Recorded from the encoder before the frame-copy change. A different value means the MP4 changed.
     /// <summary>The video digest was recorded with a hardware encoder; another kind of encoder (a software one on a build machine) writes other bytes, so it is compared only when the same kind ran.</summary>
     private const bool GoldenVideoWasHardware = true;
     private const string GoldenVideoDigest = "5FCA28DBB720739A45247E51639C406D648072B7A73248DC933552C47E310F8D";

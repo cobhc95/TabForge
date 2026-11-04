@@ -32,8 +32,6 @@ public sealed record MainMenuRow(string? Header, string? CommandId = null, strin
 /// <summary>A run of rows inserted into the top-level menu <see cref="Menu"/> right after the skeleton item named <see cref="After"/> (at the start when null).</summary>
 public sealed record MainMenuGroup(string Menu, string? After, params MainMenuRow[] Rows);
 
-/// <summary>A row a feature module adds: it goes right after the row of command <see cref="AfterId"/> in menu <see cref="Menu"/>.</summary>
-public sealed record MainMenuFeatureRow(string Menu, string AfterId, string Header, string CommandId);
 
 /// <summary>
 /// The main-menu rows in menu order. A static table, built once at type load and never written, so any thread may read it.
@@ -253,27 +251,10 @@ public static class MainMenuTable
         // <groups>
     };
 
-    /// <summary>The rows a feature module adds: none today (the feature rows sit in their menus above). A row listed here goes right after the top-level row of its anchor command.</summary>
-    public static IReadOnlyList<MainMenuFeatureRow> FeatureRows { get; } = new MainMenuFeatureRow[] { };
-
     /// <summary>Every row that runs a command, in menu order, at any submenu depth (separators and the submenu rows themselves left out).</summary>
     public static IEnumerable<MainMenuRow> CommandRows(IEnumerable<MainMenuGroup> groups) => groups.SelectMany(g => g.Rows).SelectMany(Leaves);
 
     private static IEnumerable<MainMenuRow> Leaves(MainMenuRow row) =>
         row.IsSubmenu ? row.Children!.SelectMany(Leaves) : row.IsSeparator ? Enumerable.Empty<MainMenuRow>() : new[] { row };
 
-    /// <summary>The groups with each feature row placed right after the row of its anchor command id, in the menu it names. An anchor no row holds throws.</summary>
-    public static IReadOnlyList<MainMenuGroup> WithFeatureRows()
-    {
-        var merged = Groups.Select(g => new MainMenuGroup(g.Menu, g.After, g.Rows.ToArray())).ToList();
-        foreach (var feature in FeatureRows)
-        {
-            var group = merged.FindIndex(g => g.Menu == feature.Menu && Array.Exists(g.Rows, r => r.CommandId == feature.AfterId));
-            if (group < 0) throw new InvalidOperationException($"Feature menu row '{feature.CommandId}': anchor '{feature.AfterId}' not found in menu '{feature.Menu}'.");
-            var rows = merged[group].Rows.ToList();
-            rows.Insert(rows.FindIndex(r => r.CommandId == feature.AfterId) + 1, MainMenuRow.Item(feature.Header, feature.CommandId));
-            merged[group] = merged[group] with { Rows = rows.ToArray() };
-        }
-        return merged;
-    }
 }

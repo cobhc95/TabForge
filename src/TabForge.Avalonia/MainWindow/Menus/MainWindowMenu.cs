@@ -13,7 +13,7 @@ using TabForge.Services;
 
 namespace TabForge.Avalonia;
 
-// Owns: the menu row (the menu bar plus MenuRowToggles docked right): the top-level menus in the app's order, filled from MainMenuTable.WithFeatureRows(), each item tagged with its
+// Owns: the menu row (the menu bar plus MenuRowToggles docked right): the top-level menus in the app's order, filled from MainMenuTable.Groups, each item tagged with its
 //   command id, enabled when MainWindowCommands has a handler for it, showing its hotkey as gesture text (re-read from the live hotkeys when a menu opens); the View menu's Layouts and Panels items (DockViewMenus) above
 //   its Reset all panels row; submenus (a row with Children) built from the same table, any depth.
 // Does not own: the rows (MainMenuTable in Core), the handlers (MainWindowCommands), the dialogs, or the Layouts and Panels rows (DockViewMenus).
@@ -39,7 +39,7 @@ public static class MainWindowMenu
     /// <returns>The menu row: the menu on the left, the layout toggles (MenuRowToggles) docked right.</returns>
     public static Control Build(MainWindowCommands commands, Window owner, DockViewMenus viewMenus, HotkeySettings hotkeys, Control? modePills = null)
     {
-        var groups = MainMenuTable.WithFeatureRows();
+        var groups = MainMenuTable.Groups;
         var unknown = groups.Select(g => g.Menu).Distinct().Except(TopLevelOrder).ToList();
         if (unknown.Count > 0) throw new InvalidOperationException($"MainMenuTable names menus the window does not list: {string.Join(", ", unknown)}.");
         // The bar: 30 px on the panel colour with a soft 1 px bottom line; top-level headers 16 px in, and the same inset after the label (AvaloniaMenuTemplates centres it).
@@ -150,16 +150,4 @@ public static class MainWindowMenu
         return item;
     }
 
-    /// <summary>The preview dialogs no row names, in one submenu (a development aid: the release menu does not add it, see PreviewPromptsMenu for the track prompts).</summary>
-    internal static MenuItem PreviewsMenu(IEnumerable<PreviewDialogEntry> entries)
-    {
-        var menu = new MenuItem { Header = "Preview dialogs" };
-        foreach (var entry in entries)
-        {
-            var item = new MenuItem { Header = entry.Header };
-            item.Click += (_, _) => entry.Open();
-            menu.Items.Add(item);
-        }
-        return menu;
-    }
 }

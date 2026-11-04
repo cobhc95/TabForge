@@ -21,7 +21,6 @@ public sealed class DrawingArchitectureTests
     {
         "UiTokens.cs",
         "CaptureMetrics.cs",
-        "UiStrokes.cs",
         "UiFonts.cs",
         "UiDensity.cs",
         "UiMetrics.cs",

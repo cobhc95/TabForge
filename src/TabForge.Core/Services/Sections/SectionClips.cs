@@ -53,10 +53,6 @@ public static class SectionClips
         return new SectionClipSet(start, entries);
     }
 
-    /// <summary>The same set with a copy of every clip (new identities).</summary>
-    public static SectionClipSet Cloned(SectionClipSet set) =>
-        new(set.Start, set.Entries.Select(e => e with { Clip = e.Clip.Clone() }).ToList());
-
     /// <summary>
     /// Puts the set's clips on the section that now starts at bar <paramref name="newStart"/>; with <paramref name="add"/> the clips are added to their
     /// tracks (copies), otherwise they are the clips already there (moves). Returns the latest end of the placed clips in seconds, or 0 when none.

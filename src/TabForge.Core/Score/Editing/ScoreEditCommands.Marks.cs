@@ -181,18 +181,6 @@ public sealed partial class ScoreEditCommands
         return null;
     }
 
-    public void CycleAccent()
-    {
-        if (ApplyToolSelection(cells =>
-            {
-                var current = cells.Select(cell => cell.Accent).Distinct().Count() == 1 ? cells[0].Accent : 0;
-                var target = (current + 1) % 3;
-                foreach (var selected in cells) selected.Accent = target;
-            })) return;
-        if (BeatWithNotesOrSay() is not { } cell) return;   // as GP5: a mark on an empty spot does nothing (nothing is kept for the next note)
-        RunEdit(() => { cell.Accent = (cell.Accent + 1) % 3; return true; });
-    }
-
     public void SetAccent(int accent)
     {
         accent = Math.Clamp(accent, 0, 2);
@@ -404,8 +392,6 @@ public sealed partial class ScoreEditCommands
         RunEdit(() => { Services.EditCommands.EmptyBar(cells); return true; });
     }
 
-
-    internal static TabCell CloneCell(TabCell src) => src.Clone();
 
     public void ToggleRepeatOpen()
     {

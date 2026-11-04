@@ -216,16 +216,4 @@ public sealed partial class ScoreEditCommands
         });
     }
 
-    public void SetTupletEntryState(int numerator, int denominator)
-    {
-        if (numerator <= 0 || denominator <= 0)
-        {
-            CurrentTupletNumerator = 0;
-            CurrentTupletDenominator = 0;
-            return;
-        }
-        CurrentTupletNumerator = Math.Clamp(numerator, 2, 13);
-        CurrentTupletDenominator = Math.Clamp(denominator, 1, 12);
-        CurrentTriplet = CurrentTupletNumerator == 3 && CurrentTupletDenominator == 2;
-    }
 }

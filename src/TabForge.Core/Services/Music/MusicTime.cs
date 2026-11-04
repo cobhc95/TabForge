@@ -285,17 +285,6 @@ public static class MusicTime
     public static double BarMs(SongProject p, int measureIndex, double tempoScale = 1.0)
         => SlotsToMs(p, measureIndex, BarSlots(p, measureIndex), tempoScale);
 
-    public static string DurationGlyph(int denominator) => denominator switch
-    {
-        1 => "𝅝", 2 => "𝅗𝅥", 4 => "♩", 8 => "♪", 16 => "𝅘𝅥𝅯", 32 => "𝅘𝅥𝅰", 64 => "𝅘𝅥𝅱", _ => "♪"
-    };
-
-    public static string DurationName(int denominator) => denominator switch
-    {
-        1 => "whole", 2 => "half", 4 => "quarter", 8 => "eighth", 16 => "sixteenth",
-        32 => "thirty-second", 64 => "sixty-fourth", _ => "note"
-    };
-
     // ----- arrangement X-axis: one musical axis shared by every track -----
 
     /// <summary>Width of one bar at the given unit (4/4) bar width. Bars scale with their musical length.</summary>

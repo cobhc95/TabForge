@@ -6,6 +6,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Markup.Xaml.MarkupExtensions;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views;
 
@@ -58,7 +59,7 @@ public static class ViewTempoPopups
 
     private static Border Frame(Control child)
     {
-        var frame = new Border { BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(3), Padding = new Thickness(8, 6), Child = child };
+        var frame = new Border { BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(ChromeMetrics.RadiusSmall), Padding = new Thickness(8, 6), Child = child };
         frame[!Border.BackgroundProperty] = new DynamicResourceExtension("PanelBackground");
         frame[!Border.BorderBrushProperty] = new DynamicResourceExtension("BorderBrush");
         return frame;

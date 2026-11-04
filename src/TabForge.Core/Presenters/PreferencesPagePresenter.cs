@@ -35,7 +35,6 @@ public sealed record ResetPrompt(string Title, string Message);
 public static class PreferencesPagePresenter
 {
     public const string NoChangedSettings = "No settings on this page differ from the defaults.";
-    public const string NoChangedShortcuts = "No shortcuts on this page differ from the defaults.";
 
     /// <summary>The settings the Appearance page's Theme card resets: the built-in palette, sizing, typography, motion and score look. The theme mode comes first, as its preset rewrites the colours after it.</summary>
     public static readonly IReadOnlyList<string> ThemeResetKeys = new[]
@@ -76,9 +75,6 @@ public static class PreferencesPagePresenter
 
     public static ResetPrompt ResetPage(string page, int changed) =>
         new($"Reset {page}", $"Restore {changed} setting{Plural(changed)} on this page to their defaults?");
-
-    public static ResetPrompt ResetShortcuts(int changed) =>
-        new("Reset shortcuts", $"Restore the default keys for {changed} changed shortcut{Plural(changed)}?");
 
     public static ResetPrompt ResetAll() =>
         new("Reset all settings", "Restores every option and keyboard shortcut in Settings to its default. Your presets, layouts, folders and songs are not touched. Cancel still undoes it until you press OK or Apply.");

@@ -102,7 +102,7 @@ public sealed class ColourPickerPresenter
         SaturationPercent = saturationPercent;
         BrightnessPercent = brightnessPercent;
         OpacityPercent = opacityPercent;
-        var opaque = ColourChooserPresenter.ColourFromSliders(hue, saturationPercent, brightnessPercent);
+        var opaque = ColourHsv.ColourFromSliders(hue, saturationPercent, brightnessPercent);
         Colour = SupportsOpacity ? new Rgba(opaque.R, opaque.G, opaque.B, (byte)Math.Round(opacityPercent * 255 / 100)) : opaque;
         CodeText = ColourHex.Format(Colour, SupportsOpacity);
         CodeError = null;
@@ -123,7 +123,7 @@ public sealed class ColourPickerPresenter
     {
         Colour = SupportsOpacity ? colour : new Rgba(colour.R, colour.G, colour.B);
         OpacityPercent = Colour.A * 100.0 / 255;
-        (Hue, SaturationPercent, BrightnessPercent) = ColourChooserPresenter.SliderValues(Colour);
+        (Hue, SaturationPercent, BrightnessPercent) = ColourHsv.SliderValues(Colour);
         CodeText = ColourHex.Format(Colour, SupportsOpacity);
         CodeError = null;
     }

@@ -40,8 +40,6 @@ internal static class DockPaneTable
 
     public static IEnumerable<string> SideIds => Rows.Where(r => r.Side).Select(r => r.Id);
 
-    public static IEnumerable<DockPaneRow> InRegistrationOrder => Rows.OrderBy(r => r.RegisterOrder);
-
     /// <summary>True for an id a saved layout may hold: a current pane or a retired one.</summary>
     public static bool IsSavedId(string id) => Rows.Any(r => r.Id == id) || RetiredIds.Contains(id);
 }

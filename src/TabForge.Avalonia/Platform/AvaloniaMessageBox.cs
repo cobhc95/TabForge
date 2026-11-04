@@ -7,6 +7,7 @@ using Avalonia.Layout;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using TabForge.Presenters;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Platform;
 
@@ -58,7 +59,7 @@ public sealed class AvaloniaMessageBox : Window
         {
             var ring = new Ellipse { Width = 30, Height = 30, StrokeThickness = 2 };
             ring[!Shape.StrokeProperty] = new DynamicResourceExtension(TonePaletteName(tone));
-            var mark = new TextBlock { Text = glyph, FontSize = 16, FontWeight = FontWeight.Bold, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            var mark = new TextBlock { Text = glyph, FontSize = ChromeMetrics.TextTitle, FontWeight = FontWeight.Bold, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
             mark[!TextBlock.ForegroundProperty] = new DynamicResourceExtension(TonePaletteName(tone));
             var iconPanel = new Grid { Name = "IconGlyph", Width = 30, Height = 30, VerticalAlignment = VerticalAlignment.Top };
             iconPanel.Children.Add(ring);
@@ -66,7 +67,7 @@ public sealed class AvaloniaMessageBox : Window
             DockPanel.SetDock(iconPanel, Dock.Left);
             body.Children.Add(iconPanel);
         }
-        var message = new TextBlock { Name = "MessageText", Text = text, TextWrapping = TextWrapping.Wrap, FontSize = 13, MaxWidth = 500, Margin = new Thickness(14, 0, 0, 0) };
+        var message = new TextBlock { Name = "MessageText", Text = text, TextWrapping = TextWrapping.Wrap, FontSize = ChromeMetrics.TextDialog, MaxWidth = 500, Margin = new Thickness(14, 0, 0, 0) };
         message[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
         content.Children.Add(message);
         content.Children.Add(actions);

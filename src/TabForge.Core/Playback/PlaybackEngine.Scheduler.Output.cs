@@ -146,11 +146,6 @@ public sealed partial class PlaybackEngine : IDisposable
                 if (e.TrackIndex >= 0 && (e.IsNoteOn || e.IsNoteOff)) NoteSounding(e);
             }
         }
-        if (!_diagnostics) return;
-        var wall = _diagnosticClock.Elapsed.TotalMilliseconds - _playbackStartWallMs;
-        var latency = wall - (streamMs - startMs);
-        var record = new DispatchRecord(streamMs, latency, e.TrackIndex, status, data1, data2, e.DeviceId);
-        lock (_logGate) { if (_dispatchLog.Count < InputLimits.MaxDiagnosticRecords) _dispatchLog.Add(record); }
     }
 
     /// <summary>The latest persistent channel message per (device, status, controller) at <paramref name="timeMs"/>: the setup, overwritten by the mix points and other events up to then. The one definition of a track's effective level at a position.</summary>

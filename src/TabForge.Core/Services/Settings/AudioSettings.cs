@@ -59,17 +59,6 @@ public sealed class AudioSettings
     public string LoopDefaultScope { get; set; } = "Section";
     /// <summary>Forget the selected loop area when looping is switched off.</summary>
     public bool LoopClearAreaOnDisable { get; set; }   // off: the Loop button keeps the region (user rule); opt-in in the loop settings
-    /// <summary>Fretboard preview layout: "TabForge" (fixed look-ahead) or one of the "the reference: …" beat/bar layouts.</summary>
-    public string FretboardStyle { get; set; } = "TabForge";
     /// <summary>Master volume applied on top of every track's volume, 0–100 percent.</summary>
     public int MasterVolume { get; set; } = 100;
-    /// <summary>What the master volume knob scales.</summary>
-    public bool MasterAffectsTracks { get; set; } = true;
-    public bool MasterAffectsMetronome { get; set; }
-    public bool MasterAffectsPreview { get; set; }
-    /// <summary>Arrangement pan controls: rotary knobs (true) or horizontal sliders.</summary>
-    public bool PanKnobs { get; set; }
-    /// <summary>One-time switch of existing settings to the standard pan slider. Currently unused (no reader); kept so old files load.</summary>
-    public bool PanSliderAdopted { get; set; }
-    public bool VolumeKnobs { get; set; }
 }

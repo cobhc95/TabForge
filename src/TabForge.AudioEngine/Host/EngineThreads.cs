@@ -109,13 +109,6 @@ public static partial class AudioThreadSetup
         catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException) { return false; }
     }
 
-    /// <summary>The calling thread flushes denormals (both SSE flags set), per <see cref="FlushDenormals"/>.</summary>
-    public static bool DenormalsFlushed()
-    {
-        try { return _controlfp_s(out var current, 0, 0) == 0 && (current & McwDn) == DnFlush; }
-        catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException) { return false; }
-    }
-
     /// <summary>The calling thread: denormals flushed, and registered once with the Windows "Pro Audio" scheduling class (MMCSS, time critical): fewer dropouts at small buffers.</summary>
     internal static void PrepareAudioThread()
     {

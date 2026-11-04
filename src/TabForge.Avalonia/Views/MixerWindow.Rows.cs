@@ -45,7 +45,7 @@ public sealed partial class MixerWindow
         grid.Margin = new Thickness(MixerColumnLayout.HeaderMarginLeft, 0, MixerColumnLayout.HeaderMarginRight, 4);
         for (var i = 0; i < ColumnNames.Length; i++)
         {
-            var header = new TextBlock { Text = _compact && i == MixerColumnLayout.Volume ? "VOL" : ColumnNames[i], FontSize = 11, FontWeight = FontWeight.SemiBold, [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextSecondary") };
+            var header = new TextBlock { Text = _compact && i == MixerColumnLayout.Volume ? "VOL" : ColumnNames[i], FontSize = ChromeMetrics.TextSmall, FontWeight = FontWeight.SemiBold, [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextSecondary") };
             if (_compact && (i == MixerColumnLayout.Midi || i == MixerColumnLayout.Pitch)) header.IsVisible = false;
             Put(grid, header, i);
         }
@@ -58,7 +58,7 @@ public sealed partial class MixerWindow
         foreach (var row in rows) stack.Children.Add(row);
         return new Border
         {
-            BorderThickness = new Thickness(MixerColumnLayout.PanelBorderThickness), CornerRadius = new CornerRadius(6), Padding = new Thickness(MixerColumnLayout.PanelPadding), Margin = new Thickness(0, 0, 0, 8), Child = stack,
+            BorderThickness = new Thickness(MixerColumnLayout.PanelBorderThickness), CornerRadius = new CornerRadius(ChromeMetrics.RadiusLarge), Padding = new Thickness(MixerColumnLayout.PanelPadding), Margin = new Thickness(0, 0, 0, 8), Child = stack,
             [!Border.BackgroundProperty] = new DynamicResourceExtension("PanelBackground"),
             [!Border.BorderBrushProperty] = new DynamicResourceExtension("BorderSoftBrush"),
         };
@@ -68,7 +68,7 @@ public sealed partial class MixerWindow
     {
         var border = new Border
         {
-            Name = name, Child = grid, Padding = new Thickness(MixerColumnLayout.RowBorderPadding, 5), Margin = new Thickness(0, 1), CornerRadius = new CornerRadius(4),
+            Name = name, Child = grid, Padding = new Thickness(MixerColumnLayout.RowBorderPadding, 5), Margin = new Thickness(0, 1), CornerRadius = new CornerRadius(ChromeMetrics.RadiusMedium),
             BorderThickness = new Thickness(MixerColumnLayout.RowBorderThickness), BorderBrush = Brushes.Transparent,   // the selection outline lives here (no layout shift)
             [!Border.BackgroundProperty] = new DynamicResourceExtension(accent ? "Panel2Brush" : "WindowBrush"),
         };
@@ -82,7 +82,7 @@ public sealed partial class MixerWindow
 
     private StackPanel NameBlock(string title, string subtitle, bool accent)
     {
-        var subtitleBlock = new TextBlock { Text = subtitle, FontSize = 11, TextTrimming = TextTrimming.CharacterEllipsis, IsVisible = !_compact, [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextSecondary") };
+        var subtitleBlock = new TextBlock { Text = subtitle, FontSize = ChromeMetrics.TextSmall, TextTrimming = TextTrimming.CharacterEllipsis, IsVisible = !_compact, [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextSecondary") };
         return new StackPanel
         {
             Children =
@@ -143,7 +143,7 @@ public sealed partial class MixerWindow
         var colour = GroupColour(group, members);
         var swatch = new Button
         {
-            Name = "GroupColour", Content = new Border { Width = 12, Height = 12, CornerRadius = new CornerRadius(3), Background = SwatchBrush(colour) },
+            Name = "GroupColour", Content = new Border { Width = 12, Height = 12, CornerRadius = new CornerRadius(ChromeMetrics.RadiusSmall), Background = SwatchBrush(colour) },
             Width = 16, Height = 16, Padding = new Thickness(0), Margin = new Thickness(0, 0, 6, 0), VerticalAlignment = VerticalAlignment.Top,
         };
         ToolTip.SetTip(swatch, $"Colour of the {group.ToLowerInvariant()}: click to choose (colours every track in the group)");
@@ -179,7 +179,7 @@ public sealed partial class MixerWindow
         void OnTrack(Action<TrackModel> apply) { if (Now() is { } live) apply(live); }
         var track = built;   // the build-time values the row shows
         var grid = RowGrid();
-        var swatch = new Border { Width = 12, Height = 12, CornerRadius = new CornerRadius(3), Background = SwatchBrush(track.ColorHex) };
+        var swatch = new Border { Width = 12, Height = 12, CornerRadius = new CornerRadius(ChromeMetrics.RadiusSmall), Background = SwatchBrush(track.ColorHex) };
         var chip = new Button
         {
             Name = "TrackColour", Content = swatch, Width = 16, Height = 16, Padding = new Thickness(0), Margin = new Thickness(22, 0, 6, 0),

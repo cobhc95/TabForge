@@ -15,7 +15,6 @@ namespace TabForge.Avalonia.Views.Fx;
 // Tests: TabForge.Avalonia.Tests.FxAddPluginTests.
 public sealed class FxAddPlugin
 {
-    private const string UnknownRole = "";
     private readonly IFxChainHost _host;
     private readonly FxChainDialogs _dialogs;
     private readonly Action<string> _status;

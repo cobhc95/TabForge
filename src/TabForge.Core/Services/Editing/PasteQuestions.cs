@@ -1,6 +1,6 @@
 namespace TabForge.Services;
 
-/// <summary>The questions a paste can ask (docs/specs/COPY_PASTE_DESIGN.md, Owner decisions Q1..Q5).</summary>
+/// <summary>The questions a paste can ask.</summary>
 public enum PasteQuestion { BeatsOntoNotes, Octave, BarsOntoNotes, BarSettings, Drums }
 
 /// <summary>Q1: pasting beats onto existing notes.</summary>

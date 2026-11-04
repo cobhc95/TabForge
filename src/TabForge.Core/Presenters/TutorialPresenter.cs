@@ -27,14 +27,6 @@ public static class TutorialPresenter
     /// <summary>The saved guide choice for the Detailed Guide; Basic is any other value.</summary>
     private const string DetailedSavedValue = "detailed";
 
-    /// <summary>The last export step; the exporter reports it when the PDF is finished.</summary>
-    public const string DoneStep = "Done";
-
-    /// <summary>The export step during which the page layout runs with no measurable progress.</summary>
-    public const string LayingOutStep = "Laying out pages";
-
-    public const string PreparingText = "Preparing the PDF…";
-    public const string CancellingText = "Cancelling…";
     public const string CancelledText = "PDF export cancelled.";
 
     /// <summary>The name of a guide as the window's title and export dialog use it.</summary>
@@ -42,9 +34,6 @@ public static class TutorialPresenter
 
     /// <summary>The window title for a guide.</summary>
     public static string GuideTitle(TutorialGuide guide) => "TabForge " + GuideName(guide);
-
-    /// <summary>The title of the export dialog for a guide.</summary>
-    public static string ExportDialogTitle(TutorialGuide guide) => $"Export the {GuideName(guide)} as a PDF";
 
     /// <summary>True when the Detailed Guide has chapters, so its choice is enabled.</summary>
     public static bool DetailedAvailable(TutorialLibrary detailed) => detailed.Chapters.Count > 0;
@@ -60,9 +49,6 @@ public static class TutorialPresenter
     public static TutorialGuide SwitchedGuide(TutorialGuide requested, bool detailedAvailable) =>
         requested == TutorialGuide.Detailed && !detailedAvailable ? TutorialGuide.Basic : requested;
 
-    /// <summary>The value the saved guide choice stores for a guide.</summary>
-    public static string SavedGuideValue(TutorialGuide guide) => guide == TutorialGuide.Detailed ? DetailedSavedValue : "basic";
-
     /// <summary>The contents rows in order: each chapter, and the headings of the open chapter right after it.</summary>
     public static IReadOnlyList<TutorialContentsRow> ContentsRows(IReadOnlyList<TutorialChapter> chapters, TutorialChapter? open)
     {
@@ -75,10 +61,6 @@ public static class TutorialPresenter
         }
         return rows;
     }
-
-    /// <summary>The name a screen reader gives a contents row: the chapter's label and title, or the section's text.</summary>
-    public static string ContentsAutomationName(TutorialChapter chapter, string text, int level) =>
-        level == 0 ? $"{chapter.Label}: {chapter.Title}" : $"Section: {text}";
 
     /// <summary>Which of Back, Forward, Previous and Next are enabled, from the history position and the open chapter's position in the library.</summary>
     public static TutorialNavButtons NavButtons(IReadOnlyList<TutorialChapter> chapters, TutorialChapter? current, int historyIndex, int historyCount)
@@ -113,23 +95,4 @@ public static class TutorialPresenter
             NoResultsText: $"Nothing matches “{query}”.");
     }
 
-    /// <summary>The progress bar's maximum: one step per chapter, plus the finishing step.</summary>
-    public static int ExportProgressMaximum(int chapterCount) => chapterCount + 1;
-
-    /// <summary>True when the export step runs with no measurable progress.</summary>
-    public static bool ExportProgressIsIndeterminate(string step) => step == LayingOutStep;
-
-    /// <summary>The status line for one export step report.</summary>
-    public static string ExportProgressStatus(int done, int total, string step) => step switch
-    {
-        DoneStep => "Finishing…",
-        LayingOutStep => "Laying out pages…",
-        _ => $"Writing chapter {done + 1} of {total}: {step}",
-    };
-
-    /// <summary>The status line after a PDF is saved.</summary>
-    public static string ExportSavedText(string fileName, int pages) => $"Saved {fileName} ({pages} pages).  ";
-
-    /// <summary>The status line when the PDF could not be written.</summary>
-    public static string ExportFailedText(string reason) => "The PDF could not be written: " + reason;
 }

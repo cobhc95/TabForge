@@ -54,15 +54,6 @@ internal sealed partial class ScorePreviewEditor
     /// <summary>Raised after the loop tint changed, so the view repaints.</summary>
     internal event EventHandler? LoopTintChanged;
 
-    /// <summary>Lights whole bars like selected notes without selecting them (display only: no loop, no edit target); null or empty removes them.</summary>
-    public void SetMirrorBars(IReadOnlyList<(int First, int Last)>? bars)
-    {
-        if (bars is { Count: 0 }) bars = null;
-        if (bars is null ? _probe.MirrorBars is null : _probe.MirrorBars is { } now && now.SequenceEqual(bars)) return;
-        _probe.MirrorBars = bars;
-        LoopTintChanged?.Invoke(this, EventArgs.Empty);
-    }
-
     /// <summary>True while scattered bars are lit by <see cref="SetMirrorBars"/>.</summary>
     public bool HasMirrorBars => _probe.MirrorBars is not null;
 

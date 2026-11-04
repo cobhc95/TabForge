@@ -18,7 +18,6 @@ namespace TabForge.Avalonia.Platform;
 /// thin-outlined 13 DIP circle with a 5 DIP centred dot while checked, and the Slider is the default one (a 4 DIP track and a 11x18 DIP thumb
 /// in the system control colours, which the app does not theme).
 /// Owns: those three templates and the system slider colours. Does not own: the CheckBox state colours (Core look "CheckBox" via AvaloniaLooks).
-/// Tests: TabForge.Avalonia.Tests.ParityShotsTests (A/B renders of the Score text and Global tuning dialogs).
 /// </summary>
 public static class AvaloniaCheckSliderStyles
 {

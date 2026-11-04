@@ -206,9 +206,6 @@ public static class AvaloniaPalette
         return true;
     }
 
-    /// <summary>The appearance whose brushes were published last.</summary>
-    public static AppearanceSettings PublishedAppearance => State.Appearance;
-
     private static void Rebuild()
     {
         State.Derived.Clear();

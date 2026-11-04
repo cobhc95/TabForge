@@ -5,6 +5,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using TabForge.Avalonia.Platform.Controls;
 using TabForge.Platform;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views;
 
@@ -54,7 +55,7 @@ public sealed partial class TrackPropertiesWindow
 
     private static StackPanel KnobBlock(KnobControl knob)
     {
-        var readout = new TextBlock { Name = knob.Label + "Readout", HorizontalAlignment = HorizontalAlignment.Center, FontSize = 11, Margin = new Thickness(0, 2, 0, 0), Text = knob.DisplayText() };
+        var readout = new TextBlock { Name = knob.Label + "Readout", HorizontalAlignment = HorizontalAlignment.Center, FontSize = ChromeMetrics.TextSmall, Margin = new Thickness(0, 2, 0, 0), Text = knob.DisplayText() };
         knob.ValueChanged += (_, _) => readout.Text = knob.DisplayText();
         var caption = new TextBlock { Text = knob.Label, HorizontalAlignment = HorizontalAlignment.Center, FontWeight = FontWeight.SemiBold, Margin = new Thickness(0, 2, 0, 0) };
         return new StackPanel { Margin = new Thickness(0, 2, 0, 0), Children = { knob, caption, readout } };

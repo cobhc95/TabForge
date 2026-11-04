@@ -14,6 +14,7 @@ using TabForge.Avalonia.Views.Fx;
 using TabForge.Plugins;
 using TabForge.Presenters;
 using TabForge.Avalonia.Views.Dialogs;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views;
 
@@ -252,7 +253,7 @@ public sealed class PluginBrowserWindow : Window
 
     private Button AddButton(string text, string automationId, string tip, Action click)
     {
-        var button = new Button { Content = text, Margin = new Thickness(0, 0, 6, 4), Padding = new Thickness(10, 3) };
+        var button = new Button { Content = text, Margin = new Thickness(0, 0, 6, 4), Padding = DialogMetrics.ActionButtonPadding };
         ToolTip.SetTip(button, tip);
         AutomationProperties.SetAutomationId(button, automationId);
         button.Name = automationId.Replace("Plugins.", "") + "Button";
@@ -295,7 +296,7 @@ public sealed class PluginBrowserWindow : Window
     private Button SortHeader(int column)
     {
         var title = ColumnHeaders[column];
-        var arrow = new TextBlock { FontSize = 9, Margin = new Thickness(6, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+        var arrow = new TextBlock { FontSize = ChromeMetrics.TextMicro, Margin = new Thickness(6, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
         arrow[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("Accent");
         _sortArrows.Add(arrow);
         var header = new Button

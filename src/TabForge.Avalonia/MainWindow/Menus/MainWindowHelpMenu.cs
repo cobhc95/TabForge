@@ -13,6 +13,7 @@ using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Presenters;
 using TabForge.Services;
 using Trace = TabForge.Services.Trace;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia;
 
@@ -137,7 +138,7 @@ internal sealed class AboutWindow : Window
         {
             var ring = new Ellipse { Width = 30, Height = 30, StrokeThickness = 2 };
             ring[!Shape.StrokeProperty] = new DynamicResourceExtension(TonePaletteName(tone));
-            var mark = new TextBlock { Text = glyph, FontSize = 16, FontWeight = FontWeight.Bold, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            var mark = new TextBlock { Text = glyph, FontSize = ChromeMetrics.TextTitle, FontWeight = FontWeight.Bold, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
             mark[!TextBlock.ForegroundProperty] = new DynamicResourceExtension(TonePaletteName(tone));
             var iconPanel = new Grid { Name = "IconGlyph", Width = 30, Height = 30, VerticalAlignment = VerticalAlignment.Top };
             iconPanel.Children.Add(ring);

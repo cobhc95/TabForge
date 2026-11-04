@@ -55,19 +55,4 @@ public static class StandardDialogsPresenter
     public static (string Title, string Colour)? MarkerResult(string name, string? colour) =>
         !string.IsNullOrWhiteSpace(name) && colour is not null ? (name.Trim(), colour) : null;
 
-    public static int? ClampedInt(string text, int min, int max) => int.TryParse(text, out var v) ? Math.Clamp(v, min, max) : null;
-
-    /// <summary>A tuning typed as MIDI numbers (clamped 12-96) or note names such as E4; unknown tokens are skipped.</summary>
-    public static List<int> ParseTuning(string s)
-    {
-        var map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        for (var m = 12; m < 100; m++) map[MusicTheoryService.NoteName(m)] = m;
-        var tunings = new List<int>();
-        foreach (var token in s.Split(new[] { ' ', ',', ';' }, StringSplitOptions.RemoveEmptyEntries))
-        {
-            if (int.TryParse(token, out var v)) tunings.Add(Math.Clamp(v, 12, 96));
-            else if (map.TryGetValue(token.Trim(), out var mv)) tunings.Add(mv);
-        }
-        return tunings;
-    }
 }

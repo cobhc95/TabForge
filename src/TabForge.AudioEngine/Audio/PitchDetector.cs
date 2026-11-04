@@ -111,11 +111,4 @@ public sealed class PitchDetector
         return (float)((double)_rate / _factor / refined);
     }
 
-    /// <summary>Nearest equal-tempered note (A4 = <paramref name="a4"/> Hz): MIDI number and the offset from it in cents (-50..50).</summary>
-    public static (int Midi, double Cents) NearestNote(double hz, double a4 = 440)
-    {
-        var m = 69 + 12 * Math.Log2(hz / a4);
-        var midi = (int)Math.Round(m);
-        return (midi, (m - midi) * 100);
-    }
 }

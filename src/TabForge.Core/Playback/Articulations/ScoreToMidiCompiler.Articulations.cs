@@ -32,8 +32,6 @@ internal sealed partial class ScoreToMidiCompiler
         /// <summary>True when the technique's own pitch bend, cut or attack must not run: a rule covers it, or the export skips unmapped techniques.</summary>
         public bool Suppress(string id, bool skipUnmapped) => Covered.Contains(id) || (skipUnmapped && Unmapped.Contains(id));
 
-        /// <summary>True for a technique that has no rule row at all (tremolo, trill, whammy): only the Skip choice affects it.</summary>
-        public bool SuppressUnmapped(bool skipUnmapped) => skipUnmapped;
     }
 
     /// <summary>The map of the track instrument, or null: no instrument plug-in plays the track, or its slot has no rules.</summary>

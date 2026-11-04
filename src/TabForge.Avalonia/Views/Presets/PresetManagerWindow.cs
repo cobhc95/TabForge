@@ -186,7 +186,6 @@ public sealed partial class PresetManagerWindow : Window
     public bool CanDelete => _delete.IsEnabled;
     public bool CanMoveUp => _up.IsEnabled;
     public bool CanMoveDown => _down.IsEnabled;
-    public bool CanShowInTree => _show.IsVisible && _show.IsEnabled;
     public string RenameTip => ToolTip.GetTip(_rename) as string ?? "";
 
     public string SearchText

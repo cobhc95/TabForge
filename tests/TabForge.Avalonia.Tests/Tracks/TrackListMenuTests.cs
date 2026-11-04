@@ -10,7 +10,7 @@ namespace TabForge.Avalonia.Tests;
 
 // Owns: the empty track list's right-click menu: its rows pinned to the captions and order (ArrangementPanel.Groups.cs BuildEmptyAreaMenu),
 //   and which of its rows the Avalonia window runs (Colour tracks and Settings open their preview dialogs; the rest render disabled).
-// Does not own: the Core rows (TrackListMenus), the pixels (ParityShotsTests, context-timeline-empty) or the Tools submenu (PreviewToolsMenu).
+// Does not own: the Core rows (TrackListMenus) or the Tools submenu (PreviewToolsMenu).
 // Tests: this file.
 public class TrackListMenuTests
 {

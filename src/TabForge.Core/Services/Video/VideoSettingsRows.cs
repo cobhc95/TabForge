@@ -26,9 +26,9 @@ public static partial class SettingsCatalog
                 VideoEncoderChoices.Available(), "Which H.264 encoder writes the MP4. Auto uses a hardware encoder when the PC has one (the default behaviour); Software and Hardware force the choice. A hardware encoder that fails to start falls back to software when exporting. FFmpeg (offered only when an ffmpeg is installed) writes the MP4 through that ffmpeg instead of Windows.",
                 "video encoder hardware software h264 gpu experimental"),
             Bool(General, "Video encoder (experimental)", "video.fastexport", "Fast export (experimental)", v => video.FastExport = v, () => video.FastExport,
-                "Export video faster with a lower encoder effort. The picture can look slightly different and the file slightly bigger. Off by default: on the test PC it gave no measurable gain (see docs/reference/VIDEO_ENCODER_OPTIONS.md).", "video export fast speed quality experimental"),
+                "Export video faster with a lower encoder effort. The picture can look slightly different and the file slightly bigger. Off by default: on the test PC it gave no measurable gain.", "video export fast speed quality experimental"),
             Bool(General, "Video encoder (experimental)", "video.lowlatency", "Low latency recording (experimental)", v => video.LowLatency = v, () => video.LowLatency,
-                "Ask the encoder for its low-latency mode while recording live. Off by default: on the test PC it made the hardware encoder slower (see docs/reference/VIDEO_ENCODER_OPTIONS.md).", "video record low latency live encoder experimental"),
+                "Ask the encoder for its low-latency mode while recording live. Off by default: on the test PC it made the hardware encoder slower.", "video record low latency live encoder experimental"),
         };
     }
 }

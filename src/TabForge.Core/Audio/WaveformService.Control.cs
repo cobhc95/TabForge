@@ -17,18 +17,6 @@ public sealed partial class WaveformService
         RaiseReady(file);
     }
 
-    /// <summary>Stops reading (and forgets) every file that is still loading and is not one of <paramref name="wanted"/>: a clip was removed or a timeline closed.</summary>
-    public void CancelUnused(IEnumerable<string> wanted, MediaContext context)
-    {
-        var keep = new HashSet<string>(wanted.Select(f => KeyOf(f, context)), StringComparer.OrdinalIgnoreCase);
-        lock (Gate)
-        {
-            // Only this document's own requests: another window showing the same file keeps reading it.
-            foreach (var s in Slots.Values.Where(s => ReferenceEquals(s.Context, context) && s.State == WaveState.Loading && !keep.Contains(s.Key)).ToList())
-                RemoveLocked(s);
-        }
-    }
-
     /// <summary>Stops reading (and forgets) these files if they are still loading: their timeline closed.</summary>
     public void Cancel(IEnumerable<string> files, MediaContext context)
     {

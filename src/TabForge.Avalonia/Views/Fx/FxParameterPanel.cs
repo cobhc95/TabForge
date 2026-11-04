@@ -72,7 +72,6 @@ public sealed class FxParameterPanel : DockPanel
     public string CountText => _count.Text ?? "";
     public bool CanUndo => _undo.IsEnabled;
     public bool CanRedo => _redo.IsEnabled;
-    public bool MoreVisible => _more.IsVisible;
 
     /// <summary>The slider of a parameter (null when its row is not shown); the tests move it.</summary>
     public Slider? SliderOf(uint id) => _byId.TryGetValue(id, out var row) ? row.Slider : null;
@@ -80,8 +79,6 @@ public sealed class FxParameterPanel : DockPanel
     public string? ValueTextOf(uint id) => _byId.TryGetValue(id, out var row) ? row.Value.Text : null;
     /// <summary>Presses Undo (a test or a key).</summary>
     public void UndoLast() => Step(_model.Undo());
-    /// <summary>Presses Redo (a test or a key).</summary>
-    public void RedoLast() => Step(_model.Redo());
 
     /// <summary>Empties the panel for another plug-in.</summary>
     public void Clear()

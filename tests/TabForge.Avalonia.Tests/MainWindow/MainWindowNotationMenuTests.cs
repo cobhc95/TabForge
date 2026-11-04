@@ -52,7 +52,7 @@ public class MainWindowNotationMenuTests
     public void ChoiceRowsAreCheckableAndTheirCheckFollowsTheLiveValue()
     {
         var choices = new[] { "View.NotationBoth", "View.NotationTab", "View.NotationStaff", "View.ScoreThemeDark", "View.ScoreThemeLight", "View.Zoom75", "View.Zoom100", "View.Zoom150" };
-        var rows = TabForge.Presenters.MainMenuTable.CommandRows(TabForge.Presenters.MainMenuTable.WithFeatureRows()).ToList();
+        var rows = TabForge.Presenters.MainMenuTable.CommandRows(TabForge.Presenters.MainMenuTable.Groups).ToList();
         Assert.All(choices, id => Assert.True(rows.Single(r => r.CommandId == id).IsCheckable, id));
 
         var score = new ScorePreviewView();

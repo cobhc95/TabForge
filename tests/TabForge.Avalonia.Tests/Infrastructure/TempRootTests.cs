@@ -21,37 +21,4 @@ public sealed class TempRootTests
         Assert.Equal(32, Path.GetFileName(root).Length);
     }
 
-    [Fact]
-    public void AbOutputFollowsTheRunFolderWhenSet()
-    {
-        const string variable = "TF_AB_OUT";
-        var previous = Environment.GetEnvironmentVariable(variable);
-        try
-        {
-            var runFolder = Path.Combine(Path.GetTempPath(), "tf-ab-test-run");
-            Environment.SetEnvironmentVariable(variable, runFolder);
-            Assert.Equal(Path.Combine(runFolder, "avalonia"), ParityShotsTests.OutputDirectory);
-            Assert.Equal(Path.Combine(runFolder, "missing.txt"), ParityShotsTests.MissingListPath);
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable(variable, previous);
-        }
-    }
-
-    [Fact]
-    public void AbOutputFallsBackToTheTestProcessFolderWhenUnset()
-    {
-        const string variable = "TF_AB_OUT";
-        var previous = Environment.GetEnvironmentVariable(variable);
-        try
-        {
-            Environment.SetEnvironmentVariable(variable, null);
-            Assert.Equal(Path.Combine(DialogTestKit.PngDirectory, "tf-ab", "avalonia"), ParityShotsTests.OutputDirectory);
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable(variable, previous);
-        }
-    }
 }

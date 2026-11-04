@@ -14,7 +14,7 @@ namespace TabForge.Avalonia.Views;
 // Owns: the Piano / Tab pills in the main menu row (right side, left of the open / save quick buttons; MainWindowMenu docks them): the lit pill is the view
 //       shown for the current track, a click on the other switches that track's view (the same command as the right-click rows). Hover and pressed
 //       states, tooltips per pill, disabled (with a tooltip) while no track is shown, and hidden by the row when it is too narrow (the menus keep priority).
-//       Drawn in theme tokens (Palette ModePill*, light and dark). Retired 26 Oct (tombstone): the copies that floated over the score and piano roll.
+//       Drawn in theme tokens (Palette ModePill*, light and dark).
 // Does not own: the switch itself (EditorPaneSwitch.SetView) or which view a track uses (PianoRollViewRules).
 // Tests: TabForge.Avalonia.Tests.PianoRollPaneSwitchTests.
 public sealed class EditorModePills : Control

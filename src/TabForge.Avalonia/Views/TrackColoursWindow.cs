@@ -12,6 +12,7 @@ using TabForge.Models;
 using TabForge.Platform;
 using TabForge.Presenters;
 using TabForge.Avalonia.Views.Dialogs;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views;
 
@@ -92,7 +93,7 @@ public sealed class TrackColoursWindow : Window
         foreach (var (name, hex) in TrackColoursPresenter.Palette)
         {
             var button = new Button { Width = 30, Height = 24, Margin = new Thickness(0, 0, 4, 4), Padding = new Thickness(0) };
-            button.Content = new Border { Width = 22, Height = 16, CornerRadius = new CornerRadius(3), Background = SwatchBrush(hex) };
+            button.Content = new Border { Width = 22, Height = 16, CornerRadius = new CornerRadius(ChromeMetrics.RadiusSmall), Background = SwatchBrush(hex) };
             ToolTip.SetTip(button, $"{name}: colour the ticked tracks");
             button.Click += (_, _) => ColourTicked(hex);
             palette.Children.Add(button);
@@ -116,7 +117,7 @@ public sealed class TrackColoursWindow : Window
             var track = _tracks[i];
             var box = new CheckBox { VerticalAlignment = VerticalAlignment.Center };
             box.IsCheckedChanged += (_, _) => _presenter.SetTicked(index, box.IsChecked == true);
-            var swatch = new Border { Width = 14, Height = 14, CornerRadius = new CornerRadius(3), Margin = new Thickness(6, 0, 8, 0), Background = SwatchBrush(track.ColorHex) };
+            var swatch = new Border { Width = 14, Height = 14, CornerRadius = new CornerRadius(ChromeMetrics.RadiusSmall), Margin = new Thickness(6, 0, 8, 0), Background = SwatchBrush(track.ColorHex) };
             var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = DialogMetrics.RowMargin };
             row.Children.Add(box);
             row.Children.Add(swatch);

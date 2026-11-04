@@ -58,8 +58,6 @@ internal sealed class LiveTake
     public IReadOnlyList<LiveTakeBand> Bands => _bands ??= RepeatBandsActive
         ? LiveTakeFold.RepeatBands(StartSec, EndSec, RepeatPerformed)
         : LiveTakeFold.Bands(StartSec, EndSec, Loop);
-    /// <summary>How many live lanes below the base lane the bands need (0 before the first wrap or without a loop).</summary>
-    public int StackRows => Math.Max(0, Bands.Count - 1);
 
     /// <summary>The track was disarmed while recording: stop growing the take, keep it (and its lane) until the global stop.</summary>
     public void Freeze() => Frozen = true;
@@ -187,9 +185,6 @@ internal sealed class LiveTakes
         if (take.RepeatBandsActive) return Math.Max(take.LaneCount, take.Lane + 1);
         return Math.Max(take.LaneCount, take.Lane + take.Bands.Count);
     }
-
-    /// <summary>Live laps are full lane bands counted in <see cref="LaneCountOf"/>; nothing stacks below them (always 0).</summary>
-    public double StackHeightOf(TrackModel track) => 0;
 
     /// <summary>The take of <paramref name="track"/>, or null.</summary>
     public LiveTake? Of(TrackModel track)

@@ -38,9 +38,6 @@ public sealed class InstrumentPanelStrip : Grid
     /// <summary>What the Customize button does: the window host opens the Fretboard settings window. Null leaves the button doing nothing.</summary>
     internal Action? CustomizeRequested { get; set; }
 
-    /// <summary>The track the board shows (the settings window previews it).</summary>
-    internal TrackModel? ShownTrack => _track;
-
     /// <summary>The Scales button, the anchor of the scale popup; invisible when the pane has no scale (a drum track).</summary>
     internal Control ScalesAnchor => _scales;
     private readonly Canvas _scalesLayer = new();

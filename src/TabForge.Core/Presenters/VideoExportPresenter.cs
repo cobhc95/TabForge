@@ -79,10 +79,6 @@ public static class VideoExportPresenter
 
     /// <summary>The missing plug-ins question title.</summary>
     public const string MissingPluginsTitle = "Plug-ins not loaded";
-    /// <summary>Tip for exporting without the missing plug-ins.</summary>
-    public const string ExportWithoutPluginsToolTip = "Export without the missing plug-ins";
-    /// <summary>Tip for cancelling the export.</summary>
-    public const string CancelExportToolTip = "Cancel the export";
 
     /// <summary>The remembered range, except that a remembered Selection opens as the whole song when no bars are selected.</summary>
     public static int RangeOnOpen(int savedRange, bool hasSelection) =>

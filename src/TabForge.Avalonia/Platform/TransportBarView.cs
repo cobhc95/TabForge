@@ -181,7 +181,7 @@ public sealed partial class TransportBarView : Border
         this.GetResourceObservable(UiDensityResources.Factor).Subscribe(new global::Avalonia.Reactive.AnonymousObserver<object?>(factor => ApplyGaps(row, factor is double f ? f : 1.0)));
         Name = "TransportControls";
         BorderThickness = new Thickness(1);
-        CornerRadius = new CornerRadius(6);
+        CornerRadius = new CornerRadius(ChromeMetrics.RadiusLarge);
         Padding = BarPadding;
         Margin = BarMargin;
         HorizontalAlignment = HorizontalAlignment.Left;

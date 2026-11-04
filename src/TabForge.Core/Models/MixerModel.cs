@@ -130,10 +130,6 @@ public static class MixerBuses
     /// <summary>True when the stand-in is the monitor chain (its FX window shows the "Use for all projects" box).</summary>
     public static bool IsMonitor(TrackModel track) => track.BusSlot == MonitorSlot;
 
-    /// <summary>The monitor stand-in the engine runs (chain on with plug-ins), or null.</summary>
-    public static TrackModel? ActiveMonitor(SongProject project, BusChain global) =>
-        MonitorChain(project, global) is { On: true } c && c.Rig.Plugins.Count > 0 ? MonitorTrack(project, global) : null;
-
     private static TrackModel Proxy(BusChain bus, string name, int slot)
     {
         var t = bus.Proxy ??= new TrackModel { Name = name, InstrumentName = "Effects bus", Kind = TrackKind.Guitar };

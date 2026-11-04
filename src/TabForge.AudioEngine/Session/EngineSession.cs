@@ -431,7 +431,7 @@ internal sealed partial class EngineSession
     {
         AssertMain();
         RenderCancel = true;
-        RenderThread?.Join(5000);
+        var renderEnded = RenderThread?.Join(5000) ?? true;
         try
         {
             StopRecording(wait: true);
@@ -442,6 +442,8 @@ internal sealed partial class EngineSession
         try { Input?.Dispose(); } catch (Exception ex) { Log.Write($"shutdown: input: {ex.Message}"); }
         try { Editors.CloseAll(); } catch (Exception ex) { Log.Write($"shutdown: editors: {ex.Message}"); }
         try { StopOutput(); } catch (Exception ex) { Log.Write($"shutdown: player: {ex.Message}"); }
+        // A render stuck inside a plug-in still uses the chains: leave them for the process exit instead of disposing them under it.
+        if (!renderEnded) { Log.Write("shutdown: a render did not end in time; its chains are left to the process exit"); return; }
         foreach (var chain in Loaded.Values) { try { chain.Dispose(); } catch (Exception ex) { Log.Write($"dispose failed: {ex.Message}"); } }
         Loaded.Clear();
         Retired.DisposeAll();

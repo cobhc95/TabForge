@@ -90,9 +90,6 @@ public sealed class PluginTrust
     /// <summary>Paths whose file was found different from the approval when the engine went to load it (until approved again).</summary>
     private readonly ConcurrentDictionary<string, bool> ChangedAtLoad = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>How many files were hashed so far (self-test: the cache must avoid re-hashing).</summary>
-    internal int HashCount => Volatile.Read(ref _hashCount);
-
     /// <summary>UNC / device paths and network, removable or optical drives: never trusted without approval.</summary>
     public bool IsRemote(string normalized)
     {
@@ -236,9 +233,6 @@ public sealed class PluginTrust
             else CopyFingerprint(now, rec);
         }
     }
-
-    /// <summary>Forgets the in-memory scan fingerprints (a test that scans scratch folders must not leak them into later tests).</summary>
-    public void ClearScanRecords() { ScanRecords.Clear(); Interlocked.Increment(ref _scanGeneration); }
 
     /// <summary>Called by the scanner: fingerprints the plug-ins it found in user-writable local folders (the scan's baseline).</summary>
     public void RecordScan(IReadOnlyList<VstPluginInfo> found, CancellationToken cancellationToken, IProgress<(int Found, string Folder)>? progress, IPluginFileTrust files)

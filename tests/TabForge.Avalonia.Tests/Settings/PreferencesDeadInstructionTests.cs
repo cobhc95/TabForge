@@ -128,7 +128,7 @@ public class PreferencesDeadInstructionTests
     [AvaloniaFact]
     public void MenuPathsAndKeysQuotedInSettingDescriptionsExist()
     {
-        var menus = MainMenuTable.WithFeatureRows().GroupBy(g => Clean(g.Menu))
+        var menus = MainMenuTable.Groups.GroupBy(g => Clean(g.Menu))
             .ToDictionary(g => g.Key, g => MainMenuTable.CommandRows(g).Select(r => Clean(r.Header!)).Concat(g.SelectMany(x => x.Rows).Where(r => r.IsSubmenu).Select(r => Clean(r.Header!))).ToList());
         var gestures = HotkeyCatalog.All.SelectMany(a => new[] { a.DefaultGesture, a.DefaultGesture2 }).Where(g => g.Length > 0).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var problems = new List<string>();

@@ -15,6 +15,7 @@ using TabForge.Plugins;
 using TabForge.Presenters;
 using TabForge.Services;
 using TabForge.Avalonia.Views.Dialogs;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views;
 
@@ -408,7 +409,7 @@ public sealed partial class TrackPropertiesWindow : Window
 
     private static TextBlock Hint(string text)
     {
-        var hint = new TextBlock { Text = text, FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) };
+        var hint = new TextBlock { Text = text, FontSize = ChromeMetrics.TextSmall, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) };
         hint[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
         return hint;
     }
@@ -416,7 +417,7 @@ public sealed partial class TrackPropertiesWindow : Window
     private static Border Card(string title, Control content) => Card(Heading(title), content);
 
     private static TextBlock Heading(string title) =>
-        new() { Text = title.ToUpperInvariant(), FontSize = 11, FontWeight = FontWeight.SemiBold, Opacity = 0.75, VerticalAlignment = VerticalAlignment.Center };
+        new() { Text = title.ToUpperInvariant(), FontSize = ChromeMetrics.TextSmall, FontWeight = FontWeight.SemiBold, Opacity = 0.75, VerticalAlignment = VerticalAlignment.Center };
 
     // A card whose heading is a control (the Tuning card's header row) or a plain title, then the content.
     private static Border Card(Control heading, Control content)
@@ -424,7 +425,7 @@ public sealed partial class TrackPropertiesWindow : Window
         heading.Margin = new Thickness(0, 0, 0, 1);
         var card = new Border
         {
-            CornerRadius = new CornerRadius(6), Padding = new Thickness(10, 6, 10, 6), Margin = new Thickness(0, 0, 0, 6), BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(ChromeMetrics.RadiusLarge), Padding = new Thickness(10, 6, 10, 6), Margin = new Thickness(0, 0, 0, 6), BorderThickness = new Thickness(1),
             Child = new StackPanel { Children = { heading, content } },
         };
         card[!Border.BackgroundProperty] = new DynamicResourceExtension("PanelBackground");

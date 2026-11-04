@@ -61,9 +61,6 @@ public sealed class MediaContext
 
     public bool IsSaved => SavedPath is not null;
 
-    /// <summary>The folder a Guitar Pro (or other non-native) song was imported from; used while the song has no saved path.</summary>
-    public string? SourceDirectory { get { lock (_gate) return _sourceDirectory; } }
-
     /// <summary>The approval scope: the canonical saved path, or <c>session:&lt;id&gt;</c> for an unsaved song.</summary>
     public string ScopeKey { get { lock (_gate) return _savedPath ?? (IsAnonymous ? "anonymous" : "session:" + SessionId); } }
 

@@ -12,6 +12,7 @@ using TabForge.Avalonia.Views.NoteMaps;
 using TabForge.Avalonia.Views.Presets;
 using TabForge.Plugins;
 using TabForge.Presenters;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views.Midi;
 
@@ -82,7 +83,7 @@ public sealed class MidiNoteMapRows
             var overrides = new TextBlock
             {
                 Text = "For a single note, the Overrides setting also works, e.g. 40>38, or 42>x to drop a note.", TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
-                FontSize = 11, [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MutedBrush"),
+                FontSize = ChromeMetrics.TextSmall, [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MutedBrush"),
             };
             overrides.Spaced(DialogMetrics.MidiBarGap);
             stack.Children.Add(overrides);

@@ -61,9 +61,6 @@ public sealed class SelectionSync : IDisposable
         ApplyToEditor();
     }
 
-    /// <summary>True while the model is being written into the editor (its SelectionChanged is an echo).</summary>
-    public bool IsApplyingToEditor => _applyingToEditor;
-
     private void OnModelChanged(object? sender, SelectionOrigin origin)
     {
         if (origin != SelectionOrigin.Editor) ApplyToEditor();

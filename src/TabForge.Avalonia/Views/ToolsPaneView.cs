@@ -14,6 +14,7 @@ using Avalonia.VisualTree;
 using TabForge.Avalonia;
 using TabForge.Avalonia.Platform;
 using TabForge.Presenters;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views;
 
@@ -47,7 +48,7 @@ public sealed class ToolsPaneView : Border
         this[!MarginProperty] = new DynamicResourceExtension(UiDensityResources.PaneMargin);
         this[!PaddingProperty] = new DynamicResourceExtension(UiDensityResources.PanePad);
         BorderThickness = new Thickness(1);
-        CornerRadius = new CornerRadius(4);
+        CornerRadius = new CornerRadius(ChromeMetrics.RadiusMedium);
         this[!BackgroundProperty] = new DynamicResourceExtension("Panel2Brush");
         this[!BorderBrushProperty] = new DynamicResourceExtension("BorderSoftBrush");
 

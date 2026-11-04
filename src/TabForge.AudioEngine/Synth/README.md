@@ -7,7 +7,6 @@ The built-in General MIDI sound: the synth rendered in the engine (so effects ca
 | --- | --- |
 | `DlsToSoundFont.cs` | Converts the Windows General MIDI bank (DLS) into an in-memory SoundFont the synth can play |
 | `GmSynth.cs` | The General MIDI sound of a track, rendered in the engine |
-| `GmSynthProbe.cs` | The `--probe-gm` diagnostic: measures what the built-in synth produces for each playing technique |
 
 ## Pathway
 

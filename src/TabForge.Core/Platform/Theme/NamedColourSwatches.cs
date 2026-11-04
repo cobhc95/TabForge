@@ -45,12 +45,6 @@ public static class NamedColourSwatches
     public static readonly IReadOnlyList<string> TrackRotationColours =
         new[] { TrackDefaultColour, "#ED2224", "#F4E014", "#2248E8", "#35B954", "#D850C6" };
 
-    /// <summary>The ten quick track colours the track properties window offers beside its colour box, in picker order (two rows of five).</summary>
-    public static readonly IReadOnlyList<string> TrackQuickPickColours = new[]
-    {
-        "#E5484D", "#F76B15", "#FFC53D", "#46A758", "#12A594", "#3E63DD", "#8E4EC6", "#D6409F", "#8B8D98", "#F0F0F0",
-    };
-
     /// <summary>The colour of a section marker that has none of its own: the first section colour.</summary>
     public static readonly string SectionDefaultColour = Sections[0].Hex;
 

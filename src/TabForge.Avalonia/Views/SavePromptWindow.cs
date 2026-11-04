@@ -9,6 +9,7 @@ using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using TabForge.Presenters;
 using TabForge.Avalonia.Views.Dialogs;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views;
 
@@ -41,7 +42,7 @@ public sealed class SavePromptWindow : Window
 
         var icon = new Border { Width = 26, Height = 26, CornerRadius = new CornerRadius(13), VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 0, 12, 0) };
         icon[!Border.BackgroundProperty] = new DynamicResourceExtension("Accent");
-        icon.Child = new TextBlock { Name = "IconGlyph", Text = "?", FontSize = 16, FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+        icon.Child = new TextBlock { Name = "IconGlyph", Text = "?", FontSize = ChromeMetrics.TextTitle, FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
         icon.Child[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextLegible");
         DockPanel.SetDock(icon, Dock.Left);
         var message = new TextBlock { Name = "MessageText", Text = prompt.Message, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center };
@@ -50,7 +51,7 @@ public sealed class SavePromptWindow : Window
         if (details is { Count: > 0 }) footer.Children.Add(BuildDetails(details));
         if (rememberText is not null)
         {
-            _remember = new CheckBox { Name = "RememberBox", Content = rememberText, FontSize = 12, Margin = new Thickness(0, details is { Count: > 0 } ? 10 : 0, 0, 8) };
+            _remember = new CheckBox { Name = "RememberBox", Content = rememberText, FontSize = ChromeMetrics.TextBody, Margin = new Thickness(0, details is { Count: > 0 } ? 10 : 0, 0, 8) };
             footer.Children.Add(_remember);
         }
         var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8 };
@@ -112,9 +113,9 @@ public sealed class SavePromptWindow : Window
     {
         var list = new StackPanel { Margin = new Thickness(0, 4, 0, 0) };
         foreach (var line in details)
-            list.Children.Add(new TextBlock { Text = "• " + line, TextWrapping = TextWrapping.Wrap, FontSize = 12, Margin = new Thickness(0, 1) });
+            list.Children.Add(new TextBlock { Text = "• " + line, TextWrapping = TextWrapping.Wrap, FontSize = ChromeMetrics.TextBody, Margin = new Thickness(0, 1) });
         var scroller = new ScrollViewer { Name = "DetailsList", Content = list, MaxHeight = 170, IsVisible = false };
-        var link = new TextBlock { Name = "DetailsLink", Text = ConfirmDialogPresenter.DetailsLink(details.Count, open: false), FontSize = 12, TextDecorations = TextDecorations.Underline, Cursor = new Cursor(StandardCursorType.Hand) };
+        var link = new TextBlock { Name = "DetailsLink", Text = ConfirmDialogPresenter.DetailsLink(details.Count, open: false), FontSize = ChromeMetrics.TextBody, TextDecorations = TextDecorations.Underline, Cursor = new Cursor(StandardCursorType.Hand) };
         link[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("Accent");
         link.PointerPressed += (_, _) =>
         {

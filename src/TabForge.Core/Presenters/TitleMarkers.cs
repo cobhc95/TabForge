@@ -15,9 +15,4 @@ public static class TitleMarkers
     /// <summary>Shown after a title in degraded mode: the model may be inconsistent after an unexpected error.</summary>
     public const string DegradedMarker = "  [after an error: restart recommended]";
 
-    /// <summary>The unsaved marker, or nothing when the song is clean.</summary>
-    public static string DirtySuffix(bool isDirty) => isDirty ? DirtyMarker : "";
-
-    /// <summary>The restart note, or nothing when the window is not degraded.</summary>
-    public static string DegradedSuffix(bool isDegraded) => isDegraded ? DegradedMarker : "";
 }

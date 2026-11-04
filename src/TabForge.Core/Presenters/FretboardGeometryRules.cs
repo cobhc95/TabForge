@@ -36,7 +36,6 @@ public static class FretboardGeometryRules
 
     /// <summary>Room left of the nut (string numbers, when switched on, sit just left of it).</summary>
     public const double LeftGutter = 54;
-    public const double RightPad = 14;
     /// <summary>Room above the top string for its sounding marker (radius 16 + halo 4) so nothing is clipped whatever the docking
     /// position. A technique tag that would not fit above the top string's marker is drawn beside it instead.</summary>
     public const double TopPad = 16 + 4 + 2;

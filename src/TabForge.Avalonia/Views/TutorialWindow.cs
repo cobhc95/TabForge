@@ -10,6 +10,7 @@ using Avalonia.Media;
 using TabForge.Presenters;
 using TabForge.Services;
 using TabForge.Avalonia.Views.Dialogs;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views;
 
@@ -305,7 +306,7 @@ public sealed class TutorialWindow : Window
         return new Border
         {
             Child = inner, Padding = new Thickness(10, 6, 10, 6), Margin = new Thickness(0, 4, 0, 4), BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(4), [!Border.BorderBrushProperty] = new DynamicResourceExtension("BorderSoftBrush"),
+            CornerRadius = new CornerRadius(ChromeMetrics.RadiusMedium), [!Border.BorderBrushProperty] = new DynamicResourceExtension("BorderSoftBrush"),
         };
     }
 

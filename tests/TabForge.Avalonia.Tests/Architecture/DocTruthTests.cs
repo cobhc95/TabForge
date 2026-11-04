@@ -373,10 +373,8 @@ public sealed class DocTruthTests
         }
 
         var docs = Path.Combine(source, "docs");
-        foreach (var md in new[] { "", "architecture", "specs", "plans", "guides", "reference" }.SelectMany(d => Directory.GetFiles(Path.Combine(docs, d), "*.md", SearchOption.TopDirectoryOnly)))
+        foreach (var md in new[] { "", "architecture", "specs", "guides", "reference" }.SelectMany(d => Directory.GetFiles(Path.Combine(docs, d), "*.md", SearchOption.TopDirectoryOnly)))
         {
-            var fn = Path.GetFileName(md);
-            if (fn.Equals("ARCHITECTURE_SIMPLIFY.md", StringComparison.OrdinalIgnoreCase)) continue; // proposal-only, header says nothing moved.
             docsScanned++;
             foreach (var line in File.ReadLines(md))
             {

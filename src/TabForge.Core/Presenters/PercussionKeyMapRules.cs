@@ -12,15 +12,12 @@ public static class PercussionKeyMapRules
 {
     public const int FirstNote = 27;
     public const double MinRowHeight = 14;
-    /// <summary>A hit glows for this long after its onset.</summary>
-    public const double GlowWindowMs = 260;
     /// <summary>The map's left edge: the cells start this far in from the pane's left side.</summary>
     public const double CellLeft = 8;
     /// <summary>The map's top edge: the cells start this far down from the pane's top.</summary>
     public const double CellTop = 5;
     /// <summary>The pane size the hit test assumes before the panel has been laid out.</summary>
     public const double FallbackWidth = 900;
-    public const double FallbackHeight = 168;
     private const double ScalesButtonStrip = 8 + 24 + 4;
 
     /// <summary>The note names, index 0 is <see cref="FirstNote"/>. Read-only: callers index it, they never change it.</summary>
@@ -76,9 +73,6 @@ public static class PercussionKeyMapRules
     }
 
     public static double LabelFontSize(Grid grid) => Math.Clamp(grid.CellHeight * 0.62, 9, 13);
-
-    /// <summary>The glow of a hit this long after its onset (1 at the onset, fading to 0); 0 for a hit outside the window.</summary>
-    public static double GlowStrength(double ageMs) => ageMs < -5 || ageMs >= GlowWindowMs ? 0 : 1 - Math.Clamp(ageMs / GlowWindowMs, 0, 1);
 
     /// <summary>The pane height below which the whole map cannot be drawn (the Scales button strip sits top-right).</summary>
     public static double RequiredHeight(double width)

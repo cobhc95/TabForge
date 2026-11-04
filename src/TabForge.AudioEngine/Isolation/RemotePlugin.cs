@@ -231,7 +231,12 @@ public sealed partial class RemotePlugin : IPluginInstance
             var left = connectTimeoutMs - (int)Math.Min(int.MaxValue, clock.ElapsedMilliseconds);
             if (left <= 0) throw new TimeoutException("The plug-in process did not answer.");
             var accept = Task.Run(() => listener.AcceptTcpClientAsync());
-            if (!accept.Wait(left)) { ObserveFault(accept); throw new TimeoutException("The plug-in process did not answer."); }
+            if (!accept.Wait(left))
+            {
+                ObserveFault(accept);
+                _ = accept.ContinueWith(t => t.Result.Dispose(), TaskContinuationOptions.OnlyOnRanToCompletion);   // a client that connects after this gives up
+                throw new TimeoutException("The plug-in process did not answer.");
+            }
             var client = accept.GetAwaiter().GetResult();
             client.NoDelay = true;
             var stream = client.GetStream();

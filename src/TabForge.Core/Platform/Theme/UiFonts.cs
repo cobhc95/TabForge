@@ -11,7 +11,7 @@ public readonly record struct UiFont(string Family, double Size, int Weight = 40
 
 /// <summary>
 /// The shared font entry point. The interface and icon sizes read the appearance live; the score style reads the configured
-/// ScoreText; the mono family is the one fixed tab-digits family, owned here so every site names it. Nothing in the app calls it yet.
+/// ScoreText; the mono family is the one fixed tab-digits family, owned here so every site names it.
 /// </summary>
 public static class UiFonts
 {

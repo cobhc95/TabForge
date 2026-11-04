@@ -9,6 +9,7 @@ using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using TabForge.Avalonia.Platform;
 using TabForge.Services;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views;
 
@@ -139,9 +140,9 @@ public static class PreferencesSpecialPages
     internal static Border Card(string title, Control content)
     {
         var stack = new StackPanel { Spacing = 12 };
-        stack.Children.Add(new TextBlock { Text = title, FontWeight = FontWeight.SemiBold, FontSize = 14 });
+        stack.Children.Add(new TextBlock { Text = title, FontWeight = FontWeight.SemiBold, FontSize = ChromeMetrics.TextEmphasis });
         stack.Children.Add(content);
-        var border = new Border { Name = title, Padding = new Thickness(14, 10), CornerRadius = new CornerRadius(6), BorderThickness = new Thickness(1), Child = stack };
+        var border = new Border { Name = title, Padding = new Thickness(14, 10), CornerRadius = new CornerRadius(ChromeMetrics.RadiusLarge), BorderThickness = new Thickness(1), Child = stack };
         border[!Border.BackgroundProperty] = new DynamicResourceExtension("Panel2Brush");
         border[!Border.BorderBrushProperty] = new DynamicResourceExtension("BorderSoftBrush");
         return border;

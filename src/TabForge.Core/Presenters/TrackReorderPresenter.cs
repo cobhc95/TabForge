@@ -25,14 +25,6 @@ public static class TrackReorderPresenter
         return 0;
     }
 
-    /// <summary>The track drawn at <paramref name="drawIndex"/> while the lanes are redrawn in preview order (the dragged track is drawn last).</summary>
-    public static int TrackAtDrawIndex(int drawIndex, int from, int trackCount)
-        => from < trackCount && drawIndex == trackCount - 1 ? from
-         : from < trackCount && drawIndex >= from ? drawIndex + 1 : drawIndex;
-
-    /// <summary>The smoothing factor of a frame that took <paramref name="elapsedSeconds"/>.</summary>
-    public static double Smoothing(double elapsedSeconds) => 1 - Math.Exp(-Math.Clamp(elapsedSeconds, 0, MaxFrameSeconds) / EaseSeconds);
-
     /// <summary>
     /// Moves every row's offset one frame toward its target. Returns whether any offset changed and, in <paramref name="settled"/>,
     /// whether every passed row has reached its target.

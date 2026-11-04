@@ -9,6 +9,7 @@ using TabForge.Models;
 using TabForge.Presenters;
 using TabForge.Services;
 using TabForge.Avalonia.Views.Dialogs;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views;
 
@@ -71,10 +72,10 @@ public sealed class GroupRulesWindow : Window
 
     private Grid ButtonRow()
     {
-        var add = new Button { Content = "Add group", Padding = new Thickness(10, 3, 10, 3), Margin = new Thickness(0, 0, 8, 0) };
-        var reset = new Button { Content = "Reset to defaults", Padding = new Thickness(10, 3, 10, 3) };
-        var ok = new Button { Content = "OK", IsDefault = true, MinWidth = DialogMetrics.DialogButtonMinWidth, Margin = new Thickness(8, 0, 0, 0), Padding = new Thickness(10, 3, 10, 3) };
-        var cancel = new Button { Content = "Cancel", IsCancel = true, MinWidth = DialogMetrics.DialogButtonMinWidth, Margin = new Thickness(8, 0, 0, 0), Padding = new Thickness(10, 3, 10, 3) };
+        var add = new Button { Content = "Add group", Padding = DialogMetrics.ActionButtonPadding, Margin = new Thickness(0, 0, 8, 0) };
+        var reset = new Button { Content = "Reset to defaults", Padding = DialogMetrics.ActionButtonPadding };
+        var ok = new Button { Content = "OK", IsDefault = true, MinWidth = DialogMetrics.DialogButtonMinWidth, Margin = new Thickness(8, 0, 0, 0), Padding = DialogMetrics.ActionButtonPadding };
+        var cancel = new Button { Content = "Cancel", IsCancel = true, MinWidth = DialogMetrics.DialogButtonMinWidth, Margin = new Thickness(8, 0, 0, 0), Padding = DialogMetrics.ActionButtonPadding };
         add.Click += (_, _) => { _presenter.AddGroup(); Rebuild(); };
         reset.Click += (_, _) => { _presenter.ResetToDefaults(); Rebuild(); };
         ok.Click += (_, _) => Accept();
@@ -98,7 +99,7 @@ public sealed class GroupRulesWindow : Window
         });
         if (_hasOwnRules)
         {
-            var back = new Button { Content = "Reset to app rules", Padding = new Thickness(10, 3, 10, 3), HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 6, 0, 0) };
+            var back = new Button { Content = "Reset to app rules", Padding = DialogMetrics.ActionButtonPadding, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 6, 0, 0) };
             ToolTip.SetTip(back, "Drop this song's own rules: it follows the app-wide rules again");
             back.Click += (_, _) => Close(GroupRulesPresenter.ResetToAppResult());
             stack.Children.Add(back);
@@ -142,7 +143,7 @@ public sealed class GroupRulesWindow : Window
 
     private static Border Card(Control content)
     {
-        var card = new Border { BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(6), Padding = new Thickness(8), Margin = new Thickness(0, 0, 0, 8), Child = content };
+        var card = new Border { BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(ChromeMetrics.RadiusLarge), Padding = new Thickness(8), Margin = new Thickness(0, 0, 0, 8), Child = content };
         card[!Border.BackgroundProperty] = new DynamicResourceExtension("PanelBackground");
         card[!Border.BorderBrushProperty] = new DynamicResourceExtension("ChromeBorder");
         return card;
@@ -168,7 +169,7 @@ public sealed class GroupRulesWindow : Window
         var colour = new Button
         {
             Width = 28, Height = 24, Padding = new Thickness(0), Margin = new Thickness(6, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center,
-            Content = new Border { Width = 14, Height = 14, CornerRadius = new CornerRadius(3), Background = BrushFor(entry.Def.Colour ?? TrackColouring.ColourOf(entry.Def.Name, null)) },
+            Content = new Border { Width = 14, Height = 14, CornerRadius = new CornerRadius(ChromeMetrics.RadiusSmall), Background = BrushFor(entry.Def.Colour ?? TrackColouring.ColourOf(entry.Def.Name, null)) },
         };
         ToolTip.SetTip(colour, "Group colour (colours the group's tracks)");
         var name = new TextBox { Text = entry.Def.Name, MinWidth = 180, VerticalContentAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0), VerticalAlignment = VerticalAlignment.Center };
@@ -199,7 +200,7 @@ public sealed class GroupRulesWindow : Window
         var menu = MenuStability.CreateContextMenu();
         foreach (var (colourName, hex) in TrackColoursPresenter.Palette)
         {
-            var item = new MenuItem { Header = colourName, Icon = new Border { Width = 14, Height = 14, CornerRadius = new CornerRadius(3), Background = BrushFor(hex) } };
+            var item = new MenuItem { Header = colourName, Icon = new Border { Width = 14, Height = 14, CornerRadius = new CornerRadius(ChromeMetrics.RadiusSmall), Background = BrushFor(hex) } };
             item.Click += (_, _) => { _presenter.SetGroupColour(index, hex); Rebuild(); };
             menu.Items.Add(item);
         }

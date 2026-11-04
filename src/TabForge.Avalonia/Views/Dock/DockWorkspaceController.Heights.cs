@@ -149,10 +149,6 @@ public sealed partial class DockWorkspaceController
         return StartPanelAtWidth(panelId, width);
     }
 
-    /// <summary>The pixel width of a pane whose horizontal splitter the user moved since <see cref="StartPanelAtWidth"/> last fitted it; null otherwise.</summary>
-    public double? UserSetPanelWidth(string panelId) =>
-        MovedWidth(panelId) is null ? null : _draggedWidths.GetValueOrDefault(panelId) ?? PanelWidth(panelId);
-
     private double? RatioWidth(string panelId)
     {
         if (WidthSplitOf(panelId) is not { } start) return null;

@@ -21,7 +21,7 @@ namespace TabForge.Avalonia.Views;
 //       the press, release jump and confirm flash of each row (SectionButtonFeedback), and the Add at cursor, Edit and Remove buttons, which report that they need the full app.
 // Does not own: the sections (the markers are read only here), the section editor, the timeline and the dock placement (DockPaneSetup).
 // Not ported yet: the hover glow, keyboard selection and the Add and Edit dialogs.
-// Tests: SectionColourPresenterTests (rules), ParityShotsTests (panel-sections shots).
+// Tests: SectionColourPresenterTests (rules).
 public sealed class SectionsPanelView : Border
 {
     private const string Heading = "Sections";
@@ -138,11 +138,11 @@ public sealed class SectionsPanelView : Border
         DockPanel.SetDock(lockGlyph, Dock.Right);
         line.Children.Add(lockGlyph);
         line.Children.Add(title);
-        var glow = new Border { Background = new SolidColorBrush(AvaloniaPalette.ColorOf(Palette.Get(FlashKey))), CornerRadius = new CornerRadius(2), Opacity = 0, IsHitTestVisible = false };
+        var glow = new Border { Background = new SolidColorBrush(AvaloniaPalette.ColorOf(Palette.Get(FlashKey))), CornerRadius = new CornerRadius(ChromeMetrics.RadiusTiny), Opacity = 0, IsHitTestVisible = false };
         var scale = new ScaleTransform(1, 1);
         var view = new Border
         {
-            Padding = new Thickness(7, 4), Margin = new Thickness(0, 1), CornerRadius = new CornerRadius(2),
+            Padding = new Thickness(7, 4), Margin = new Thickness(0, 1), CornerRadius = new CornerRadius(ChromeMetrics.RadiusTiny),
             Child = new Grid { Children = { line, glow } },
             RenderTransform = scale, RenderTransformOrigin = RelativePoint.Center,
         };

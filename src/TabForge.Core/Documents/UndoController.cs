@@ -58,12 +58,6 @@ public sealed class UndoController
     /// <summary>The newest redo state, or null.</summary>
     public UndoSnapshot? NextRedo => _redo.TryPeek(out var top) ? top : null;
 
-    /// <summary>
-    /// Bytes charged to the history: what each state stored first. The document's baseline state (its first capture) is not
-    /// charged, so the history can additionally keep at most one copy of the song's bars.
-    /// </summary>
-    public long BytesHeld => _historyBytes;
-
     /// <summary>The current content of <paramref name="project"/> as a state, without adding it to the history.</summary>
     public UndoSnapshot Snapshot(SongProject project) => new(_encoder.Encode(project), Highlight: HighlightSource?.Invoke(), Loop: LoopSource?.Invoke());
 

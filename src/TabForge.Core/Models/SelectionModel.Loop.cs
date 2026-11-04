@@ -64,12 +64,6 @@ public sealed partial class SelectionModel
     }
 
     /// <summary>
-    /// True when a released score selection may set the loop region now: always, except while playback is actively looping (Loop on and playing,
-    /// a region or the whole song/section): the playing loop stays put; the notes are still selected.
-    /// </summary>
-    public bool ScoreSelectionSetsLoop(bool playing) => !(playing && LoopRepeat);
-
-    /// <summary>
     /// A score note selection was released: the loop region becomes exactly its beats and the Loop button turns on, (while a loop plays the Loop button stays as it is)
     /// (<see cref="ScoreSelectionSetsLoop"/>). False when nothing changed.
     /// </summary>

@@ -24,6 +24,5 @@ public static class FileTypes
     public static bool IsOpenable(string extension) => Array.Exists(OpenInApp, e => e.Equals(extension, StringComparison.OrdinalIgnoreCase));
     public static bool IsMusicXml(string extension) => Array.Exists(MusicXml, e => e.Equals(extension, StringComparison.OrdinalIgnoreCase));
     public static bool IsMidi(string extension) => Array.Exists(Midi, e => e.Equals(extension, StringComparison.OrdinalIgnoreCase));
-    public static bool IsGuitarPro(string extension) => Array.Exists(GuitarPro, e => e.Equals(extension, StringComparison.OrdinalIgnoreCase));
     public static bool IsTuxGuitarGtp(string extension) => TuxGuitarGtp.Equals(extension, StringComparison.OrdinalIgnoreCase);
 }

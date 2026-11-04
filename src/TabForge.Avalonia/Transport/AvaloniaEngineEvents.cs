@@ -295,5 +295,6 @@ public sealed class AvaloniaEngineEvents : IDisposable
         _engine.Resynced -= OnEngineResynced;
         _engine.DeviceError -= OnDeviceError;
         _engine.TrackLimitReached -= OnTrackLimitReached;
+        _slowLoadPrompt?.Close();   // its answer could no longer be acted on
     }
 }

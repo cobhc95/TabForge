@@ -79,8 +79,6 @@ public sealed partial class OfflineRenderer
 
     private readonly EngineThreads _threads;
 
-    public int WorkerCount => _workers.Count;
-
     public OfflineRenderer(RenderSpec spec, MixEngine mix, SharedBlock shared, int sampleRate, int maxBlock, EngineThreads threads, Func<bool> cancelled, Action<RenderProgressInfo> progress)
     {
         _spec = spec; _mix = mix; _shared = shared; _threads = threads; _rate = sampleRate; _cancelled = cancelled; _progress = progress;

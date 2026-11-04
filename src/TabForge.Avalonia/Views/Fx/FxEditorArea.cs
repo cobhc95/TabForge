@@ -82,7 +82,6 @@ public sealed class FxEditorArea : Grid
     public event Action? SecondActionClicked;
     public bool EditorVisible => _frame.IsVisible;
     public string NoticeText => _notice.Text ?? "";
-    public bool ActionVisible => _action.IsVisible;
     public string? ActionLabel => _action.Content as string;
     public string? SecondActionLabel => _second.Content as string;
     public bool OverlayVisible => _overlay.IsVisible;

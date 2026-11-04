@@ -39,8 +39,6 @@ public sealed class FxParameterPane : IDisposable
     public FxParameterPanel Panel => _panel;
     /// <summary>The plug-in the panel shows, or null when it is closed.</summary>
     public PluginSlot? Slot => _slot;
-    /// <summary>Whether the panel is polling the plug-in.</summary>
-    public bool IsPolling => _timer.IsEnabled;
 
     /// <summary>Shows the parameters of <paramref name="slot"/>: asks for them now, then at the poll rate until <see cref="Close"/>.</summary>
     public void Open(PluginSlot slot)

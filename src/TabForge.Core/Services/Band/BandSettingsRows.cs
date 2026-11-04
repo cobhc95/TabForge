@@ -39,7 +39,6 @@ public static partial class SettingsCatalog
             Choice(Timeline, "Band view", "band.playheadline", "Playhead line", v => band.PlayheadLine = BandChoices.NormalizePlayhead(v), () => BandChoices.NormalizePlayhead(band.PlayheadLine),
                 BandChoices.PlayheadLines, "How far the green playhead line reaches in a Band view lane: only across the engraved tab or staff, or the full height of the row.",
                 "band view playhead line tab only full row green length"),
-            // Tombstone: "band.syncorder" (Keep Band order in sync) is hidden until row/track order syncing is built; BandSettings.KeepOrderInSync is kept.
             Bool(Timeline, "Band view", "band.fretboardabove", "Fretboard above the tab", v => band.FretboardAbove = v, () => band.FretboardAbove,
                 "Each Band view row shows its instrument above its tab, both at the full row width. Off: the instrument sits beside the tab. Also in the roll-down menu after the Band view caption.", "band view layout fretboard instrument above beside tab stacked"),
             Bool(Timeline, "Band view", "band.colourframe", "Track colour frame", v => band.ColourFrame = v, () => band.ColourFrame,

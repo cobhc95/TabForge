@@ -12,6 +12,7 @@ using Avalonia.Media;
 using TabForge.Presenters;
 using TabForge.Services;
 using TabForge.Avalonia.Views.Dialogs;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views;
 
@@ -54,7 +55,7 @@ public sealed class PasteOptionsWindow : Window
         DockPanel.SetDock(title, Dock.Top);
         DockPanel.SetDock(footer, Dock.Bottom);
         var root = new DockPanel { Children = { title, footer, body } };
-        var card = new Border { Margin = new Thickness(CardInset), CornerRadius = new CornerRadius(8), BorderThickness = new Thickness(1), Child = root };
+        var card = new Border { Margin = new Thickness(CardInset), CornerRadius = new CornerRadius(ChromeMetrics.RadiusXLarge), BorderThickness = new Thickness(1), Child = root };
         card[!Border.BackgroundProperty] = new DynamicResourceExtension("PanelBackground");
         card[!Border.BorderBrushProperty] = new DynamicResourceExtension("SoftBorder");
         Content = card;
@@ -76,7 +77,7 @@ public sealed class PasteOptionsWindow : Window
         AutomationProperties.SetName(close, "Cancel paste");
         ToolTip.SetTip(close, PasteOptionsPresenter.CancelToolTip);
         close.Click += (_, _) => Close(null);
-        var title = new TextBlock { Text = PasteOptionsPresenter.Title, VerticalAlignment = VerticalAlignment.Center, FontSize = 12, Margin = new Thickness(14, 0, 0, 0) };
+        var title = new TextBlock { Text = PasteOptionsPresenter.Title, VerticalAlignment = VerticalAlignment.Center, FontSize = ChromeMetrics.TextBody, Margin = new Thickness(14, 0, 0, 0) };
         title[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
         var row = new DockPanel { Height = 34, Children = { close, title } };
         DockPanel.SetDock(close, Dock.Right);
@@ -123,7 +124,7 @@ public sealed class PasteOptionsWindow : Window
             Name = $"Q{(int)question}Option{i}", Content = label, GroupName = "paste-" + (int)question, IsChecked = i == 0, Margin = new Thickness(6, 2, 0, 2), Padding = new Thickness(4, 0, 0, 0)
         }).ToArray();
         foreach (var option in options) panel.Children.Add(option);
-        var remember = new CheckBox { Name = $"Q{(int)question}Remember", Content = PasteOptionsPresenter.RememberText, FontSize = 12, Margin = new Thickness(6, 6, 0, 0) };
+        var remember = new CheckBox { Name = $"Q{(int)question}Remember", Content = PasteOptionsPresenter.RememberText, FontSize = ChromeMetrics.TextBody, Margin = new Thickness(6, 6, 0, 0) };
         ToolTip.SetTip(remember, PasteOptionsPresenter.RememberToolTip);
         panel.Children.Add(remember);
         _groups[question] = (options, remember);

@@ -27,7 +27,6 @@ namespace TabForge.Avalonia.Views;
 // Tests: TabForge.Avalonia.Tests.PianoRollViewTests, PianoRollToolbarLayoutTests.
 public sealed partial class PianoRollView
 {
-    // Retired 26 Oct (tombstone): PillsRoom, the room the toolbar kept at its right end for the Piano / Tab pills that floated there (they sit in the menu row now).
     private const double PopupSize = 240;
 
     private readonly Dictionary<PianoRollTool, ToggleButton> _toolButtons = new();
@@ -47,12 +46,10 @@ public sealed partial class PianoRollView
     {
         (PianoRollTool.Pointer, IconGeometry.ToolSelect, "Select (V): click and drag to select, move and resize notes. Nothing is written."),
         (PianoRollTool.Select, IconGeometry.ToolDraw, "Write (1): click or drag to write notes; right-drag selects."),
-        // Retired 26 Oct (tombstone): the separate Select (1) and Draw (2) buttons; both are the Edit tool now.
         (PianoRollTool.Erase, IconGeometry.ToolErase, "Erase (2): click deletes a note, a box deletes the notes in it"),
         (PianoRollTool.Split, IconGeometry.ToolSplit, "Split (3): click cuts a note at the snap point; S cuts the selected notes at the dashed line"),
         (PianoRollTool.Mute, IconGeometry.ToolMute, "Mute (4): click mutes or unmutes a note (a muted note is hollow and silent; a tab stays as written)"),
         (PianoRollTool.Glue, IconGeometry.ToolGlue, "Glue (5): click a note to join it with the next note of its pitch"),
-        // Retired 26 Oct (tombstone): the Velocity tool button (key 7). Alt-drag a note, or drag the bars in the velocity lane.
     };
 
     private readonly Button _scaleButton = new() { Name = "PianoRollScaleButton" };

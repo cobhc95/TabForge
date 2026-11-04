@@ -91,7 +91,7 @@ public sealed class GlobalTuningWindow : Window
             _stringLines[s] = line;
             var note = new TextBlock
             {
-                Name = $"NoteLabel{s}", FontWeight = FontWeight.SemiBold, FontSize = 14,
+                Name = $"NoteLabel{s}", FontWeight = FontWeight.SemiBold, FontSize = ChromeMetrics.TextEmphasis,
                 HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
             };
             note[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextStrong");

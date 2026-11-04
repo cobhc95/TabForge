@@ -77,6 +77,4 @@ internal static class DockSizeRules
         return (clamped, Math.Max(minB, total - clamped), lowerBound, minB);
     }
 
-    /// <summary>Pixels the main dock must scroll when the panes' minimum height exceeds the workspace (0 when it fits or is unmeasured).</summary>
-    internal static double MainOverflow(double height, double needed) => height > 0 ? Math.Max(0, Math.Ceiling(needed - height)) : 0;
 }
