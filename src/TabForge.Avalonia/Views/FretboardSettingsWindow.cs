@@ -15,9 +15,9 @@ using TabForge.Services;
 namespace TabForge.Avalonia.Views;
 
 // Owns: the Fretboard settings window (a modeless tool window): a settings-style section rail on the left (Look, Notes and markers, Layout and size,
-//   Strings and capo, Scale highlight, each with its glyph), the chosen section's rows on the right, and a footer with "More settings in Preferences",
-//   Reset section and Done. Every pick is written to the settings and applied at once; a slider updates the board while it is dragged and saves when
-//   it is let go, so a drag never broadcasts settings.
+//   Strings and capo, Scale highlight, each with its glyph), the chosen section's cards on the right, and the Settings footer: "More settings in Preferences"
+//   on the left; the status, Cancel, Apply and OK on the right. Every pick is written to the settings and shows on the board at once; Apply and OK keep
+//   the picks, and Cancel or closing the window writes back the values from the last Apply (or from opening).
 // Does not own: the settings types (EditingSettings, AppearanceSettings), the look names (FretboardStyles), the rail look (PreferencesWindow's
 //   PrefsNavRow style) or saving and opening Preferences (the callbacks the window host passes).
 // Tests: TabForge.Avalonia.Tests.FretboardStyleTests, FretboardSettingsWindowTests.
@@ -51,6 +51,10 @@ public sealed partial class FretboardSettingsWindow : Window
     private readonly ScrollViewer _page = new() { HorizontalScrollBarVisibility = global::Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled };
     private readonly ListBox _nav = new() { Width = ChromeMetrics.SettingsRailWidth, BorderThickness = default };
     private readonly Dictionary<int, SettingsNavigationIconView> _navIcons = new();
+    private readonly TextBlock _status = new() { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, FretboardChromeMetrics.FooterGap, 0) };
+    private readonly Button _apply = new() { Name = "FretboardSettingsApply", Content = SettingsCatalog.Special(SettingsCatalog.ActionApply).Label, IsEnabled = false };
+    private AppSettings _kept;
+    private bool _dirty;
 
     /// <param name="settings">The live settings the rows read and write.</param>
     /// <param name="changed">Saves the settings and raises SettingsChanged, so the main window's fretboard follows.</param>
@@ -58,24 +62,13 @@ public sealed partial class FretboardSettingsWindow : Window
     public FretboardSettingsWindow(AppSettings settings, Action changed, Action morePreferences)
     {
         (_settings, _changed) = (settings, changed);
+        _kept = PreferencesCatalog.Copy(settings);
         Title = "Fretboard settings";
         Width = 820;
         SizeToContent = SizeToContent.Height;
         MaxHeight = 700;
         MinWidth = 640;
         MinHeight = 320;
-        var more = new Button { Name = "FretboardMoreSettings", Content = "More settings in Preferences" };
-        more.Classes.Add("PrefsActionButton");
-        more.Click += (_, _) => morePreferences();
-        var reset = new Button { Name = "FretboardResetSection", Content = "Reset section" };
-        reset.Classes.Add("PrefsActionButton");
-        reset.Click += (_, _) => ResetSection(_nav.SelectedIndex);
-        var done = new Button { Name = "FretboardSettingsDone", Content = "Done", IsDefault = true };
-        done.Classes.Add("PrefsActionButton");
-        done.Classes.Add(AvaloniaDefaultLooks.AccentLook);
-        done.Click += (_, _) => Close();
-        var footer = new StackPanel { Orientation = Orientation.Horizontal, Spacing = FretboardChromeMetrics.FooterGap, HorizontalAlignment = HorizontalAlignment.Right, Children = { more, reset, done } }
-            .WithMargin(12, 8, 12, 12);
         var body = new Grid { ColumnDefinitions = new ColumnDefinitions($"{ChromeMetrics.SettingsRailWidth},*") };
         foreach (var section in Enumerable.Range(0, SectionCount))
             _nav.Items.Add(new ListBoxItem { Content = NavRow(section), Tag = section, MinHeight = ChromeMetrics.SettingsRailRowHeight, Classes = { AvaloniaFormControlStyles.PrefsNavRowClass } });
@@ -84,12 +77,64 @@ public sealed partial class FretboardSettingsWindow : Window
         Grid.SetColumn(_page, 1);
         body.Children.Add(_page);
         var root = new DockPanel();
+        var footer = BuildFooter(morePreferences);
         DockPanel.SetDock(footer, Dock.Bottom);
         root.Children.Add(footer);
         root.Children.Add(body);
         Content = root;
         _nav.SelectionChanged += (_, _) => { SyncRailSelection(); ShowSection(SelectedSection); };
         _nav.SelectedIndex = 0;
+        Closing += (_, _) => Revert();
+    }
+
+    /// <summary>The Settings footer band: the link to Preferences on the left; the status, Cancel, Apply and OK on the right.</summary>
+    private Border BuildFooter(Action morePreferences)
+    {
+        var more = new Button { Name = "FretboardMoreSettings", Content = "More settings in Preferences" };
+        more.Classes.Add("PrefsActionButton");
+        more.Click += (_, _) => morePreferences();
+        var cancel = new Button { Name = "FretboardSettingsCancel", Content = SettingsCatalog.Special(SettingsCatalog.ActionCancel).Label, IsCancel = true };
+        cancel.Classes.Add("PrefsActionButton");
+        cancel.Click += (_, _) => Close();
+        _apply.Classes.Add("PrefsActionButton");
+        _apply.Click += (_, _) => Apply();
+        var ok = new Button { Name = "FretboardSettingsOk", Content = SettingsCatalog.Special(SettingsCatalog.ActionOk).Label, IsDefault = true };
+        ok.Classes.Add("PrefsActionButton");
+        ok.Classes.Add(AvaloniaDefaultLooks.AccentLook);
+        ok.Click += (_, _) => { Apply(); Close(); };
+        ShowStatus();
+        var right = ToolWindowParts.Row(_status, cancel, _apply, ok);
+        DockPanel.SetDock(more, Dock.Left);
+        DockPanel.SetDock(right, Dock.Right);
+        var footer = new DockPanel { LastChildFill = false, Children = { more, right } }.WithMargin(12, 8, 12, 8);
+        var band = new Border { Child = footer, BorderThickness = new Thickness(0, 1, 0, 0) };
+        band[!Border.BackgroundProperty] = new global::Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("WindowBrush");
+        band[!Border.BorderBrushProperty] = new global::Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("BorderSoftBrush");
+        return band;
+    }
+
+    /// <summary>Keeps the picks: Cancel now returns to here.</summary>
+    internal void Apply()
+    {
+        _kept = PreferencesCatalog.Copy(_settings);
+        _dirty = false;
+        ShowStatus();
+    }
+
+    /// <summary>Writes back what the window's rows changed since the last Apply and saves, leaving every other setting as it is now.</summary>
+    private void Revert()
+    {
+        if (!_dirty) return;
+        foreach (var section in Enumerable.Range(0, SectionCount)) CopySection(section, _kept.Editing, _kept.Appearance);
+        _settings.Editing.ScaleHighlight = _kept.Editing.ScaleHighlight;
+        _dirty = false;
+        _changed();
+    }
+
+    private void ShowStatus()
+    {
+        _status.Text = _dirty ? "Changes not applied" : "All changes saved";
+        _apply.IsEnabled = _dirty;
     }
 
     /// <summary>A rail row: the section's glyph, then its name.</summary>
@@ -121,6 +166,8 @@ public sealed partial class FretboardSettingsWindow : Window
     /// <summary>A pick was made: save and rebuild the page after the click ends so the chip that raised it is not removed mid-event.</summary>
     internal void Changed(bool rebuild = true)
     {
+        _dirty = true;
+        ShowStatus();
         _changed();
         if (rebuild) Dispatcher.UIThread.Post(() => ShowSection(_nav.SelectedIndex));
     }

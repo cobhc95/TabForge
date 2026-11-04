@@ -134,42 +134,80 @@ public class FretboardSettingsWindowTests
     }
 
     [AvaloniaFact]
-    public void TheFooterAndStepperMatchTheProgramStyle()
+    public void TheFooterMatchesTheProgramStyle()
     {
         var (window, _, _) = Make();
-        foreach (var name in new[] { "FretboardMoreSettings", "FretboardResetSection", "FretboardSettingsDone" })
+        foreach (var name in new[] { "FretboardMoreSettings", "FretboardSettingsCancel", "FretboardSettingsApply", "FretboardSettingsOk" })
             Assert.Contains("PrefsActionButton", Find<Button>(window, name).Classes);
-        var done = Find<Button>(window, "FretboardSettingsDone");
+        var done = Find<Button>(window, "FretboardSettingsOk");
         Assert.Contains(AvaloniaDefaultLooks.AccentLook, done.Classes);
         Assert.True(done.IsDefault);
-        window.Select(1);
-        Assert.Contains(AvaloniaFormControlStyles.PrefsFieldClass, Find<TextBox>(window, "FretboardHorizonBox").Classes);
-        Assert.Contains(AvaloniaFormControlStyles.StepButtonClass, Find<Button>(window, "FretboardHorizonMinus").Classes);
-        Assert.Contains(AvaloniaFormControlStyles.StepButtonClass, Find<Button>(window, "FretboardHorizonPlus").Classes);
     }
 
     [AvaloniaFact]
-    public void TheStepperStepsAndSavesAndTypingAppliesOrReverts()
+    public void TheSlidersMoveInStepsSaveAndReset()
     {
         var (window, settings, doors) = Make();
         window.Select(1);
-        var start = settings.Editing.PreviewHorizon;
-        Click(Find<Button>(window, "FretboardHorizonPlus"));
-        Assert.Equal(Math.Min(10, start + 1), settings.Editing.PreviewHorizon);
-        Click(Find<Button>(window, "FretboardHorizonMinus"));
-        Click(Find<Button>(window, "FretboardHorizonMinus"));
-        Assert.Equal(Math.Max(1, start - 1), settings.Editing.PreviewHorizon);
-        Assert.True(doors.Saves >= 3);
-        var box = Find<TextBox>(window, "FretboardHorizonBox");
-        box.Text = "8";
-        box.RaiseEvent(new RoutedEventArgs(InputElement.LostFocusEvent));
+        var horizon = Find<MiniSlider>(window, "FretboardHorizon");
+        Assert.Equal(settings.Editing.PreviewHorizon, horizon.Value);
+        horizon.SetByUser(8);
         Assert.Equal(8, settings.Editing.PreviewHorizon);
-        box.Text = "99";
-        box.RaiseEvent(new RoutedEventArgs(InputElement.LostFocusEvent));
+        Assert.True(doors.Saves >= 1);
+        horizon.SetByUser(99);
         Assert.Equal(10, settings.Editing.PreviewHorizon);
-        box.Text = "abc";
-        box.RaiseEvent(new RoutedEventArgs(InputElement.LostFocusEvent));
-        Assert.Equal(10, settings.Editing.PreviewHorizon);
-        Assert.Equal("10", box.Text);
+        horizon.ResetToDefault();
+        Assert.Equal(new EditingSettings().PreviewHorizon, settings.Editing.PreviewHorizon);
+
+        var size = Find<MiniSlider>(window, "FretboardMarkerSize");
+        size.SetByUser(124);
+        Assert.Equal(120, settings.Editing.FretMarkerSizePercent);
+        Assert.Equal(120, size.Value);
+    }
+
+    [AvaloniaTheory]
+    [InlineData(Key.Right, 100)]
+    [InlineData(Key.Up, 100)]
+    [InlineData(Key.Left, 80)]
+    [InlineData(Key.Down, 80)]
+    public void TheArrowKeysStepAFocusedSlider(Key key, int expected)
+    {
+        var (window, settings, _) = Make();
+        window.Select(1);
+        var size = Find<MiniSlider>(window, "FretboardMarkerSize");
+        size.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = key });
+        Assert.Equal(expected, settings.Editing.FretMarkerSizePercent);
+    }
+
+    [AvaloniaFact]
+    public void CancelPutsBackThePicksAndApplyKeepsThem()
+    {
+        var (window, settings, _) = Make();
+        window.Show();
+        window.Select(1);
+        Assert.False(Find<Button>(window, "FretboardSettingsApply").IsEnabled);
+        var horizon = Find<MiniSlider>(window, "FretboardHorizon");
+        horizon.SetByUser(9);
+        Assert.Equal(9, settings.Editing.PreviewHorizon);
+        Assert.True(Find<Button>(window, "FretboardSettingsApply").IsEnabled);
+        Click(Find<Button>(window, "FretboardSettingsApply"));
+        Assert.False(Find<Button>(window, "FretboardSettingsApply").IsEnabled);
+        horizon.SetByUser(2);
+        settings.Editing.ConfirmDeleteBar = !settings.Editing.ConfirmDeleteBar;
+        var other = settings.Editing.ConfirmDeleteBar;
+        Click(Find<Button>(window, "FretboardSettingsCancel"));
+        Assert.Equal(9, settings.Editing.PreviewHorizon);
+        Assert.Equal(other, settings.Editing.ConfirmDeleteBar);
+    }
+
+    [AvaloniaFact]
+    public void OkKeepsThePicks()
+    {
+        var (window, settings, _) = Make();
+        window.Show();
+        window.Select(1);
+        Find<MiniSlider>(window, "FretboardHorizon").SetByUser(9);
+        Click(Find<Button>(window, "FretboardSettingsOk"));
+        Assert.Equal(9, settings.Editing.PreviewHorizon);
     }
 }

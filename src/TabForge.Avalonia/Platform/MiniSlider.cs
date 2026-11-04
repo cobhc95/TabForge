@@ -2,13 +2,14 @@ using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Styling;
 
 namespace TabForge.Avalonia.Platform;
 
 // Owns: a stand-alone mini slider that looks and drags like the track list volume and pan sliders: it is drawn by the same painter (TrackRowCells.DrawSlider)
-//   and maps the pointer with the same rules (TrackRowCells.SliderValueAt, SliderGrabOffset); a double-click returns it to its declared default.
+//   and maps the pointer with the same rules (TrackRowCells.SliderValueAt, SliderGrabOffset); a double-click returns it to its declared default, and when focusable the arrow keys step it.
 // Does not own: what the value means or where its default is declared (the caller), the track list hit testing (TimelineInputController).
 // Tests: TabForge.Avalonia.Tests.LiveStripSliderTests.
 // Thread: UI thread. A value that does not change repaints nothing; a repaint never changes the size.
@@ -32,6 +33,9 @@ public sealed class MiniSlider : Control
     public int Maximum { get; }
     /// <summary>The value a double-click returns to.</summary>
     public int Default { get; }
+
+    /// <summary>The distance between the values a user can reach, counted from <see cref="Minimum"/>.</summary>
+    public int Step { get; init; } = 1;
 
     /// <summary>Raised when the user changes the value.</summary>
     public event Action<int>? ValueChanged;
@@ -58,7 +62,7 @@ public sealed class MiniSlider : Control
     /// <summary>The user change: moves to <paramref name="value"/> and raises <see cref="ValueChanged"/> when it differs.</summary>
     public void SetByUser(int value)
     {
-        var clamped = Math.Clamp(value, Minimum, Maximum);
+        var clamped = Math.Clamp(Minimum + (int)Math.Round((value - Minimum) / (double)Step) * Step, Minimum, Maximum);
         if (clamped == _value) return;
         _value = clamped;
         InvalidateVisual();
@@ -110,7 +114,27 @@ public sealed class MiniSlider : Control
 
     protected override void OnPointerEntered(PointerEventArgs e) { if (!_dragging) Paint(TrackRowCells.CellPaint.Hover); }
 
-    protected override void OnPointerExited(PointerEventArgs e) { if (!_dragging) Paint(TrackRowCells.CellPaint.Idle); }
+    protected override void OnPointerExited(PointerEventArgs e) { if (!_dragging && !IsFocused) Paint(TrackRowCells.CellPaint.Idle); }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        if (e.Key is Key.Left or Key.Down) SetByUser(_value - Step);
+        else if (e.Key is Key.Right or Key.Up) SetByUser(_value + Step);
+        else return;
+        e.Handled = true;
+    }
+
+    protected override void OnGotFocus(GotFocusEventArgs e)
+    {
+        base.OnGotFocus(e);
+        if (!_dragging) Paint(TrackRowCells.CellPaint.Hover);
+    }
+
+    protected override void OnLostFocus(RoutedEventArgs e)
+    {
+        base.OnLostFocus(e);
+        if (!_dragging && !IsPointerOver) Paint(TrackRowCells.CellPaint.Idle);
+    }
 
     private void Paint(TrackRowCells.CellPaint paint)
     {

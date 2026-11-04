@@ -166,15 +166,15 @@ public sealed class FretboardContrastTests
         var saves = 0;
         var window = new FretboardSettingsWindow(settings, () => saves++, () => { });
         T Find<T>(string name) where T : Control => window.GetLogicalDescendants().OfType<T>().Single(c => c.Name == name);
-        void Click(string name) => Find<Button>(name).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-        Click("FretboardBrightnessMinus");
+
+        Find<MiniSlider>("FretboardBrightness").SetByUser(60);
         Assert.Equal(60, settings.Editing.FretboardBrightness);
         Find<ToggleButton>("FretboardMarkerColourBlue").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Assert.Equal("Blue", settings.Editing.FretMarkerColour);
         Dispatcher.UIThread.RunJobs();
         window.Select(1);
         Assert.DoesNotContain(window.GetLogicalDescendants().OfType<Control>(), c => c.Name == "FretboardMarkerColourBlue");
-        Click("FretboardNoteBrightnessPlus");
+        Find<MiniSlider>("FretboardNoteBrightness").SetByUser(105);
         Assert.Equal(105, settings.Editing.FretboardNoteBrightness);
         window.ResetSection(1);
         Assert.Equal(100, settings.Editing.FretboardNoteBrightness);
