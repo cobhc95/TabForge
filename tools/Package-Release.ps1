@@ -344,37 +344,6 @@ if ($LASTEXITCODE) { throw 'Inno Setup failed' }
 $setup = Join-Path $dist "TabForge-$display-setup.exe"
 Write-Output ("Installer: {0} ({1:N1} MB)" -f $setup, ((Get-Item $setup).Length / 1MB))
 
-# SoundTouch.Net source (LGPL-2.1 s6): a pinned clone of the official repository, attached to the release.
-# Network or git problems only warn: THIRD_PARTY.md carries a written offer of the source that covers the gap.
-$soundTouchTag = '2.3.2'
-$soundTouchCommit = '98e5b8fd2f8efed0ddf7c8f66b435bfb231659dc'
-$soundTouchZip = Join-Path $dist "SoundTouch.Net-$soundTouchTag-source.zip"
-$soundTouchClone = Join-Path $root 'build\soundtouch.net-src'
-$savedEap = $ErrorActionPreference
-$ErrorActionPreference = 'Continue'
-try {
-    if (Test-Path -LiteralPath $soundTouchClone) {
-        # git marks its pack files read-only; clear that so the old clone can be removed.
-        Get-ChildItem -LiteralPath $soundTouchClone -Recurse -Force -File | ForEach-Object { $_.Attributes = 'Normal' }
-        [IO.Directory]::Delete($soundTouchClone, $true)
-    }
-    [IO.Directory]::CreateDirectory((Split-Path $soundTouchClone)) | Out-Null
-    & git clone --quiet https://github.com/owoudenberg/soundtouch.net.git $soundTouchClone 2>&1 | Out-Null
-    if ($LASTEXITCODE) { throw 'git clone failed' }
-    & git -C $soundTouchClone -c advice.detachedHead=false checkout --quiet $soundTouchCommit 2>&1 | Out-Null
-    if ($LASTEXITCODE) { throw "commit $soundTouchCommit not found in the clone" }
-    $head = (& git -C $soundTouchClone rev-parse HEAD).Trim()
-    if ($head -ne $soundTouchCommit) { throw "HEAD is $head, expected $soundTouchCommit" }
-    if (Test-Path -LiteralPath $soundTouchZip) { [IO.File]::Delete($soundTouchZip) }
-    & git -C $soundTouchClone archive --format=zip --prefix="SoundTouch.Net-$soundTouchTag/" -o $soundTouchZip $soundTouchCommit 2>&1 | Out-Null
-    if ($LASTEXITCODE -or -not (Test-Path -LiteralPath $soundTouchZip)) { throw 'git archive failed' }
-    Write-Output ("SoundTouch.Net source: {0} ({1:N1} MB, commit {2})" -f $soundTouchZip, ((Get-Item $soundTouchZip).Length / 1MB), $soundTouchCommit)
-} catch {
-    Write-LoudWarning "SoundTouch.Net $soundTouchTag source zip NOT produced: $($_.Exception.Message). Attach it to the release by hand (tag $soundTouchTag, commit $soundTouchCommit); THIRD_PARTY.md carries the written offer."
-} finally {
-    $ErrorActionPreference = $savedEap
-}
-
 # Checksums for the release notes.
 $sums = Join-Path $dist "TabForge-$display-SHA256.txt"
 Get-FileHash -Algorithm SHA256 $zip, $setup |
