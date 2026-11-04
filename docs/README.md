@@ -762,7 +762,7 @@ download matches that build.
 
 Each release attaches the installer (`TabForge-<version>-setup.exe`) and the portable ZIP (`TabForge-<version>-win-x64-portable.zip`). The installer offers a Start menu entry, an optional desktop icon and an optional *"Open .gp and .tforge files with TabForge"* association, for your Windows account only. Songs double-clicked in Explorer open as a new tab in the running TabForge (or a new window; see Settings > General).
 
-A `licenses/` folder beside `TabForge.exe` (portable zip and installer) holds the full licence texts of every bundled component. SoundTouch.Net (LGPL-2.1) ships as a separate, replaceable `SoundTouch.Net.dll`; each release attaches its source.
+A `licenses/` folder beside `TabForge.exe` (portable zip and installer) holds the full licence texts of every bundled component. SoundTouch.Net (LGPL-2.1) ships as a separate, replaceable `SoundTouch.Net.dll`; its source is linked in [THIRD_PARTY.md](THIRD_PARTY.md).
 ## Building from source
 
 Requires the .NET 10 SDK (the version in `global.json`) on Windows.
