@@ -56,6 +56,11 @@ public sealed unsafe class EditorWindows : IPluginEditorHost
 
     private const string ClassName = "TabForgePluginEditor";
     private const int GWLP_USERDATA = -21, WM_NCCREATE = 0x81, ERROR_CLASS_ALREADY_EXISTS = 1410;
+    private const uint WM_MOVE = 3, WM_ENTERSIZEMOVE = 0x231, WM_EXITSIZEMOVE = 0x232;
+    private const uint MONITOR_DEFAULTTONULL = 0, SWP_NOSIZE = 1, SWP_NOACTIVATE = 0x10;
+    /// <summary>How much of a floating window's top edge counts as its title bar: a saved place is used only when this strip touches a monitor, so the window can be dragged.</summary>
+    private const int TitleStripPixels = 30;
+    [DllImport("user32")] private static extern IntPtr MonitorFromRect(ref RECT r, uint flags);
     [DllImport("user32", EntryPoint = "SetWindowLongPtrW")] private static extern IntPtr SetWindowLongPtr(IntPtr h, int index, IntPtr value);
     [DllImport("user32", EntryPoint = "GetWindowLongPtrW")] private static extern IntPtr GetWindowLongPtr(IntPtr h, int index);
 
@@ -83,6 +88,9 @@ public sealed unsafe class EditorWindows : IPluginEditorHost
     /// <summary>The editor size each window last got (open or a plug-in request): a request within <see cref="SameSizePixels"/> of it is a repeat and is ignored.</summary>
     private readonly Dictionary<IntPtr, (int W, int H)> EditorSizes = new();
     private const int SameSizePixels = 1;
+    /// <summary>Floating windows whose owner hears where the user puts them, with the place it last heard. Added after the window has its first place, so opening reports nothing.</summary>
+    private readonly Dictionary<IntPtr, (Action<int, int> Report, int X, int Y)> Moves = new();
+    private bool _inMoveLoop;   // a title-bar drag runs: only its end is reported, not every step
 
     /// <summary>How many plug-in windows are open now.</summary>
     public int OpenCount => Open.Count;
@@ -106,6 +114,11 @@ public sealed unsafe class EditorWindows : IPluginEditorHost
                 try { owner.UserClosed?.Invoke(); } catch { /* swallow: an editor-close handler must not break window teardown */ }
                 return 0;
             }
+            if (msg is WM_ENTERSIZEMOVE or WM_EXITSIZEMOVE or WM_MOVE)
+            {
+                var data = GetWindowLongPtr(hwnd, GWLP_USERDATA);
+                if (data != IntPtr.Zero && GCHandle.FromIntPtr(data).Target is EditorWindows owner) owner.OnMove(hwnd, msg);
+            }
         }
         catch { return 0; }
         return DefWindowProc(hwnd, msg, w, l);
@@ -124,7 +137,7 @@ public sealed unsafe class EditorWindows : IPluginEditorHost
     }
 
     /// <summary>Shows the plug-in's editor (or brings it forward). False when the plug-in has no editor.</summary>
-    public bool Show(IPluginInstance plugin, string title, IntPtr owner, bool dark, bool docked = false, bool onTop = false, Action<int, int>? sized = null)
+    public bool Show(IPluginInstance plugin, string title, IntPtr owner, bool dark, bool docked = false, bool onTop = false, Action<int, int>? sized = null, (int X, int Y)? place = null, Action<int, int>? moved = null)
     {
         if (ByPlugin.TryGetValue(plugin, out var existing))
         {
@@ -174,6 +187,11 @@ public sealed unsafe class EditorWindows : IPluginEditorHost
             source.ResizeRequested += OnResize;
             ResizeHandlers[hwnd] = OnResize;
         }
+        if (!docked)
+        {
+            if (place is { } at) PlaceFloating(hwnd, at.X, at.Y);
+            if (moved is not null && GetWindowRect(hwnd, out var opened)) Moves[hwnd] = (moved, opened.Left, opened.Top);
+        }
         if (onTop && !docked) SetWindowPos(hwnd, new IntPtr(-1), 0, 0, 0, 0, SWP_NOMOVE | 1); // HWND_TOPMOST
         // The first ShowWindow of a process can take the (hidden) start-up setting instead: show until visible.
         ShowWindow(hwnd, SW_SHOW);
@@ -184,6 +202,25 @@ public sealed unsafe class EditorWindows : IPluginEditorHost
         _log.Write($"editor open: '{title}' {EditorDiagnostics.Describe(plugin)} host={(docked ? "docked" : "floating")} runtime='{RuntimeInformation.FrameworkDescription}'");
         Rates[hwnd] = new EditorRate(title, plugin);
         return true;
+    }
+
+    /// <summary>Puts a floating window where it last was, unless its title bar would touch no monitor (that monitor has gone): then it stays where Windows opened it.</summary>
+    private static void PlaceFloating(IntPtr hwnd, int x, int y)
+    {
+        if (!GetWindowRect(hwnd, out var now)) return;
+        var strip = new RECT { Left = x, Top = y, Right = x + (now.Right - now.Left), Bottom = y + TitleStripPixels };
+        if (MonitorFromRect(ref strip, MONITOR_DEFAULTTONULL) == IntPtr.Zero) return;
+        SetWindowPos(hwnd, IntPtr.Zero, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+    }
+
+    /// <summary>Tells the owner where the user put a floating window: at the end of a drag, or at once for a move without one (a Windows snap). A minimised window is not a place.</summary>
+    private void OnMove(IntPtr hwnd, uint msg)
+    {
+        if (msg == WM_ENTERSIZEMOVE) { _inMoveLoop = true; return; }
+        if (msg == WM_EXITSIZEMOVE) _inMoveLoop = false;
+        if (_inMoveLoop || !Moves.TryGetValue(hwnd, out var known) || IsIconic(hwnd) || !GetWindowRect(hwnd, out var now) || (now.Left == known.X && now.Top == known.Y)) return;
+        Moves[hwnd] = (known.Report, now.Left, now.Top);
+        try { known.Report(now.Left, now.Top); } catch (Exception ex) { _log.Write($"editor move report failed: {ex.Message}"); }
     }
 
     private readonly HashSet<IntPtr> Docked = new();
@@ -275,6 +312,7 @@ public sealed unsafe class EditorWindows : IPluginEditorHost
         DockedAt.Remove(hwnd);
         Settle.Remove(hwnd);
         EditorSizes.Remove(hwnd);
+        Moves.Remove(hwnd);
         Rates.Remove(hwnd);
         DestroyWindow(hwnd);
         if (Open.Count == 0) lock (WithOpenWindows) WithOpenWindows.Remove(this);

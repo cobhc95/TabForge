@@ -23,7 +23,7 @@ public sealed partial class RemotePlugin : IPluginInstance
 {
     // Host commands over the pipe.
     public const byte CmdGetState = 1, CmdSetState = 2, CmdOpenEditor = 3, CmdCloseEditor = 4, CmdDescribe = 5, CmdListParams = 6, CmdSetParam = 7, CmdQuit = 9, CmdSetProgram = 10;
-    public const byte MsgLoaded = 100, MsgFailed = 101, MsgState = 102, MsgEditor = 103, MsgEdited = 104, MsgInfo = 105, MsgEditorSized = 106, MsgParams = 107, MsgHello = 108, MsgEditorClosed = 109;
+    public const byte MsgLoaded = 100, MsgFailed = 101, MsgState = 102, MsgEditor = 103, MsgEdited = 104, MsgInfo = 105, MsgEditorSized = 106, MsgParams = 107, MsgHello = 108, MsgEditorClosed = 109, MsgEditorMoved = 110;
     /// <summary>Prefix of the helper's MsgFailed text when its state is over <see cref="PluginStateLimits.MaxRawBytes"/>.</summary>
     internal const string StateTooLargePrefix = "state-too-large";
 
@@ -62,6 +62,8 @@ public sealed partial class RemotePlugin : IPluginInstance
     public event Action? EditorClosed;
     /// <summary>The plug-in's editor, in its own process, asked for a new size (raised on the engine's main thread; the one subscriber is the open editor's session).</summary>
     public Action<int, int>? EditorSized { get; set; }
+    /// <summary>The user moved the floating editor window: its new place in screen pixels.</summary>
+    public Action<int, int>? EditorMoved { get; set; }
 
     /// <summary>How long the process may take to connect to the control pipe.</summary>
     internal const int ConnectTimeoutMs = 15000;
@@ -420,6 +422,7 @@ public sealed partial class RemotePlugin : IPluginInstance
                 if (type == MsgEdited) { _threads.Post(() => Edited?.Invoke()); continue; }
                 if (type == MsgEditorClosed) { _threads.Post(() => EditorClosed?.Invoke()); continue; }
                 if (type == MsgEditorSized) { var (width, height) = (r.ReadInt32(), r.ReadInt32()); _threads.Post(() => EditorSized?.Invoke(width, height)); continue; }
+                if (type == MsgEditorMoved) { var (x, y) = (r.ReadInt32(), r.ReadInt32()); _threads.Post(() => EditorMoved?.Invoke(x, y)); continue; }
                 if (!control.Receive(type, r)) _threads.Log.Write($"isolated plug-in: dropped a late or unknown reply ({type}): {Path}");
             }
         }
@@ -478,15 +481,22 @@ public sealed partial class RemotePlugin : IPluginInstance
 
     /// <summary>Isolated editors live in the plug-in's own process: the window is owned by TabForge's window (<paramref name="owner"/>), docked over its area or floating.
     /// Returns the editor size, or null when the editor did not open.</summary>
-    public (int Width, int Height)? OpenEditor(IntPtr owner, bool docked)
+    public (int Width, int Height)? OpenEditor(IntPtr owner, bool docked, (int X, int Y)? place = null)
     {
-        var data = Ask(CmdOpenEditor, w => WriteOpenEditor(w, owner, docked), MsgEditor);
+        var data = Ask(CmdOpenEditor, w => WriteOpenEditor(w, owner, docked, place), MsgEditor);
         return data is null ? null : ReadEditorSize(data);
     }
 
     // The wire layout of the open-editor command and its reply: written here and read in PluginHostMain, nowhere else.
-    internal static void WriteOpenEditor(BinaryWriter w, IntPtr owner, bool docked) { w.Write((long)owner); w.Write(docked); }
-    internal static (IntPtr Owner, bool Docked) ReadOpenEditor(BinaryReader r) => (new IntPtr(r.ReadInt64()), r.ReadBoolean());
+    internal static void WriteOpenEditor(BinaryWriter w, IntPtr owner, bool docked, (int X, int Y)? place = null)
+    {
+        w.Write((long)owner); w.Write(docked);
+        w.Write(place.HasValue);
+        if (place is { } at) { w.Write(at.X); w.Write(at.Y); }
+    }
+
+    internal static (IntPtr Owner, bool Docked, (int X, int Y)? Place) ReadOpenEditor(BinaryReader r) =>
+        (new IntPtr(r.ReadInt64()), r.ReadBoolean(), r.ReadBoolean() ? (r.ReadInt32(), r.ReadInt32()) : null);
     internal static void WriteEditorSize(BinaryWriter w, (int Width, int Height)? size) { w.Write(size?.Width ?? 0); w.Write(size?.Height ?? 0); }
     internal static (int Width, int Height)? ReadEditorSize(byte[] data) =>
         data.Length >= 8 && BitConverter.ToInt32(data, 0) is > 0 and var width ? (width, BitConverter.ToInt32(data, 4)) : null;

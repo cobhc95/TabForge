@@ -65,16 +65,75 @@ public class EditorWindowsResizeTests
     }
 
     [Fact]
-    public void TheOpenEditorCommandCarriesTheDockedFlag()
+    public void TheOpenEditorCommandCarriesTheDockedFlagAndThePlace()
     {
-        foreach (var docked in new[] { true, false })
+        foreach (var (docked, place) in new (bool, (int X, int Y)?)[] { (true, null), (false, null), (false, (-1200, 40)) })
         {
             using var stream = new System.IO.MemoryStream();
-            using (var writer = new System.IO.BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true)) RemotePlugin.WriteOpenEditor(writer, (IntPtr)0x1234, docked);
+            using (var writer = new System.IO.BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true)) RemotePlugin.WriteOpenEditor(writer, (IntPtr)0x1234, docked, place);
             stream.Position = 0;
             using var reader = new System.IO.BinaryReader(stream);
-            Assert.Equal(((IntPtr)0x1234, docked), RemotePlugin.ReadOpenEditor(reader));
+            Assert.Equal(((IntPtr)0x1234, docked, place), RemotePlugin.ReadOpenEditor(reader));
         }
+    }
+
+    [Fact]
+    public void TheEngineOpenEditorMessageCarriesThePlace()
+    {
+        foreach (var place in new (int X, int Y)?[] { null, (-1200, 40) })
+        {
+            var message = new TabForge.Audio.Contracts.OpenEditorMessage(1, 2, 0x1234, true, false, false, place);
+            using var stream = new System.IO.MemoryStream();
+            using (var writer = new System.IO.BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true)) message.Write(writer);
+            stream.Position = 0;
+            using var reader = new System.IO.BinaryReader(stream);
+            Assert.Equal(message, TabForge.Audio.Contracts.OpenEditorMessage.Read(reader));
+        }
+    }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)] private struct Rect { public int Left, Top, Right, Bottom; }
+    [System.Runtime.InteropServices.DllImport("user32", CharSet = System.Runtime.InteropServices.CharSet.Unicode)] private static extern IntPtr FindWindow(string cls, string title);
+    [System.Runtime.InteropServices.DllImport("user32")] private static extern bool GetWindowRect(IntPtr h, out Rect r);
+    [System.Runtime.InteropServices.DllImport("user32")] private static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int w, int hgt, uint flags);
+
+    // A real Win32 window: what a tab switch does to a floating editor (closed, then opened again where the user left it).
+    [AvaloniaFact]
+    public void AFloatingWindowReportsWhereItIsMovedAndOpensThereAgain()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        const string title = "TabForge place test";
+        var editors = new EditorWindows(new EngineLogWriter());
+        var plugin = new ResizablePlugin();
+        var moves = new List<(int, int)>();
+        Assert.True(editors.Show(plugin, title, IntPtr.Zero, dark: true, moved: (x, y) => moves.Add((x, y))));
+        Assert.Empty(moves);   // opening is not the user moving it
+        var window = FindWindow(TabForge.Avalonia.Shell.Win32.PluginEditorWin32.EditorPopupClass, title);
+        Assert.NotEqual(IntPtr.Zero, window);
+        const uint noSize = 1, noZOrder = 4, noActivate = 0x10;
+        Assert.True(SetWindowPos(window, IntPtr.Zero, 137, 151, 0, 0, noSize | noZOrder | noActivate));
+        Assert.Equal(new[] { (137, 151) }, moves);
+        editors.CloseFor(plugin);
+
+        Assert.True(editors.Show(plugin, title, IntPtr.Zero, dark: true, place: (137, 151), moved: (x, y) => moves.Add((x, y))));
+        window = FindWindow(TabForge.Avalonia.Shell.Win32.PluginEditorWin32.EditorPopupClass, title);
+        Assert.True(GetWindowRect(window, out var again));
+        Assert.Equal((137, 151), (again.Left, again.Top));
+        Assert.Single(moves);   // opening at the saved place reports nothing
+        editors.CloseFor(plugin);
+    }
+
+    [AvaloniaFact]
+    public void AFloatingWindowWhoseMonitorHasGoneOpensWhereWindowsPutsIt()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        const string title = "TabForge gone monitor test";
+        const int nowhere = 100000;
+        var editors = new EditorWindows(new EngineLogWriter());
+        var plugin = new ResizablePlugin();
+        Assert.True(editors.Show(plugin, title, IntPtr.Zero, dark: true, place: (nowhere, nowhere)));
+        Assert.True(GetWindowRect(FindWindow(TabForge.Avalonia.Shell.Win32.PluginEditorWin32.EditorPopupClass, title), out var opened));
+        Assert.True(opened.Left < nowhere && opened.Top < nowhere);
+        editors.CloseFor(plugin);
     }
 
     [Fact]

@@ -64,7 +64,7 @@ internal sealed partial class EngineSession
         finally { LeaveCall(entered); }
     }
 
-    public void OpenEditor(int slot, int index, IntPtr owner, bool dark, bool docked = false, bool onTop = false)
+    public void OpenEditor(int slot, int index, IntPtr owner, bool dark, bool docked = false, bool onTop = false, (int X, int Y)? place = null)
     {
         AssertMain();
         Log.Write($"editor requested: slot {slot} plug-in {index}");
@@ -80,6 +80,14 @@ internal sealed partial class EngineSession
         var staged = chain.Effects.FirstOrDefault(e => e.Index == index)?.Plugin;   // diagnostics: the instance the audio thread processes for this slot
         Log.Write($"editor open request: slot {slot} plug-in {index} editor {EditorDiagnostics.Describe(plugin)} chain stage {(staged is null ? "none" : EditorDiagnostics.Describe(staged))} sameInstance={ReferenceEquals(plugin, staged)} docked={docked}");
         void Size(int w, int h) => Send(EngineEvent.EditorSize, x => { x.Write(slot); x.Write(index); x.Write(w); x.Write(h); });
+        var id = request.Specs[index].Id;
+        // By id: the plug-in may have moved in its chain since this window opened.
+        void Moved(int x, int y)
+        {
+            if (!Requested.TryGetValue(slot, out var now)) return;
+            var at = id.Length > 0 ? now.Specs.FindIndex(s => s.Id == id) : index;
+            if (at >= 0) Send(EngineEvent.EditorMoved, w => { w.Write(slot); w.Write(at); w.Write(x); w.Write(y); });
+        }
         if (plugin is Isolation.RemotePlugin remote)   // its window lives in its own process
         {
             // Bounded pipe waits, never blamed: an unresponsive helper must not trip the engine's own hang watchdog.
@@ -87,7 +95,8 @@ internal sealed partial class EngineSession
             try
             {
                 remote.EditorSized = Size;
-                if (remote.OpenEditor(owner, docked) is { } opened) Size(opened.Width, opened.Height);
+                remote.EditorMoved = Moved;
+                if (remote.OpenEditor(owner, docked, place) is { } opened) Size(opened.Width, opened.Height);
                 else if (docked) Size(0, 0);   // no editor: 0 x 0 tells the window to show the parameter panel now
             }
             finally { LeaveCall(remoteCall); }
@@ -98,7 +107,7 @@ internal sealed partial class EngineSession
         Editors.UserClosed ??= () => Send(EngineEvent.EditorClosed, _ => { });
         var entered = EnterCall(slot, index, plugin, path, PluginCallKind.Editor);
         bool shown;
-        try { shown = Editors.Show(plugin, $"{name} — {request.Track}", owner, dark, docked, onTop, Size); }
+        try { shown = Editors.Show(plugin, $"{name} — {request.Track}", owner, dark, docked, onTop, Size, place, Moved); }
         finally { LeaveCall(entered); }
         if (!shown) { Log.Write($"editor: {path} has no editor or its window could not be created"); if (docked) Size(0, 0); }
     }

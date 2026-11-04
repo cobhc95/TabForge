@@ -18,8 +18,9 @@ public interface IPluginEditorHost
     /// <summary>Diagnostics: how many times a plug-in has been processed so far (-1: not counted); set once by the owner of the audio side, read on the main thread.</summary>
     Func<Plugins.IPluginInstance, long>? ProcessCalls { get => null; set { } }
 
-    /// <summary>Shows the plug-in editor (or brings it forward). False when the plug-in has no editor or it could not be shown.</summary>
-    bool Show(Plugins.IPluginInstance plugin, string title, IntPtr owner, bool dark, bool docked = false, bool onTop = false, Action<int, int>? sized = null);
+    /// <summary>Shows the plug-in editor (or brings it forward). False when the plug-in has no editor or it could not be shown.
+    /// A new floating window opens at <paramref name="place"/> when it is on a monitor; <paramref name="moved"/> hears where the user puts it. Hosts that leave placing to the window manager ignore both.</summary>
+    bool Show(Plugins.IPluginInstance plugin, string title, IntPtr owner, bool dark, bool docked = false, bool onTop = false, Action<int, int>? sized = null, (int X, int Y)? place = null, Action<int, int>? moved = null);
     void CloseFor(Plugins.IPluginInstance plugin);
     void CloseAll();
     void Idle();
@@ -45,7 +46,7 @@ public sealed class UnsupportedEditorHost : IPluginEditorHost
     public Action? UserClosed { get; set; }
     public int OpenCount => 0;
 
-    public bool Show(Plugins.IPluginInstance plugin, string title, IntPtr owner, bool dark, bool docked = false, bool onTop = false, Action<int, int>? sized = null)
+    public bool Show(Plugins.IPluginInstance plugin, string title, IntPtr owner, bool dark, bool docked = false, bool onTop = false, Action<int, int>? sized = null, (int X, int Y)? place = null, Action<int, int>? moved = null)
     {
         if (!_reported) { _reported = true; _log?.Write($"editor: {Reason}"); }
         return false;

@@ -217,14 +217,15 @@ public static class PluginHostMain
                 }
                 case RemotePlugin.CmdOpenEditor:
                 {
-                    var (owner, docked) = RemotePlugin.ReadOpenEditor(r);
+                    var (owner, docked, place) = RemotePlugin.ReadOpenEditor(r);
                     threads.Post(() => PluginControlChannel.Answer(pipe, id, log, () =>
                     {
                         (int Width, int Height)? size = null;
                         var replied = false;
                         // The size at open goes in the reply; a later resize request of the editor goes to the engine as an event.
                         void Sized(int w, int h) { if (replied) Frames.Write(pipe, RemotePlugin.MsgEditorSized, x => RemotePlugin.WriteEditorSize(x, (w, h))); else size = (w, h); }
-                        editors.Show(plugin, Path.GetFileNameWithoutExtension(path), owner, dark: true, docked: docked, sized: Sized);
+                        editors.Show(plugin, Path.GetFileNameWithoutExtension(path), owner, dark: true, docked: docked, sized: Sized, place: place,
+                            moved: (x, y) => Frames.Write(pipe, RemotePlugin.MsgEditorMoved, m => { m.Write(x); m.Write(y); }));
                         replied = true;
                         return (RemotePlugin.MsgEditor, w => RemotePlugin.WriteEditorSize(w, size));
                     }));

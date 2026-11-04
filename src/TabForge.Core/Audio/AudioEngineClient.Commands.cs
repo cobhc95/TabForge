@@ -152,8 +152,19 @@ public sealed partial class AudioEngineClient : IDisposable
     public bool OpenEditor(TrackModel track, PluginSlot slot, IntPtr window, bool dark, bool docked = false, bool onTop = false)
     {
         if (!TryAddress(track, slot, out var engineSlot, out var index)) return false;
-        Send(EngineCommand.OpenEditor, new OpenEditorMessage(engineSlot, index, (long)window, dark, docked, onTop).Write);
+        (int X, int Y)? place = !docked && _editorPlaces.TryGetValue(slot, out var saved) ? saved.Value : null;
+        Send(EngineCommand.OpenEditor, new OpenEditorMessage(engineSlot, index, (long)window, dark, docked, onTop, place).Write);
         return true;
+    }
+
+    // Kept here, not in the engine: a tab switch closes a floating editor and reopens it later, and by then the engine may have dropped the parked chain or stopped (WarmIdle).
+    private readonly System.Runtime.CompilerServices.ConditionalWeakTable<PluginSlot, System.Runtime.CompilerServices.StrongBox<(int X, int Y)>> _editorPlaces = new();
+
+    /// <summary>The user moved a plug-in's floating window: it reopens there.</summary>
+    private void RememberEditorPlace(int engineSlot, int index, int x, int y)
+    {
+        if (TrackAt(engineSlot)?.Rig.Plugins is { } plugins && index >= 0 && index < plugins.Count)
+            _editorPlaces.AddOrUpdate(plugins[index], new System.Runtime.CompilerServices.StrongBox<(int X, int Y)>((x, y)));
     }
 
     public void CloseEditor(TrackModel track, PluginSlot slot)

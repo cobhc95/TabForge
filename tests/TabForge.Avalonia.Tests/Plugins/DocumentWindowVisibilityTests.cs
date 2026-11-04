@@ -25,6 +25,8 @@ public class DocumentWindowVisibilityTests
         var windows = new FxChainWindows(owner, () => shown, null, null, new TabForge.Plugins.PluginTrust());
         var window = windows.Open(a.Project.Tracks[0]);
         Assert.True(window.IsVisible);
+        var moved = new global::Avalonia.PixelPoint(137, 151);
+        window.Position = moved;
 
         shown = b;
         windows.SongShown(new[] { a, b });
@@ -33,6 +35,7 @@ public class DocumentWindowVisibilityTests
         shown = a;
         windows.SongShown(new[] { a, b });
         Assert.True(window.IsVisible);
+        Assert.Equal(moved, window.Position);   // shown again where it was left, not centred over the owner again
 
         windows.CloseSong(a);
         Assert.False(window.IsVisible);

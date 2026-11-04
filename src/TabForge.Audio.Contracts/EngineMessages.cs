@@ -106,11 +106,16 @@ public readonly record struct SetStateMessage(int Slot, int Index, string State)
     public static SetStateMessage Read(BinaryReader r) => new(r.ReadInt32(), r.ReadInt32(), r.ReadBoundedString(PluginStateLimits.MaxBase64Chars));
 }
 
-/// <summary><see cref="EngineCommand.OpenEditor"/>: slot, chain index, window handle (int64), dark, docked, on top.</summary>
-public readonly record struct OpenEditorMessage(int Slot, int Index, long Window, bool Dark, bool Docked, bool OnTop)
+/// <summary><see cref="EngineCommand.OpenEditor"/>: slot, chain index, window handle (int64), dark, docked, on top; then, only when known, the place (screen pixels) a floating window last had.</summary>
+public readonly record struct OpenEditorMessage(int Slot, int Index, long Window, bool Dark, bool Docked, bool OnTop, (int X, int Y)? Place = null)
 {
-    public void Write(BinaryWriter w) { w.Write(Slot); w.Write(Index); w.Write(Window); w.Write(Dark); w.Write(Docked); w.Write(OnTop); }
-    public static OpenEditorMessage Read(BinaryReader r) => new(r.ReadInt32(), r.ReadInt32(), r.ReadInt64(), r.ReadBoolean(), r.ReadBoolean(), r.ReadBoolean());
+    public void Write(BinaryWriter w)
+    {
+        w.Write(Slot); w.Write(Index); w.Write(Window); w.Write(Dark); w.Write(Docked); w.Write(OnTop);
+        if (Place is { } place) { w.Write(place.X); w.Write(place.Y); }
+    }
+
+    public static OpenEditorMessage Read(BinaryReader r) => new(r.ReadInt32(), r.ReadInt32(), r.ReadInt64(), r.ReadBoolean(), r.ReadBoolean(), r.ReadBoolean(), r.BaseStream.Position < r.BaseStream.Length ? (r.ReadInt32(), r.ReadInt32()) : null);
 }
 
 /// <summary><see cref="EngineCommand.SetTrackMix"/>: slot, volume 0..127, pan 0..127.</summary>

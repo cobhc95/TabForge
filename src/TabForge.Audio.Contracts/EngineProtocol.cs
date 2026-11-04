@@ -257,6 +257,8 @@ public enum EngineEvent : byte
     AsioPanelShown = 28,
     /// <summary>Answer to <see cref="EngineCommand.GetParams"/>: slot, chain index, then a parameter list (<see cref="PluginParameterWire"/>).</summary>
     Params = 29,
+    /// <summary>The user moved a floating plug-in window (slot, index, x, y in screen pixels); it reopens there.</summary>
+    EditorMoved = 30,
 }
 
 /// <summary>Bounds of one <see cref="EngineEvent.MasterAudio"/> chunk.</summary>

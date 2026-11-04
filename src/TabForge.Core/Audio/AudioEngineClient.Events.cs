@@ -74,6 +74,12 @@ public sealed partial class AudioEngineClient
                 RaiseOnUi(() => EditorSized?.Invoke(slot, index, width, height));
                 break;
             }
+            case EngineEvent.EditorMoved:
+            {
+                var slot = r.ReadInt32(); var index = r.ReadInt32(); var x = r.ReadInt32(); var y = r.ReadInt32();
+                RaiseOnUi(() => RememberEditorPlace(slot, index, x, y));
+                break;
+            }
             case EngineEvent.Programs: OnPrograms(r); break;
             case EngineEvent.Params: OnParams(r); break;
             case EngineEvent.MidiLog: OnMidiLog(r); break;

@@ -92,7 +92,7 @@ public static partial class EngineHost
             case EngineCommand.OpenEditor:
             {
                 var m = OpenEditorMessage.Read(r); var window = new IntPtr(m.Window);
-                Threads.Post(() => _session.OpenEditor(m.Slot, m.Index, window, m.Dark, m.Docked, m.OnTop));
+                Threads.Post(() => _session.OpenEditor(m.Slot, m.Index, window, m.Dark, m.Docked, m.OnTop, m.Place));
                 break;
             }
             case EngineCommand.CloseEditor:

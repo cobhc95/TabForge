@@ -68,7 +68,7 @@ public sealed unsafe class X11EditorHost : IPluginEditorHost
         return true;
     }
 
-    public bool Show(IPluginInstance plugin, string title, IntPtr owner, bool dark, bool docked = false, bool onTop = false, Action<int, int>? sized = null)
+    public bool Show(IPluginInstance plugin, string title, IntPtr owner, bool dark, bool docked = false, bool onTop = false, Action<int, int>? sized = null, (int X, int Y)? place = null, Action<int, int>? moved = null)
     {
         if (docked && !_dockedNoted) { _dockedNoted = true; _log.Write("editor: docking is not offered on this system; the editor opens in its own window"); }
         if (!EnsureDisplay()) return false;
