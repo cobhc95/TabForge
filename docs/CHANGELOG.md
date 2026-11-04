@@ -8,6 +8,7 @@ Stable release with real wound string textures, tidier dialogs and crash and shu
 
 - Tabs: closing the rightmost tab no longer crashes the program when the window is activated during the close, which could happen while a song played in another tab. Closing a tab in the background no longer switches to it first, so the shown song and its playback carry on.
 - Plug-in windows: a floating plug-in window now comes back exactly where you left it when you switch to another tab and back. A saved place whose monitor has gone is ignored.
+- Hotkeys: play, stop and other navigation keys now work while the FX chain, a plug-in window or another tool window has the focus, using your own key bindings. Text boxes, plug-in text fields that use a standard text box or a caret, dialogs, Settings and Fretboard settings keep their keys.
 - ASIO: drivers open again. Since 0.8.7 every ASIO driver failed with "Unable to instantiate ASIO" and playback fell back to WASAPI. A driver that really cannot be opened now says so in plain words.
 - Crash recovery: a recovered song keeps its track inputs, Band layout and collapsed mixer groups, and its audio clips still point to the right files.
 - Recording: audio that a slow disk could not finish writing at shutdown is reported as lost instead of the take silently ending short.

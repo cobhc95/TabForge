@@ -119,6 +119,33 @@ public sealed class MainWindowKeyboard
         return Route(key, modifiers, focused);
     }
 
+    /// <summary>Runs a key pressed in another TabForge window, only when it maps to a navigation or transport command; the main window's own rules (Space ends a recording, a text box keeps its keys) apply. true when the key was used.</summary>
+    public bool RouteNavigation(Key key, KeyModifiers modifiers, object? focused)
+    {
+        if (CommandFor(key, modifiers) is not { } id || !NavigationHotkeys.Contains(id)) return false;
+        return RouteBeforeControls(key, modifiers, focused) || Route(key, modifiers, focused);
+    }
+
+    /// <summary>The gestures currently bound to navigation and transport commands, in catalogue spelling.</summary>
+    public IEnumerable<string> NavigationGestures()
+    {
+        foreach (var (gesture, id) in _map)
+            if (NavigationHotkeys.Contains(id)) yield return gesture;
+    }
+
+    /// <summary>The key and modifiers of a catalogue gesture; false when the gesture does not name a key.</summary>
+    public static bool TryParseGesture(string gesture, out Key key, out KeyModifiers modifiers)
+    {
+        key = Key.None;
+        modifiers = KeyModifiers.None;
+        if (!HotkeyCatalog.TryParse(gesture, out var name, out var mods) || !System.Enum.TryParse(name, out key)) return false;
+        if (mods.HasFlag(HotkeyModifiers.Control)) modifiers |= KeyModifiers.Control;
+        if (mods.HasFlag(HotkeyModifiers.Alt)) modifiers |= KeyModifiers.Alt;
+        if (mods.HasFlag(HotkeyModifiers.Shift)) modifiers |= KeyModifiers.Shift;
+        if (mods.HasFlag(HotkeyModifiers.Windows)) modifiers |= KeyModifiers.Meta;
+        return true;
+    }
+
     /// <summary>Escape leaves full screen while the window is in it (the command applies only then); the key is fixed, not a catalogue binding.</summary>
     private string? EscapeLeaveFullscreenFor(Key key, KeyModifiers modifiers) =>
         key == Key.Escape && modifiers == KeyModifiers.None && _commands.Handles(MainWindowViewMenu.FullscreenExitCommandId) && _commands.Applies(MainWindowViewMenu.FullscreenExitCommandId)
