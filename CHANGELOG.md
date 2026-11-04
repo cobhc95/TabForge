@@ -14,6 +14,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ### Fixed
 
+- Copied track headers omit null partial-capo data, preserving the established clipboard representation and compatibility with earlier TabForge clips.
 - File > Open awaits its dialog and checks a slow starting folder off the UI thread with a timeout. Repeated Ctrl+O cannot open overlapping requests.
 - Playback playheads follow display frames rather than a fixed-rate timer.
 - Track-meter menus stay meter-only, scale tooltips stay anchored, and applying an already-selected recommended UI size does nothing.
