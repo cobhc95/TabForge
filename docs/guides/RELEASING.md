@@ -13,7 +13,7 @@ The command pushes `main` and the `v<version>` tag to the public repository. The
 
 - The basic self-test (about 5 seconds) runs on the exact Windows folder that gets packaged.
 - Packaging refuses to continue if native helper hashes, licence files or the demo song are wrong or missing.
-- `tools\SHIP.cmd` refuses to push if you are not on `main`, there are uncommitted changes, the notes are missing, the tag already exists or private files are tracked.
+- `tools\SHIP.cmd` refuses to push if you are not on `main`, there are uncommitted changes, the notes are missing, the tag already exists, the version is lower than an existing tag or private files are tracked. The update check compares each part of a version as a whole number (0.8.75 is higher than 0.8.8), so a lower number would never be offered to anyone on the higher one.
 
 The slower release test set (`--areas release`) and the full suite are not part of a release. Run the release set when you want it with `tools\Package-Release.ps1 -FullGate`.
 

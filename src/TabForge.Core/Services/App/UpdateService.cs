@@ -13,12 +13,12 @@ public sealed record ReleaseInfo(string Version, Uri Page);
 
 // Owns: the update check request to the release feed with its timeouts and size caps.
 // Does not own: when the check runs (UpdateCheckController) and the dialogs.
-// Tests: no dedicated test class.
+// Tests: UpdateServiceTests.
 /// <summary>
 /// Update check, deliberately minimal:
 /// - one anonymous HTTPS GET to a fixed address (the public GitHub releases list of this repository);
 ///   TLS 1.2/1.3 with normal certificate validation, no redirects, no cookies, no credentials, no proxy
-///   auto-configuration scripts beyond the system proxy, 10 s timeout, 256 KB response cap;
+///   auto-configuration scripts beyond the system proxy, 10 s timeout, 512 KB response cap;
 /// - nothing is sent except the User-Agent GitHub requires ("TabForge/&lt;version&gt;");
 /// - only the "tag_name" and "draft" fields are read, and a tag must be a plain version (v1.2.3, optionally with a pre-release suffix);
 ///   no text, links or files from the reply are shown, opened or saved;
@@ -29,13 +29,13 @@ public sealed record ReleaseInfo(string Version, Uri Page);
 public static class UpdateService
 {
     public const string Repository = "cobhc95/TabForge";
-    private static readonly Uri ReleasesApi = new($"https://api.github.com/repos/{Repository}/releases?per_page=20");
-    private const int MaxResponseBytes = 256 * 1024;
-    private const int MaxReleasesRead = 20;
+    private const int MaxReleasesRead = 10;
+    private static readonly Uri ReleasesApi = new($"https://api.github.com/repos/{Repository}/releases?per_page={MaxReleasesRead}");
+    private const int MaxResponseBytes = 512 * 1024;
 
     /// <summary>
     /// Shared handler + client (additive lifetime fix): one TLS setup per process instead of one per check,
-    /// so repeated checks reuse the connection pool. Caps (256 KB, 10 s, no redirects) are unchanged.
+    /// so repeated checks reuse the connection pool.
     /// </summary>
     private static readonly SocketsHttpHandler SharedHandler = new()
     {
@@ -71,33 +71,40 @@ public static class UpdateService
             || page.AbsolutePath.StartsWith($"/{Repository}/releases/tag/v", StringComparison.Ordinal))
         && page.Query.Length == 0 && page.Fragment.Length == 0;
 
-    /// <summary>A release newer than <paramref name="currentVersion"/>, or null (none, offline, refused or unexpected reply).</summary>
+    /// <summary>A release newer than <paramref name="currentVersion"/>, or null when there is none. A failed check throws, so it is never reported as "up to date".</summary>
     public static async Task<ReleaseInfo?> CheckAsync(string currentVersion, CancellationToken cancellation)
     {
         var json = await FetchAsync(cancellation).ConfigureAwait(false);
-        // A final-release user is only offered final releases; a pre-release user is offered anything newer.
-        var latest = json is null ? null : LatestVersionFrom(json, includePreReleases: currentVersion.Contains('-') || AppInfo.IsPreRelease);
-        return latest is not null && IsNewer(latest, currentVersion) ? new ReleaseInfo(latest, PageFor(latest)) : null;
+        return NewerRelease(json, currentVersion);
     }
 
-    private static async Task<string?> FetchAsync(CancellationToken cancellation)
+    /// <summary>The newer release a reply offers, or null when there is none. Throws <see cref="HttpRequestException"/> when the reply holds no release version.</summary>
+    public static ReleaseInfo? NewerRelease(string json, string currentVersion)
+    {
+        // A final-release user is only offered final releases; a pre-release user is offered anything newer.
+        var latest = LatestVersionFrom(json, includePreReleases: currentVersion.Contains('-') || AppInfo.IsPreRelease)
+            ?? throw new HttpRequestException("The release list holds no release version.");
+        return IsNewer(latest, currentVersion) ? new ReleaseInfo(latest, PageFor(latest)) : null;
+    }
+
+    private static async Task<string> FetchAsync(CancellationToken cancellation)
     {
         // Shared client: never disposed here. Same timeouts/caps as before; the length header and the
-        // streaming cap both still bound the 256 KB response even when the header lies.
+        // streaming cap both still bound the response even when the header lies.
         using var request = new HttpRequestMessage(HttpMethod.Get, ReleasesApi);
         request.Headers.UserAgent.Add(new ProductInfoHeaderValue("TabForge", SafeToken(AppInfo.Version)));
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
         using var response = await SharedClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellation).ConfigureAwait(false);
-        if (response.StatusCode != HttpStatusCode.OK) return null;
-        if (response.Content.Headers.ContentType?.MediaType is not ("application/json" or "application/vnd.github+json")) return null;
-        if (response.Content.Headers.ContentLength is > MaxResponseBytes) return null;
+        if (response.StatusCode != HttpStatusCode.OK) throw new HttpRequestException($"The release list replied {(int)response.StatusCode}.");
+        if (response.Content.Headers.ContentType?.MediaType is not ("application/json" or "application/vnd.github+json")) throw new HttpRequestException("The release list is not JSON.");
+        if (response.Content.Headers.ContentLength is > MaxResponseBytes) throw new HttpRequestException("The release list is too large.");
         await using var stream = await response.Content.ReadAsStreamAsync(cancellation).ConfigureAwait(false);
         var buffer = new MemoryStream();
         var chunk = new byte[16384];
         int read;
         while ((read = await stream.ReadAsync(chunk, cancellation).ConfigureAwait(false)) > 0)
         {
-            if (buffer.Length + read > MaxResponseBytes) return null; // bounded even when the length header lies
+            if (buffer.Length + read > MaxResponseBytes) throw new HttpRequestException("The release list is too large."); // bounded even when the length header lies
             buffer.Write(chunk, 0, read);
         }
         return System.Text.Encoding.UTF8.GetString(buffer.GetBuffer(), 0, (int)buffer.Length);

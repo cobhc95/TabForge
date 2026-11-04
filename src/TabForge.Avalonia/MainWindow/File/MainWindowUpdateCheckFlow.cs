@@ -28,7 +28,7 @@ internal sealed class MainWindowUpdateCheckFlow
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromMilliseconds(UiTiming.UpdateCheckTimeoutMs);
     private const string CheckingText = "Checking for updates…";
     private const string UpToDateText = "TabForge is up to date";
-    private const string UnreachableText = "Could not reach GitHub to check for updates";
+    private const string UnreachableText = "Could not check GitHub for updates";
     private const string AutomaticChecksOnText = "Automatic update checks on";
     private const string AutomaticChecksOffText = "Automatic update checks off (Settings > General > Updates)";
     private const string BrowserFailedText = "Could not open the browser: ";
@@ -88,7 +88,7 @@ internal sealed class MainWindowUpdateCheckFlow
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException
                                    or IOException or AuthenticationException)
         {
-            reached = false; // Not logged: offline or blocked is reported as "could not reach" (silent for the automatic check)
+            reached = false; // Not logged: offline, blocked or an unusable reply is reported as "could not check" (silent for the automatic check)
         }
         finally { _running = false; }
 

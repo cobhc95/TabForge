@@ -75,6 +75,6 @@ libSkiaSharp
 libHarfBuzzSharp
 // External system library bundled beside libmp3lame.so.0 by tools/package-linux.sh.
 libmpg123.so.0
-TabForge-0.8.9-linux-x64.tar.gz
-TabForge-0.8.9-linux-x86_64.AppImage
+TabForge-0.9.0-linux-x64.tar.gz
+TabForge-0.9.0-linux-x86_64.AppImage
 raw.githubusercontent.com

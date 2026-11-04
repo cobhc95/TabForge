@@ -2,7 +2,7 @@
 Publishes the version in Directory.Build.props to GitHub with one command: pushes main and the v<version> tag, then
 waits for the release workflow, which builds the packages and publishes the release as Latest (target: under 4 minutes).
 Before pushing it checks only what would make the release fail or leak: on main, nothing uncommitted, release notes
-present, tag unused, no private files tracked. See docs/guides/RELEASING.md.
+present, tag unused, version not lower than any tag, no private files tracked. See docs/guides/RELEASING.md.
 #>
 [CmdletBinding()]
 param([string]$Remote = 'public')
@@ -18,6 +18,9 @@ if ($branch -ne 'main') { throw "Releases go out from main; this is '$branch'." 
 if (@(& git status --porcelain).Count -gt 0) { throw 'There are uncommitted changes. Commit them first.' }
 if (-not (Test-Path -LiteralPath "docs/releases/$version.md")) { throw "docs/releases/$version.md (the release notes) is missing." }
 if (& git ls-remote --tags $Remote "refs/tags/$tag") { throw "$tag already exists on $Remote. Raise <Version> in Directory.Build.props." }
+# The app's update check compares each part as a whole number, so 0.8.75 is higher than 0.8.8: a lower number is never offered to anyone on the higher one.
+$highest = & git ls-remote --tags --refs $Remote 'refs/tags/v*' | ForEach-Object { if ($_ -match 'refs/tags/v(\d+\.\d+\.\d+)') { [version]$Matches[1] } } | Sort-Object | Select-Object -Last 1
+if ($highest -and [version]($version -split '-')[0] -lt $highest) { throw "$tag is lower than v$highest, so people on v$highest would never be offered it. Raise <Version> in Directory.Build.props." }
 $private = @(& git ls-files | Where-Object { $_ -like '*manifest.private*' -or $_ -like 'shots-*' })
 if ($private.Count -gt 0) { throw "Private files are tracked: $($private[0]) (and $($private.Count - 1) more)." }
 

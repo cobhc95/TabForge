@@ -2,13 +2,14 @@
 
 TabForge is actively developed; please report anything odd on the Issues page.
 
-## 0.8.9
+## 0.9.0
 
 Stable maintenance release with no new features.
 
 - Crash recovery: a recovered song keeps its track inputs, Band layout and collapsed mixer groups, and its audio clips still point to the right files.
 - Recording: audio that a slow disk could not finish writing at shutdown is reported as lost instead of the take silently ending short.
 - Audio engine and plug-ins: fixed a timer left running after a stop during connect, plug-ins disposed under a stuck render at shutdown, and a connection leaked by a late plug-in.
+- Update check: a check that fails now says so instead of reporting that you are up to date, and a long release list can no longer stop it working. This release is numbered 0.9.0 so that it also reaches people on 0.8.75, who were not offered 0.8.8.
 - The "Plug-in loading slowly" prompt closes with its window, and the IR Loader editor stops checking for updates while hidden.
 - Interface: many windows share one set of text sizes and corner radii, and more dialog buttons use the same padding.
 - Removed unused code, settings, documents, tools and artwork. Settings files from earlier versions still load.
