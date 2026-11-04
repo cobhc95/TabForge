@@ -12,8 +12,6 @@
 > **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.8.8/TabForge-0.8.8-setup.exe)** · no administrator rights needed
 >
 > **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.8.8/TabForge-0.8.8-win-x64-portable.zip)** · extract and run `TabForge.exe`
->
-> **[SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.8.8/TabForge-0.8.8-SHA256.txt)** · to verify the Windows files
 
 Windows 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify your download](#verify-your-download). Older versions: [Releases](https://github.com/cobhc95/TabForge/releases).
 
@@ -762,7 +760,7 @@ them. Releases built by the GitHub Actions release workflow from the tagged sour
 (`gh attestation verify <file> --repo cobhc95/TabForge`) and SHA-256 checksums, so you can verify that a
 download matches that build.
 
-Each release attaches the installer (`TabForge-<version>-setup.exe`), the portable ZIP (`TabForge-<version>-win-x64-portable.zip`) and SHA-256 checksums. The installer offers a Start menu entry, an optional desktop icon and an optional *"Open .gp and .tforge files with TabForge"* association, for your Windows account only. Songs double-clicked in Explorer open as a new tab in the running TabForge (or a new window; see Settings > General).
+Each release attaches the installer (`TabForge-<version>-setup.exe`) and the portable ZIP (`TabForge-<version>-win-x64-portable.zip`). The installer offers a Start menu entry, an optional desktop icon and an optional *"Open .gp and .tforge files with TabForge"* association, for your Windows account only. Songs double-clicked in Explorer open as a new tab in the running TabForge (or a new window; see Settings > General).
 
 A `licenses/` folder beside `TabForge.exe` (portable zip and installer) holds the full licence texts of every bundled component. SoundTouch.Net (LGPL-2.1) ships as a separate, replaceable `SoundTouch.Net.dll`; each release attaches its source.
 ## Building from source
