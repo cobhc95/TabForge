@@ -22,7 +22,7 @@ it without rebuilding TabForge. TabForge only calls it through its public API.
 - Source of the exact version used (tag `2.3.2`, commit `98e5b8fd2f8efed0ddf7c8f66b435bfb231659dc`):
   https://github.com/owoudenberg/soundtouch.net/tree/98e5b8fd2f8efed0ddf7c8f66b435bfb231659dc
 - The package is the unmodified NuGet package `SoundTouch.Net` 2.3.2.
-- **Source attached to the release:** every TabForge release on GitHub also attaches `SoundTouch.Net-2.3.2-source.zip`,
+- **Source attached to the release:** every TabForge release on GitHub also attaches `TabForge-<version>-source-SoundTouch.Net-2.3.2.zip`,
   a copy of that repository at the commit above.
 - **Written offer:** for at least three years from the date of each TabForge release that includes SoundTouch.Net, we will
   give any third party, on request, a complete machine-readable copy of the corresponding source code of SoundTouch.Net

@@ -9,7 +9,7 @@
 ## Download
 
 > [!TIP]
-> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.8.8/TabForge-0.8.8-setup.exe)** · no administrator rights needed
+> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.8.8/TabForge-0.8.8-win-setup.exe)** · no administrator rights needed
 >
 > **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.8.8/TabForge-0.8.8-win-x64-portable.zip)** · extract and run `TabForge.exe`
 
@@ -17,7 +17,7 @@ Windows 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify 
 
 ### Linux packages (experimental)
 
-The primary Linux download is the AppImage ([`TabForge-0.8.8-x86_64.AppImage`](https://github.com/cobhc95/TabForge/releases/download/v0.8.8/TabForge-0.8.8-x86_64.AppImage)); the gzip archive ([`TabForge-0.8.8-linux-x64.tar.gz`](https://github.com/cobhc95/TabForge/releases/download/v0.8.8/TabForge-0.8.8-linux-x64.tar.gz)) is the fallback. Both include pinned Wine and FFmpeg; Linux remains experimental and has not been verified on real hardware.
+The primary Linux download is the AppImage ([`TabForge-0.8.8-linux-x86_64.AppImage`](https://github.com/cobhc95/TabForge/releases/download/v0.8.8/TabForge-0.8.8-linux-x86_64.AppImage)); the gzip archive ([`TabForge-0.8.8-linux-x64.tar.gz`](https://github.com/cobhc95/TabForge/releases/download/v0.8.8/TabForge-0.8.8-linux-x64.tar.gz)) is the fallback. Both include pinned Wine and FFmpeg; Linux remains experimental and has not been verified on real hardware.
 
 Run it: `chmod +x TabForge-*-x86_64.AppImage`, then `./TabForge-*-x86_64.AppImage`. When FUSE 2 is missing, run with `--appimage-extract-and-run`. On Ubuntu 22.04 and newer you may need `libfuse2` / `libfuse2t64`. The AppImage runs on the glibc it was built on or newer: it is built on the oldest supported distro (Ubuntu 22.04); read `MIN_GLIBC.txt` beside the download for the real minimum number. The host must provide the X11/ALSA/fontconfig/GL libraries listed under "Requires on the host" in the `tools/package-linux.sh` header; Windows plug-ins run through the bundled Wine. Honestly unproven: the Wine build, the distro checks and real-hardware tests are unproven, and size and startup time are not yet measured. No Linux run or proof comes from this machine: no Linux machine or WSL exists here.
 
