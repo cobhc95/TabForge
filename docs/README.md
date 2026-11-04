@@ -1,4 +1,4 @@
-# TabForge 0.8.8
+# TabForge 0.8.9
 
 **A keyboard-driven tablature and notation editor for Windows. Opens GP files (.gp3, .gp4, .gp5, .gpx, .gp) and saves .gp and its own .tforge projects.** Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard / keyboard, an arrangement timeline, audio and MIDI recording, a mixer, VST plug-ins and offline audio and video rendering.
 
@@ -9,15 +9,15 @@
 ## Download
 
 > [!TIP]
-> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.8.8/TabForge-0.8.8-win-setup.exe)** · no administrator rights needed
+> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.8.9/TabForge-0.8.9-win-setup.exe)** · no administrator rights needed
 >
-> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.8.8/TabForge-0.8.8-win-x64-portable.zip)** · extract and run `TabForge.exe`
+> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.8.9/TabForge-0.8.9-win-x64-portable.zip)** · extract and run `TabForge.exe`
 
 Windows 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify your download](#verify-your-download). Older versions: [Releases](https://github.com/cobhc95/TabForge/releases).
 
 ### Linux packages (experimental)
 
-The primary Linux download is the AppImage ([`TabForge-0.8.8-linux-x86_64.AppImage`](https://github.com/cobhc95/TabForge/releases/download/v0.8.8/TabForge-0.8.8-linux-x86_64.AppImage)); the gzip archive ([`TabForge-0.8.8-linux-x64.tar.gz`](https://github.com/cobhc95/TabForge/releases/download/v0.8.8/TabForge-0.8.8-linux-x64.tar.gz)) is the fallback. Both include pinned Wine and FFmpeg; Linux remains experimental and has not been verified on real hardware.
+The primary Linux download is the AppImage ([`TabForge-0.8.9-linux-x86_64.AppImage`](https://github.com/cobhc95/TabForge/releases/download/v0.8.9/TabForge-0.8.9-linux-x86_64.AppImage)); the gzip archive ([`TabForge-0.8.9-linux-x64.tar.gz`](https://github.com/cobhc95/TabForge/releases/download/v0.8.9/TabForge-0.8.9-linux-x64.tar.gz)) is the fallback. Both include pinned Wine and FFmpeg; Linux remains experimental and has not been verified on real hardware.
 
 Run it: `chmod +x TabForge-*-linux-x86_64.AppImage`, then `./TabForge-*-linux-x86_64.AppImage`. When FUSE 2 is missing, run with `--appimage-extract-and-run`. On Ubuntu 22.04 and newer you may need `libfuse2` / `libfuse2t64`. The AppImage runs on the glibc it was built on or newer: it is built on the oldest supported distro (Ubuntu 22.04); read `MIN_GLIBC.txt` beside the download for the real minimum number. The host must provide the X11/ALSA/fontconfig/GL libraries listed under "Requires on the host" in the `tools/package-linux.sh` header; Windows plug-ins run through the bundled Wine. Honestly unproven: the Wine build, the distro checks and real-hardware tests are unproven, and size and startup time are not yet measured. No Linux run or proof comes from this machine: no Linux machine or WSL exists here.
 
@@ -31,11 +31,15 @@ Run it: `chmod +x TabForge-*-linux-x86_64.AppImage`, then `./TabForge-*-linux-x8
 </tr>
 </table>
 
-**Contents:** [Download](#download) · [What's new in 0.8.8](#whats-new-in-088) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
+**Contents:** [Download](#download) · [What's new in 0.8.9](#whats-new-in-089) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
 
-## What's new in 0.8.8
+## What's new in 0.8.9
 
-0.8.8 is the stable release. It has everything in 0.8.75, plus fixes to the FX chain window with display scaling and to the Load FX Chain dialogue.
+0.8.9 is a stable maintenance release with no new features. Crash recovery now keeps a song's track inputs, Band layout and audio clip links. It also fixes several shutdown problems and removes a large amount of unused code and files.
+
+Full list: the [changelog](CHANGELOG.md#089).
+
+<details><summary>Earlier in 0.8.8: fretboard, capos, tuning and plug-ins</summary>
 
 <table>
 <tr>
@@ -56,6 +60,8 @@ Run it: `chmod +x TabForge-*-linux-x86_64.AppImage`, then `./TabForge-*-linux-x8
 - **Fixes:** File > Open no longer waits in a nested message loop, playheads follow display frames, and projects with plug-in paths from another operating system open with a readable notice.
 
 Full list: the [changelog](CHANGELOG.md#088).
+
+</details>
 
 <details><summary>Earlier in 0.8: Avalonia, selection and loops, piano roll</summary>
 
