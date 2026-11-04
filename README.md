@@ -1,6 +1,6 @@
-# TabForge 0.8.7
+# TabForge 0.8.75
 
-> Stable release. See the [release notes](docs/releases/0.8.7.md) and the [changelog](CHANGELOG.md).
+> Stable release. See the [release notes](docs/releases/0.8.75.md) and the [changelog](CHANGELOG.md).
 
 **A keyboard-driven tablature and notation editor for Windows, with an experimental Linux build. Opens .gp, .gpx, .gp5, .gp4 and .gp3 files and saves .gp and its own .tforge projects, and can save .gp5, .gp4 and .gp3 copies.** Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard / keyboard, an arrangement timeline, audio and MIDI recording, a mixer, VST plug-ins and offline audio and video rendering.
 
@@ -13,27 +13,27 @@
 > [!TIP]
 > **Windows**
 >
-> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.8.7/TabForge-0.8.7-setup.exe)** · no administrator rights needed
+> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.8.75/TabForge-0.8.75-setup.exe)** · no administrator rights needed
 >
-> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.8.7/TabForge-0.8.7-win-x64-portable.zip)** · extract and run `TabForge.exe`
+> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.8.75/TabForge-0.8.75-win-x64-portable.zip)** · extract and run `TabForge.exe`
 >
-> **[SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.8.7/TabForge-0.8.7-SHA256.txt)** · to verify both Windows files
+> **[SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.8.75/TabForge-0.8.75-SHA256.txt)** · to verify both Windows files
 
 > [!WARNING]
 > **Linux (experimental)**
 >
-> **[AppImage](https://github.com/cobhc95/TabForge/releases/download/v0.8.7/TabForge-0.8.7-x86_64.AppImage)** · the primary Linux package · **[tar.xz](https://github.com/cobhc95/TabForge/releases/download/v0.8.7/TabForge-0.8.7-linux-x64.tar.xz)** · fallback · **[SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.8.7/TabForge-0.8.7-linux-SHA256.txt)** for both · glibc 2.34 or newer, 64-bit, X11 (Wayland sessions run through XWayland). The Wine 9.21 runtime, the Windows plug-in helpers, the SoundFont and a pinned LGPL FFmpeg are bundled, so sound, Windows VST2 / VST3 plug-ins and Video export work on first run, with no separate Wine or FFmpeg install. This build is experimental. It has not been tested on real Linux hardware; distro, XWayland, virtual-audio and upgrade paths are unproven; Render, microphone input and CLAP plug-ins are not yet confirmed on Linux; and some Windows plug-ins have known limits (for example some JUCE 8 editors render black under Wine). See the [release notes](docs/releases/0.8.7.md). Expect rough edges, and please report them.
+> **[AppImage](https://github.com/cobhc95/TabForge/releases/download/v0.8.75/TabForge-0.8.75-x86_64.AppImage)** · the primary Linux package · **[tar.gz](https://github.com/cobhc95/TabForge/releases/download/v0.8.75/TabForge-0.8.75-linux-x64.tar.gz)** · fallback · **[SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.8.75/TabForge-0.8.75-linux-SHA256.txt)** for both · glibc 2.34 or newer, 64-bit, X11 (Wayland sessions run through XWayland). The Wine 9.21 runtime, the Windows plug-in helpers, the SoundFont and a pinned LGPL FFmpeg are bundled, so sound, Windows VST2 / VST3 plug-ins and Video export work on first run, with no separate Wine or FFmpeg install. This build is experimental. It has not been tested on real Linux hardware; distro, XWayland, virtual-audio and upgrade paths are unproven; Render, microphone input and CLAP plug-ins are not yet confirmed on Linux; and some Windows plug-ins have known limits (for example some JUCE 8 editors render black under Wine). See the [release notes](docs/releases/0.8.75.md). Expect rough edges, and please report them.
 
 Windows: 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify your download](#verify-your-download). Older versions: [Releases](https://github.com/cobhc95/TabForge/releases).
 
 **Run the AppImage on Linux:**
 
 ```bash
-chmod +x TabForge-0.8.7-x86_64.AppImage
-./TabForge-0.8.7-x86_64.AppImage
+chmod +x TabForge-0.8.75-x86_64.AppImage
+./TabForge-0.8.75-x86_64.AppImage
 ```
 
-**Or the tar.xz fallback:** `tar -xJf TabForge-0.8.7-linux-x64.tar.xz`, then run `TabForge.AppDir/AppRun`.
+**Or the tar.gz fallback:** `tar -xzf TabForge-0.8.75-linux-x64.tar.gz`, then run `TabForge.AppDir/AppRun`.
 
 If it does not start, install the usual desktop libraries: `sudo apt install libx11-6 libxext6 libxcursor1 libxrandr2 libxi6 libfontconfig1 libfreetype6 libgl1 libasound2` (on Ubuntu 24.04 the sound package is `libasound2t64`).
 
@@ -47,9 +47,9 @@ If it does not start, install the usual desktop libraries: `sudo apt install lib
 </tr>
 </table>
 
-**Contents:** [Download](#download) · [New in 0.8.7](#new-in-087) · [New since 0.8.3](#new-since-083) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
+**Contents:** [Download](#download) · [New in 0.8.75](#new-in-0875) · [New since 0.8.3](#new-since-083) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
 
-## New in 0.8.7
+## New in 0.8.75
 
 - **A fretboard that looks like an instrument:** layered wood, real fret spacing, wound strings, shaded binding and material inlays. Five presets include Flame maple with green inlays, with brightness and contrast controls in Fretboard settings.
 - **Full and partial capos:** place and drag them on the board or in Track properties. Up to four partial capos can cover different strings; notes, playback and score labels follow them.
@@ -97,7 +97,7 @@ Built-in effects, a master level meter, techniques that switch an instrument's a
 <tr>
 <td width="33%" valign="top"><a href="docs/media/screenshots/0.8.5/preset-manager.jpg"><img src="docs/media/screenshots/0.8.5/preset-manager.jpg" alt="The preset manager" width="215"></a><br><b>Preset manager</b><br>Reorder presets by dragging, undo a delete, import and export presets as files.</td>
 <td width="33%" valign="top"><a href="docs/media/screenshots/0.8.5/fx-window-eq.png"><img src="docs/media/screenshots/0.8.5/fx-window-eq.png" alt="The EQ inside the FX chain window" width="215"></a><br><b>Effects in the FX window</b><br>Built-in editors open right in the FX chain window. Any plug-in's parameters also show as searchable sliders (right-click › Show generic controls).</td>
-<td width="33%" valign="top"><b>Linux (experimental)</b><br>Songs, sound, Windows VST2 and VST3 plug-ins through the bundled Wine runtime, Video export and file drag and drop, as an AppImage or a tar.xz.</td>
+<td width="33%" valign="top"><b>Linux (experimental)</b><br>Songs, sound, Windows VST2 and VST3 plug-ins through the bundled Wine runtime, Video export and file drag and drop, as an AppImage or a tar.gz.</td>
 </tr>
 <tr>
 <td width="33%" valign="top"><a href="docs/media/screenshots/0.8.5/builtin-eq.jpg"><img src="docs/media/screenshots/0.8.5/builtin-eq.jpg" alt="The built-in EQ" width="215"></a><br><b>Built-in effects</b><br>EQ, compressor, limiter, delay and noise gate, listed in Add plug-in as TabForge / Built-in.</td>
@@ -841,7 +841,7 @@ download matches that build.
 
 Each release attaches the installer (`TabForge-<version>-setup.exe`), the portable ZIP (`TabForge-<version>-win-x64-portable.zip`) and SHA-256 checksums. The installer offers a Start menu entry, an optional desktop icon and an optional *"Open .gp and .tforge files with TabForge"* association, for your Windows account only. Songs double-clicked in Explorer open as a new tab in the running TabForge (or a new window; see Settings > General).
 
-The experimental Linux packages (`TabForge-<version>-x86_64.AppImage` and `TabForge-<version>-linux-x64.tar.xz`) share one checksum file (`TabForge-<version>-linux-SHA256.txt`); check it with `sha256sum -c`.
+The experimental Linux packages (`TabForge-<version>-x86_64.AppImage` and `TabForge-<version>-linux-x64.tar.gz`) share one checksum file (`TabForge-<version>-linux-SHA256.txt`); check it with `sha256sum -c`.
 
 A `licenses/` folder beside `TabForge.exe` (portable zip and installer) holds the full licence texts of every bundled component. SoundTouch.Net (LGPL-2.1) ships as a separate, replaceable `SoundTouch.Net.dll`; each release attaches its source.
 ## Building from source

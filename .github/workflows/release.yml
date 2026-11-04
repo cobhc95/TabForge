@@ -123,7 +123,9 @@ jobs:
       - name: Archive the exact reviewed source
         if: steps.guard.outputs.skip != 'true'
         shell: pwsh
-        run: git archive --format=zip --prefix=TabForge-0.8.7-source/ --output=dist/TabForge-0.8.7-source.zip HEAD
+        run: |
+          $version = ([xml][IO.File]::ReadAllText('Directory.Build.props')).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
+          git archive --format=zip --prefix="TabForge-$version-source/" --output="dist/TabForge-$version-source.zip" HEAD
 
       - name: Upload the release files
         if: steps.guard.outputs.skip != 'true'
@@ -209,13 +211,16 @@ jobs:
           TABFORGE_SOUNDFONT: ${{ github.workspace }}/staging/GeneralUser-GS.sf2
           TABFORGE_SOUNDFONT_LICENSE: ${{ github.workspace }}/staging/GeneralUser-GS-LICENSE.txt
         run: |
+          VERSION="$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Directory.Build.props | head -n1)"
+          export TABFORGE_REQUIRE_FFMPEG=1
           bash tools/package-linux.sh --out "$GITHUB_WORKSPACE/package" --wine "$GITHUB_WORKSPACE/staging/wine" --helpers "$GITHUB_WORKSPACE/src/TabForge.AudioEngine/native" --appimagetool "$GITHUB_WORKSPACE/staging/appimagetool" --ffmpeg "$GITHUB_WORKSPACE/staging/ffmpeg"
-          test -f package/linux/TabForge-0.8.7-linux-x64.tar.xz
-          test -f package/linux/TabForge-0.8.7-x86_64.AppImage
+          test -f "package/linux/TabForge-$VERSION-linux-x64.tar.gz"
+          test -f "package/linux/TabForge-$VERSION-x86_64.AppImage"
       - name: Verify package parity and record checksums
         working-directory: package/linux
         run: |
-          ./TabForge-0.8.7-x86_64.AppImage --appimage-extract >/dev/null
+          VERSION="$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' "$GITHUB_WORKSPACE/Directory.Build.props" | head -n1)"
+          ./TabForge-$VERSION-x86_64.AppImage --appimage-extract >/dev/null
           diff -r squashfs-root/usr TabForge.AppDir/usr
           test -f TabForge.AppDir/usr/bin/wine/bin/wine
           cmp TabForge.AppDir/usr/bin/ffmpeg "$GITHUB_WORKSPACE/staging/ffmpeg/bin/ffmpeg"
@@ -223,13 +228,15 @@ jobs:
           for file in tfvst32.exe tfvst64.exe tfvst3.dll tfvst3-x86.dll; do
             cmp "TabForge.AppDir/usr/bin/$file" "$GITHUB_WORKSPACE/src/TabForge.AudioEngine/native/$file"
           done
-          sha256sum TabForge-0.8.7-linux-x64.tar.xz TabForge-0.8.7-x86_64.AppImage > TabForge-0.8.7-linux-SHA256.txt
+          gzip -t "TabForge-$VERSION-linux-x64.tar.gz"
+          tar -tzf "TabForge-$VERSION-linux-x64.tar.gz" >/dev/null
+          sha256sum "TabForge-$VERSION-linux-x64.tar.gz" "TabForge-$VERSION-x86_64.AppImage" > "TabForge-$VERSION-linux-SHA256.txt"
       - name: Upload Linux review files
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: linux-release-files
           path: |
-            package/linux/TabForge-*.tar.xz
+            package/linux/TabForge-*.tar.gz
             package/linux/TabForge-*.AppImage
             package/linux/TabForge-*-SHA256.txt
             package/linux/MIN_GLIBC.txt

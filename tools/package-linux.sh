@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# TabForge for Linux (x86_64): publish linux-x64 self-contained and pack it as an AppImage (the PRIMARY Linux deliverable; needs appimagetool), plus a plain tar.xz (xz -9e -T0) kept only as the beta fallback until the AppImage is proven on real hardware.
-# NON-SHIPPING: Windows stays the only shipped platform until the 0.9.0 trial. REBUILD.cmd and the Windows installer never run this.
+# TabForge for Linux (x86_64): publish linux-x64 self-contained and pack it as an AppImage (the PRIMARY Linux deliverable; needs appimagetool), plus a gzip tar archive as the fallback.
+# EXPERIMENTAL Linux release package; Windows remains the primary platform. REBUILD.cmd and the Windows installer never run this.
 #
 # Run on Linux (Ubuntu 22.04 or newer; the AppImage runs on the glibc it was built on or newer). Usage:
 #   Source/tools/package-linux.sh [--out <folder>] [--wine <folder with bin/wine>] [--helpers <folder>] [--tfportable <folder holding libtfportable.so>] [--tfvst3 <folder holding libtfvst3.so>] [--ffmpeg <folder>] [--appimagetool <path>]
@@ -10,13 +10,13 @@
 #   wine-gecko are refused. Without --wine the package is made without Windows plug-in support, as before.
 # SoundFont: TABFORGE_SOUNDFONT=<GeneralUser-GS.sf2 path> and TABFORGE_SOUNDFONT_LICENSE=<its licence text>; both ship in usr/bin/SoundFonts. libtfportable.so and libtfvst3.so are built with cmake here (or --tfportable / --tfvst3 <folder>).
 # appimagetool: https://github.com/AppImage/appimagetool/releases (MIT). It builds the PRIMARY package: without it
-#   only the AppDir and the fallback tar.xz are made and the primary deliverable is missing (see the loud warning below).
+#   only the AppDir and the fallback tar.gz are made and the primary deliverable is missing (see the loud warning below).
 #   The AppImage uses squashfs xz compression (--comp xz) when that appimagetool build supports it, else its default.
 #
 # Build machine needs: dotnet SDK, cmake, a C/C++ toolchain, git (cmake fetches the pinned Steinberg VST3 SDK, miniaudio and RtMidi), libasound2-dev, binutils (objdump, strip), xz-utils (xz -9e -T0), python3.
 #   Offline VST3 SDK: TABFORGE_VST3SDK=<checkout root> (passed as -DVST3SDK_DIR).
 #
-# The package (usr/bin of the AppDir, inside the tar.xz and the AppImage) contains:
+# The package (usr/bin of the AppDir, inside the tar.gz and the AppImage) contains:
 #   TabForge (+ the self-contained .NET runtime and Avalonia/Skia libraries), libtfportable.so (audio + MIDI), libtfvst3.so (VST3 host helper),
 #   libmp3lame.so.0 + libmpg123.so.0 (LAME and mpg123, both LGPL; only if found; RPATH $ORIGIN via patchelf, notice in ThirdParty/libmpg123/), ffmpeg + ThirdParty/ffmpeg/LICENSE.txt (LGPL build; only if --ffmpeg given),
 #   SoundFonts/GeneralUser-GS.sf2 + GeneralUser-GS-LICENSE.txt, and the ThirdParty notices that the publish output carries.
@@ -41,7 +41,7 @@
 # Extra allowed libraries for a one-off: TABFORGE_NEEDED_EXTRA="libfoo.so.1 libbar.so.2".
 set -euo pipefail
 
-command -v xz >/dev/null 2>&1 || { echo "xz not found (apt install xz-utils): cannot make the tar.xz package" >&2; exit 1; }
+command -v gzip >/dev/null 2>&1 || { echo "gzip not found: cannot make the tar.gz package" >&2; exit 1; }
 command -v strip >/dev/null 2>&1 || { echo "strip not found (apt install binutils): cannot strip debug symbols" >&2; exit 1; }
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -168,7 +168,7 @@ fi
 cp "$TFVST3_DIR/libtfvst3.so" "$APPDIR/usr/bin/"                                   # VST3 host helper (native/tfvst3/posix), beside libtfportable.so
 
 # 3b. The pinned Wine tree and the Windows helper PEs. The app finds wine at <program folder>/wine/bin/wine, which is
-#     usr/bin/wine in the AppDir, so both the tar.xz and the AppImage mount are relocation-safe.
+#     usr/bin/wine in the AppDir, so both the tar.gz and the AppImage mount are relocation-safe.
 if [ -n "$WINE_ROOT" ]; then
   mkdir -p "$APPDIR/usr/bin/wine" "$APPDIR/usr/bin/ThirdParty/wine"
   cp -a "$WINE_ROOT/." "$APPDIR/usr/bin/wine/"
@@ -243,9 +243,7 @@ if [ -n "$FFMPEG_DIR" ] && [ -f "$FFMPEG_DIR/bin/ffmpeg" ]; then
   cp "$FFMPEG_DIR/bin/ffmpeg" "$APPDIR/usr/bin/ffmpeg"
   chmod +x "$APPDIR/usr/bin/ffmpeg"
   cp "$FFMPEG_DIR/LICENSE.txt" "$APPDIR/usr/bin/ThirdParty/ffmpeg/LICENSE.txt"
-  if [ -f "$FFMPEG_DIR/BUILD_PROVENANCE.txt" ]; then
-    cp "$FFMPEG_DIR/BUILD_PROVENANCE.txt" "$APPDIR/usr/bin/ThirdParty/ffmpeg/BUILD_PROVENANCE.txt"
-  fi
+  if [ -f "$FFMPEG_DIR/BUILD_PROVENANCE.txt" ]; then cp "$FFMPEG_DIR/BUILD_PROVENANCE.txt" "$APPDIR/usr/bin/ThirdParty/ffmpeg/BUILD_PROVENANCE.txt"; fi
   FFMPEG_VERSION="$("$FFMPEG_DIR/bin/ffmpeg" -version 2>/dev/null | sed -n '1p' || echo 'BtbN linux64-lgpl build')"
   printf '%s\n' "ffmpeg ($FFMPEG_VERSION) is shipped unmodified as the separate program 'ffmpeg' next to TabForge; TabForge only runs it as a process." \
     "Build: BtbN/FFmpeg-Builds linux64-lgpl. Build scripts and source: https://github.com/BtbN/FFmpeg-Builds and https://ffmpeg.org/download.html" \
@@ -255,6 +253,10 @@ if [ -n "$FFMPEG_DIR" ] && [ -f "$FFMPEG_DIR/bin/ffmpeg" ]; then
     "Ask through https://github.com/cobhc95/TabForge/issues." \
     "Replace 'ffmpeg' with your own build, or set TABFORGE_FFMPEG, to use another one." > "$APPDIR/usr/bin/ThirdParty/ffmpeg/README.txt"
 else
+  if [ "${TABFORGE_REQUIRE_FFMPEG:-0}" = "1" ]; then
+    echo "ERROR: this release requires the pinned LGPL FFmpeg bundle (--ffmpeg <folder>)" >&2
+    exit 1
+  fi
   echo "warning: ffmpeg not given (--ffmpeg <folder> or TABFORGE_FFMPEG_DIR); Video export needs ffmpeg installed on the system" >&2
 fi
 chmod +x "$APPDIR/usr/bin/TabForge"
@@ -407,7 +409,7 @@ if [ -n "$WINE_ROOT" ]; then
   echo "bundled Wine: $WINE_VERSION"
 fi
 echo "package dependency check passed; minimum glibc required: $GLIBC_MAX"
-# Packaging guard: refuse to create the tar.xz or AppImage if the private plug-in manifest slipped into the tree.
+# Packaging guard: refuse to create the tar.gz or AppImage if the private plug-in manifest slipped into the tree.
 private_hits="$(find "$APPDIR" -type f -name 'manifest.private*.json' -print -quit)"
 if [ -n "$private_hits" ]; then
   echo "ERROR: the private plug-in manifest is in the AppDir; refusing to package: $private_hits" >&2
@@ -415,8 +417,8 @@ if [ -n "$private_hits" ]; then
 fi
 echo "$GLIBC_MAX" > "$OUT/MIN_GLIBC.txt"
 
-# 4. The packages. -9e is the strongest xz preset; -T0 uses all cores.
-( cd "$OUT" && tar -cf - TabForge.AppDir | xz -9e -T0 > "TabForge-$VERSION-$RID.tar.xz" )
+# 4. The packages. Use maximum gzip compression for the portable fallback archive.
+( cd "$OUT" && tar -cf - TabForge.AppDir | gzip -9 > "TabForge-$VERSION-$RID.tar.gz" )
 if [ -n "$APPIMAGETOOL" ] && [ -x "$APPIMAGETOOL" ]; then
   APPIMAGE="$OUT/TabForge-$VERSION-x86_64.AppImage"
   APPIMAGE_DONE=""
@@ -433,15 +435,15 @@ if [ -n "$APPIMAGETOOL" ] && [ -x "$APPIMAGETOOL" ]; then
     ARCH=x86_64 "$APPIMAGETOOL" "$APPDIR" "$APPIMAGE"
   fi
 else
-  echo "WARNING: appimagetool not found, so the PRIMARY Linux package (the AppImage) was NOT produced: only the AppDir and the beta-fallback tar.xz were made (get appimagetool from https://github.com/AppImage/appimagetool/releases and re-run)" >&2
+  echo "WARNING: appimagetool not found, so the PRIMARY Linux package (the AppImage) was NOT produced: only the AppDir and fallback tar.gz were made (get appimagetool from https://github.com/AppImage/appimagetool/releases and re-run)" >&2
 fi
 echo "primary Linux package (AppImage):"
 for f in "$OUT"/*.AppImage; do
   [ -e "$f" ] || { echo "  (no AppImage was produced)"; break; }
   stat -c '  %n %s bytes' "$f"
 done
-echo "beta fallback (tar.xz):"
-for f in "$OUT"/*.tar.xz; do
+echo "fallback (tar.gz):"
+for f in "$OUT"/*.tar.gz; do
   [ -e "$f" ] || continue
   stat -c '  %n %s bytes' "$f"
 done

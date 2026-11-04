@@ -2,7 +2,7 @@
 
 TabForge is actively developed; please report anything odd on the Issues page.
 
-## 0.8.7
+## 0.8.75
 
 ### New
 
@@ -10,7 +10,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 - Full and partial capos on the board and in Track properties: up to four partial capos, each with its own string selection. Drag a capo to move it in one undo step; notes, playback and the score header follow each string's effective capo. The board behind a capo is dimmed and cannot write notes.
 - Track properties has compact Details, Mixer and MIDI cards, tuning presets for 3 to 10 strings, saved custom tunings and per-string audition through the track's sound. Instrument and tuning choices stay in a draft until OK; Cancel discards them.
 - Windows 32-bit VST2 plug-ins run in a helper process. Bridged VST3 plug-ins can open their own editors. Approve all and Approve selected identify plug-ins after one confirmation, with progress and Stop.
-- Experimental Linux downloads: AppImage is the primary package; tar.xz is the fallback. Both bundle pinned Wine 9.21 and the Windows plug-in helpers for supported 32- and 64-bit Windows VST2/VST3 plug-ins. First-use preparation runs off the UI thread and missing-runtime or plug-in failures are reported readably.
+- Experimental Linux downloads: AppImage is the primary package; tar.gz is the fallback. Both bundle pinned Wine 9.21 and the Windows plug-in helpers for supported 32- and 64-bit Windows VST2/VST3 plug-ins. First-use preparation runs off the UI thread and missing-runtime or plug-in failures are reported readably.
 
 ### Fixed
 
@@ -25,7 +25,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ### Notes
 
-- Automatic scale detection and best-match suggestions are shared by the status bar, fretboard and piano roll; these already shipped in 0.8.6 and remain a headline capability, not a newly added 0.8.7 feature.
+- Automatic scale detection and best-match suggestions are shared by the status bar, fretboard and piano roll; these already shipped in 0.8.6 and remain a headline capability, not a newly added 0.8.75 feature.
 - Linux remains experimental and has not been validated on real hardware. Some JUCE 8 editors render black under Wine. Eight bridged plug-ins may need 1,024-frame buffers. Windows native 64-bit VST2 plug-ins are not isolated from the audio engine.
 - No full-suite-green, real-hardware compatibility or visual-parity claim is made.
 
