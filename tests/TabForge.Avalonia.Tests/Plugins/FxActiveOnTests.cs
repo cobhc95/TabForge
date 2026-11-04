@@ -424,4 +424,19 @@ public class FxActiveOnTests
         }
         finally { window.Close(); }
     }
+
+    [Fact]
+    public void AChainPlaysOnlyWhenAPluginIsOnAndAllowedHere()
+    {
+        var asio = new ActiveOnOutput(TabForge.Audio.Contracts.AudioDriverNames.Asio, "Interface");
+        var wasapi = new ActiveOnOutput(TabForge.Audio.Contracts.AudioDriverNames.WasapiShared, "Speakers");
+        var slot = new PluginSlot { Name = "EQ", ActiveOn = new ActiveOnRule { DriverKind = ActiveOnDriverKind.Asio } };
+        var rig = new RigPreset { Plugins = { slot } };
+        Assert.True(ActiveOnRules.AnyPlays(rig, chainOn: true, asio));
+        Assert.False(ActiveOnRules.AnyPlays(rig, chainOn: true, wasapi));
+        Assert.False(ActiveOnRules.AnyPlays(rig, chainOn: false, asio));
+        slot.Enabled = false;
+        Assert.False(ActiveOnRules.AnyPlays(rig, chainOn: true, asio));
+        Assert.False(ActiveOnRules.AnyPlays(new RigPreset(), chainOn: true, asio));
+    }
 }

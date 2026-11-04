@@ -16,6 +16,7 @@ Stable release with sharper wound strings, tidier dialogs and crash and shutdown
 - Update check: a check that fails now says so instead of reporting that you are up to date, and a long release list can no longer stop it working. This release is numbered 0.9.0 so that it also reaches people on 0.8.75, who were not offered 0.8.8.
 - The "Plug-in loading slowly" prompt closes with its window, and the IR Loader editor stops checking for updates while hidden and no longer has a Choose button that opened an empty menu; Browse picks the file.
 - Fretboard: wound strings are drawn with fine coils that stay sharp at any size, with a new Bronze finish; a sounding string now shows a soft blur that rings for the note's own length, and the Fretboard settings window now matches main Settings: grey cards, the track list's sliders instead of +/- boxes, and Cancel, Apply and OK.
+- Monitor FX: the headphones button only lights when a plug-in really plays on the current device, not just when the chain has plug-ins.
 - Interface: many windows share one set of text sizes and corner radii, and more dialog buttons use the same padding.
 - Removed unused code, settings, documents, tools and artwork. Settings files from earlier versions still load.
 

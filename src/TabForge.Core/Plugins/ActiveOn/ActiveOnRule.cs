@@ -115,6 +115,15 @@ public static class ActiveOnRules
         return result;
     }
 
+    /// <summary>True when anything in the chain really plays on this output: the chain is on, and a plug-in is switched on, not in a bypassed container and allowed here.</summary>
+    public static bool AnyPlays(RigPreset rig, bool chainOn, ActiveOnOutput output)
+    {
+        ChainTree.Refresh(rig);
+        for (var i = 0; chainOn && i < rig.Plugins.Count; i++)
+            if (rig.Plugins[i].Plays && Matches(rig, i, output)) return true;
+        return false;
+    }
+
     /// <summary>True when a rule names the output device, so the popup keeps the name of an unplugged device (shown greyed) instead of forgetting it.</summary>
     public static bool NamesDevice(ActiveOnRule? rule) => rule is not null && !string.IsNullOrWhiteSpace(rule.DeviceName);
 

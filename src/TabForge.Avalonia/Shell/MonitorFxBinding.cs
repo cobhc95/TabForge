@@ -8,9 +8,9 @@ namespace TabForge.Avalonia.Shell;
 /// Owns: the delegates only. Does not own: the chain (FxChainWindows) or the button (CaptionButtons).
 /// Tests: TabForge.Avalonia.Tests.MonitorFxTitleButtonTests.
 /// </summary>
-public sealed class MonitorFxBinding(Func<(bool On, int Plugins, bool Global)> read, Action open, Action<bool> setOn, Action<bool> setGlobal)
+public sealed class MonitorFxBinding(Func<(bool On, int Plugins, bool Global, bool Playing)> read, Action open, Action<bool> setOn, Action<bool> setGlobal)
 {
-    public (bool On, int Plugins, bool Global) Read() => read();
+    public (bool On, int Plugins, bool Global, bool Playing) Read() => read();
     public void Open() => open();
     public void SetOn(bool on) => setOn(on);
     public void SetGlobal(bool global) => setGlobal(global);

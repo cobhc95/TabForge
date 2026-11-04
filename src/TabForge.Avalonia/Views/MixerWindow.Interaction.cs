@@ -108,7 +108,7 @@ public sealed partial class MixerWindow
     // Read only: a song file without a monitor chain is not given one by looking at the mixer; the chain is created when it is opened for editing.
     private BusChain MonitorChain() => _project.Mixer.MonitorFx ?? new BusChain();
 
-    private bool MonitorActive() => MonitorChain() is { On: true } chain && chain.Rig.Plugins.Any(p => p.Plays);
+    private bool MonitorActive() => MonitorChain() is var chain && TabForge.Plugins.ActiveOnRules.AnyPlays(chain.Rig, chain.On, (global::Avalonia.Application.Current as App)?.Engine?.ActiveOutput ?? default);
 
     private void OpenChain(TrackModel track) => FxChainWindows.OpenFor(this, track);
 

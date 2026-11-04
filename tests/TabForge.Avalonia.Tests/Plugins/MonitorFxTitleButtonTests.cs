@@ -14,7 +14,7 @@ public class MonitorFxTitleButtonTests
     [AvaloniaFact]
     public void ButtonStateFollowsMonitorChain()
     {
-        var state = (On: false, Plugins: 2, Global: true);
+        var state = (On: false, Plugins: 2, Global: true, Playing: false);
         var opened = 0;
         var binding = new MonitorFxBinding(() => state, () => opened++, on => state.On = on, global => state.Global = global);
         var bar = new TitleBarView(new TabStripView(new TabForge.Services.TabSettings()), new NullChrome(), () => { }, () => { }, monitor: binding);
@@ -29,10 +29,16 @@ public class MonitorFxTitleButtonTests
         state.On = true;
         binding.RaiseChanged();
         Dispatcher.UIThread.RunJobs();
+        Assert.Equal(grey, glyph.Stroke);   // on, but nothing plays on this device
+        Assert.Contains("inactive on this device", ToolTip.GetTip(button)?.ToString());
+
+        state.Playing = true;
+        binding.RaiseChanged();
+        Dispatcher.UIThread.RunJobs();
         Assert.NotEqual(grey, glyph.Stroke);
         Assert.Contains("Program-wide · 2 plug-ins · on", ToolTip.GetTip(button)?.ToString());
 
-        state = (true, 0, false);
+        state = (true, 0, false, false);
         binding.RaiseChanged();
         Dispatcher.UIThread.RunJobs();
         Assert.Equal(grey, glyph.Stroke);

@@ -214,12 +214,13 @@ public sealed class FxChainWindows
         if (wasOpen) OpenMonitor();
     }
 
-    /// <summary>The monitor chain in effect for the shown song: whether it is on, its plug-in count and whether it is the app-wide one (the title bar's Monitor FX button).</summary>
-    public (bool On, int Plugins, bool Global) MonitorState()
+    /// <summary>The monitor chain in effect for the shown song: whether it is on, its plug-in count, whether it is the app-wide one, and whether anything in it really plays on the current output (the title bar's Monitor FX button).</summary>
+    public (bool On, int Plugins, bool Global, bool Playing) MonitorState()
     {
         var project = _active().Project;
         var chain = project.Mixer.MonitorUseGlobal ? GlobalMonitorChain : project.Mixer.MonitorFx;
-        return (chain?.On ?? false, chain?.Rig.Plugins.Count ?? 0, project.Mixer.MonitorUseGlobal);
+        var playing = chain is not null && ActiveOnRules.AnyPlays(chain.Rig, chain.On, _playback?.Engine?.ActiveOutput ?? default);
+        return (chain?.On ?? false, chain?.Rig.Plugins.Count ?? 0, project.Mixer.MonitorUseGlobal, playing);
     }
 
     private SongFxChainHost MonitorHost() => new(_active(), _playback, _settings, () => _owner, () => TrackListChanged?.Invoke(), _trust);

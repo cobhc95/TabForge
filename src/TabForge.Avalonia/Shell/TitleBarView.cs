@@ -162,7 +162,7 @@ public sealed class TitleBarView : Border, ICaptionButtonRects
         else chrome.BeginMove();
     }
 
-    // The Monitor FX button of the main window: it reads the shown song's monitor chain and follows the settings, the shown song and that song's display state.
+    // The Monitor FX button of the main window: it reads the shown song's monitor chain and follows the settings, the shown song, that song's display state and the audio output.
     private static MonitorFxBinding MonitorBinding(MainWindow main)
     {
         FxChainWindows? Chains() => FxChainWindows.For(main);
@@ -177,11 +177,16 @@ public sealed class TitleBarView : Border, ICaptionButtonRects
             binding.RaiseChanged();
         }
         Action<AppSettings> settings = _ => binding.RaiseChanged();
+        Action output = binding.RaiseChanged;
+        Action<string> outputFailed = _ => binding.RaiseChanged();
+        var engine = main.Playback?.Engine;
+        if (engine is not null) { engine.StatusChanged += output; engine.DeviceError += outputFailed; }
         main.Songs.ActiveChanged += Watch;
         if (main.Settings is { } shared) shared.SettingsChanged += settings;
         main.Closed += (_, _) =>
         {
             main.Songs.ActiveChanged -= Watch;
+            if (engine is not null) { engine.StatusChanged -= output; engine.DeviceError -= outputFailed; }
             if (main.Settings is { } s) s.SettingsChanged -= settings;
             if (watched is not null) watched.DisplayStateChanged -= song;
         };
