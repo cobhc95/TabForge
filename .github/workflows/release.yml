@@ -59,8 +59,8 @@ jobs:
           "Inno Setup: $iscc"
           "ISCC=$iscc" | Add-Content -Path $env:GITHUB_ENV
 
-      # Publishes, runs the seconds-long basic self-test on the exact folder, then builds the zip, the installer and the checksums.
-      - name: Package (self-test, portable zip, installer, checksums)
+      # Publishes, runs the seconds-long basic self-test on the exact folder, then builds the zip and the installer.
+      - name: Package (self-test, portable zip, installer)
         shell: pwsh
         timeout-minutes: 30
         run: ./tools/Package-Release.ps1 -InnoCompiler $env:ISCC
@@ -74,8 +74,7 @@ jobs:
         with:
           subject-path: |
             dist/TabForge-*-win-x64-portable.zip
-            dist/TabForge-*-setup.exe
-            dist/TabForge-*-SHA256.txt
+            dist/TabForge-*-win-setup.exe
             src/TabForge.AudioEngine/native/tfvst3.dll
 
       - name: Upload the release files
@@ -84,8 +83,7 @@ jobs:
           name: release-files
           path: |
             dist/TabForge-*-win-x64-portable.zip
-            dist/TabForge-*-setup.exe
-            dist/TabForge-*-SHA256.txt
+            dist/TabForge-*-win-setup.exe
             dist/TabForge-*-selftest.log
             native/BUILD_PROVENANCE.md
           if-no-files-found: error
@@ -161,12 +159,7 @@ jobs:
           export TABFORGE_REQUIRE_FFMPEG=1
           bash tools/package-linux.sh --out "$GITHUB_WORKSPACE/package" --wine "$GITHUB_WORKSPACE/staging/wine" --helpers "$GITHUB_WORKSPACE/src/TabForge.AudioEngine/native" --appimagetool "$GITHUB_WORKSPACE/staging/appimagetool" --ffmpeg "$GITHUB_WORKSPACE/staging/ffmpeg"
           test -f "package/linux/TabForge-$VERSION-linux-x64.tar.gz"
-          test -f "package/linux/TabForge-$VERSION-x86_64.AppImage"
-      - name: Record checksums
-        working-directory: package/linux
-        run: |
-          VERSION="$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' "$GITHUB_WORKSPACE/Directory.Build.props" | head -n1)"
-          sha256sum "TabForge-$VERSION-linux-x64.tar.gz" "TabForge-$VERSION-x86_64.AppImage" > "TabForge-$VERSION-linux-SHA256.txt"
+          test -f "package/linux/TabForge-$VERSION-linux-x86_64.AppImage"
       - name: Upload Linux review files
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -174,7 +167,6 @@ jobs:
           path: |
             package/linux/TabForge-*.tar.gz
             package/linux/TabForge-*.AppImage
-            package/linux/TabForge-*-SHA256.txt
             package/linux/MIN_GLIBC.txt
           if-no-files-found: error
 
@@ -197,5 +189,5 @@ jobs:
         run: |
           VERSION="${TAG#v}"
           mkdir upload
-          find artifacts/release-files artifacts/linux-release-files -type f \( -name '*.zip' -o -name '*-setup.exe' -o -name '*SHA256.txt' -o -name '*.tar.gz' -o -name '*.AppImage' \) -exec cp {} upload/ \;
+          find artifacts/release-files artifacts/linux-release-files -type f \( -name '*.zip' -o -name '*-setup.exe' -o -name '*.tar.gz' -o -name '*.AppImage' \) -exec cp {} upload/ \;
           gh release create "$TAG" upload/* --repo "$GITHUB_REPOSITORY" --title "TabForge $VERSION" --notes-file "docs/releases/$VERSION.md" --latest

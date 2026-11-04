@@ -19,7 +19,7 @@ Windows 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify 
 
 The primary Linux download is the AppImage ([`TabForge-0.8.8-linux-x86_64.AppImage`](https://github.com/cobhc95/TabForge/releases/download/v0.8.8/TabForge-0.8.8-linux-x86_64.AppImage)); the gzip archive ([`TabForge-0.8.8-linux-x64.tar.gz`](https://github.com/cobhc95/TabForge/releases/download/v0.8.8/TabForge-0.8.8-linux-x64.tar.gz)) is the fallback. Both include pinned Wine and FFmpeg; Linux remains experimental and has not been verified on real hardware.
 
-Run it: `chmod +x TabForge-*-x86_64.AppImage`, then `./TabForge-*-x86_64.AppImage`. When FUSE 2 is missing, run with `--appimage-extract-and-run`. On Ubuntu 22.04 and newer you may need `libfuse2` / `libfuse2t64`. The AppImage runs on the glibc it was built on or newer: it is built on the oldest supported distro (Ubuntu 22.04); read `MIN_GLIBC.txt` beside the download for the real minimum number. The host must provide the X11/ALSA/fontconfig/GL libraries listed under "Requires on the host" in the `tools/package-linux.sh` header; Windows plug-ins run through the bundled Wine. Honestly unproven: the Wine build, the distro checks and real-hardware tests are unproven, and size and startup time are not yet measured. No Linux run or proof comes from this machine: no Linux machine or WSL exists here.
+Run it: `chmod +x TabForge-*-linux-x86_64.AppImage`, then `./TabForge-*-linux-x86_64.AppImage`. When FUSE 2 is missing, run with `--appimage-extract-and-run`. On Ubuntu 22.04 and newer you may need `libfuse2` / `libfuse2t64`. The AppImage runs on the glibc it was built on or newer: it is built on the oldest supported distro (Ubuntu 22.04); read `MIN_GLIBC.txt` beside the download for the real minimum number. The host must provide the X11/ALSA/fontconfig/GL libraries listed under "Requires on the host" in the `tools/package-linux.sh` header; Windows plug-ins run through the bundled Wine. Honestly unproven: the Wine build, the distro checks and real-hardware tests are unproven, and size and startup time are not yet measured. No Linux run or proof comes from this machine: no Linux machine or WSL exists here.
 
 ### See it in action
 
@@ -760,7 +760,7 @@ them. Releases built by the GitHub Actions release workflow from the tagged sour
 (`gh attestation verify <file> --repo cobhc95/TabForge`), so you can verify that a
 download matches that build.
 
-Each release attaches the installer (`TabForge-<version>-setup.exe`) and the portable ZIP (`TabForge-<version>-win-x64-portable.zip`). The installer offers a Start menu entry, an optional desktop icon and an optional *"Open .gp and .tforge files with TabForge"* association, for your Windows account only. Songs double-clicked in Explorer open as a new tab in the running TabForge (or a new window; see Settings > General).
+Each release attaches the installer (`TabForge-<version>-win-setup.exe`) and the portable ZIP (`TabForge-<version>-win-x64-portable.zip`). The installer offers a Start menu entry, an optional desktop icon and an optional *"Open .gp and .tforge files with TabForge"* association, for your Windows account only. Songs double-clicked in Explorer open as a new tab in the running TabForge (or a new window; see Settings > General).
 
 A `licenses/` folder beside `TabForge.exe` (portable zip and installer) holds the full licence texts of every bundled component. SoundTouch.Net (LGPL-2.1) ships as a separate, replaceable `SoundTouch.Net.dll`; its source is linked in [THIRD_PARTY.md](THIRD_PARTY.md).
 ## Building from source

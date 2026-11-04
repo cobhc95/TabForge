@@ -425,7 +425,7 @@ echo "$GLIBC_MAX" > "$OUT/MIN_GLIBC.txt"
 GZIP_TOOL="$(command -v pigz || command -v gzip)"
 ( cd "$OUT" && tar -cf - TabForge.AppDir | "$GZIP_TOOL" -6 > "TabForge-$VERSION-$RID.tar.gz" )
 if [ -n "$APPIMAGETOOL" ] && [ -x "$APPIMAGETOOL" ]; then
-  APPIMAGE="$OUT/TabForge-$VERSION-x86_64.AppImage"
+  APPIMAGE="$OUT/TabForge-$VERSION-linux-x86_64.AppImage"
   APPIMAGE_DONE=""
   if "$APPIMAGETOOL" --help 2>&1 | grep -q -- '--comp'; then
     echo "AppImage squashfs compression: trying zstd (fast)"

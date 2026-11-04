@@ -1,7 +1,7 @@
 <#
 Builds the two GitHub release downloads into dist\:
   TabForge-<display>-win-x64-portable.zip   extract anywhere and run TabForge.exe
-  TabForge-<display>-setup.exe              Inno Setup installer (optional file associations)
+  TabForge-<display>-win-setup.exe              Inno Setup installer (optional file associations)
 The version comes from Directory.Build.props <Version>, so the app, the engine, the zip and the installer agree.
 File names and the installer use the display version (0.5.0 shows as "0.5", like the app); the numeric file version stays 0.5.0.0.
 
@@ -70,7 +70,7 @@ if (-not $InCleanCheckout -and $env:CI -ne 'true') {
         if ($FullGate) { $innerArgs += '-FullGate' }
         & (Get-Process -Id $PID).Path @innerArgs
         if ($LASTEXITCODE) { throw "The release build in the clean worktree failed (exit $LASTEXITCODE)." }
-        # Bring the results (zip, installer, checksums, self-test log, symbols) home.
+        # Bring the results (zip, installer, self-test log, symbols) home.
         $distHome = Join-Path $root 'dist'
         [IO.Directory]::CreateDirectory($distHome) | Out-Null
         foreach ($item in Get-ChildItem -LiteralPath (Join-Path $wt 'dist')) {
@@ -341,12 +341,5 @@ Write-Output ("Portable: {0} ({1:N1} MB)" -f $zip, ((Get-Item $zip).Length / 1MB
 if (-not (Test-Path -LiteralPath $InnoCompiler)) { throw "Inno Setup compiler not found: $InnoCompiler" }
 & $InnoCompiler "/DAppVersion=$display" "/DFileVersion=$numericVersion" "/DSourceDir=$publish" "/O$dist" /Q (Join-Path $srcRoot 'installer\TabForge.iss')
 if ($LASTEXITCODE) { throw 'Inno Setup failed' }
-$setup = Join-Path $dist "TabForge-$display-setup.exe"
+$setup = Join-Path $dist "TabForge-$display-win-setup.exe"
 Write-Output ("Installer: {0} ({1:N1} MB)" -f $setup, ((Get-Item $setup).Length / 1MB))
-
-# Checksums for the release notes.
-$sums = Join-Path $dist "TabForge-$display-SHA256.txt"
-Get-FileHash -Algorithm SHA256 $zip, $setup |
-    ForEach-Object { "{0}  {1}" -f $_.Hash.ToLowerInvariant(), (Split-Path $_.Path -Leaf) } |
-    Set-Content -LiteralPath $sums -Encoding ascii
-Write-Output "Checksums: $sums"
