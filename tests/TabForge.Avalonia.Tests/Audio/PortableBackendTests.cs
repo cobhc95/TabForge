@@ -40,10 +40,9 @@ public sealed class PortableBackendTests
     }
 
 #if WINDOWS
-    [Fact]
+    [WindowsFact]
     public void ThisWindowsMachineDefaultsToTheWindowsAdapters()
     {
-        if (!OperatingSystem.IsWindows()) return;
         var devSwitch = Environment.GetEnvironmentVariable(AudioBackends.DevVariable) is not null || Environment.GetEnvironmentVariable(MidiBackends.DevVariable) is not null
             || Environment.GetEnvironmentVariable(LameMp3Encoder.DevVariable) is not null;
         if (devSwitch) return;   // a developer opted in on this computer

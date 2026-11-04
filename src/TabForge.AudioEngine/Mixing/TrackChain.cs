@@ -166,7 +166,7 @@ public sealed partial class TrackChain : IDisposable
         get
         {
             var total = 0;
-            foreach (var e in _effects) if (!e.Bypass) total += Math.Max(0, e.Plugin.LatencySamples);
+            foreach (var e in _effects) if (!e.Bypass) total += Math.Max(0, Ask(e.Plugin, p => p.LatencySamples));
             return total;
         }
     }
@@ -177,10 +177,26 @@ public sealed partial class TrackChain : IDisposable
         get
         {
             var tail = 0;
-            foreach (var p in Plugins) { try { tail = Math.Max(tail, p.TailSamples); } catch (Exception) { } // swallow: a plug-in that does not report its tail keeps the current value
+            foreach (var p in Plugins) { try { tail = Math.Max(tail, Ask(p, q => q.TailSamples)); } catch (Exception) { } // swallow: a plug-in that does not report its tail keeps the current value
  }
             return tail;
         }
+    }
+
+    /// <summary>
+    /// A main-thread query that runs plug-in code holds the same breadcrumb as every other call, so a hang in a latency or
+    /// tail query is attributed to that plug-in instead of looking like an unattributed main-thread hang.
+    /// </summary>
+    private static int Ask(IPluginInstance plugin, Func<IPluginInstance, int> query)
+    {
+        var shared = EngineHost.Shared;
+        var entered = false;
+        try
+        {
+            if (shared is not null) { shared.EnterMain(-1, -1, plugin.Path, PluginCallKind.Other); entered = true; }
+            return query(plugin);
+        }
+        finally { if (entered) shared?.LeaveMain(); }
     }
     private float _peak, _inputPeak, _prePeakL, _prePeakR, _postPeakL, _postPeakR, _rmsL, _rmsR;
     private int _preClips, _postClips;
@@ -254,9 +270,9 @@ public sealed partial class TrackChain : IDisposable
         var arm = ArmMode;
         MixClipsAndInput(shared, arm, frames, transport, monitor);
 
-        // Serial chain: each plug-in gets the audio and MIDI coming out of the previous one.
+        // Serial chain: each plug-in gets the audio and MIDI coming out of the previous one. Each stage clears its own
+        // breadcrumb when the plug-in call returns, so a fault later in this block is never blamed on the last plug-in.
         for (var k = 0; k < _effects.Length; k++) RunEffect(_effects[k], k, firstDone, shared, frames, transport, peers);
-        Leave(shared);
 
         MixToOutputs(mixL, mixR, offset, frames, arm, shared);
     }
@@ -268,6 +284,7 @@ public sealed partial class TrackChain : IDisposable
         {
             Enter(shared, -1, "General MIDI synth");
             _midiSynth.Process(_silence, _a, frames, midi, transport);
+            Leave(shared);
         }
         else if (_midiSynth is not null && _synthSilence)
         {
@@ -280,6 +297,7 @@ public sealed partial class TrackChain : IDisposable
             }
             Enter(shared, -1, "General MIDI synth");
             _midiSynth.Process(_silence, _a, frames, _synthStop, transport);
+            Leave(shared);
             _a[0].AsSpan(0, frames).Clear(); _a[1].AsSpan(0, frames).Clear();
         }
     }
@@ -337,6 +355,7 @@ public sealed partial class TrackChain : IDisposable
         var plugMidi = probe is not null ? probe.Events(frames) : effect.IsInstrument && effect.AutoPitch.Active ? AutoPitched(effect, heard) : heard;
         Interlocked.Increment(ref effect.ProcessCalls);
         effect.Plugin.Process(input, _b, frames, plugMidi, transport);
+        Leave(shared);   // the plug-in call ended: later work in this block is not this plug-in's
         if (!Finite(_b, frames))
         {
             // A NaN / infinity would poison the bus, the master, the meters and recorded stems. Discard the block,

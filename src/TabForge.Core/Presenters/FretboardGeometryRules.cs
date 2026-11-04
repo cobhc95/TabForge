@@ -13,16 +13,36 @@ public static class FretboardGeometryRules
 {
     /// <summary>The fields of an instrument state that decide the fretboard layout. AnchorFret is the current (else next) note's fret, 0 when none.
     /// Bass: the instrument is a bass (its real scale and string pitch apply under RealProportions); false for a guitar.</summary>
-    public readonly record struct Input(int Strings, int DisplayFrets, int FretCount, double StringSpacing, bool LeftHanded, int AnchorFret, bool Bass = false);
+    /// <remarks>CapoByString packs each string's capo fret (its effective capo: the full capo or a higher partial one) in 5 bits per string, see <see cref="PackCapos"/>.</remarks>
+    public readonly record struct Input(int Strings, int DisplayFrets, int FretCount, double StringSpacing, bool LeftHanded, int AnchorFret, bool Bass = false, long CapoByString = 0);
 
-    public readonly record struct Layout(UiRect Board, int FirstFret, int LastFret, double FretWidth, double StringGap, int Strings, bool LeftHanded);
+    /// <remarks>The board is the whole neck: the fret numbers are physical. Written (tab) frets count from each string's capo, so a note is drawn at its capo plus its fret, see <see cref="PositionOfTab"/>.</remarks>
+    public readonly record struct Layout(UiRect Board, int FirstFret, int LastFret, double FretWidth, double StringGap, int Strings, bool LeftHanded, long CapoByString = 0)
+    {
+        /// <summary>The capo fret of a string (0 when there is none).</summary>
+        public int CapoOf(int stringIndex) => stringIndex is >= 0 and < MaxCapoStrings ? (int)((CapoByString >> (CapoBits * stringIndex)) & CapoMask) : 0;
+    }
 
+    private const int CapoBits = 5, CapoMask = 31, MaxCapoStrings = 12;
+
+    /// <summary>Packs each string's capo fret (0 to 24) into one number, 5 bits a string, so a layout carries them without allocating.</summary>
+    public static long PackCapos(int fullCapo, IReadOnlyList<TabForge.Models.PartialCapo>? partials, int strings)
+    {
+        long packed = 0;
+        for (var s = 0; s < Math.Min(strings, MaxCapoStrings); s++)
+            packed |= (long)Math.Clamp(TabForge.Models.PartialCapoRules.EffectiveCapo(fullCapo, partials, s), 0, CapoMask) << (CapoBits * s);
+        return packed;
+    }
+
+    /// <summary>Room left of the nut (string numbers, when switched on, sit just left of it).</summary>
     public const double LeftGutter = 54;
     public const double RightPad = 14;
     /// <summary>Room above the top string for its sounding marker (radius 16 + halo 4) so nothing is clipped whatever the docking
     /// position. A technique tag that would not fit above the top string's marker is drawn beside it instead.</summary>
     public const double TopPad = 16 + 4 + 2;
-    public const double BottomPad = 26;
+    /// <summary>Room under the board: the wood's edge margin below the lowest string (0.44 of the smallest gap, rounded up to 12) plus the fret-number row
+    /// (5 below the wood, ~19 high) and 4 of clearance, so the numbers end inside the pane and never reach the splitter below it.</summary>
+    public const double BottomPad = 40;
     /// <summary>Top-right strip kept clear for the pane's hide (X) button.</summary>
     public const double CornerReserve = 24;
     /// <summary>Legend column (108) plus the hide-button corner strip, so neither overlaps the board.</summary>
@@ -101,7 +121,7 @@ public static class FretboardGeometryRules
         var stringGap = Math.Min(FretboardSizeRules.ClampStringGap(Math.Clamp(naturalGap * spacing, floorGap, naturalGap * MaxSpacingFactor), strings, boardWidth, caps), heightGap);
         var boardHeight = stringGap * gaps;
         var top = content.Y + TopPad + Math.Max(0, (availableHeight - boardHeight) / 2);
-        return new Layout(new UiRect(left, top, boardWidth, boardHeight), firstFret, lastFret, fretWidth, stringGap, strings, state.LeftHanded);
+        return new Layout(new UiRect(left, top, boardWidth, boardHeight), firstFret, lastFret, fretWidth, stringGap, strings, state.LeftHanded, state.CapoByString);
     }
 
     /// <summary>The board at its real proportions: every shown fret keeps the real cell and the strings the real pitch, at one scale, so the board's
@@ -122,7 +142,7 @@ public static class FretboardGeometryRules
         var boardHeight = strings * pitch * scale;
         var left = BoardLeft(content, fullWidth, boardWidth, available, position, horizontalOffset);
         var top = content.Y + TopPad + Math.Max(0, (availableHeight - boardHeight) / 2);
-        return new Layout(new UiRect(left, top, boardWidth, boardHeight), 1, total, cell * scale, boardHeight / gaps, strings, state.LeftHanded);
+        return new Layout(new UiRect(left, top, boardWidth, boardHeight), 1, total, cell * scale, boardHeight / gaps, strings, state.LeftHanded, state.CapoByString);
     }
 
     /// <summary>The user's string spacing factor (Compact to Wide), 1 (Natural) when it is not finite.</summary>
@@ -158,14 +178,60 @@ public static class FretboardGeometryRules
         return layout.Board.Y + i * layout.StringGap;
     }
 
+    /// <summary>The continuous 12-TET distance of a (possibly fractional) fret from the nut, in units of the scale
+    /// length: 1 - 2^(-fret/12). The scale length cancels, so only the ratio matters: each fret cell is 2^(-1/12)
+    /// of the remaining scale.</summary>
+    public static double TemperedDistance(double fret) => 1 - Math.Pow(2, -fret / 12.0);
+
+    /// <summary>X of fret wire <paramref name="wire"/> (0 is the nut) at its true 12-TET place between the shown
+    /// frets, so the cells narrow toward the bridge by 2^(-1/12) each. The board runs one cell past the last
+    /// wire, as a real board does, so the last fret's marker still sits on wood.</summary>
+    public static double WireX(in Layout layout, int wire)
+    {
+        var x = WireUnmirrored(layout, wire);
+        return layout.LeftHanded ? layout.Board.Right - (x - layout.Board.X) : x;
+    }
+
     public static double FretX(in Layout layout, double fret)
     {
-        var pos = layout.Board.X + (fret - layout.FirstFret + 0.5) * layout.FretWidth;
-        return layout.LeftHanded ? layout.Board.Right - (pos - layout.Board.X) : pos;
+        var cell = (int)Math.Floor(fret);
+        if (Math.Abs(fret - Math.Round(fret)) > 1e-9)
+        {
+            // A half position is the wire itself, as before: FretX(f - 0.5) was the wire before fret f.
+            var x = WireUnmirrored(layout, cell);
+            return layout.LeftHanded ? layout.Board.Right - (x - layout.Board.X) : x;
+        }
+        var left = WireUnmirrored(layout, cell - 1);
+        var right = WireUnmirrored(layout, cell);
+        var centre = (left + right) / 2;
+        return layout.LeftHanded ? layout.Board.Right - (centre - layout.Board.X) : centre;
+    }
+
+    /// <summary>Wood past the last wire, in 12-TET cells: the board runs this far beyond the last fret (as a
+    /// real board does), so the last fret's marker still sits on wood.</summary>
+    private const double EndPadFrets = 1.0;
+
+    private static double WireSpan(in Layout layout) =>
+        TemperedDistance(layout.LastFret + EndPadFrets) - TemperedDistance(layout.FirstFret - 1);
+
+    private static double WireUnmirrored(in Layout layout, int wire)
+    {
+        var span = WireSpan(layout);
+        if (!(span > 0)) return layout.Board.X;
+        return layout.Board.X + (TemperedDistance(wire) - TemperedDistance(layout.FirstFret - 1)) / span * layout.Board.Width;
     }
 
     public static UiPoint PositionOf(in Layout layout, int stringIndex, int fret)
         => new(fret <= 0 ? layout.Board.X - 14 : FretX(layout, fret), StringY(layout, stringIndex));
+
+    /// <summary>Where a written (tab) fret sits: its string's capo plus the fret on the physical neck, so nothing is drawn behind a capo. An open string
+    /// (fret 0) sits at its capo, or just left of the nut when it has none.</summary>
+    public static UiPoint PositionOfTab(in Layout layout, int stringIndex, int tabFret)
+    {
+        var capo = layout.CapoOf(stringIndex);
+        if (capo <= 0) return PositionOf(layout, stringIndex, tabFret);
+        return new UiPoint(FretX(layout, capo + Math.Max(0, tabFret)), StringY(layout, stringIndex));
+    }
 
     /// <summary>The area the board is laid out in: the pane, narrowed when the board with its legend would run past the pane's right edge.</summary>
     public static UiRect ContentArea(Input state, UiRect pane, FretboardHorizontalPosition position = FretboardHorizontalPosition.Centre, FretboardBoardLimits? limits = null)
@@ -217,12 +283,31 @@ public static class FretboardGeometryRules
 
         if (point.X < board.X)
         {
+            // Left of the nut is the open string, which a capo covers.
+            if (layout.CapoOf(stringIndex) > 0) return false;
             fret = 0;
             return true;
         }
+        // The 12-TET cells narrow toward the bridge: the fret is the cell whose wires contain the point.
         var local = layout.LeftHanded ? board.Right - point.X : point.X - board.X;
-        var index = (int)Math.Floor(local / layout.FretWidth);
-        fret = Math.Clamp(layout.FirstFret + index, 1, state.FretCount);
+        var found = layout.LastFret;
+        for (var f = layout.FirstFret; f <= layout.LastFret; f++)
+        {
+            if (local < WireUnmirrored(layout, f) - board.X)
+            {
+                found = f;
+                break;
+            }
+        }
+        fret = Math.Clamp(found, 1, state.FretCount + 24);
+        // The click is on the physical neck: a string with a capo is played from the capo, nothing behind it, and the capo itself is the open string.
+        var capo = layout.CapoOf(stringIndex);
+        if (capo > 0)
+        {
+            if (fret < capo) return false;
+            fret -= capo;
+        }
+        fret = Math.Clamp(fret, capo > 0 && fret == 0 ? 0 : 1, state.FretCount);
         return true;
     }
 }

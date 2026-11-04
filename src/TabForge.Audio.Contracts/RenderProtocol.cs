@@ -147,7 +147,7 @@ public sealed class RenderSpec
         {
             StartFrame = r.ReadInt64(), EndFrame = r.ReadInt64(), TailMode = (RenderTailMode)r.ReadByte(), TailMs = r.ReadInt32(),
             SampleRate = r.ReadInt32(), Channels = r.ReadInt32(), Format = (RenderFormat)r.ReadByte(),
-            MasterPath = r.ReadBoundedString(1024), MasterGain = r.ReadSingle(), EventFile = r.ReadBoundedString(1024),
+            MasterPath = r.ReadBoundedString(global::TabForge.Audio.Contracts.Frames.MaxPathChars), MasterGain = r.ReadSingle(), EventFile = r.ReadBoundedString(global::TabForge.Audio.Contracts.Frames.MaxPathChars),
             Threads = (RenderThreads)r.ReadByte(), RealtimePace = r.ReadBoolean(),
         };
         if (spec.StartFrame < 0 || spec.EndFrame <= spec.StartFrame) throw new InvalidDataException("Bad render range.");
@@ -157,7 +157,7 @@ public sealed class RenderSpec
         if (count is < 0 or > 256) throw new InvalidDataException("Bad render slot count.");
         for (var i = 0; i < count; i++)
         {
-            var s = new RenderSlot { Slot = r.ReadInt32(), Volume = r.ReadInt32(), Pan = r.ReadInt32(), InMaster = r.ReadBoolean(), StemPath = r.ReadBoundedString(1024) };
+            var s = new RenderSlot { Slot = r.ReadInt32(), Volume = r.ReadInt32(), Pan = r.ReadInt32(), InMaster = r.ReadBoolean(), StemPath = r.ReadBoundedString(global::TabForge.Audio.Contracts.Frames.MaxPathChars) };
             if (r.ReadBoolean()) s.Clips = r.ReadClips();
             spec.Slots.Add(s);
         }
@@ -189,7 +189,7 @@ public sealed record RenderResult(long Frames, double Seconds, double ElapsedSec
         var frames = r.ReadInt64(); var seconds = r.ReadDouble(); var elapsed = r.ReadDouble(); var workers = r.ReadInt32();
         var count = Math.Clamp(r.ReadInt32(), 0, 1024);
         var files = new List<RenderFileResult>(count);
-        for (var i = 0; i < count; i++) files.Add(new RenderFileResult(r.ReadBoundedString(1024), r.ReadInt32(), r.ReadSingle(), r.ReadInt64()));
+        for (var i = 0; i < count; i++) files.Add(new RenderFileResult(r.ReadBoundedString(global::TabForge.Audio.Contracts.Frames.MaxPathChars), r.ReadInt32(), r.ReadSingle(), r.ReadInt64()));
         return new RenderResult(frames, seconds, elapsed, workers, files);
     }
 }

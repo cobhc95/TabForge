@@ -1,0 +1,97 @@
+name: wine-stage8-juce8
+# Stage 8 part 1 (time-boxed experiment): does the real Dexed 1.1.0 VST3 editor (JUCE 8, Direct2D)
+# paint under the newest stable Wine and under Wine's d2d1 DLL options? The bundled Wine stays 9.21 and
+# is not changed here: the engine is pointed at a scratch Wine with TABFORGE_WINE. This job reports the
+# result; a black window is evidence, not a job failure.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+env:
+  DOTNET_NOLOGO: '1'
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  # Latest stable Wine release (11.0, 2026-01-14) and the newest build available (11.21, 2026-10-31).
+  WINE110_URL: https://github.com/Kron4ek/Wine-Builds/releases/download/11.0/wine-11.0-amd64-wow64.tar.xz
+  WINE110_SHA256: 39574efa1132c3ca0d5c77dd2eddbe4a49cca0d6cc2c290ff4924493a1c40314
+  WINE1121_URL: https://github.com/Kron4ek/Wine-Builds/releases/download/11.21/wine-11.21-amd64-wow64.tar.xz
+  WINE1121_SHA256: 33f3c5b56b1deb8f6725539ea006f27b5d781b3b4ae6a8a1f492d8af4fb9dc83
+  DEXED_URL: https://github.com/asb2m10/dexed/releases/download/v1.1.0/Dexed-1.1.0-win.zip
+  DEXED_SHA256: 4773150a3dfa281d1caef583f493a41ed99ea95b054b5a3479780799ed6279cc
+  DEXED_VST3_SHA256: b306439ad6385d9b27d737b37a7101724fdc1000cf5a8c781bfdb38d0cbe5a06
+  # The last green Stage 7 package carries the C# engine and libtfvst3.so this experiment drives.
+  STAGE7_RUN: '41256233784'
+jobs:
+  juce8-wine:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the display, screenshot and runtime libraries (no Wine)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb xauth x11-utils imagemagick xdotool xz-utils openbox wmctrl \
+            libfontconfig1 libfreetype6 libgl1 libasound2t64 libx11-6 libxext6 libxcursor1 libxrandr2 libxi6 \
+            libxfixes3 libxrender1 libxcb1 libice6 libsm6 libxcomposite1 libxdamage1 libxinerama1 libxxf86vm1 \
+            libxkbcommon0 libwayland-client0 libpulse0 libegl1
+      - name: Download the last green Stage 7 package
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p artifact
+          gh run download "$STAGE7_RUN" --repo "$GITHUB_REPOSITORY" -n wine-stage7-package -D artifact
+          stat -c '%n %s bytes' artifact/*
+      - name: Fetch the two Wine builds and the real Dexed 1.1.0 VST3 (maker release, SHA-256 pinned)
+        run: |
+          mkdir -p staging
+          curl -fsSL -o staging/wine-11.0.tar.xz "$WINE110_URL"
+          echo "$WINE110_SHA256  staging/wine-11.0.tar.xz" | sha256sum -c -
+          mkdir staging/wine-11.0 && tar -xf staging/wine-11.0.tar.xz -C staging/wine-11.0 --strip-components=1
+          chmod +x staging/wine-11.0/bin/wine staging/wine-11.0/bin/wineserver
+          curl -fsSL -o staging/wine-11.21.tar.xz "$WINE1121_URL"
+          echo "$WINE1121_SHA256  staging/wine-11.21.tar.xz" | sha256sum -c -
+          mkdir staging/wine-11.21 && tar -xf staging/wine-11.21.tar.xz -C staging/wine-11.21 --strip-components=1
+          chmod +x staging/wine-11.21/bin/wine staging/wine-11.21/bin/wineserver 2>/dev/null || true
+
+          curl -fsSL -o staging/dexed.zip "$DEXED_URL"
+          echo "$DEXED_SHA256  staging/dexed.zip" | sha256sum -c -
+          mkdir -p fixtures/Dexed.vst3/Contents/x86_64-win fixtures/Dexed.vst3/Contents/Resources
+          unzip -p staging/dexed.zip 'Dexed.vst3/Contents/x86_64-win/Dexed.vst3' > fixtures/Dexed.vst3/Contents/x86_64-win/Dexed.vst3
+          unzip -p staging/dexed.zip 'Dexed.vst3/Contents/Resources/moduleinfo.json' > fixtures/Dexed.vst3/Contents/Resources/moduleinfo.json
+          echo "$DEXED_VST3_SHA256  fixtures/Dexed.vst3/Contents/x86_64-win/Dexed.vst3" | sha256sum -c -
+          file fixtures/Dexed.vst3/Contents/x86_64-win/Dexed.vst3 | tee staging/fixture.txt
+
+          ID="$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+          mkdir -p "$RUNNER_TEMP/pkg-$ID"
+          tar -xJf artifact/*.tar.xz -C "$RUNNER_TEMP/pkg-$ID"
+          echo "APP_TAR=$RUNNER_TEMP/pkg-$ID/TabForge.AppDir" >> "$GITHUB_ENV"
+          staging/wine-11.0/bin/wine --version | tee staging/wine-11.0-version.txt
+          staging/wine-11.21/bin/wine --version | tee staging/wine-11.21-version.txt
+      - name: Run the Dexed 1.1.0 editor on Wine 11.0 / 11.21, default and d2d1 overrides
+        run: |
+          chmod +x tools/test-wine-juce8.sh
+          i=0
+          run() {
+            i=$((i+1))
+            TABFORGE_XVFB_DISPLAY=":$((97+i))" timeout 300 tools/test-wine-juce8.sh \
+              --app "$APP_TAR" --fixture "$PWD/fixtures/Dexed.vst3" --out "$PWD/juce8-evidence" \
+              --label "$1" "${@:2}" || echo "case $1 ended with status $?"
+            pkill -f "Xvfb :$((97+i))" 2>/dev/null || true
+          }
+          run wine110-default --wine "$PWD/staging/wine-11.0/bin/wine"
+          run wine110-d2d1-off --wine "$PWD/staging/wine-11.0/bin/wine" --dll-overrides "d2d1=d"
+          run wine1121-default --wine "$PWD/staging/wine-11.21/bin/wine"
+          run wine1121-d2d1-off --wine "$PWD/staging/wine-11.21/bin/wine" --dll-overrides "d2d1=d"
+          run wine1121-d2d1-dxgi-off --wine "$PWD/staging/wine-11.21/bin/wine" --dll-overrides "d2d1=d;dxgi=d"
+          cat juce8-evidence/summary.txt
+      - name: Upload the JUCE 8 / Wine experiment screenshots, logs and pixel stats
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-stage8-juce8-evidence
+          path: |
+            juce8-evidence/**
+            staging/wine-11.0-version.txt
+            staging/wine-11.21-version.txt
+            staging/fixture.txt
+          if-no-files-found: warn

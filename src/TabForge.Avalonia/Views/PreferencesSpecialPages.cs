@@ -27,7 +27,7 @@ public static class PreferencesSpecialPages
     /// <summary>Row keys shown on Common settings, by card, and the ids of the link entries under them.</summary>
     public static readonly IReadOnlyList<(string Title, string[] Keys, string[] LinkIds)> HomeCards = new[]
     {
-        ("Look", new[] { "appearance.thememode", "appearance.uiscale", "appearance.fretboard", "general.toolbar" }, new[] { SettingsCatalog.LinkAppearance }),
+        ("Look", new[] { "appearance.thememode", "appearance.uiscale", "appearance.uiscale.recommended", "appearance.fretboard", "general.toolbar" }, new[] { SettingsCatalog.LinkAppearance }),
         ("Sound", new[] { "vst.driver", "vst.device", "audio.metronome", "audio.metrovolume", "audio.countin", "audio.speed" },
             new[] { SettingsCatalog.LinkAudio, SettingsCatalog.LinkPlayback }),
         ("Score", new[] { "score.defaultnotation", "follow.mode" }, new[] { SettingsCatalog.LinkScore }),

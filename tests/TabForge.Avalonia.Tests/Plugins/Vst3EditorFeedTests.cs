@@ -14,18 +14,16 @@ public sealed class Vst3EditorFeedTests
 {
     private static string Shim => Path.Combine(AppContext.BaseDirectory, "tfvst3.dll");
 
-    [Fact]
+    [WindowsFact]
     public void TheShimsOwnChecksPass()
     {
-        if (!OperatingSystem.IsWindows()) return;   // tfvst3.dll is the Windows shim
         Assert.True(File.Exists(Shim), "tfvst3.dll is copied next to the tests");
         Assert.Equal(0, Vst3Plugin.NativeSelfTest());
     }
 
-    [Fact]
+    [WindowsFact]
     public void TheShimExportsTheEditorIdleFeedAndAcceptsANullHandle()
     {
-        if (!OperatingSystem.IsWindows()) return;
         var lib = NativeLibrary.Load(Shim);
         try
         {

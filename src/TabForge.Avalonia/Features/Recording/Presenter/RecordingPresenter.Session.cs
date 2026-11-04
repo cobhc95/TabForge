@@ -1,5 +1,4 @@
 using System;
-using TabForge.Documents;
 using TabForge.Models;
 
 namespace TabForge.Avalonia.Features.Recording.Presenter;
@@ -16,9 +15,9 @@ internal sealed partial class RecordingPresenter
     {
         private readonly EngineHooks _hooks;
         private readonly Action _stop;
-        private readonly Action<SongDocument, TrackModel, AudioClip>? _reRecord;
+        private readonly Action<object, TrackModel, AudioClip>? _reRecord;
 
-        internal RecordingSession(EngineHooks hooks, Action stop, Action<SongDocument, TrackModel, AudioClip>? reRecord = null)
+        internal RecordingSession(EngineHooks hooks, Action stop, Action<object, TrackModel, AudioClip>? reRecord = null)
         {
             _hooks = hooks;
             _stop = stop;
@@ -40,14 +39,14 @@ internal sealed partial class RecordingPresenter
         public bool IsTrackRecording(TrackModel track) => _hooks.IsCapturing(track);
 
         /// <summary>A record arm/disarm changed: a disarm while recording ends that track's capture at that moment (its lane stays until the stop).</summary>
-        public void ArmChanged(SongDocument song) => _hooks.ArmChanged(song);
+        public void ArmChanged() => _hooks.ArmChanged();
 
         /// <summary>
         /// Starts the one-pass re-record of <paramref name="clip"/>'s pass on <paramref name="song"/>: seeks to the group's loop start,
         /// runs the normal count-in when enabled, captures only that track for one loop length and replaces only that pass on landing.
         /// False while another recording runs or when the clip is not a loop pass.
         /// </summary>
-        public bool ReRecordPass(SongDocument song, TrackModel track, AudioClip clip)
+        public bool ReRecordPass(object song, TrackModel track, AudioClip clip)
         {
             if (IsRecording || _reRecord is null || !TakeGroups.IsGrouped(clip)) return false;
             _reRecord(song, track, clip);

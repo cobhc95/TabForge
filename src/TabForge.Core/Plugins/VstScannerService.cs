@@ -56,9 +56,13 @@ public static class VstScannerService
         {
             var cached = persisted.Where(k => k is not null && !string.IsNullOrWhiteSpace(k.Path))
                 .Take(InputLimits.MaxVstPlugins)
-                .Select(k => new VstPluginInfo(
-                    string.IsNullOrWhiteSpace(k.Name) ? Path.GetFileNameWithoutExtension(k.Path) : k.Name,
-                    k.Path, string.IsNullOrWhiteSpace(k.Format) ? "VST3" : k.Format, k.Vendor ?? "", k.Role ?? "", k.ClassId ?? ""))
+                .Select(k =>
+                {
+                    var format = PluginFormats.Normalize(k.Format);
+                    return new VstPluginInfo(
+                        string.IsNullOrWhiteSpace(k.Name) ? Path.GetFileNameWithoutExtension(k.Path) : k.Name,
+                        k.Path, string.IsNullOrWhiteSpace(format) ? PluginFormats.OfPlugin(k.Path) : format, k.Vendor ?? "", k.Role ?? "", k.ClassId ?? "");
+                })
                 .ToList();
             remember.LastScan = cached;
             lock (SessionGate) { _sessionRootsKey = SessionKey(roots); _sessionResults = cached; _sessionAtUtc = DateTime.UtcNow; }
@@ -114,7 +118,7 @@ public static class VstScannerService
         cancellationToken.ThrowIfCancellationRequested();
         var list = scan.Results.Values.OrderBy(plugin => plugin.Name, StringComparer.OrdinalIgnoreCase)
             .ThenBy(plugin => plugin.Path, StringComparer.OrdinalIgnoreCase).ToList();
-        trust.RecordScan(list.Where(plugin => !plugin.IsUnsupported32).ToList(), cancellationToken, progress, files);   // fingerprint the finds in user-writable folders: the trust baseline
+        trust.RecordScan(list, cancellationToken, progress, files);   // fingerprint every find in user-writable folders: the trust baseline (a 32-bit DLL is fingerprinted, never executed)
         RememberScanResult(remember, list);
         return list;
     }
@@ -187,7 +191,7 @@ public static class VstScannerService
         {
             var fullPath = Path.GetFullPath(entry);
             var (vendor, role, classId) = Vst3ModuleInfo(fullPath);
-            scan.Results.TryAdd(fullPath, new VstPluginInfo(Path.GetFileNameWithoutExtension(entry), fullPath, "VST3", vendor, role, classId));
+            scan.Results.TryAdd(fullPath, new VstPluginInfo(Path.GetFileNameWithoutExtension(entry), fullPath, PluginFormats.OfPlugin(fullPath), vendor, role, classId));
             return scan.Results.Count >= InputLimits.MaxVstPlugins;
         }
         if (scan.IncludeClap && string.Equals(Path.GetExtension(entry), ".clap", StringComparison.OrdinalIgnoreCase))
@@ -196,19 +200,31 @@ public static class VstScannerService
             scan.Results.TryAdd(fullPath, new VstPluginInfo(Path.GetFileNameWithoutExtension(entry), fullPath, PluginFormats.Clap, ""));
             return scan.Results.Count >= InputLimits.MaxVstPlugins;
         }
-        var vst2Here = PluginScanFolders.Vst2Supported(HostSystem.Current);   // VST2 hosting is Windows-only: a .dll elsewhere is never a plug-in
-        if (vst2Here && !isDirectory && string.Equals(Path.GetExtension(entry), ".dll", StringComparison.OrdinalIgnoreCase)
-            && PeExports.IsVst2Plugin(entry))
+        var windows = HostSystem.Current == HostOs.Windows;
+        var wineBridge32 = HostSystem.Current == HostOs.Linux && WineBridgeSupport.Available;
+        var wineBridge64 = HostSystem.Current == HostOs.Linux && WineBridgeSupport.Available64;
+        var vst2Here = PluginScanFolders.Vst2Supported(HostSystem.Current, wineBridge32 || wineBridge64);
+        if (vst2Here && windows && !isDirectory && string.Equals(Path.GetExtension(entry), ".dll", StringComparison.OrdinalIgnoreCase)
+            && PeExports.IsVst2Plugin64(entry))
         {
             var fullPath = Path.GetFullPath(entry);
             scan.Results.TryAdd(fullPath, new VstPluginInfo(Path.GetFileNameWithoutExtension(entry), fullPath, "VST2", Vst2Vendor(fullPath)));
             return scan.Results.Count >= InputLimits.MaxVstPlugins;
         }
 
-        if (vst2Here && !isDirectory && string.Equals(Path.GetExtension(entry), ".dll", StringComparison.OrdinalIgnoreCase) && PeExports.IsVst2Plugin32(entry))
+        if (vst2Here && (windows || wineBridge32) && !isDirectory && string.Equals(Path.GetExtension(entry), ".dll", StringComparison.OrdinalIgnoreCase)
+            && PeExports.IsVst2Plugin32(entry))
         {
             var fullPath = Path.GetFullPath(entry);
             scan.Results.TryAdd(fullPath, new VstPluginInfo(Path.GetFileNameWithoutExtension(entry), fullPath, VstPluginInfo.Format32, Vst2Vendor(fullPath)));
+            return scan.Results.Count >= InputLimits.MaxVstPlugins;
+        }
+
+        if (vst2Here && !windows && wineBridge64 && !isDirectory && string.Equals(Path.GetExtension(entry), ".dll", StringComparison.OrdinalIgnoreCase)
+            && PeExports.IsVst2Plugin64(entry))
+        {
+            var fullPath = Path.GetFullPath(entry);
+            scan.Results.TryAdd(fullPath, new VstPluginInfo(Path.GetFileNameWithoutExtension(entry), fullPath, VstPluginInfo.Format64, Vst2Vendor(fullPath)));
             return scan.Results.Count >= InputLimits.MaxVstPlugins;
         }
 
@@ -298,7 +314,12 @@ public static class VstScannerService
         return ExpandFolders(FolderListText.Clean(folders).Where(IsLocalScanFolder));
     }
 
-    private static IEnumerable<string> GetDefaultRoots() => PluginScanFolders.Vst3(PluginScanInputs.Current());
+    private static IEnumerable<string> GetDefaultRoots()
+    {
+        var inputs = PluginScanInputs.Current();
+        var roots = PluginScanFolders.Vst3(inputs);
+        return WineBridgeSupport.AnyAvailable ? roots.Concat(PluginScanFolders.Vst2(inputs)) : roots;
+    }
 
     /// <summary>Vendor, role and class id (32 hex digits, upper case) of a VST3 bundle from its moduleinfo.json (read as text; the plug-in is not loaded).</summary>
     public static (string Vendor, string Role, string ClassId) Vst3ModuleInfo(string bundle)

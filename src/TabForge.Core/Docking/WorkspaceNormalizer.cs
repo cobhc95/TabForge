@@ -42,8 +42,53 @@ internal static class WorkspaceNormalizer
             floating.Width = InputLimits.ClampFinite(floating.Width, 80, 4_096, 360);
             floating.Height = InputLimits.ClampFinite(floating.Height, 80, 4_096, 260);
         }
+        // Old too-small remembered sizes are migrated, not refused: a saved split that starves the score editor keeps the score's minimum share,
+        // so the TAB opens readable and the corrected layout is what the next save persists.
+        ClampScoreShares(workspace.Root);
+        foreach (var floating in workspace.Floating) ClampScoreShares(floating.Root);
+        if (workspace.InstrumentVerticalShare is { } vertical && vertical > InstrumentMaxShare)
+            workspace.InstrumentVerticalShare = InstrumentMaxShare;
         return true;
     }
+
+    /// <summary>The largest share of a vertical split the timeline may take when the other half holds the score editor.</summary>
+    private const double TimelineMaxShare = 0.65;
+
+    /// <summary>The largest share of a vertical split the fretboard may take when the other half holds the score editor.</summary>
+    private const double InstrumentMaxShare = 0.60;
+
+    /// <summary>Migrates every vertical split of a tree that stacks the timeline or the fretboard against the score editor, so the score side never opens as a thin strip.</summary>
+    private static void ClampScoreShares(DockNodeState? node)
+    {
+        if (node is null) return;
+        if (node.Kind == "split" && string.Equals(node.Orientation, "Vertical", StringComparison.Ordinal))
+        {
+            ClampStackedShare(node, "timeline", TimelineMaxShare);
+            ClampStackedShare(node, "instrument", InstrumentMaxShare);
+        }
+        ClampScoreShares(node.First);
+        ClampScoreShares(node.Second);
+    }
+
+    /// <summary>Clamps a vertical split whose one half is the <paramref name="paneId"/> tabs host and whose other half holds the score editor,
+    /// so the pane takes at most <paramref name="maxShare"/>; the remembered drag is migrated the same way.</summary>
+    private static void ClampStackedShare(DockNodeState node, string paneId, double maxShare)
+    {
+        var paneFirst = node.First is { Kind: "tabs" } first && first.Panels.Contains(paneId, StringComparer.Ordinal);
+        var paneSecond = node.Second is { Kind: "tabs" } second && second.Panels.Contains(paneId, StringComparer.Ordinal);
+        if (paneFirst == paneSecond) return;   // the pane is on both sides or neither: not a stacked split
+        if (!SubtreeHasEditor(paneFirst ? node.Second : node.First)) return;
+        var share = paneFirst ? node.Ratio : 1 - node.Ratio;
+        if (share > maxShare) node.Ratio = Math.Clamp(paneFirst ? maxShare : 1 - maxShare, 0.02, 0.98);
+        if (node.UserRatio is { } user)
+        {
+            var userShare = paneFirst ? user : 1 - user;
+            if (userShare > maxShare) node.UserRatio = Math.Clamp(paneFirst ? maxShare : 1 - maxShare, 0.02, 0.98);
+        }
+    }
+
+    private static bool SubtreeHasEditor(DockNodeState? node) =>
+        node is not null && (node.Kind == "editor" || SubtreeHasEditor(node.First) || SubtreeHasEditor(node.Second));
 
     /// <summary>Takes the Keyboard mode pane out of a layout that is about to be saved or restored. False when what is left is not a layout (no score, no Band view).</summary>
     public static bool RemoveKeyboardModePane(DockWorkspaceState state)

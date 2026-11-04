@@ -18,7 +18,7 @@ namespace TabForge.Avalonia.Views.Fx;
 // Owns: the FX chain list's rows as a selection: click, Ctrl+click, Shift+click, Ctrl+A, the arrow keys, the rubber band from the empty area, the focused
 //   row (the one the plug-in pane shows) and its mark; and the drag of the selected rows (the others open a gap where the lifted rows would land and the
 //   lifted rows sit in it, a line marks the drop position, the container the rows would go into lights up, the list scrolls at its edges, Esc cancels).
-//   Reports a drop and a double-click; changes no chain.
+//   Reports a drop and a double-click; changes no chain. The click/band/focus rules live in ChainSelection, shared with the MIDI chain list.
 // Does not own: what a row shows (FxChainRows), what a drop does to the chain (FxChainContainers), the drop rules (FxChainDropMath), the chain model.
 // Tests: TabForge.Avalonia.Tests.FxChainListTests.
 // Threads: UI thread only. No timers: nothing moves unless the pointer does.
@@ -43,10 +43,8 @@ public sealed class FxChainList : Grid
     private readonly TextBlock _badgeText = new() { FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, Text = DropInsideText };
     private readonly Border _badge;
     private readonly List<(Border Chrome, object Tag, int Depth, string? DropName)> _items = new();
-    private readonly HashSet<int> _selected = new();
+    private readonly ChainSelection _sel = new();
     private object? _focused;
-    private int _anchor = -1;
-    private bool _applying;
     private readonly DynamicResourceExtension _accentBrushExt = new("AccentBrush");
     private readonly DynamicResourceExtension _accentSoftBrushExt = new("AccentSoftBrush");
     private bool _measured;
@@ -57,9 +55,8 @@ public sealed class FxChainList : Grid
     internal int DragComputeCount { get; private set; }
 
     private int _pressRow = -1;
-    private bool _collapseOnRelease, _banding, _dragging;
+    private bool _collapseOnRelease, _dragging;
     private Point _press;
-    private HashSet<int> _bandBase = new();
     private double[] _tops = Array.Empty<double>(), _heights = Array.Empty<double>();
     private List<int> _moving = new();
     private int _insert = -1, _into = -1, _lineDepth = -1, _gapRow = -1;
@@ -102,11 +99,11 @@ public sealed class FxChainList : Grid
 
     public int Count => _items.Count;
     public object? Focused => _focused;
-    public int FocusedIndex => IndexOf(_focused);
+    public int FocusedIndex => _sel.FocusedIndex;
     public bool IsDragging => _dragging;
-    public bool IsBanding => _banding;
+    public bool IsBanding => _sel.IsBanding;
     public object? TagAt(int i) => i >= 0 && i < Count ? _items[i].Tag : null;
-    public IReadOnlyList<int> SelectedRows => _selected.OrderBy(i => i).ToList();
+    public IReadOnlyList<int> SelectedRows => _sel.SelectedRows;
     public IReadOnlyList<object> SelectedTags => SelectedRows.Select(i => _items[i].Tag).ToList();
     public Control RowAt(int i) => _items[i].Chrome;
     public ScrollViewer Scroller => _scroll;
@@ -119,14 +116,12 @@ public sealed class FxChainList : Grid
     }
 
     /// <summary>The rows an action on <paramref name="tag"/>'s row applies to: the whole selection when that row is selected, else it alone.</summary>
-    public IReadOnlyList<object> TargetsOf(object tag) => IndexOf(tag) is var i and >= 0 && _selected.Contains(i) ? SelectedTags : new[] { tag };
+    public IReadOnlyList<object> TargetsOf(object tag) => IndexOf(tag) is var i and >= 0 && _sel.IsSelected(i) ? SelectedTags : new[] { tag };
 
     public void Clear()
     {
         Cancel();
-        _applying = true;
-        try { _rows.Children.Clear(); _items.Clear(); _selected.Clear(); _measured = false; }
-        finally { _applying = false; }
+        _rows.Children.Clear(); _items.Clear(); _sel.Clear(); _focused = null; _measured = false;
     }
 
     /// <summary>Adds a row: its content sits in a frame that carries the focus mark and the lifted look. <paramref name="depth"/> is how many
@@ -150,63 +145,51 @@ public sealed class FxChainList : Grid
     /// (alone, when it is not one of them). Raises no focus event: the caller shows the pane.</summary>
     public void Restore(IReadOnlyCollection<object> tags, int focus)
     {
-        if (Count == 0) { _focused = null; _anchor = -1; return; }
+        if (Count == 0) { _focused = null; _sel.Clear(); return; }
         focus = Math.Clamp(focus, 0, Count - 1);
-        var keep = Enumerable.Range(0, Count).Where(i => tags.Contains(_items[i].Tag, ReferenceEqualityComparer.Instance)).ToHashSet();
-        if (!keep.Contains(focus)) keep = new HashSet<int> { focus };
-        Apply(keep, focus, raise: false);
-        _anchor = focus;
+        var keep = Enumerable.Range(0, Count).Where(i => tags.Contains(_items[i].Tag, ReferenceEqualityComparer.Instance)).ToList();
+        _sel.Replace(keep, focus, Count);
+        AfterSel(raise: false);
     }
 
-    // ---------- selection ----------
+    // ---------- selection (shared with the MIDI chain list through ChainSelection) ----------
 
     /// <summary>A click on a row: alone selects it, Ctrl toggles it, Shift selects from the anchor to it (Ctrl+Shift adds that range).</summary>
     public void Click(int index, bool ctrl = false, bool shift = false)
     {
-        if (index < 0 || index >= Count) return;
-        var set = ctrl ? _selected.ToHashSet() : new HashSet<int>();
-        if (shift && _anchor >= 0 && _anchor < Count) for (var i = Math.Min(_anchor, index); i <= Math.Max(_anchor, index); i++) set.Add(i);
-        else
-        {
-            if (!ctrl || !set.Remove(index)) set.Add(index);
-            _anchor = index;
-        }
-        if (set.Count == 0) set.Add(index);   // the pane always shows a row: the last selected row stays
-        Apply(set, set.Contains(index) ? index : set.Contains(FocusedIndex) ? FocusedIndex : set.Min());
+        _sel.Click(index, Count, ctrl, shift);
+        if (Count > 0) AfterSel(raise: true);
     }
 
-    public void SelectAll() => Apply(Enumerable.Range(0, Count).ToHashSet(), Math.Max(0, FocusedIndex));
+    public void SelectAll()
+    {
+        _sel.SelectAll(Count);
+        if (Count > 0) AfterSel(raise: true);
+    }
 
     /// <summary>Esc: cancels a drag or a band, else clears a multi-selection to the focused row. False when there was nothing to do.</summary>
     public bool HandleEscape()
     {
-        if (_dragging || _banding) { Cancel(); return true; }
-        if (_selected.Count < 2) return false;
-        Apply(new HashSet<int> { Math.Max(0, FocusedIndex) }, Math.Max(0, FocusedIndex));
+        if (_dragging || _sel.IsBanding) { Cancel(); return true; }
+        if (!_sel.CollapseToFocused()) return false;
+        AfterSel(raise: true);
         return true;
     }
 
-    private void Apply(HashSet<int> set, int focus, bool raise = true)
+    private void AfterSel(bool raise)
     {
         if (Count == 0) return;
-        _applying = true;
-        try
-        {
-            _selected.Clear();
-            foreach (var i in set) _selected.Add(i);
-            for (var i = 0; i < Count; i++) PaintRow(i);
-        }
-        finally { _applying = false; }
-        SetFocused(focus, raise);
+        for (var i = 0; i < Count; i++) PaintRow(i);
+        var tag = TagAt(_sel.FocusedIndex);
+        if (ReferenceEquals(tag, _focused)) return;
+        _focused = tag;
+        if (raise) FocusChanged?.Invoke();
     }
 
     private void SetFocused(int index, bool raise)
     {
-        var tag = TagAt(index);
-        for (var i = 0; i < Count; i++) PaintRow(i, focusedIndex: index);
-        if (ReferenceEquals(tag, _focused)) return;
-        _focused = tag;
-        if (raise && !_applying) FocusChanged?.Invoke();
+        _sel.SetFocused(index, Count);
+        AfterSel(raise);
     }
 
     // A selected row takes the soft accent fill; the focused row an accent bar on its left edge, also among other selected rows.
@@ -216,7 +199,7 @@ public sealed class FxChainList : Grid
         var focused = i == (focusedIndex ?? FocusedIndex);
         if (focused) chrome[!Border.BorderBrushProperty] = _accentBrushExt;
         else { chrome.ClearValue(Border.BorderBrushProperty); chrome.BorderBrush = AvaloniaPalette.TransparentBrush; }   // a bound brush is dropped first
-        if (_selected.Contains(i)) chrome[!Border.BackgroundProperty] = _accentSoftBrushExt;
+        if (_sel.IsSelected(i)) chrome[!Border.BackgroundProperty] = _accentSoftBrushExt;
         else { chrome.ClearValue(Border.BackgroundProperty); chrome.Background = AvaloniaPalette.TransparentBrush; }
     }
 
@@ -297,7 +280,7 @@ public sealed class FxChainList : Grid
         // A right click on a row outside the selection selects that row alone (the menu then means it); inside the selection it keeps the selection.
         if (e.GetCurrentPoint(this).Properties.IsRightButtonPressed)
         {
-            if (RowOf(e.Source) is >= 0 and var hit && !_selected.Contains(hit)) { Focus(); Click(hit); }
+            if (RowOf(e.Source) is >= 0 and var hit && !_sel.IsSelected(hit)) { Focus(); Click(hit); }
             return;
         }
         if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed || KeepsOwnClick(e.Source)) return;
@@ -315,7 +298,7 @@ public sealed class FxChainList : Grid
         }
         if (e.ClickCount > 1) { RowActivated?.Invoke(_items[index].Tag); e.Handled = true; return; }
         // A press on a selected row keeps the selection (it may be the start of a drag); a plain click then selects it alone on release.
-        _collapseOnRelease = !ctrl && !shift && _selected.Contains(index) && _selected.Count > 1;
+        _collapseOnRelease = !ctrl && !shift && _sel.IsSelected(index) && _sel.SelectedRows.Count > 1;
         if (_collapseOnRelease) SetFocused(index, raise: true); else Click(index, ctrl, shift);
         _pressRow = index;
         e.Handled = true;
@@ -323,14 +306,14 @@ public sealed class FxChainList : Grid
 
     private void OnMove(object? sender, PointerEventArgs e)
     {
-        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed || (!_banding && _pressRow < 0)) return;
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed || (!_sel.IsBanding && _pressRow < 0)) return;
         var viewport = e.GetPosition(_scroll);
-        if (_banding || _dragging) ScrollAtEdges(viewport.Y);
+        if (_sel.IsBanding || _dragging) ScrollAtEdges(viewport.Y);
         var at = e.GetPosition(_rows);
-        if (_banding) { Band(_press.Y, at.Y, at.X); return; }
+        if (_sel.IsBanding) { Band(_press.Y, at.Y, at.X); return; }
         if (!_dragging)
         {
-            if (Math.Abs(at.Y - _press.Y) < DragStartDistance || !_selected.Contains(_pressRow)) return;
+            if (Math.Abs(at.Y - _press.Y) < DragStartDistance || !_sel.IsSelected(_pressRow)) return;
             BeginDrag();
             e.Pointer.Capture(this);
         }
@@ -346,8 +329,8 @@ public sealed class FxChainList : Grid
 
     private void OnUp(object? sender, PointerReleasedEventArgs e)
     {
-        var had = _banding || _dragging;
-        if (_banding) EndBand();
+        var had = _sel.IsBanding || _dragging;
+        if (_sel.IsBanding) EndBand();
         else if (_dragging) EndDrag();
         else if (_collapseOnRelease && _pressRow >= 0) Click(_pressRow);
         _pressRow = -1; _collapseOnRelease = false;
@@ -358,33 +341,33 @@ public sealed class FxChainList : Grid
     /// <summary>Ends any band or drag without applying it (Esc, a lost capture, a rebuild of the rows).</summary>
     private void Cancel()
     {
-        if (_banding) { _banding = false; _band.IsVisible = false; }
+        if (_sel.IsBanding) { _sel.EndBand(); _band.IsVisible = false; }
         if (_dragging) { _dragging = false; _insert = _into = _lineDepth = _gapRow = -1; ShowDrag(); }
         _pressRow = -1; _collapseOnRelease = false;
     }
 
-    // ---------- rubber band ----------
+    // ---------- rubber band (shared with the MIDI chain list through ChainSelection) ----------
 
     private void BeginBand(bool add)
     {
         Measure();
-        _banding = true;
-        _bandBase = add ? _selected.ToHashSet() : new HashSet<int>();
+        _sel.BeginBand(add);
     }
 
     /// <summary>Selects the rows the band between two heights touches (content coordinates), added to the rows it started with.</summary>
     private void Band(double y0, double y1, double x)
     {
+        var tops = new List<double>(_tops);
+        var heights = new List<double>(_heights);
+        _sel.UpdateBand(ChainSelection.BandHits(tops, heights, y0, y1));
+        if (Count > 0) AfterSel(raise: true);
         var (top, bottom) = (Math.Min(y0, y1), Math.Max(y0, y1));
-        var set = _bandBase.ToHashSet();
-        for (var i = 0; i < Count; i++) if (_tops[i] < bottom && _tops[i] + _heights[i] > top) set.Add(i);
-        if (set.Count > 0) Apply(set, set.Contains(FocusedIndex) ? FocusedIndex : set.Min());
         Canvas.SetLeft(_band, Math.Min(_press.X, x)); Canvas.SetTop(_band, top - Offset);
         _band.Width = Math.Abs(x - _press.X); _band.Height = bottom - top;
         _band.IsVisible = true;
     }
 
-    private void EndBand() { _banding = false; _band.IsVisible = false; }
+    private void EndBand() { _sel.EndBand(); _band.IsVisible = false; }
 
     // ---------- drag ----------
 
@@ -515,7 +498,7 @@ public sealed class FxChainList : Grid
     internal double RowTop(int index) { if (!_dragging) Measure(); return _tops[index] - (_dragging ? Above(index) : 0); }
     internal double RowHeight(int index) => _heights[index];
     internal double RowCentre(int index) => RowTop(index) + _heights[index] / 2;
-    internal void SimulateDragStart(int index) { if (!_selected.Contains(index)) Click(index); _pressRow = index; _press = new Point(20, RowCentre(index)); BeginDrag(); }
+    internal void SimulateDragStart(int index) { if (!_sel.IsSelected(index)) Click(index); _pressRow = index; _press = new Point(20, RowCentre(index)); BeginDrag(); }
     internal void SimulateDragMove(double y, double x = 0) { _gapRow = -1; DragTo(y, x); }
     /// <summary>The insertion line's depth (-1: none) and left edge, and the badge's text ("" while hidden).</summary>
     internal (int Depth, double Left, string Badge) DropMarks => (_lineDepth, _line.IsVisible ? Canvas.GetLeft(_line) : -1, _badge.IsVisible ? _badgeText.Text ?? "" : "");

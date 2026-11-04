@@ -288,11 +288,7 @@ public sealed unsafe partial class Vst3Plugin : IPluginInstance, IEditorResizeSo
             return tfv3_get_state(_handle, p, size) > 0 ? bytes : throw new InvalidOperationException("The plug-in did not write its state.");
     }
 
-    private static void CheckStateSize(int size)
-    {
-        if (size > TabForge.Audio.Contracts.PluginStateLimits.MaxRawBytes)
-            throw new InvalidDataException($"The plug-in's state ({size / 1048576.0:0.0} MiB) is larger than the {TabForge.Audio.Contracts.PluginStateLimits.MaxRawBytes / 1048576} MiB limit.");
-    }
+    private static void CheckStateSize(int size) => TabForge.Audio.Contracts.PluginStateLimits.Check(size);
 
     /// <summary>
     /// Applies a saved state. Throws <see cref="InvalidDataException"/> when the blob is malformed or the plug-in rejects it

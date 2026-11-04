@@ -8,14 +8,20 @@ namespace TabForge.AudioEngine.Isolation;
 /// The audio half of an isolated plug-in: each block goes to the plug-in's process through a
 /// <see cref="PluginHostBlock"/> and must come back within the callback's budget. Every request carries a new
 /// generation number that the plug-in process echoes when it finishes; only the answer for the current generation
-/// is accepted. A missed deadline bypasses the block (effects dry, instruments silent) and leaves the in-flight buffers
-/// alone; blocks stay bypassed while the child is busy with that generation and normal processing resumes once it reports
-/// it done. The link fails for good (<c>onFailed</c> once, shared buffers never written again) only when the child is still
-/// busy after the grace period (2 s), misses over 25 % of the blocks of a 5 s window, or misses an offline block.
-/// <see cref="Process"/> is allocation-free and lock-free.
+/// is accepted, and with two slots it also has its own four channels. A missed deadline bypasses the block (effects dry,
+/// instruments silent) and leaves the in-flight slot alone; blocks stay bypassed while the child is busy with that
+/// generation and normal processing resumes once it reports it done. The link fails for good (its flag is set once and
+/// shared buffers are never written again) only when the child is still busy after the grace period (2 s), misses over
+/// 25 % of the blocks of a 5 s window, or misses an offline block.
+/// <see cref="Process"/> is allocation-free and lock-free. A failure only sets the failed flag and its reason on the audio
+/// thread; an observer on the engine main thread (a watchdog poll) takes it with <see cref="TryTakeFailure"/> and does the
+/// reporting and process kill there.
 /// </summary>
 public sealed class PluginHostLink
 {
+    /// <summary>Why a link failed (written on the audio thread, formatted by the observer off it).</summary>
+    public enum FailureReason { None, GraceExpired, MissWindow, OfflineTimeout, ModeSwitchTimeout, ControlTimeout, Stopped }
+
     /// <summary>Realtime wait: one deadline per mixer callback (<see cref="BeginCallback"/>: start + 75 % of its duration, at most 40 ms) shared by every isolated plug-in in it; outside a callback, 75 % of the block, 2..40 ms.</summary>
     public const double MinBudgetMs = 2, MaxBudgetMs = 40, BlockShare = 0.75;
     /// <summary>Offline (render) blocks are not realtime: a slow plug-in may take this long before it counts as hung.</summary>
@@ -29,21 +35,19 @@ public sealed class PluginHostLink
 
     private readonly PluginHostBlock _block;
     private readonly int _sampleRate;
-    private readonly Action _onFailed;
     private readonly long _graceTicks, _windowTicks;
     private int _generation;
-    private int _failed;
+    private int _failed, _failureReason, _notified, _stopped;
     private volatile bool _offline;
     // Audio thread only: the missed generation the child is still working on (0 = none), since when; the miss window.
     private int _outstanding;
     private long _outstandingSince, _windowStart;
     private int _windowBlocks, _windowMisses;
 
-    public PluginHostLink(PluginHostBlock block, int sampleRate, Action onFailed, double graceMs = DefaultGraceMs, double windowMs = DefaultWindowMs)
+    public PluginHostLink(PluginHostBlock block, int sampleRate, double graceMs = DefaultGraceMs, double windowMs = DefaultWindowMs)
     {
         _block = block;
         _sampleRate = Math.Max(1, sampleRate);
-        _onFailed = onFailed;
         _graceTicks = (long)(graceMs * System.Diagnostics.Stopwatch.Frequency / 1000);
         _windowTicks = (long)(windowMs * System.Diagnostics.Stopwatch.Frequency / 1000);
     }
@@ -77,10 +81,22 @@ public sealed class PluginHostLink
     /// <summary>Blocks bypassed without a request because the callback's shared budget was already spent (not counted as misses: they never count toward the 25 % rule).</summary>
     public long BudgetSkippedBlocks { get; private set; }
 
-    /// <summary>Audio thread (or a render worker).</summary>
+    /// <summary>Audio thread (or a render worker). A teardown that races this call leaves the block dry, never an exception in the device callback.</summary>
     public void Process(float[][] input, float[][] output, int frames, ReadOnlySpan<BlockMidi> midi, in TransportInfo transport)
     {
         frames = Math.Min(frames, _block.MaxBlock);
+        _block.EnterProcess();
+        try
+        {
+            if (Failed || _block.Disposed) { PassThrough(input, output, frames); return; }
+            try { ProcessBlock(input, output, frames, midi, transport); }
+            catch (ObjectDisposedException) { PassThrough(input, output, frames); }   // teardown won the race: bypass, never Fail()
+        }
+        finally { _block.ExitProcess(); }
+    }
+
+    private void ProcessBlock(float[][] input, float[][] output, int frames, ReadOnlySpan<BlockMidi> midi, in TransportInfo transport)
+    {
         if (Failed) { PassThrough(input, output, frames); return; }
         var now = System.Diagnostics.Stopwatch.GetTimestamp();
         if (_outstanding != 0)
@@ -89,7 +105,8 @@ public sealed class PluginHostLink
             if (Volatile.Read(ref _block.DoneGeneration) != _outstanding)
             {
                 PassThrough(input, output, frames);
-                if (Miss(now) || now - _outstandingSince > _graceTicks) Fail();
+                if (Miss(now)) Fail(FailureReason.MissWindow);
+                else if (now - _outstandingSince > _graceTicks) Fail(FailureReason.GraceExpired);
                 return;
             }
             _outstanding = 0;   // it caught up: resume normal processing with a fresh generation
@@ -114,29 +131,29 @@ public sealed class PluginHostLink
                 }
             }
         }
-        input[0].AsSpan(0, frames).CopyTo(_block.Channel(0));
-        input[1].AsSpan(0, frames).CopyTo(_block.Channel(1));
+        var generation = NextGeneration();
+        input[0].AsSpan(0, frames).CopyTo(_block.ChannelSlot(generation, 0));
+        input[1].AsSpan(0, frames).CopyTo(_block.ChannelSlot(generation, 1));
         var count = Math.Min(midi.Length, PluginHostBlock.MaxEvents);
         midi[..count].CopyTo(_block.Events);
         _block.EventCount = count;
         _block.Frames = frames;
         _block.Tempo = transport.Tempo; _block.Ppq = transport.PpqPosition; _block.Playing = transport.Playing ? 1 : 0;
         _block.BarStartPpq = transport.Meter.BarStartPpq; _block.TimeSigNumerator = transport.Meter.Numerator; _block.TimeSigDenominator = transport.Meter.Denominator;
-        var generation = ++_generation;
         _block.Send(generation);
         if (_block.WaitDone(generation, waitMs))
         {
-            _block.Channel(2)[..frames].CopyTo(output[0]);
-            _block.Channel(3)[..frames].CopyTo(output[1]);
-            if (Tally(now, missed: false)) Fail();
+            _block.ChannelSlot(generation, 2)[..frames].CopyTo(output[0]);
+            _block.ChannelSlot(generation, 3)[..frames].CopyTo(output[1]);
+            if (Tally(now, missed: false)) Fail(FailureReason.MissWindow);
             return;
         }
         // No answer in time: the request is still in flight, so its buffers stay the plug-in process's until it reports done.
         PassThrough(input, output, frames);
-        if (_offline) { Fail(); return; }   // a render block waited the full offline budget: hung
+        if (_offline) { Fail(FailureReason.OfflineTimeout); return; }   // a render block waited the full offline budget: hung
         _outstanding = generation;
         _outstandingSince = now;
-        if (Miss(now)) Fail();
+        if (Miss(now)) Fail(FailureReason.MissWindow);
     }
 
     private bool Miss(long now) { MissedBlocks++; return Tally(now, missed: true); }
@@ -153,29 +170,69 @@ public sealed class PluginHostLink
         return tooMany;
     }
 
-    /// <summary>Engine main thread, while nothing processes: switches the plug-in process's mode (an empty block carries the request).</summary>
+    /// <summary>
+    /// Engine main thread, while nothing processes (audio is stopped: the caller asserts quiescence, the same contract as
+    /// setting up a render): switches the plug-in process's mode (an empty block carries the request).
+    /// </summary>
     public void SetOfflineMode(bool offline)
     {
         _offline = offline;
-        if (Failed) return;
+        if (Failed || _block.Disposed) return;
         if (_outstanding != 0)
         {
-            if (!_block.WaitDone(_outstanding, ModeSwitchBudgetMs)) { Fail(); return; }
+            if (!_block.WaitDone(_outstanding, ModeSwitchBudgetMs)) { Fail(FailureReason.ModeSwitchTimeout); return; }
             _outstanding = 0;
         }
         _block.Offline = offline ? 1 : 0;
         _block.Frames = 0; _block.EventCount = 0;
-        var generation = ++_generation;
+        var generation = NextGeneration();
         _block.Send(generation);
-        if (!_block.WaitDone(generation, ModeSwitchBudgetMs)) Fail();
+        if (!_block.WaitDone(generation, ModeSwitchBudgetMs)) Fail(FailureReason.ModeSwitchTimeout);
     }
 
     /// <summary>Marks the link down without reporting (the process already ended or is being closed).</summary>
-    public void Stop() => Volatile.Write(ref _failed, 1);
-
-    private void Fail()
+    public void Stop()
     {
-        if (Interlocked.Exchange(ref _failed, 1) == 0) _onFailed();
+        Volatile.Write(ref _failureReason, (int)FailureReason.Stopped);
+        Volatile.Write(ref _stopped, 1);
+        Volatile.Write(ref _failed, 1);
+        // The block's own Dispose sets the abort flag and wakes a Process inside WaitDone before it unmaps the view, so
+        // this stays a flag write even when a process-exit callback calls Stop after teardown.
+    }
+
+    /// <summary>Why the link failed, for the observer's log (written before <see cref="Failed"/> became true).</summary>
+    public FailureReason Reason => (FailureReason)Volatile.Read(ref _failureReason);
+
+    /// <summary>True once <see cref="Stop"/> marked the link down for an orderly end: never reported as a crash.</summary>
+    internal bool Stopped => Volatile.Read(ref _stopped) != 0;
+
+    /// <summary>Main thread / watchdog: takes a self-failure once for reporting; false after <see cref="Stop"/> (an orderly end).</summary>
+    public bool TryTakeFailure(out FailureReason reason)
+    {
+        reason = Reason;
+        if (Volatile.Read(ref _stopped) != 0 || Volatile.Read(ref _failed) == 0) return false;
+        return Interlocked.Exchange(ref _notified, 1) == 0;
+    }
+
+    // Audio thread: a new generation for both processing paths. 0 means "none" in the block protocol, so a wrap skips it.
+    private int NextGeneration()
+    {
+        var generation = Interlocked.Increment(ref _generation);
+        return generation == 0 ? Interlocked.Increment(ref _generation) : generation;
+    }
+
+    /// <summary>Test seam: the generation counter, so a wrap can be exercised without 2³² blocks.</summary>
+    internal int GenerationForTest
+    {
+        get => Volatile.Read(ref _generation);
+        set => Volatile.Write(ref _generation, value);
+    }
+
+    // Audio thread only: sets the reason, then the flag the main-thread observer polls. No allocation, lock, Post or formatting.
+    private void Fail(FailureReason reason)
+    {
+        Volatile.Write(ref _failureReason, (int)reason);
+        Interlocked.Exchange(ref _failed, 1);
     }
 
     private void PassThrough(float[][] input, float[][] output, int frames)

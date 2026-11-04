@@ -19,16 +19,10 @@ namespace TabForge.Avalonia.Platform;
 // Tests: TabForge.Avalonia.Tests.FretboardContextMenuTests.
 public sealed class FretboardContextMenu : IMenuCommandRunner
 {
-    public const string ViewId = "Fretboard.View", ScaleId = "Fretboard.Scale", FindScaleId = "Fretboard.FindScale", ClearScaleId = "Fretboard.ClearScale",
-        NoteNamesId = "Fretboard.NoteNames", PreviewId = "Fretboard.Preview", PreviewPreviousId = "Fretboard.PreviewPrevious", LeftHandedId = "Fretboard.LeftHanded", LockId = "Fretboard.LockSize",
-        PositionId = "Fretboard.Position", DockId = "Fretboard.Dock", SettingsId = "Fretboard.Settings";
+    public const string ViewId = "Fretboard.View", ScaleId = "Fretboard.Scale", FindScaleId = "Fretboard.FindScale", ClearScaleId = "Fretboard.ClearScale", SettingsId = "Fretboard.Settings";
 
     private const string ShowThisTrackAs = "Show this track as", Scale = "Scale", FindScale = "Find scale…", ClearScale = "Clear scale";
-    private const string NoteNames = "Note names", PreviewNext = "Preview next notes", PreviewPrevious = "Preview previous notes", LeftHanded = "Left-handed";
-    private const string LockSize = "Lock fretboard size", Position = "Position", Dock = "Dock", Settings = "Fretboard settings…";
-    private const string TopArg = "top", BottomArg = "bottom";
-    /// <summary>The Position setting's values, in the order the submenu lists them.</summary>
-    private static readonly string[] HorizontalPositions = { "Left", "Centre", "Right" };
+    private const string Settings = "Fretboard settings…";
 
     private readonly Func<AppSettings> _settings;
     private readonly Action _save;
@@ -40,7 +34,7 @@ public sealed class FretboardContextMenu : IMenuCommandRunner
 
     /// <param name="settings">The live settings the rows read and the commands write.</param>
     /// <param name="save">Saves the settings and raises SettingsChanged.</param>
-    /// <param name="openSettings">Opens Preferences on the Fretboard &amp; Keyboard page.</param>
+    /// <param name="openSettings">Opens the Fretboard settings window (which links on to Preferences).</param>
     /// <param name="selectedTrack">The track the panel shows; "Show this track as" changes that track only (null: no track, nothing changes).</param>
     public FretboardContextMenu(Func<AppSettings> settings, Action save, Action openSettings, Func<TrackModel?> selectedTrack)
     {
@@ -104,33 +98,9 @@ public sealed class FretboardContextMenu : IMenuCommandRunner
         };
         // Drum tracks have no scale: the drum map's menu keeps the view rows only.
         if (kind != InstrumentPanelKind.Drums) rows.Add(new() { Header = Scale, Children = ScaleRows(editing.ScaleHighlight) });
-        if (kind != InstrumentPanelKind.Drums)
-        {
-            rows.Add(MenuSpec.Separator());
-            rows.Add(Toggle(NoteNamesId, NoteNames, editing.ShowNoteNames));
-            rows.Add(Toggle(PreviewId, PreviewNext, editing.PreviewNotesEnabled));
-            rows.Add(Toggle(PreviewPreviousId, PreviewPrevious, editing.PreviewPreviousNotesEnabled));
-            if (kind != InstrumentPanelKind.Keyboard) rows.Add(Toggle(LeftHandedId, LeftHanded, editing.LeftHanded));
-        }
+        // Note names, the look-ahead toggles, left-handed, lock, position and dock live in the Fretboard settings window now, once.
         rows.Add(MenuSpec.Separator());
-        rows.Add(Toggle(LockId, LockSize, settings.Appearance.LockInstrumentSize));
-        var position = settings.Appearance.FretboardPosition;
-        rows.Add(new MenuSpec
-        {
-            Header = Position,
-            Children = HorizontalPositions.Select(p => Choice(PositionId, p, p, position == p)).ToList(),
-        });
-        rows.Add(new MenuSpec
-        {
-            Header = Dock,
-            Children = new List<MenuSpec>
-            {
-                Choice(DockId, "Top", TopArg, !settings.Appearance.FretboardAtBottom),
-                Choice(DockId, "Bottom", BottomArg, settings.Appearance.FretboardAtBottom),
-            },
-        });
-        rows.Add(MenuSpec.Separator());
-        rows.Add(new MenuSpec { Id = SettingsId, Header = Settings, ToolTip = "Open Settings > Fretboard & Keyboard (appearance, sizes, colours, look-ahead, default view)" });
+        rows.Add(new MenuSpec { Id = SettingsId, Header = Settings, ToolTip = "Open the Fretboard settings window: look, notes and markers, layout, strings and capo, scale highlight" });
         return rows;
     }
 
@@ -151,9 +121,6 @@ public sealed class FretboardContextMenu : IMenuCommandRunner
     private static MenuSpec Choice(string id, string header, string arg, bool selected) =>
         new() { Id = id, Header = header, Arg = arg, Checkable = true, Checked = selected, Radio = true };
 
-    private static MenuSpec Toggle(string id, string header, bool on) =>
-        new() { Id = id, Header = header, Checkable = true, Checked = on };
-
     public bool Handles(string commandId) => commandId.StartsWith("Fretboard.", StringComparison.Ordinal);
 
     public void Run(string commandId, string? argument) => RunFor(_selectedTrack(), commandId, argument);
@@ -163,7 +130,6 @@ public sealed class FretboardContextMenu : IMenuCommandRunner
     {
         var settings = _settings();
         var editing = settings.Editing;
-        var appearance = settings.Appearance;
         switch (commandId)
         {
             case ViewId:
@@ -176,13 +142,6 @@ public sealed class FretboardContextMenu : IMenuCommandRunner
             case ScaleId: editing.ScaleHighlight = argument; break;
             case ClearScaleId: editing.ScaleHighlight = null; break;
             case FindScaleId: _findScale(); return;
-            case NoteNamesId: editing.ShowNoteNames = !editing.ShowNoteNames; break;
-            case PreviewId: editing.PreviewNotesEnabled = !editing.PreviewNotesEnabled; break;
-            case PreviewPreviousId: editing.PreviewPreviousNotesEnabled = !editing.PreviewPreviousNotesEnabled; break;
-            case LeftHandedId: editing.LeftHanded = !editing.LeftHanded; break;
-            case LockId: appearance.LockInstrumentSize = !appearance.LockInstrumentSize; break;
-            case PositionId: appearance.FretboardPosition = argument ?? appearance.FretboardPosition; break;
-            case DockId: appearance.FretboardAtBottom = argument == BottomArg; break;
             case SettingsId: _openSettings(); return;
             default: throw new InvalidOperationException($"No handler for command '{commandId}'.");
         }

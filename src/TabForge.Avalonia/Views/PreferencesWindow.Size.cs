@@ -21,7 +21,7 @@ using TabForge.Avalonia.Views.Dialogs;
 
 namespace TabForge.Avalonia.Views;
 
-// Owns: the remembered size of the Settings window: the usable-size rules, the initial width and height and capturing the size on close (partial of PreferencesWindow).
+// Owns: the remembered size of the Settings window (stored in inner DIPs, at UI scale 1; WindowUiScale applies the scale): the usable-size rules, the initial width and height and capturing the size on close (partial of PreferencesWindow).
 // Tests: TabForge.Avalonia.Tests.PreferencesWindowTests.
 
 public sealed partial class PreferencesWindow
@@ -52,7 +52,10 @@ public sealed partial class PreferencesWindow
             if (WindowState != WindowState.Normal) return;
             // The UI-scale helper changes the size, not the user: neither that change nor its settled bounds may be remembered.
             if (WindowUiScale.IsApplyingSize(this) || WindowUiScale.MatchesAppliedSize(this, Bounds.Size)) return;
-            if (TryRememberSize(Bounds.Width, Bounds.Height, Saved)) WindowSizeChanged?.Invoke();
+            // Remembered in inner DIPs (the size at UI scale 1), so the window reopens and follows a scale change at the same proportions.
+            var scale = WindowUiScale.CurrentScale(this);
+            if (!(scale > 0)) scale = 1.0;
+            if (TryRememberSize(Bounds.Width / scale, Bounds.Height / scale, Saved)) WindowSizeChanged?.Invoke();
         }
         catch (Exception ex)
         {

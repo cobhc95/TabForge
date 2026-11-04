@@ -89,6 +89,8 @@ public sealed class AppSettings
     public string? LastLayout { get; set; }
     /// <summary>User presets of the note-effect editors (bend, tremolo bar...), keyed by editor kind; built-in presets are not stored.</summary>
     public List<EffectPresetEntry> EffectPresets { get; set; } = new();
+    /// <summary>The person's own string-tuning presets (high to low MIDI); built-in tunings are not stored.</summary>
+    public List<TuningUserPresetEntry> TuningUserPresets { get; set; } = new();
     /// <summary>Preferred score layout for newly opened tabs; existing tabs retain their own view state.</summary>
     /// <summary>The folder each open, save and browse dialog last used, by its key (see DialogKeys): the dialog starts there.</summary>
     public Dictionary<string, string> RememberedFolders { get; set; } = new();
@@ -103,6 +105,13 @@ public sealed class EffectPresetEntry
     public string Name { get; set; } = "";
     public List<TabForge.Models.BendPointModel> Points { get; set; } = new();
     public Dictionary<string, double> Values { get; set; } = new();
+}
+
+/// <summary>One of the person's own string-tuning presets: the name and the tuning high to low.</summary>
+public sealed class TuningUserPresetEntry
+{
+    public string? Name { get; set; }
+    public List<int>? HighToLow { get; set; }
 }
 
 /// <summary>A named workspace layout: dock placement/sizes/visibility plus window state.</summary>

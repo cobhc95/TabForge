@@ -19,8 +19,14 @@ public static partial class SettingsCatalog
                 new[] { "System", "Dark", "Light", "Custom" }, "Dark or Light sets the interface, accent and score colours together, keeping any colour you picked yourself (Reset colours drops those). System follows Windows. Custom keeps all your colours as they are.", "theme system dark light custom"),
             Button(Appearance, "Custom palette", "appearance.resetcolours", "Reset colours to the theme preset",
                 "Drops every colour you set yourself (accent, panels, score page...) and applies the Dark or Light colours again.", "theme reset colours preset default restore"),
-            Number(Appearance, "Interface", "appearance.uiscale", "Interface size", v => a.UiScale = v, () => a.UiScale, 0.8, 1.5,
-                "Make the interface text and icons bigger or smaller (1 = normal).", "ui scale zoom interface size dpi", "x", 0.05, 2),
+            // A change of the size (the stepper, a reset of the row) marks it as the user's own, so the monitor recommendation never replaces it;
+            // a write of the same value (a clamp on load, a copy into the live settings) leaves the mark as it is.
+            Number(Appearance, "Interface", "appearance.uiscale", "Interface size", v => { if (Math.Abs(v - a.UiScale) > 1e-9) a.UiScaleUserOverridden = true; a.UiScale = v; }, () => a.UiScale,
+                TabForge.Platform.Theme.UiDensity.MinScale, TabForge.Platform.Theme.UiDensity.MaxScale,
+                "Make the interface text and icons bigger or smaller (1 = normal). Until you change it, TabForge uses the size recommended for your monitor.", "ui scale zoom interface size dpi", "x", 0.05, 2),
+            Button(Appearance, "Interface", TabForge.Platform.Theme.UiScaleRecommendation.RowKey, "Recommended size for your monitor",
+                "Sets Interface size to the size recommended for the screen this window is on (its resolution, working area and display scaling), and lets TabForge follow the monitor again.",
+                "ui scale interface size recommended monitor screen resolution dpi automatic default"),
             Int(Appearance, "Interface", "appearance.tracktint", "Track colour tint", v => a.TrackTintPercent = v, () => a.TrackTintPercent, 0, 60,
                 "How strongly each track's row and timeline lane take the track's colour (0 = off). Subtle and darker in the dark theme. Tracks can turn it off in Track properties.",
                 "track colour color tint background row lane intensity transparency", unit: "%"),

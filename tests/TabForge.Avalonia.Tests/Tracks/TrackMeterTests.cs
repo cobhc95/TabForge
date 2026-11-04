@@ -176,14 +176,50 @@ public class TrackMeterTests
         var (view, window) = Shown();
         Click(window, view.Header.TranslatePoint(view.Header.CellRect(0, TrackRowCells.Cell.Meter).Center, window)!.Value, MouseButton.Right);
         Assert.True(view.TrackMeters.MenuOpen);
+        Assert.Equal(-1, view.Timeline.ContextMenus.ClickedTrack);
         window.Close();
     }
 
-    private static (ArrangementView View, Window Window) Shown()
+    [AvaloniaFact]
+    public void MeterContextRequestDoesNotOpenTheAncestorPanelMenu()
+    {
+        var panelMenu = new ContextMenu { Items = { new MenuItem { Header = "Reset this panel to default position" } } };
+        var (view, window) = Shown(panelMenu);
+        Click(window, view.Header.TranslatePoint(view.Header.CellRect(0, TrackRowCells.Cell.Meter).Center, window)!.Value, MouseButton.Right);
+        Assert.True(view.TrackMeters.MenuOpen);
+        Assert.False(panelMenu.IsOpen);
+        Assert.Equal(-1, view.Timeline.ContextMenus.ClickedTrack);
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void AncestorPanelMenuStillOpensOutsideTheTrackHeader()
+    {
+        var panelMenu = new ContextMenu { Items = { new MenuItem { Header = "Reset this panel to default position" } } };
+        var (view, window) = Shown(panelMenu);
+        Click(window, new Point(2, 2), MouseButton.Right);
+        Assert.True(panelMenu.IsOpen);
+        Assert.False(view.TrackMeters.MenuOpen);
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void RightClickOffAMeterStillOpensTheTrackMenu()
+    {
+        var panelMenu = new ContextMenu { Items = { new MenuItem { Header = "Reset this panel to default position" } } };
+        var (view, window) = Shown(panelMenu);
+        Click(window, view.Header.TranslatePoint(view.Header.CellRect(0, TrackRowCells.Cell.Mute).Center, window)!.Value, MouseButton.Right);
+        Assert.Equal(0, view.Timeline.ContextMenus.ClickedTrack);
+        Assert.False(view.TrackMeters.MenuOpen);
+        Assert.False(panelMenu.IsOpen);
+        window.Close();
+    }
+
+    private static (ArrangementView View, Window Window) Shown(ContextMenu? panelMenu = null)
     {
         var doc = new ScorePreviewEditor.PreviewDocument(DemoSongFactory.Create());
         var view = new ArrangementView(doc.Project, doc) { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
-        var window = new Window { Width = 1300, Height = 520, Content = view, RequestedThemeVariant = ThemeVariant.Dark };
+        var window = new Window { Width = 1300, Height = 520, Content = new Border { Child = view, ContextMenu = panelMenu, Padding = new Thickness(8), Background = global::Avalonia.Media.Brushes.Transparent }, RequestedThemeVariant = ThemeVariant.Dark };
         window.Show();
         window.UpdateLayout();
         return (view, window);

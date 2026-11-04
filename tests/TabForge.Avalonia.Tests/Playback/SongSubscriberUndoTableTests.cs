@@ -241,6 +241,13 @@ public class SongSubscriberUndoTableTests
         ["FxParameterPane.cs:_track"] = "a part of the chain window of that track (it is made by the window and disposed with it): FxChainWindows re-resolves or closes that window, and with it this pane, on a song replace",
         ["TrackFxStrip.cs:_track"] = "a part of the chain window of that track: FxChainWindows re-resolves or closes that window, and with it this strip, on a song replace",
         ["WiringWindow.cs:_track"] = "owned by the chain window of that track (Show(this)): FxChainWindows closes that window, and with it this one, when a song replace changes the track",
+        ["EngineStringRinger.cs:_track"] = "the ringer the track properties dialog owns for its string previews; the dialog blocks undo while it rings",
+        ["TrackPropertiesWindow.cs:_original"] = "the dialog's private draft copy (not the song's track); the dialog blocks undo while it is open",
+        ["ArticulationsPane.cs:_track"] = "a tab of the MIDI processing window, which closes with its chain window",
+        ["BuiltinEffectPanel.cs:Track"] = "a built-in editor hosted by the chain window; FxChainWindows re-resolves or closes it on a song replace",
+        ["IrLoaderEditor.cs:_track"] = "the IR loader editor hosted by the chain window; FxChainWindows re-resolves or closes it on a song replace",
+        ["TrackMeterColumn.cs:_song"] = "the meter column's song; the arrangement reloads it on Show and follows the timeline on RowsChanged",
+        ["MidiExportWindow.cs:_project"] = "opened with ShowDialog on the main window, whose input (undo included) is blocked while it is open",
         ["SelfTestImportWorker.cs:viaWorker"] = "a self-test local, not a view",
         ["SelfTestImportPlausibility.cs:viaWorker"] = "a self-test local, not a view",
     };

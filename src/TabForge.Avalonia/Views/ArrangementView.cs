@@ -406,10 +406,16 @@ public sealed partial class ArrangementView : UserControl
         return current.WrittenBar == bar ? Math.Max(1, current.Pass) : 1;
     }
 
-    /// <summary>
-    /// The "Add track" strip asks the Add track question over the window. Audio adds an audio track at the end (one undo step);
-    /// Instrument opens the Track properties window in add mode, which adds its track on OK.
-    /// </summary>
+    /// <summary>The "Add track" strip asks the Add track question over the window. Audio adds an audio track at the end (one undo step);
+    /// Instrument opens the Track properties window in add mode, which adds its track on OK.</summary>
+    public Func<TrackModel, TabForge.Presenters.IStringRinger?>? RingerFactory { get; set; }   // how an added track's strings ring; null stays silent (tests, captures)
+
+    /// <summary>The settings the Add track window saves the person's tunings in; null keeps them in that window only.</summary>
+    public Func<TabForge.Services.AppSettings>? SettingsGetter { get; set; }
+
+    /// <summary>Writes the settings after the Add track window saves a tuning; null writes nothing.</summary>
+    public Action? SaveSettings { get; set; }
+
     private async void OnAddTrackClicked()
     {
         try
@@ -423,7 +429,8 @@ public sealed partial class ArrangementView : UserControl
                     DocumentEdits.Run(_document, project => { project.Tracks.Add(NewTrackFactory.CreateTrack(project, TrackKind.Audio)); return true; });
                     break;
                 case AddTrackChoice.Instrument:
-                    await new TrackPropertiesWindow(NewTrackFactory.CreateTrack(_document.Project, TrackKind.Guitar), _document, adding: true).ShowAndWaitAsync(owner);
+                    var added = NewTrackFactory.CreateTrack(_document.Project, TrackKind.Guitar);
+                    await new TrackPropertiesWindow(added, _document, adding: true, ringer: RingerFactory?.Invoke(added), settingsGetter: SettingsGetter, saveSettings: SaveSettings).ShowAndWaitAsync(owner);
                     break;
             }
             if (_document.Project.Tracks.Count > countBefore) SelectAndShowLastTrack();

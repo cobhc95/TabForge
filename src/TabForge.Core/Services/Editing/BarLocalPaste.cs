@@ -157,7 +157,7 @@ public static class BarLocalPaste
         {
             SourceTrackId = source.SourceTrackId, SourceTrackIndex = source.SourceTrackIndex, Name = source.Name, InstrumentName = source.InstrumentName,
             TrackKind = source.TrackKind, IsDrums = source.IsDrums, MidiChannel = source.MidiChannel, StringTunings = source.StringTunings.ToList(), Capo = source.Capo,
-            NumberOfFrets = source.NumberOfFrets, DrumMapPreset = source.DrumMapPreset, Voice = 0, LengthSlots = clip.BarSlots(0)
+            PartialCapos = PartialCapoRules.Copy(source.PartialCapos), NumberOfFrets = source.NumberOfFrets, DrumMapPreset = source.DrumMapPreset, Voice = 0, LengthSlots = clip.BarSlots(0)
         };
         for (var i = 0; i < cells.Count; i++)
         {

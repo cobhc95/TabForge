@@ -14,7 +14,7 @@ using Xunit;
 namespace TabForge.Avalonia.Tests;
 
 /// <summary>
-/// Owns: the badge reader on bundled files, the badge control, the picker tiles and the track properties cover.
+/// Owns: the badge reader on bundled files, the badge control, the picker tiles and the track properties chooser badge.
 /// Does not own: the reader, the catalogue or the windows. Tests: this class.
 /// </summary>
 public class InstrumentBadgeTests
@@ -45,8 +45,8 @@ public class InstrumentBadgeTests
         var window = new TrackPropertiesWindow(DemoSongFactory.Create().Tracks[0]);
         window.Show();
         Dispatcher.UIThread.RunJobs();
-        var cover = window.GetVisualDescendants().OfType<InstrumentBadgeView>().First(b => b.Name == "InstrumentBadge");
-        Assert.True(cover.IsVisible && cover.HasArt);
+        var chooserBadge = window.GetVisualDescendants().OfType<InstrumentBadgeView>().First(b => b.Name == "ChooserBadge");
+        Assert.True(chooserBadge.IsVisible && chooserBadge.HasArt);
         Assert.NotNull(window.GetVisualDescendants().OfType<Button>().FirstOrDefault(b => b.Name == "InstrumentChooserButton"));
         window.Close();
     }

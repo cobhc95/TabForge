@@ -18,18 +18,21 @@ namespace TabForge.Avalonia;
 public static class MainWindowTrackRowOptions
 {
     /// <summary>Attaches to every arrangement the panes make, and to the first one (the dock builds it before this runs).</summary>
-    public static void Register(MainWindowDocumentPanes panes, MainWindowTabs songs, Window owner, InstrumentPickerFlow picker)
+    /// <param name="playback">The sessions a track properties window's strings ring through; null keeps them silent.</param>
+    public static void Register(MainWindowDocumentPanes panes, MainWindowTabs songs, Window owner, InstrumentPickerFlow picker, Transport.AvaloniaPlaybackSessions? playback = null)
     {
-        if (panes.Arrangement is { } existing) Attach(existing, songs, owner, picker);
-        panes.ArrangementCreated += arrangement => Attach(arrangement, songs, owner, picker);
+        if (panes.Arrangement is { } existing) Attach(existing, songs, owner, picker, playback);
+        panes.ArrangementCreated += arrangement => Attach(arrangement, songs, owner, picker, playback);
     }
 
     /// <summary>Routes the gear and instrument icon cells and the body double-click of one arrangement's rows to the shown song's track of that row.</summary>
-    public static void Attach(ArrangementView arrangement, MainWindowTabs songs, Window owner, InstrumentPickerFlow picker)
+    public static void Attach(ArrangementView arrangement, MainWindowTabs songs, Window owner, InstrumentPickerFlow picker, Transport.AvaloniaPlaybackSessions? playback = null)
     {
+        // The Add-track strip's properties window rings through the same playback; the factory reads the shown song live.
+        arrangement.RingerFactory = track => Transport.EngineStringRinger.For(playback, songs.Active, track);
         arrangement.Input.TrackCellRequested += (row, cell) =>
         {
-            if (cell == TrackRowCells.Cell.Settings) _ = MainWindowTrackMenu.ShowTrackPropertiesAsync(songs.Active, owner, row, picker);
+            if (cell == TrackRowCells.Cell.Settings) _ = MainWindowTrackMenu.ShowTrackPropertiesAsync(songs.Active, owner, row, picker, playback);
             else if (cell == TrackRowCells.Cell.Kind) _ = ShowInstrumentPickerAsync(songs.Active, owner, row, arrangement, picker);
         };
         arrangement.Header.DoubleTapped += (_, e) =>
@@ -38,7 +41,7 @@ public static class MainWindowTrackRowOptions
             var point = e.GetPosition(header);
             if (header.NameRowAt(point) >= 0 || header.CellAt(point) is not null) return;
             var row = header.RowAtY(point.Y);
-            if (row >= 0) _ = MainWindowTrackMenu.ShowTrackPropertiesAsync(songs.Active, owner, row, picker);
+            if (row >= 0) _ = MainWindowTrackMenu.ShowTrackPropertiesAsync(songs.Active, owner, row, picker, playback);
         };
     }
 

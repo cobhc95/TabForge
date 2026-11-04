@@ -208,7 +208,7 @@ public sealed class FxContainerPresets
             item.Children.AddRange(contents);
             if (mode == FxPresetLoadMode.Replace)
             {
-                if (saved is not null) { target.Enabled = saved.Enabled; target.Mix = saved.Mix; target.Routing = saved.Routing; }
+                if (saved is not null) { target.Enabled = saved.Enabled; target.Mix = saved.Mix; target.Routing = saved.Routing; target.ActiveOn = saved.ActiveOn?.Clone(); }
                 target.Preset = name;
             }
             ChainTree.Write(rig, live);   // the plug-ins that left the container leave the chain, the new ones join it

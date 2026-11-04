@@ -214,6 +214,9 @@ public sealed class MainWindowSettings : IDisposable
     /// <summary>The one Settings window: shown over <paramref name="owner"/> from <paramref name="create"/>, or the open one brought forward.</summary>
     internal PreferencesWindow OpenPreferences(Window owner, Func<PreferencesWindow> create) => _tools.OpenOrActivate("Settings", null, create, owner);
 
+    /// <summary>The one Fretboard settings window: shown over <paramref name="owner"/> from <paramref name="create"/>, or the open one brought forward.</summary>
+    internal Views.FretboardSettingsWindow OpenFretboardSettings(Window owner, Func<Views.FretboardSettingsWindow> create) => _tools.OpenOrActivate("Fretboard settings", null, create, owner);
+
     /// <summary>The Settings window over the shared settings: its OK and Apply save them to the settings file.</summary>
     public PreferencesWindow CreatePreferencesWindow(Views.PreferencesRowActions? actions = null)
     {

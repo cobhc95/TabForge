@@ -1,8 +1,10 @@
 <#
 Regenerates Source\docs\reference\SBOM.md: every managed package from each project's packages.lock.json (name, version,
-type, content hash) plus the native components (tfvst3.dll and the pinned Steinberg VST3 SDK it is built from).
+type, content hash) plus the native components (tfvst3.dll, tfvst32.exe and tfvst64.exe, and the pinned Steinberg VST3
+SDK tfvst3.dll is built from) and the Linux-package components (libtfportable, libtfvst3, GeneralUser GS, LAME, mpg123,
+the optional FFmpeg program and the bundled Wine pin).
 Output is deterministic (no timestamps) so an unchanged dependency set produces an unchanged file.
-Run after changing packages or rebuilding tfvst3; Source\tools\Package-Release.ps1 runs it automatically.
+Run after changing packages or rebuilding either native component; Source\tools\Package-Release.ps1 runs it automatically.
 #>
 [CmdletBinding()]
 param()
@@ -77,13 +79,85 @@ $status = if ($recorded -eq $dllHash) { 'matches the recorded build' }
     elseif ($recorded -match '^[0-9a-f]{64}$') { 'DOES NOT match the recorded build' }
     else { 'has no recorded build (provenance missing)' }
 
+$helper = Join-Path $srcRoot 'src\TabForge.AudioEngine\native\tfvst32.exe'
+$helperHash = if (Test-Path -LiteralPath $helper) { (Get-FileHash -Algorithm SHA256 -LiteralPath $helper).Hash.ToLowerInvariant() } else { 'not present' }
+$helperRecorded = 'no local helper build record yet (the private native helper was not built)'
+$helperCompiler = 'unknown'
+$helperProvenance = Join-Path $srcRoot 'native\BUILD_PROVENANCE32.md'
+if (Test-Path -LiteralPath $helperProvenance) {
+    $helperRecorded = 'none recorded'
+    foreach ($line in [IO.File]::ReadAllLines($helperProvenance)) {
+        if ($line -match '^tfvst32\.exe SHA-256:\s*`?([0-9a-fA-F]{64})`?\s*$') { $helperRecorded = $Matches[1].ToLowerInvariant() }
+        if ($line -match '^- Compiler version:\s*(.+)$') { $helperCompiler = $Matches[1].Trim() }
+    }
+}
+$helperStatus = if ($helperRecorded -eq $helperHash) { 'matches the recorded build' }
+    elseif ($helperRecorded -match '^[0-9a-f]{64}$') { 'DOES NOT match the recorded build' }
+    else { 'has no recorded build (provenance missing)' }
+
+$helper64 = Join-Path $srcRoot 'src\TabForge.AudioEngine\native\tfvst64.exe'
+$helper64Hash = if (Test-Path -LiteralPath $helper64) { (Get-FileHash -Algorithm SHA256 -LiteralPath $helper64).Hash.ToLowerInvariant() } else { 'not present' }
+$helper64Recorded = 'no helper64 build record yet (the private native helper was not built)'
+$helper64Compiler = 'unknown'
+$helper64Provenance = Join-Path $srcRoot 'native\BUILD_PROVENANCE64.md'
+if (Test-Path -LiteralPath $helper64Provenance) {
+    $helper64Recorded = 'none recorded'
+    foreach ($line in [IO.File]::ReadAllLines($helper64Provenance)) {
+        if ($line -match '^tfvst64\.exe SHA-256:\s*`?([0-9a-fA-F]{64})`?\s*$') { $helper64Recorded = $Matches[1].ToLowerInvariant() }
+        if ($line -match '^- Compiler version:\s*(.+)$') { $helper64Compiler = $Matches[1].Trim() }
+    }
+}
+$helper64Status = if ($helper64Recorded -eq $helper64Hash) { 'matches the recorded build' }
+    elseif ($helper64Recorded -match '^[0-9a-f]{64}$') { 'DOES NOT match the recorded build' }
+    else { 'has no recorded build (provenance missing)' }
+
+$shimX86 = Join-Path $srcRoot 'src\TabForge.AudioEngine\native\tfvst3-x86.dll'
+$shimX86Hash = if (Test-Path -LiteralPath $shimX86) { (Get-FileHash -Algorithm SHA256 -LiteralPath $shimX86).Hash.ToLowerInvariant() } else { 'not present' }
+$shimX86Recorded = 'no tfvst3-x86 build record yet (run Source/native/build-tfvst3-x86.ps1)'
+$shimX86Compiler = 'unknown'
+$shimX86Provenance = Join-Path $srcRoot 'native\BUILD_PROVENANCE_X86.md'
+if (Test-Path -LiteralPath $shimX86Provenance) {
+    $shimX86Recorded = 'none recorded'
+    foreach ($line in [IO.File]::ReadAllLines($shimX86Provenance)) {
+        if ($line -match '^tfvst3-x86\.dll SHA-256:\s*`?([0-9a-fA-F]{64})`?\s*$') { $shimX86Recorded = $Matches[1].ToLowerInvariant() }
+        if ($line -match '^- Compiler:\s*(.+)$') { $shimX86Compiler = $Matches[1].Trim() }
+    }
+}
+$shimX86Status = if ($shimX86Recorded -eq $shimX86Hash) { 'matches the recorded build' }
+    elseif ($shimX86Recorded -match '^[0-9a-f]{64}$') { 'DOES NOT match the recorded build' }
+    else { 'has no recorded build (provenance missing)' }
+
 $lines.Add('')
 $lines.Add('## Native components')
 $lines.Add('')
 $lines.Add('| Component | Version / revision | Hash | Notes |')
 $lines.Add('| --- | --- | --- | --- |')
 $lines.Add("| tfvst3.dll (VST3 host bridge, built from ``Source/native/tfvst3``) | built with $compiler | SHA-256 ``$dllHash`` | shipped file $status; recorded SHA-256 ``$recorded`` (see ``Source/native/BUILD_PROVENANCE.md``) |")
+$lines.Add("| tfvst3-x86.dll (32-bit VST3 host bridge, same source, loaded by tfvst32.exe) | built with $shimX86Compiler | SHA-256 ``$shimX86Hash`` | shipped file $shimX86Status; recorded SHA-256 ``$shimX86Recorded`` (see the 32-bit bridge build record kept with the release tooling; local-only, not part of the public export) |")
+$lines.Add("| tfvst32.exe (32-bit helper: VST2 and Windows VST3 on 32-bit, built from the private native helper source) | built with $helperCompiler (x86) | SHA-256 ``$helperHash`` | original TabForge code (no third-party library and no Steinberg VST2 SDK header); shipped file $helperStatus; recorded SHA-256 ``$helperRecorded`` (see the helper build record beside the private native sources) |")
+$lines.Add("| tfvst64.exe (64-bit helper: VST2 and Windows VST3 via tfvst3.dll, same private native source as tfvst32) | built with $helper64Compiler (x64) | SHA-256 ``$helper64Hash`` | original TabForge code (no third-party library and no Steinberg VST2 SDK header); shipped file $helper64Status; recorded SHA-256 ``$helper64Recorded`` (see the 64-bit helper build record kept with the release tooling; local-only, not part of the public export) |")
 $lines.Add("| Steinberg VST3 SDK (build-time only, MIT) | tag ``$sdkTag``, commit ``$sdkCommit`` | git commit id | fetched and verified by ``Source/native/fetch-vst3sdk.ps1``; not shipped |")
+$wineVersion = '9.21'
+$wineBuild = 'Kron4ek wine-9.21-amd64-wow64'
+$wineTarball = '020f8886750ff658d92ea39e696d2a57d3e8f056f00d8dfe45b65cddee5d6fa5'
+$wineCommit = 'c9a8333c0f274201faf33d27abda1ebb5ae07cec'
+$wineSourceTarball = '4442b47ffd9b2ea457100e36ed5fd4e6f4d829d9db79a25e605175a988ca2fff'
+$lines.Add("| Wine (bundled Linux Windows plug-in runtime; Wine 9.21) | $wineBuild; Wine tag ``wine-$wineVersion``, commit ``$wineCommit`` | prebuilt tarball SHA-256 ``$wineTarball``; source tarball SHA-256 ``$wineSourceTarball`` | third-party prebuilt (not built by TabForge), copied from Kron4ek's vanilla amd64-wow64 build by ``package-linux.sh --wine`` with headers, development files and debug symbols removed; no Wine source is patched; no wine-mono or wine-gecko; licence LGPL-2.1-or-later, source offer in `THIRD_PARTY.md` and the package's ``ThirdParty/wine/README.txt`` |")
+$lines.Add('')
+$lines.Add('## Linux package components')
+$lines.Add('')
+$lines.Add('The Linux package is built at package time; these are its pins. The SHA-256 of every actual file (including the two')
+$lines.Add('built native libraries, LAME, mpg123 and an optional FFmpeg) is in the package-specific `SBOM-package.txt` written by')
+$lines.Add('the Linux packaging script next to `SBOM.md`.')
+$lines.Add('')
+$lines.Add('| Component | Version / revision | Licence / source |')
+$lines.Add('| --- | --- | --- |')
+$lines.Add('| libtfportable.so | miniaudio 0.11.25, commit `9634bedb5b5a2ca38c1ee7108a9358a4e233f14d`; RtMidi 6.0.0, commit `1e5b49925aa60065db52de44c366d446a902547b` | built from `Source/native/tfportable`; miniaudio MIT-0/public domain, RtMidi MIT-style; texts in `licenses/` |')
+$lines.Add('| libtfvst3.so | Steinberg VST3 SDK tag `v3.8.1_build_84`, commit `3cdf9ca5d1f5b1b21e0a86832aa4abe55607bd96` | built from `Source/native/tfvst3/posix`; MIT; text in `licenses/MIT_Steinberg_VST3_SDK.txt` |')
+$lines.Add('| GeneralUser GS SoundFont | v2.0.3, SHA-256 `9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe` | free-use licence, text in `licenses/GeneralUser-GS_LICENSE.txt` and beside the file |')
+$lines.Add('| LAME (libmp3lame.so.0) | the Ubuntu 22.04 system build, version in `SBOM-package.txt` | LGPL-2.0; separate replaceable library; source offer in `THIRD_PARTY.md` |')
+$lines.Add('| mpg123 (libmpg123.so.0) | the Ubuntu 22.04 system build, version in `SBOM-package.txt` | LGPL-2.1-or-later; separate replaceable library; source offer in `THIRD_PARTY.md` |')
+$lines.Add('| FFmpeg (optional) | only when the packager passes `--ffmpeg`; version and hash in `SBOM-package.txt` | LGPL build; separate program; not in the standard release package |')
 $lines.Add('')
 $lines.Add('VST3 SDK submodule commits (base, pluginterfaces, public.sdk):')
 $lines.Add('')

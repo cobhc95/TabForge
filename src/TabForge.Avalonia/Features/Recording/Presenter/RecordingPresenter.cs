@@ -79,7 +79,7 @@ internal sealed partial class RecordingPresenter(MainWindowCommands commands, Ma
                 arrangement.Input.TrackArmToggled += _ =>
                 {
                     playback.SyncEngine(songs.Active, plugins());
-                    hooks.ArmChanged(songs.Active);   // a disarm while recording ends that track's capture now
+                    hooks.ArmChanged();   // a disarm while recording ends that track's capture now
                 };
                 // The armed sub-rows' monitor and input edits reach the engine, and their meters read the engine's input peaks.
                 arrangement.ArmedRows.SettingChanged += () => playback.SyncEngine(songs.Active, plugins());
@@ -114,7 +114,7 @@ internal sealed partial class RecordingPresenter(MainWindowCommands commands, Ma
             ShowRecording(panes, hooks.IsRecording);
             recordingChanged?.Invoke();   // the status bar's state word follows
         });
-        return new RecordingSession(hooks, StopFromTransport, ReRecord);
+        return new RecordingSession(hooks, StopFromTransport, (songObj, track, clip) => ReRecord((SongDocument)songObj, track, clip));
     }
 
     /// <summary>The Record button of the shown arrangement shows whether the window is capturing.</summary>
@@ -367,13 +367,12 @@ internal sealed partial class RecordingPresenter(MainWindowCommands commands, Ma
         }
 
         /// <summary>
-        /// A record arm changed on the shown song: a track disarmed while this recording captures ends at that moment. Its live box is
+        /// A record arm changed: a track disarmed while this recording captures ends at that moment. Its live box is
         /// frozen (and keeps its lane) and an audio take is cut on landing; the MIDI capture drops every later message. Nothing when the
         /// track is still armed or was never captured.
         /// </summary>
-        public void ArmChanged(SongDocument song)
+        public void ArmChanged()
         {
-            _ = song;   // the capture's own tracks decide; the shown song is the same document the arm toggled
             if (Recording?.IsRecording != true) return;
             var changed = false;
             foreach (var track in _liveTracks)

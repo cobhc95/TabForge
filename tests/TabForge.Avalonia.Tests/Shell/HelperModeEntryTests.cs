@@ -54,6 +54,47 @@ public class HelperModeEntryTests
         Assert.Equal(string.Empty, await stdout);
     }
 
+    /// <summary>
+    /// Regression for Stage 13 A5: a packaged diagnostic mode that loads a path from its own arguments is refused unless the
+    /// release/CI tooling set TABFORGE_INTERNAL=1. It must never be a second trust path for a file the user did not approve.
+    /// </summary>
+    [Theory]
+    [InlineData("--wine-smoke")]
+    [InlineData("--wine-approve")]
+    [InlineData("--wine-editor")]
+    [InlineData("--audio-probe")]
+    [InlineData("--native-editor")]
+    [InlineData("--plugin-matrix")]
+    public async Task InternalDiagnosticModesRefuseWithoutTheOptIn(string mode)
+    {
+        var start = new ProcessStartInfo(Environment.GetEnvironmentVariable("DOTNET_HOST_PATH") ?? "dotnet")
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        start.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "TabForge.dll"));
+        start.ArgumentList.Add(mode);
+        start.ArgumentList.Add("some-path");
+        start.Environment.Remove("TABFORGE_INTERNAL");
+
+        using var process = Process.Start(start) ?? throw new InvalidOperationException("The Avalonia exe did not start.");
+        var stdout = process.StandardOutput.ReadToEndAsync();
+        var stderr = process.StandardError.ReadToEndAsync();
+        using var timeout = new CancellationTokenSource(ExitTimeout);
+        try { await process.WaitForExitAsync(timeout.Token); }
+        catch (OperationCanceledException)
+        {
+            process.Kill(entireProcessTree: true);
+            Assert.Fail($"{mode} did not refuse without TABFORGE_INTERNAL=1");
+        }
+
+        Assert.Equal(MissingArgumentsExitCode, process.ExitCode);
+        Assert.Equal(string.Empty, await stdout);
+        Assert.Contains("internal diagnostic", await stderr, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public void StartupFileTakesAnExistingPathAndRejectsOptionsAndMissingPaths()
     {

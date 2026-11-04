@@ -8,7 +8,7 @@ public static class Vst2LoadError
 
     public static string Describe(int code) => code switch
     {
-        BadImageFormat => $"This is a 32-bit plug-in; TabForge loads 64-bit plug-ins only (Windows error {code}).",
+        BadImageFormat => $"This plug-in's bitness cannot be loaded directly; a 32-bit VST2 plug-in needs the 32-bit helper (tfvst32.exe) beside TabForge.exe (Windows error {code}).",
         ModuleNotFound => $"The plug-in could not be loaded: a file it needs is missing (Windows error {code}).",
         AccessDenied => $"The plug-in could not be loaded: access denied (Windows error {code}).",
         _ => $"The plug-in library could not be loaded (Windows error {code}).",

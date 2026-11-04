@@ -29,7 +29,9 @@ public sealed partial class TimelineWaveforms
 
     private sealed class Outline
     {
-        public float[]? Peaks;
+        // The waveform service is the sole long-lived owner of peak arrays. An outline must not defeat its eviction budget.
+        public WeakReference<float[]>? Peaks;
+        public bool HasPeaks(float[] peaks) => Peaks is not null && Peaks.TryGetTarget(out var target) && ReferenceEquals(target, peaks);
         public double Offset, Length, Width, Height, Gain, BoxX, From, To;
         public IUiPath? Path;
     }
@@ -87,6 +89,7 @@ public sealed partial class TimelineWaveforms
         var peaks = _service.Get(clip.File, media);
         if (peaks is null || peaks.Length == 0)
         {
+            _outlines.Remove(clip);   // evicted/missing peak data also retires its stale native outline on the next visible request
             if (clip.SourceLengthSec > 0) DrawStatus(d, _service.StatusOf(clip.File, media), box, ink ?? colour);
             return;
         }
@@ -105,7 +108,7 @@ public sealed partial class TimelineWaveforms
     /// <summary>Draws the cached outline stretched along x while zooming (the swell stays readable; the settled redraw rebuilds it sharp).</summary>
     private bool TryDrawScaled(IDrawContext d, Outline outline, float[] peaks, AudioClip clip, Rect box, double gain, UiColor colour, double opacity, WaveSpan span)
     {
-        if (!_zooming || outline.Path is null || !ReferenceEquals(outline.Peaks, peaks) || outline.Offset != clip.OffsetSec ||
+        if (!_zooming || outline.Path is null || !outline.HasPeaks(peaks) || outline.Offset != clip.OffsetSec ||
             outline.Length != clip.SourceLengthSec || outline.Height != box.Height || outline.Gain != gain ||
             outline.Width <= 0 || outline.Width == box.Width) return false;
         var scaleX = box.Width / outline.Width;
@@ -122,7 +125,7 @@ public sealed partial class TimelineWaveforms
     }
 
     private static bool IsCurrent(Outline outline, float[] peaks, AudioClip clip, Rect box, double gain, WaveSpan span) =>
-        outline.Path is not null && ReferenceEquals(outline.Peaks, peaks) && outline.Offset == clip.OffsetSec && outline.Length == clip.SourceLengthSec &&
+        outline.Path is not null && outline.HasPeaks(peaks) && outline.Offset == clip.OffsetSec && outline.Length == clip.SourceLengthSec &&
         outline.Width == box.Width && outline.Height == box.Height && outline.Gain == gain && outline.BoxX == box.X && outline.From == span.From && outline.To == span.To;
 
     private void Build(IDrawContext d, Outline outline, float[] peaks, AudioClip clip, Rect box, double gain, WaveSpan span)
@@ -142,14 +145,16 @@ public sealed partial class TimelineWaveforms
             heights[i] = height < MinEdge ? 0 : height;
         }
         // One filled shape (top edge left to right, bottom edge back) rather than a line per column.
-        outline.Path = d.Paths.BuildPath(sink =>
+        outline.Path = d.Paths.BuildUncachedPath(sink =>
         {
             sink.BeginFigure(new UiPoint(span.From + ColumnCentre, -heights[0]), true, true);
             for (var i = 1; i < columns; i++) sink.LineTo(new UiPoint(span.From + i + ColumnCentre, -heights[i]));
             for (var i = columns - 1; i >= 0; i--) sink.LineTo(new UiPoint(span.From + i + ColumnCentre, Math.Max(MinEdge, heights[i])));
         });
         WaveColumnsBuilt = columns;
-        outline.Peaks = peaks; outline.Offset = clip.OffsetSec; outline.Length = clip.SourceLengthSec; outline.Width = box.Width; outline.Height = box.Height;
+        if (outline.Peaks is null) outline.Peaks = new WeakReference<float[]>(peaks);
+        else outline.Peaks.SetTarget(peaks);
+        outline.Offset = clip.OffsetSec; outline.Length = clip.SourceLengthSec; outline.Width = box.Width; outline.Height = box.Height;
         outline.Gain = gain; outline.BoxX = box.X; outline.From = span.From; outline.To = span.To;
         OutlinesBuilt++;
     }

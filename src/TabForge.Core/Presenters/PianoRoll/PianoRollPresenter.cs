@@ -33,6 +33,7 @@ public sealed class PianoRollPresenter
     public int TrackIndex { get; private set; } = -1;
 
     public IReadOnlyList<PianoRollNote> Notes => _notes;
+    public PianoRollNoteIndex NoteIndex { get; private set; } = new(Array.Empty<PianoRollNote>());
 
     public IReadOnlyCollection<int> Selected => _selected;
 
@@ -155,6 +156,7 @@ public sealed class PianoRollPresenter
         {
             _source = null;
             _notes = new List<PianoRollNote>();
+            NoteIndex = new PianoRollNoteIndex(_notes);
             _selected.Clear();
             return;
         }
@@ -162,6 +164,7 @@ public sealed class PianoRollPresenter
         _source = PianoRollSources.For(track, Choice);
         _map = _source.Map(document.Project);
         _notes = _source.Read(document.Project, track, _map);
+        NoteIndex = new PianoRollNoteIndex(_notes);
         Reselect(kept);
         Reloaded?.Invoke();
     }

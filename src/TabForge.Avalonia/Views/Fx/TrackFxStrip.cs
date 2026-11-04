@@ -55,7 +55,7 @@ public sealed class TrackFxStrip : StripFrame
         Knobs.SoloChanged += on => _host.Edit(_track, () => _track.Solo = on);
         Show();
         ToolTip.SetShowOnDisabled(Tuner.Switch, true);
-        _frames = new AnimationFrameSource(AvaloniaUiThread.ForApplication(), () => TopLevel.GetTopLevel(this), () => 0);
+        _frames = new AnimationFrameSource(AvaloniaUiThread.ForApplication(), () => TopLevel.GetTopLevel(this));
         _frames.Frame += () => Tick(Environment.TickCount64, DateTime.UtcNow);
         AttachedToVisualTree += (_, _) => { Show(); WantTuner(); _frames.Start(); };
         DetachedFromVisualTree += (_, _) =>

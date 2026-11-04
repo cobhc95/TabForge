@@ -79,6 +79,7 @@ public sealed partial class SongProject
         set { value.App ??= _mixer?.App; _mixer = value; }   // a replaced mixer (undo, audio sidecar) keeps following the app-wide rules
     }
     private MixerSettings _mixer = new();
+
     public string? ImportedFrom { get; set; }
     /// <summary>The Band view's rows for this song; null until the Band layout is changed.</summary>
     [JsonConverter(typeof(TolerantBandLayoutConverter))]
@@ -186,10 +187,20 @@ public sealed class TrackModel
     /// <summary>Capo fret. Fret numbers are relative to the capo: sounding pitch = tuning + capo + fret (<see cref="PitchOf"/>).</summary>
     public int Capo { get; set; }
 
-    /// <summary>The one pitch rule: open string tuning + capo + fret. <see cref="TabNote.MidiValue"/> stores this sounding pitch.</summary>
+    /// <summary>
+    /// Partial capos: each holds a fret and the strings it covers. A string's effective capo is the higher of <see cref="Capo"/>
+    /// and every partial covering it (<see cref="EffectiveCapo"/>). Null when there are none, so a track without partials writes no field.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<PartialCapo>? PartialCapos { get; set; }
+
+    /// <summary>The capo the string sounds behind: the full capo or the highest partial capo covering it, whichever is higher.</summary>
+    public int EffectiveCapo(int stringIndex) => PartialCapoRules.EffectiveCapo(Capo, PartialCapos, stringIndex);
+
+    /// <summary>The one pitch rule: open string tuning + effective capo + fret. <see cref="TabNote.MidiValue"/> stores this sounding pitch.</summary>
     public int PitchOf(int stringIndex, int fret)
         => StringTunings.Count == 0 ? fret
-            : StringTunings[Math.Clamp(stringIndex, 0, StringTunings.Count - 1)] + Math.Max(0, Capo) + fret;
+            : StringTunings[Math.Clamp(stringIndex, 0, StringTunings.Count - 1)] + EffectiveCapo(stringIndex) + fret;
 
     /// <summary>The MIDI value of an entered fret: <see cref="PitchOf"/> clamped to 0..127; on a drum track the number written is the GM percussion note itself.</summary>
     public int NoteMidi(int stringIndex, int fret)
@@ -197,7 +208,7 @@ public sealed class TrackModel
 
     /// <summary>Inverse of <see cref="PitchOf"/>: the fret that sounds <paramref name="pitch"/> on the string.</summary>
     public int FretOf(int stringIndex, int pitch)
-        => pitch - (StringTunings[Math.Clamp(stringIndex, 0, StringTunings.Count - 1)] + Math.Max(0, Capo));
+        => pitch - (StringTunings[Math.Clamp(stringIndex, 0, StringTunings.Count - 1)] + EffectiveCapo(stringIndex));
 
     public int MidiOutputDeviceId { get; set; } = -1;
     /// <summary>

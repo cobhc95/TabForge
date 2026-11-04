@@ -38,12 +38,15 @@ public static class MainWindowTrackMenu
     public static readonly IReadOnlyList<string> Commands = new[] { "Track.Add", "Track.Properties", "Track.AddBass", "Track.AddDrums", "Track.AddKeys", "Track.AddAudio", "Track.Delete", "Track.MoveUp", "Track.MoveDown", "Track.Next", "Track.Previous", "TrackRow.Delete", "TrackRow.Properties" };
 
     /// <param name="landed">Called with the new track after an add landed (the shared insert refresh: the rows reload, the track is shown); null does nothing more.</param>
-    public static void Register(MainWindowCommands commands, MainWindowTabs songs, Window owner, ContextMenuHost rows, Action<string>? status = null, InstrumentPickerFlow? picker = null, Action<TrackModel>? landed = null)
+    /// <param name="playback">The sessions a string ring sounds through; null keeps the Add and Properties windows silent.</param>
+    /// <param name="settingsGetter">The settings the Track properties window saves the person's tunings in; null keeps them in that window only.</param>
+    /// <param name="saveSettings">Writes the settings after the Track properties window saves a tuning; null writes nothing.</param>
+    public static void Register(MainWindowCommands commands, MainWindowTabs songs, Window owner, ContextMenuHost rows, Action<string>? status = null, InstrumentPickerFlow? picker = null, Action<TrackModel>? landed = null, Transport.AvaloniaPlaybackSessions? playback = null, Func<AppSettings>? settingsGetter = null, Action? saveSettings = null)
     {
         Action<string> say = status ?? (_ => { });
         void Adding(Func<TrackModel?> add) { if (add() is { } track) landed?.Invoke(track); }
-        commands.Add("Track.Add", () => UiTasks.Forget(AddAndShowAsync(songs.Active, owner, landed), "Add track", say));
-        commands.Add("Track.Properties", () => UiTasks.Forget(ShowTrackPropertiesAsync(songs.Active, owner, SelectedIndex(songs.Active), picker), "Track properties", say));
+        commands.Add("Track.Add", () => UiTasks.Forget(AddAndShowAsync(songs.Active, owner, landed, playback, settingsGetter, saveSettings), "Add track", say));
+        commands.Add("Track.Properties", () => UiTasks.Forget(ShowTrackPropertiesAsync(songs.Active, owner, SelectedIndex(songs.Active), picker, playback, settingsGetter, saveSettings), "Track properties", say));
         commands.Add("Track.AddBass", () => Adding(() => AddTrack(songs.Active, TrackKind.Bass, DefaultChainOf(owner))));
         commands.Add("Track.AddDrums", () => Adding(() => AddTrack(songs.Active, TrackKind.Drums, DefaultChainOf(owner))));
         commands.Add("Track.AddKeys", () => Adding(() => AddTrack(songs.Active, TrackKind.Keys, DefaultChainOf(owner))));
@@ -55,7 +58,7 @@ public static class MainWindowTrackMenu
         commands.Add("Track.Previous", () => StepSelectedTrack(songs.Active, -1));
         // A track row key runs on the selected track (ArrangementView points ClickedTrack at the clicked row); the row menu sets it too.
         commands.Add("TrackRow.Delete", () => UiTasks.Forget(DeleteTrackAsync(songs.Active, owner, rows.ClickedTrack >= 0 ? rows.ClickedTrack : SelectedIndex(songs.Active), rows, status), "Delete track", say));
-        commands.Add("TrackRow.Properties", () => UiTasks.Forget(ShowTrackPropertiesAsync(songs.Active, owner, rows.ClickedTrack >= 0 ? rows.ClickedTrack : SelectedIndex(songs.Active), picker), "Track properties", say));
+        commands.Add("TrackRow.Properties", () => UiTasks.Forget(ShowTrackPropertiesAsync(songs.Active, owner, rows.ClickedTrack >= 0 ? rows.ClickedTrack : SelectedIndex(songs.Active), picker, playback, settingsGetter, saveSettings), "Track properties", say));
     }
 
     /// <summary>Adds a new track of <paramref name="kind"/> at the end of the song, one undo step; returns the new track.</summary>
@@ -77,22 +80,26 @@ public static class MainWindowTrackMenu
     private static Action<TrackModel> DefaultChainOf(Window owner) => track => TabForge.Avalonia.Views.Fx.FxChainWindows.For(owner)?.ApplyDefaultChain(track);
 
     /// <summary>Track.Add, then the shared insert refresh for the track the window added (none when it was cancelled).</summary>
-    private static async Task AddAndShowAsync(SongDocument document, Window owner, Action<TrackModel>? landed)
+    private static async Task AddAndShowAsync(SongDocument document, Window owner, Action<TrackModel>? landed, Transport.AvaloniaPlaybackSessions? playback = null, Func<AppSettings>? settingsGetter = null, Action? saveSettings = null)
     {
         var before = document.Project.Tracks.Count;
-        await AddInstrumentTrackAsync(document, owner);
+        await AddInstrumentTrackAsync(document, owner, playback, settingsGetter, saveSettings);
         if (document.Project.Tracks.Count > before) landed?.Invoke(document.Project.Tracks[^1]);
     }
 
     /// <summary>Track.Add: the Track properties window in add mode, which adds its guitar track on OK.</summary>
-    private static async Task AddInstrumentTrackAsync(IEditableDocument document, Window owner) =>
-        await new TrackPropertiesWindow(NewTrackFactory.CreateTrack(document.Project, TrackKind.Guitar), document, adding: true).ShowAndWaitAsync(owner);
+    private static async Task AddInstrumentTrackAsync(IEditableDocument document, Window owner, Transport.AvaloniaPlaybackSessions? playback = null, Func<AppSettings>? settingsGetter = null, Action? saveSettings = null)
+    {
+        var track = NewTrackFactory.CreateTrack(document.Project, TrackKind.Guitar);
+        await new TrackPropertiesWindow(track, document, adding: true, ringer: Transport.EngineStringRinger.For(playback, document, track), settingsGetter: settingsGetter, saveSettings: saveSettings).ShowAndWaitAsync(owner);
+    }
 
     /// <summary>TrackRow.Properties: the Track properties window for the track at <paramref name="index"/>, editing the shown song.</summary>
-    internal static async Task ShowTrackPropertiesAsync(IEditableDocument document, Window owner, int index, InstrumentPickerFlow? picker = null)
+    internal static async Task ShowTrackPropertiesAsync(IEditableDocument document, Window owner, int index, InstrumentPickerFlow? picker = null, Transport.AvaloniaPlaybackSessions? playback = null, Func<AppSettings>? settingsGetter = null, Action? saveSettings = null)
     {
         if (index < 0 || index >= document.Project.Tracks.Count) return;
-        await new TrackPropertiesWindow(document.Project.Tracks[index], document, picker: picker).ShowAndWaitAsync(owner);
+        var track = document.Project.Tracks[index];
+        await new TrackPropertiesWindow(track, document, picker: picker, ringer: Transport.EngineStringRinger.For(playback, document, track), settingsGetter: settingsGetter, saveSettings: saveSettings).ShowAndWaitAsync(owner);
     }
 
     /// <summary>Track.Delete and TrackRow.Delete: asks once; a Yes deletes the track at <paramref name="index"/>, or every selected track when it is one of them, in one undo step. The last track stays.</summary>

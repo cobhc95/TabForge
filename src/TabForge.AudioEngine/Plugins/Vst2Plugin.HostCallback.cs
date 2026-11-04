@@ -1,6 +1,5 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace TabForge.AudioEngine.Plugins;
 
@@ -38,9 +37,7 @@ public sealed unsafe partial class Vst2Plugin
                 case 32: return WriteString(ptr, "TabForge", 64);       // vendor
                 case 33: return WriteString(ptr, "TabForge Audio Engine", 64);
                 case 34: return 1;
-                case 37:                                               // canDo
-                    var what = ptr == IntPtr.Zero ? "" : Marshal.PtrToStringAnsi(ptr) ?? "";
-                    return what is "sendVstEvents" or "sendVstMidiEvent" or "sizeWindow" or "sendVstTimeInfo" or "receiveVstEvents" or "receiveVstMidiEvent" ? 1 : 0;
+                case 37: return CanDo(ptr) ? 1 : 0;                    // canDo: byte compare, no string allocation on the audio thread
                 case 42: return 1;                                     // updateDisplay
                 case Vst2ReaperHostApi.Opcode:                         // Reaper-only function lookup (the ReaPlugs): answer by name, 0 = unknown
                     return index == Vst2ReaperHostApi.Index ? Vst2ReaperHostApi.Resolve(ptr) : 0;
@@ -50,13 +47,38 @@ public sealed unsafe partial class Vst2Plugin
         catch { return 0; } // never let an exception cross into native code
     }
 
-    private static IntPtr WriteString(IntPtr ptr, string text, int max)
+    // NUL-separated ASCII names in static read-only UTF-8 data: no managed collection and no per-callback allocation.
+    private static ReadOnlySpan<byte> HostCanDo =>
+        "sendVstEvents\0sendVstMidiEvent\0sizeWindow\0sendVstTimeInfo\0receiveVstEvents\0receiveVstMidiEvent\0"u8;
+
+    /// <summary>audioMasterCanDo: compare the native ANSI string byte for byte (no per-callback allocation).</summary>
+    internal static bool CanDo(IntPtr ptr)
     {
-        if (ptr == IntPtr.Zero) return 0;
-        var bytes = Encoding.ASCII.GetBytes(text);
-        var n = Math.Min(bytes.Length, max - 1);
-        Marshal.Copy(bytes, 0, ptr, n);
-        ((byte*)ptr)[n] = 0;
+        if (ptr == IntPtr.Zero) return false;
+        var text = (byte*)ptr;
+        var names = HostCanDo;
+        for (var start = 0; start < names.Length;)
+        {
+            var end = start;
+            while (names[end] != 0) end++;
+            var length = end - start;
+            var i = 0;
+            for (; i < length; i++)
+                if (text[i] != names[start + i]) break;
+            if (i == length && text[i] == 0) return true;
+            start = end + 1;
+        }
+        return false;
+    }
+
+    /// <summary>Writes an ASCII host string into the plug-in's buffer; no managed array per call (audio-thread safe).</summary>
+    internal static IntPtr WriteString(IntPtr ptr, string text, int max)
+    {
+        if (ptr == IntPtr.Zero || max <= 0) return 0;
+        var n = Math.Min(text.Length, max - 1);
+        var bytes = (byte*)ptr;
+        for (var i = 0; i < n; i++) bytes[i] = (byte)text[i];
+        bytes[n] = 0;
         return 1;
     }
 }

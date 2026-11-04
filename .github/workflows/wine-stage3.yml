@@ -1,0 +1,93 @@
+name: wine-stage3
+# Stage 3: the real .NET engine starts the shipped x86 and x64 helpers under Wine and renders audio through the TCP +
+# explicit file block. Both deterministic test DLLs are built from native/tfvst32/test; the one real 32-bit and one real
+# 64-bit VST2 are downloaded from the maker's official release and SHA-256-pinned here, never committed.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  DOTNET_NOLOGO: '1'
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  TABFORGE_WINE: ${{ github.workspace }}/wine/bin/wine
+  TABFORGE_TFVST32_EXE: ${{ github.workspace }}/src/TabForge.AudioEngine/native/tfvst32.exe
+  TABFORGE_TFVST64_EXE: ${{ github.workspace }}/src/TabForge.AudioEngine/native/tfvst64.exe
+  TABFORGE_TFVST32_TEST_DLL: ${{ github.workspace }}/native/tfvst32/test-bin-linux/passthrough32.dll
+  TABFORGE_TFVST64_TEST_DLL: ${{ github.workspace }}/native/tfvst32/test-bin-linux/passthrough64.dll
+  TABFORGE_WINE_REAL_VST32: ${{ github.workspace }}/wine-fixtures/Dexed32.dll
+  TABFORGE_WINE_REAL_VST64: ${{ github.workspace }}/wine-fixtures/Dexed64.dll
+  TABFORGE_WINE_REAL_SHA256: b73184588577b54fe18fb0429dd6d4a554460958286e0d66fc2a395e1e9b9d91
+  TABFORGE_WINE_REAL_VST64_SHA256: e13e1c887b633af707985ca7b2cc956fb5e9c9913b5b452ddaee6c1796ce7780
+  TABFORGE_WINE_METRICS: ${{ github.workspace }}/wine-stage3-metrics.txt
+jobs:
+  wine-stage3:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.403'
+      - name: Install display and i686/x86_64 cross compilers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb mingw-w64 unzip libfreetype6 libfontconfig1
+      - name: Fetch pinned Wow64 Wine (spike only, not for release)
+        run: |
+          curl -fsSL -o wine.tar.xz https://github.com/Kron4ek/Wine-Builds/releases/download/9.21/wine-9.21-amd64-wow64.tar.xz
+          echo "020f8886750ff658d92ea39e696d2a57d3e8f056f00d8dfe45b65cddee5d6fa5  wine.tar.xz" | sha256sum -c -
+          mkdir wine && tar -xf wine.tar.xz -C wine --strip-components=1
+          chmod +x wine/bin/wine wine/bin/wineserver
+      - name: Build the deterministic 32-bit and 64-bit test DLLs
+        run: |
+          mkdir -p native/tfvst32/test-bin-linux
+          i686-w64-mingw32-g++ -std=c++17 -O2 -shared -static-libgcc -static-libstdc++ \
+            -DUNICODE -D_UNICODE -DNOMINMAX -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS \
+            -Wl,--no-insert-timestamp \
+            native/tfvst32/test/passthrough32.cpp \
+            -o native/tfvst32/test-bin-linux/passthrough32.dll \
+            -luser32 -lgdi32
+          x86_64-w64-mingw32-g++ -std=c++17 -O2 -shared -static-libgcc -static-libstdc++ \
+            -DUNICODE -D_UNICODE -DNOMINMAX -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS \
+            -Wl,--no-insert-timestamp \
+            native/tfvst32/test/passthrough32.cpp \
+            -o native/tfvst32/test-bin-linux/passthrough64.dll \
+            -luser32 -lgdi32
+          # The helper identifies each PE by its export table and machine type, never by the file name.
+          file native/tfvst32/test-bin-linux/passthrough32.dll native/tfvst32/test-bin-linux/passthrough64.dll
+          i686-w64-mingw32-objdump -p native/tfvst32/test-bin-linux/passthrough32.dll | grep -q 'VSTPluginMain'
+          x86_64-w64-mingw32-objdump -p native/tfvst32/test-bin-linux/passthrough64.dll | grep -q 'VSTPluginMain'
+          i686-w64-mingw32-objdump -f native/tfvst32/test-bin-linux/passthrough32.dll | grep -qi 'i386'
+          x86_64-w64-mingw32-objdump -f native/tfvst32/test-bin-linux/passthrough64.dll | grep -qi 'x86-64'
+      - name: Fetch the pinned real 32-bit and 64-bit VST2 from the maker's official release
+        run: |
+          mkdir -p wine-fixtures
+          curl -fsSL -o dexed-0.9.3-win.zip \
+            https://github.com/asb2m10/dexed/releases/download/v0.9.3/dexed-0.9.3-win.zip
+          echo "b365512bb3eb6ddb2f58db7ae5ca8707fa6ea7029e08cea5165bc8a26a25b38b  dexed-0.9.3-win.zip" | sha256sum -c -
+          unzip -p dexed-0.9.3-win.zip dexed-0.9.3/win32/Dexed.dll > wine-fixtures/Dexed32.dll
+          unzip -p dexed-0.9.3-win.zip dexed-0.9.3/x64/Dexed.dll > wine-fixtures/Dexed64.dll
+          echo "b73184588577b54fe18fb0429dd6d4a554460958286e0d66fc2a395e1e9b9d91  $TABFORGE_WINE_REAL_VST32" | sha256sum -c -
+          echo "e13e1c887b633af707985ca7b2cc956fb5e9c9913b5b452ddaee6c1796ce7780  $TABFORGE_WINE_REAL_VST64" | sha256sum -c -
+      - name: Engine + both helpers under Wine (Xvfb), measured
+        run: |
+          xvfb-run -a dotnet test tests/TabForge.Avalonia.Tests/TabForge.Avalonia.Tests.csproj \
+            -c Release \
+            -p:RestoreLockedMode=false \
+            --filter "FullyQualifiedName~Vst32Wine" \
+            --logger "console;verbosity=detailed" \
+            --logger "trx;LogFileName=wine-stage3.trx" \
+            --results-directory "${{ github.workspace }}/wine-stage3-results"
+      - name: Show the recorded metrics
+        if: always()
+        run: |
+          if [ -f "$TABFORGE_WINE_METRICS" ]; then cat "$TABFORGE_WINE_METRICS"; else echo "no metrics file"; fi
+      - name: Upload metrics and test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-stage3-evidence
+          path: |
+            wine-stage3-metrics.txt
+            wine-stage3-results/**
+          if-no-files-found: warn

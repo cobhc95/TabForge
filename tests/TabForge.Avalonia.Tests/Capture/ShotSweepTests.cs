@@ -12,6 +12,8 @@ using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Layout;
+using Avalonia.LogicalTree;
+using Avalonia.VisualTree;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
@@ -55,13 +57,33 @@ public class ShotSweepTests
         ["delete-bars-remove"] = () => new ParityCapture(new BarRangePromptWindow("Bars 12-14 are selected. What should Delete do?", BarRangeAction.Remove, false, id => id == "Range.Remove" ? "Shift+Del" : "")),
     };
 
+    /// <summary>
+    /// The UI scales of the scale audit, from TABFORGE_SHOT_SCALES ("0.7,0.8,1,1.25,1.5"); empty for the normal sweep. With scales, every window is
+    /// rendered once per scale in the dark theme at its native size, named "native@0.7" and so on, and the overlap check runs too.
+    /// </summary>
+    private static double[] Scales => (Environment.GetEnvironmentVariable("TABFORGE_SHOT_SCALES") ?? "")
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Select(s => double.Parse(s, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+
+    /// <summary>The working area the scale audit's dialogs are limited to: a 1080p monitor's, the tightest a large scale is used on.</summary>
+    private static readonly Size AuditWorkingArea = new(1920, 1040);
+
     public static IEnumerable<object[]> Windows()
     {
         var names = ParityShotMap.Entries.Where(e => e.Value.Build is not null).Select(e => e.Key).Concat(Extras.Keys).Distinct().ToList();
+        var scales = Scales;
         foreach (var name in names)
+        {
+            if (scales.Length > 0)
+            {
+                foreach (var scale in scales)
+                    yield return new object[] { name, "dark", "native@" + scale.ToString(System.Globalization.CultureInfo.InvariantCulture) };
+                continue;
+            }
             foreach (var theme in Themes)
                 foreach (var size in MainLike.Contains(name) ? new[] { "native", "1600x900", "1024x640" } : new[] { "native" })
                     yield return new object[] { name, theme, size };
+        }
     }
 
     public static IEnumerable<object[]> Kinds()
@@ -82,24 +104,46 @@ public class ShotSweepTests
         var light = theme == "light";
         using var themeScope = DialogTestKit.UseTheme(light);
         global::TabForge.Avalonia.Platform.ToolIconArt.PreloadAll();   // the app preloads the tool SVGs after its first frame; a shot is taken without that idle step
-        var png = Path.Combine(Directory.CreateDirectory(Path.Combine(outDir, "windows")).FullName, $"{name}-{theme}-{size}.png");
+        var png = Path.Combine(Directory.CreateDirectory(Path.Combine(outDir, "windows")).FullName, $"{name}-{theme}-{size.Replace('@', '_')}.png");
+        var at = size.IndexOf('@');
+        var scale = at < 0 ? 1.0 : double.Parse(size[(at + 1)..], System.Globalization.CultureInfo.InvariantCulture);
+        var sizeSpec = at < 0 ? size : size[..at];
+        var previousScale = WindowUiScale.CurrentAppearance.UiScale;
+        WindowUiScale.CurrentAppearance.UiScale = scale;   // the windows the hook wraps take this scale (and their sizes follow it) as they are built
         Window? window = null;
         try
         {
+            ParityShotMap.NativeSizes = at >= 0 && !MainLike.Contains(name) || name == "win-Preferences" && at >= 0;   // a dialog is shown at the size its own code (and the scale hook) gives it
             var capture = (ParityShotMap.Entries.TryGetValue(name, out var entry) && entry.Build is { } build ? build : Extras[name])();
             window = capture.Window;
-            if (size != "native")
+            if (sizeSpec != "native")
             {
-                var parts = size.Split('x');
+                var parts = sizeSpec.Split('x');
                 window.SizeToContent = SizeToContent.Manual;
                 window.Width = int.Parse(parts[0]);
                 window.Height = int.Parse(parts[1]);
             }
+            // The Settings window is main-like for the size variants but a dialog for the scale: its size follows the scale (and wraps to its content).
+            if (at >= 0) ScaleForAudit(window, MainLike.Contains(name) || ParityShotMap.NativeSizes, scale);
             window.Show();
             DialogTestKit.RunQueuedUiWork();
             global::Avalonia.Headless.AvaloniaHeadlessPlatform.ForceRenderTimerTick();
             var part = capture.Part?.Invoke(window);
             Visual root = window;
+            if (at >= 0)
+            {
+                // The scale audit: the whole frame, because a popup (a menu) follows the window's scale through its inherited transform, which a
+                // render of the popup alone would leave out. The checks then look only inside the popup.
+                DialogTestKit.RunQueuedUiWork();
+                global::Avalonia.Headless.AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+                using (var frame = window.CaptureRenderedFrame() ?? throw new InvalidOperationException("The window rendered no frame.")) frame.Save(png);
+                var scaledCounts = new Dictionary<string, int>();
+                var scaledFindings = ShotAnalysis.Run(window, ShotPixels.Load(png), light, false, name, theme, size, "rest", png, scaledCounts, part);
+                ShotAnalysis.Overlaps(window, scaledFindings, name, theme, size, "rest", png, scaledCounts, part);
+                if (part is null && name.StartsWith("win-", StringComparison.Ordinal) && !MainLike.Contains(name) || name == "win-Preferences") ShotAnalysis.ExcessMargins(window, scaledFindings, name, theme, size, "rest", png, scaledCounts);
+                Save(outDir, new SweepCase(new SweepShot(name, theme, size, "window", Rel(outDir, png), scaledCounts, null), scaledFindings));
+                return;
+            }
             if (part is null)
             {
                 using var frame = window.CaptureRenderedFrame() ?? throw new InvalidOperationException("The window rendered no frame.");
@@ -125,8 +169,29 @@ public class ShotSweepTests
         finally
         {
             window?.Close();
+            WindowUiScale.CurrentAppearance.UiScale = previousScale;
+            ParityShotMap.NativeSizes = false;
         }
     }
+
+    /// <summary>
+    /// Puts the window at the audit's scale as the app would: its content under the scale (the windows that own their root too), and a dialog's
+    /// size grown with it up to a 1080p working area. A main window keeps its size: it stands for the monitor, so the content gets less room.
+    /// </summary>
+    private static void ScaleForAudit(Window window, bool mainLike, double scale)
+    {
+        if (ScaleRoot(window) is { } root) ThemeSettingsBinding.ApplyScale(root, scale);
+        if (mainLike || Math.Abs(scale - 1) < 1e-9) return;
+        // The hook already grew a window sized before its content was set; a window sized after that (the parity twins' WPF sizes) grows here.
+        if (WindowUiScale.MatchesAppliedSize(window, new Size(window.Width, window.Height))) return;
+        if (window.SizeToContent is SizeToContent.Manual or SizeToContent.Height && double.IsFinite(window.Width)) window.Width = Math.Min(window.Width * scale, AuditWorkingArea.Width);
+        if (window.SizeToContent is SizeToContent.Manual or SizeToContent.Width && double.IsFinite(window.Height)) window.Height = Math.Min(window.Height * scale, AuditWorkingArea.Height);
+    }
+
+    // The LayoutTransformControl that carries the window's UI scale: its content, or the first one inside it (the main window wraps its own).
+    private static LayoutTransformControl? ScaleRoot(Window window) =>
+        window.Content as LayoutTransformControl ?? (window.Content as Visual)?.GetVisualDescendants().OfType<LayoutTransformControl>().FirstOrDefault()
+        ?? (window.Content as Control)?.GetLogicalDescendants().OfType<LayoutTransformControl>().FirstOrDefault();
 
     [AvaloniaTheory]
     [MemberData(nameof(Kinds))]

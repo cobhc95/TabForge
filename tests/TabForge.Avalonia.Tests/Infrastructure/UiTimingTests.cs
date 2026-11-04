@@ -15,6 +15,7 @@ public class UiTimingTests
     [Fact]
     public void EveryNamedDurationKeepsTheValueItsSitesUsed()
     {
+        Assert.Equal(700, UiTiming.StatusScaleTooltipDelayMs);
         Assert.Equal(400, UiTiming.SettingsSaveDebounceMs);
         Assert.Equal(100, UiTiming.SettingsPreviewIntervalMs);
         Assert.Equal(8_000, UiTiming.UpdateCheckStartDelayMs);

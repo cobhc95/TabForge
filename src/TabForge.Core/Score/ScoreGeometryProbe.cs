@@ -109,6 +109,9 @@ internal sealed class ScoreGeometryProbe : IScoreLayoutHost, IScoreRenderHost, I
     internal (int Measure, int Cell, int String) HitTest(double x, double y) =>
         ScoreHitRule.HitTest(_layout, _track, x, y, HeaderHeight, SystemHeight, TabTop, StringGap, SlotsFor, measure => measure.CellsForVoice(0));
 
+    /// <summary>True when page y is on the TAB strings of its system; a click on the staff above is not (it picks the beat, never the string).</summary>
+    internal bool OnTabBand(double y) => ScoreHitRule.OnTabBand(_layout, _track, y, HeaderHeight, SystemHeight, TabTop, StringGap);
+
     /// <summary>The page y where the beats begin, below the header block: a point above it is not on a beat.</summary>
     internal double BeatAreaTop => HeaderHeight;
 
@@ -165,7 +168,7 @@ internal sealed class ScoreGeometryProbe : IScoreLayoutHost, IScoreRenderHost, I
     public const double DefaultPagePadding = ScoreLayoutEngine.PagePad, DefaultLabelGutter = 46;
     public double GridLeft => PagePadding + LabelGutter;
     public double GridWidth => Math.Max(200, CurrentPageWidth - PagePadding * 2 - LabelGutter);
-    public double FretFontSize => 11.0 * Appearance.ScoreSpacing;
+    public double FretFontSize => 12.0 * Appearance.ScoreSpacing;
     public double HeaderCentreX => (HorizontalScroll ? PageWidth : CurrentPageWidth) / 2;
 
     /// <summary>The logical page width the continuous view sets from its viewport (0 = the fixed <see cref="PageWidth"/>); a change lays the score out again.</summary>
@@ -187,7 +190,8 @@ internal sealed class ScoreGeometryProbe : IScoreLayoutHost, IScoreRenderHost, I
         return (CurrentPageWidth, HeaderHeight + systems * SystemHeight + 48);
     }
     public double StaffGap => 9.0 * Appearance.ScoreSpacing;
-    public double StringGap => 15.0 * Appearance.ScoreSpacing;
+    /// <summary>The TAB's string spacing: the fret numbers sit on the lines with room to breathe, so a full TAB staff stays readable at the default zoom.</summary>
+    public double StringGap => 17.0 * Appearance.ScoreSpacing;
     /// <summary>True for a Band card's one-line view: the blank above and below the tab is cut to what the number row, the marks and the lyrics need. The main score keeps its spacing.</summary>
     public bool TightLineBand { get => _tightLineBand; set { if (_tightLineBand == value) return; _tightLineBand = value; _layout.Invalidate(); } }
     private bool _tightLineBand;
@@ -215,11 +219,11 @@ internal sealed class ScoreGeometryProbe : IScoreLayoutHost, IScoreRenderHost, I
     private double StaffToTab => Notation == NotationMode.TabOnly
         ? (IsTight ? TightMarksRoom : TabOnlyMarksRoom) * Appearance.ScoreSpacing * Appearance.SystemVerticalSpacing
         : 4 * StaffGap + (StaffToTabRoom + _layout.ExtraBelow) * Appearance.ScoreSpacing * Appearance.SystemVerticalSpacing;
-    private const double StaffToTabRoom = 52.0;
+    private const double StaffToTabRoom = 46.0;
     private const double TabOnlyMarksRoom = 30.0, TightMarksRoom = 20.0, TightBelowTab = 10.0;
     private int Strings => Math.Max(1, _track.StringTunings.Count is > 0 and var n ? n : 6);
     private double SystemHeight => StaffMarginTop + StaffToTab + (Strings - 1) * StringGap + Math.Max((IsTight ? TightBelowTab : 20.0) * Appearance.ScoreSpacing, _layout.ExtraTabBelow);
-    private double HeaderHeight => !DrawsHeader ? 0 : 82 +(ScoreLayoutEngine.HasStringTuning(_track) ? Math.Max(1, (_track.StringTunings.Count + 1) / 2) : 0) * 11;
+    private double HeaderHeight => !DrawsHeader ? 0 : 82 + (ScoreLayoutEngine.HasStringTuning(_track) ? Math.Max(1, (_track.StringTunings.Count + 1) / 2) + (PartialCapoRules.HasLine(_track.Capo, _track.PartialCapos) ? 1 : 0) : 0) * 11;
     private double SystemRowTop(int system) => ScoreEditorGeometry.SystemTop(HeaderHeight, system, SystemHeight);
     public double StaffTop(int system) => ScoreEditorGeometry.StaffTop(HeaderHeight, system, SystemHeight, StaffMarginTop);
     public double TabTop(int system) => ScoreEditorGeometry.TabTop(StaffTop(system), StaffToTab);

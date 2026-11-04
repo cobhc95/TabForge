@@ -4,8 +4,9 @@ using TabForge.Platform;
 namespace TabForge.Services;
 
 // Owns: the live side of the remembered dialog folders: reads the folder a key starts in from the live settings, and stores a pick there with a quiet save.
-// Does not own: the rules (DialogFolders), the dialogs (AvaloniaFileDialogs) or the settings file (AppSettingsStore). Thread: the UI thread only.
-// Tests: DialogFoldersTests (the settings round trip through a scratch store).
+// The settings are read on the calling (UI) thread; only the existence checks run on a worker, under a short timeout.
+// Does not own: the rules (DialogFolders), the dialogs (AvaloniaFileDialogs) or the settings file (AppSettingsStore).
+// Tests: DialogFoldersTests (the settings round trip through a scratch store), FileDialogHangTests (the bounded start folder).
 public sealed class DialogFolderMemory
 {
     private readonly Func<AppSettings> _settings;
@@ -26,9 +27,16 @@ public sealed class DialogFolderMemory
     public static DialogFolderMemory ForApp(Func<AppSettings> settings, Action save) =>
         new(settings, save, AppFolders.Current, AppFolders.Current.Documents);
 
-    /// <summary>The folder a dialog with <paramref name="key"/> starts in (see <see cref="DialogFolders.StartFolder"/>).</summary>
+    /// <summary>The folder a dialog with <paramref name="key"/> starts in (see <see cref="DialogFolders.StartFolder"/>), checked synchronously.
+    /// Use <see cref="StartFolderAsync"/> from the UI thread so a stalled shell cannot block it.</summary>
     public string? StartFolder(string? key, string? fallback) =>
         DialogFolders.StartFolder(_settings().RememberedFolders, key, fallback, Directory.Exists, _folders, _documents);
+
+    /// <summary>The folder a dialog with <paramref name="key"/> starts in, its candidates checked off this thread under
+    /// <see cref="DialogFolders.FolderCheckTimeout"/>; null when they are all gone, slow or unreachable (the OS default location is kept).</summary>
+    public Task<string?> StartFolderAsync(string? key, string? fallback) =>
+        DialogFolders.StartFolderBoundedAsync(_settings().RememberedFolders, key, fallback, Directory.Exists, _folders, _documents,
+            DialogFolders.FolderCheckTimeout);
 
     /// <summary>Stores the pick under <paramref name="key"/> and saves once when it changed.</summary>
     public void Remember(string? key, string chosenPath, bool isFolder)

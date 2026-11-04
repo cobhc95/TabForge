@@ -12,6 +12,7 @@ These are the controls more than one window shares. Each paints itself from them
 | `TrackPillButton` | One track's capsule in a header strip: a dot in the track's colour and its name, with the Core "TrackPill" look and its idle style. |
 | `CompactTrackStrip`, `HeaderModeCaption`, `BandViewMenu`, `ToolbarMenuRows` | The compact/Band header strip, the "mode entered last" caption, the Band view's layout menu, and the rows that stand for the menu-row toggles inside another menu. |
 | `SettingsNavigationGlyphs`, `SettingsNavigationIconView` | The Settings rail glyphs (24 × 24 grid, one line weight) and the square control that paints one in the rail's colour. |
+| `FretboardView`, `FretboardBoardPainter` | Shared board artwork and capo painter. The Capo card uses instrument-accent Full/Partial capsules, a selected-capo fret box and partial-string picker, an artwork-centred hover ghost, all working bars with hand-cursor selection and one-commit dragging, an accent selection ring, tiny fret numbers and Remove selected / Remove all capos. Bar, ghost and ring share one-fret bounds. The card hides landing badges; the instrument panel keeps its badge and behaviour. Partial placement is capped at four. |
 
 Rules: colours are theme keys, sizes and timings are named constants, the pointer shape never changes, and nothing here does per-frame layout.
 

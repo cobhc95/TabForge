@@ -102,4 +102,59 @@ public class FretboardHoverTests
         panel.Draw(hovered, light: false);
         Assert.True(hovered.Rects.Count(r => r.Fill is not null) > plain.Rects.Count(r => r.Fill is not null));
     }
+
+    [AvaloniaFact]
+    public void HoveringTheCapoShowsTheHandCursor()
+    {
+        var track = DemoSongFactory.Create().Tracks[0];
+        track.Capo = 4;
+        var panel = new InstrumentPanelView
+        {
+            Kind = InstrumentPanelKind.Fretboard,
+            Look = FretboardSettingsBinding.Look.From(new AppSettings()),
+        };
+        panel.Show(track, Array.Empty<InstrumentLitNotes.Lit>());
+        var window = new Window { Width = 1300, Height = 150, Content = panel };
+        window.Show();
+
+        var at = panel.FretCentre(2, 0);   // the open string sits at the capo
+        window.MouseMove(new Point(at.X, at.Y));
+        Assert.True(panel.CapoHovered);
+        Assert.NotNull(panel.Cursor);   // the hand; the only pointer change in the app
+        var canvas = new InstrumentFretNumberTests.RecordingDrawContext();
+        panel.Draw(canvas, light: false);
+        Assert.DoesNotContain(canvas.Texts, t => t.Text == "Drag to move capo");
+
+        window.MouseMove(new Point(panel.FretCentre(2, 3).X, panel.FretCentre(2, 3).Y));
+        Assert.False(panel.CapoHovered);
+        Assert.Null(panel.Cursor);
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void DraggingTheCapoCommitsOnceWithTheLandingFret()
+    {
+        var track = DemoSongFactory.Create().Tracks[0];
+        track.Capo = 4;
+        var panel = new InstrumentPanelView
+        {
+            Kind = InstrumentPanelKind.Fretboard,
+            Look = FretboardSettingsBinding.Look.From(new AppSettings()),
+        };
+        panel.Show(track, Array.Empty<InstrumentLitNotes.Lit>());
+        int? committed = null;
+        panel.CapoCommitRequested += fret => { committed = fret; return true; };
+        var window = new Window { Width = 1300, Height = 150, Content = panel };
+        window.Show();
+
+        var at = panel.FretCentre(2, 0);
+        window.MouseMove(new Point(at.X, at.Y));
+        window.MouseDown(new Point(at.X, at.Y), MouseButton.Left);
+        var target = panel.FretCentre(2, 2);   // written 2 past a capo at 4 lands on fret 6
+        window.MouseMove(new Point(target.X, target.Y));
+        Assert.True(panel.CapoDragging);
+        window.MouseUp(new Point(target.X, target.Y), MouseButton.Left);
+        Assert.Equal(6, committed);
+        window.Close();
+    }
 }

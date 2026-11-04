@@ -10,55 +10,43 @@ using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Platform.Controls;
 using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Documents;
-using TabForge.Platform.Theme;
 using TabForge.Models;
-using TabForge.Presenters;
 using TabForge.Services;
 
 namespace TabForge.Avalonia.Views;
 
 /// <summary>
-/// The track properties sections beyond the fields: the instrument cover (the catalogue badge on the track colour, or the owner's line art when the instrument has none), the instrument button,
+/// The track properties sections beyond the fields: the instrument button (its badge, name and Change button),
 /// the colour and tint, the tuning preset box, the keep-frets box and the drum notation card.
-/// Owns: building those controls and writing them on OK. Does not own: the rules (TrackSetup, DrumMaps, ColourHex, TuningPresets) or the icon art (TrackIconArt).
-/// Tests: TabForge.Avalonia.Tests.TrackPropertiesWindowTests.
+/// Owns: building those controls and writing them on OK; the instrument picker keeps its pick with no undo step (OK commits it with everything else as one step, Cancel restores the song) and refreshes the form only, resetting the tuning draft only when it really changed the strings and keeping typed banks (always) and channel/capo unless the choice moved them.
+/// Does not own: the rules (TrackSetup, DrumMaps, ColourHex, TuningPresets) or the icon art (TrackIconArt).
+/// Tests: TabForge.Avalonia.Tests.TrackPropertiesWindowTests, TrackPropertiesWindowConcurrencyTests.
 /// </summary>
 public sealed partial class TrackPropertiesWindow
 {
-    // The cover: the track colour as a soft gradient behind the instrument badge (160 DIP, 12 above and below) and its name.
-    private const double CoverBadgeSize = 160, CoverBadgeGap = 12, CoverGradientAngle = 55, CoverHeight = 190;
-    private const byte CoverAlphaStart = 0x55, CoverAlphaEnd = 0x10;
-    private const double NotesMinHeight = 64;
+    private const double NotesMinHeight = 40;
     private const string TintTip = "The strength is set in Settings > Appearance > Track colour tint.";
-    private const double DrumMapBoxWidth = 200, PresetBoxMinWidth = 220;
+    private const double DrumMapBoxWidth = 200;
     private const string DrumNotationHint = ".gp5 file drum map: GM numbers on the TAB. .gp6/.gp7 file drum map: kit abbreviations (BD, SD, HH…). "
         + "Drum tab: one line per drum with x / o. The staff uses standard drum positions in every preset; the key map above the score shows the same labels.";
-    private readonly TrackIconPicture _picture = new() { Name = "InstrumentPicture", Width = CoverBadgeSize, Height = CoverBadgeSize, Margin = new Thickness(0, CoverBadgeGap) };
-    private readonly InstrumentBadgeView _badge = new(CoverBadgeSize) { Name = "InstrumentBadge", Margin = new Thickness(0, CoverBadgeGap) };
-    private readonly InstrumentBadgeView _chooserBadge = new(30) { Name = "ChooserBadge", Margin = new Thickness(0, 0, 10, 0) };
-    private readonly TextBlock _caption = new() { Name = "InstrumentCaption", FontSize = 13, FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, -6, 0, 10) };
-    private readonly TextBlock _chooserName = new() { Name = "ChooserName", FontSize = 13, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center };
-    private readonly Border _cover = new() { Name = "InstrumentCover", Height = CoverHeight, CornerRadius = new CornerRadius(10), Margin = new Thickness(0, 0, 0, 10), ClipToBounds = true };
+    private readonly InstrumentBadgeView _chooserBadge = new(26) { Name = "ChooserBadge", Margin = new Thickness(0, 0, 8, 0) };
+    private readonly TextBlock _chooserName = new() { Name = "ChooserName", FontSize = 12, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center };
     private ColourButton _colour = null!;
     private readonly List<string> _recentColours = new();   // this window's picks: it has no settings to keep them in
     private CheckBox _tint = null!, _keepFrets = null!;
-    private ComboBox _drumMap = null!, _presetCombo = null!;
-    private bool _syncingPresets;
+    private ComboBox _drumMap = null!;
     private Border _drumCard = null!, _tuningCard = null!;
     private List<DrumMapEntry>? _customMap;
 
     private Control PictureAndColour()
     {
-        _colour = new ColourButton(_track.ColorHex, _recentColours) { Name = "ColourBox", Margin = new Thickness(0, 2, 0, 2) };
+        _colour = new ColourButton(_track.ColorHex, _recentColours) { Name = "ColourBox", Margin = new Thickness(0, 1, 0, 1) };
         _colour.Show(_track.ColorHex);
         AutomationProperties.SetName(_colour, "Track colour");
-        _tint = new CheckBox { Name = "TintBox", Content = new TextBlock { Text = "Tint the track's row and lane with its colour", TextWrapping = TextWrapping.Wrap }, IsChecked = _track.TintRow, Margin = new Thickness(0, 4, 0, 0) };
+        _tint = new CheckBox { Name = "TintBox", Content = new TextBlock { Text = "Tint the track's row and lane with its colour", TextWrapping = TextWrapping.Wrap }, IsChecked = _track.TintRow, Margin = new Thickness(0, 2, 0, 0) };
         ToolTip.SetTip(_tint, TintTip);
-        _colour.Previewed += _ => UpdateSwatch();
         _program.TextChanged += (_, _) => UpdatePicture();
         _channel.TextChanged += (_, _) => UpdatePicture();
-        _cover.Child = new Panel { Children = { _badge, _picture }, HorizontalAlignment = HorizontalAlignment.Center };
-        UpdateSwatch();
         UpdatePicture();
         return new StackPanel { Children = { Caption("Colour"), _colour, _tint } };
     }
@@ -79,7 +67,7 @@ public sealed partial class TrackPropertiesWindow
 
     private CheckBox KeepFretsBox() => _keepFrets = new CheckBox
     {
-        Name = "KeepFretsBox", IsChecked = true, Margin = new Thickness(0, 8, 0, 0),
+        Name = "KeepFretsBox", IsChecked = true, Margin = new Thickness(0, 4, 0, 0),
         Content = "Keep fret numbers (notes change pitch, like retuning the instrument)",
     };
 
@@ -116,40 +104,6 @@ public sealed partial class TrackPropertiesWindow
 
     private string CurrentDrumPreset() => (_drumMap.SelectedItem as ComboBoxItem)?.Tag as string ?? DrumMaps.GuitarPro5;
 
-    // The tuning preset box, beside the string count: a preset sets every string box.
-    private StackPanel PresetRow()
-    {
-        _presetCombo = new ComboBox { Name = "TuningPresetBox", MinWidth = PresetBoxMinWidth, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 0, 0) };
-        AutomationProperties.SetName(_presetCombo, "Tuning preset");
-        _presetCombo.SelectionChanged += (_, _) => { if (!_syncingPresets) ApplyPickedPreset(); };
-        return new StackPanel { Orientation = Orientation.Horizontal, Children = { _stringsLabel, _presetCombo } };
-    }
-
-    private void ApplyPickedPreset()
-    {
-        var picked = _presetCombo.SelectedItem as string;
-        var preset = PresetsForTrack().FirstOrDefault(p => p.Name == picked);
-        if (preset is null) return;
-        _tunings.Clear();
-        _tunings.AddRange(preset.HighToLow);
-        RebuildStringRows();
-    }
-
-    // Lists the presets for this string count and instrument. A tuning that matches none is shown as Custom, first in the list.
-    private void RefreshPresets()
-    {
-        _syncingPresets = true;
-        _presetCombo.Items.Clear();
-        var presets = PresetsForTrack().ToList();
-        foreach (var preset in presets) _presetCombo.Items.Add(preset.Name);
-        var match = presets.FirstOrDefault(p => p.HighToLow.SequenceEqual(_tunings));
-        if (match is null) { _presetCombo.Items.Insert(0, "Custom"); _presetCombo.SelectedIndex = 0; }
-        else _presetCombo.SelectedItem = match.Name;
-        _syncingPresets = false;
-    }
-
-    private IEnumerable<TuningPreset> PresetsForTrack() => TuningPresets.For(_tunings.Count, _track.Kind == TrackKind.Bass);
-
     private string? ColourError() => ColourHex.TryParseStrict(_colour.Value.Trim(), out _) ? null : $"Colour must be a hex value like {TabForge.Platform.Theme.Palette.Hex("Accent", false)}.";
 
     // Runs inside the OK edit, after the fields: colour, tint, then the retune or the drum lines (drum tracks have no tuning).
@@ -168,25 +122,7 @@ public sealed partial class TrackPropertiesWindow
                 DrumMaps.Apply(_track, preset);
             }
         }
-        else TrackSetup.ApplyTuning(_track, _tunings, _keepFrets.IsChecked == true);
-    }
-
-    private void UpdateSwatch()
-    {
-        var parsed = ColourHex.TryParseStrict(_colour.Value.Trim(), out var c);
-        _cover.Background = parsed ? CoverGradient(c) : null;
-    }
-
-    // A linear gradient brush (from, to, 55 degrees): the line through the box centre at that angle.
-    private static LinearGradientBrush CoverGradient(Rgba c)
-    {
-        var turn = CoverGradientAngle * System.Math.PI / 180;
-        double dx = System.Math.Cos(turn) / 2, dy = System.Math.Sin(turn) / 2;
-        return new LinearGradientBrush
-        {
-            StartPoint = new RelativePoint(0.5 - dx, 0.5 - dy, RelativeUnit.Relative), EndPoint = new RelativePoint(0.5 + dx, 0.5 + dy, RelativeUnit.Relative),
-            GradientStops = { new GradientStop(Color.FromArgb(CoverAlphaStart, c.R, c.G, c.B), 0), new GradientStop(Color.FromArgb(CoverAlphaEnd, c.R, c.G, c.B), 1) },
-        };
+        else _draft.Commit(_track, _keepFrets.IsChecked == true);
     }
 
     // The instrument button: the badge, the name and "Change..."; it opens the picker of the track row icon (InstrumentPickerFlow).
@@ -196,14 +132,55 @@ public sealed partial class TrackPropertiesWindow
         var button = new Button
         {
             // The chooser is a full-width bordered box with its badge, name and "Change..." centred.
-            Name = "InstrumentChooserButton", HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center, Padding = new Thickness(8, 5, 8, 5),
+            Name = "InstrumentChooserButton", HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center, Padding = new Thickness(6, 3, 6, 3),
             Content = new StackPanel { Orientation = Orientation.Horizontal, Children = { _chooserBadge, _chooserName, change } },
         };
-        ToolTip.SetTip(button, "Open the instrument catalogue (search, pictures)");
-        button.Click += async (_, _) =>
+        ToolTip.SetTip(button, "Open the instrument catalogue (search, pictures)");        button.Click += async (_, _) =>
         {
-            var project = _document?.Project ?? SongDocument.BlankProject();
-            await _picker.ChooseAsync(this, _adding ? null : _document, project, _track, ReloadInstrument, ReloadInstrument);
+            if (_pickerRunning) return;
+            _pickerRunning = true;
+            var tunings = _track.StringTunings.ToList();
+            var kind = _track.Kind;
+            var savedTrackChannel = _track.MidiChannel;
+            var savedTrackCapo = _track.Capo;
+            var savedProgram = _program.Text;
+            var savedBankMsb = _bankMsb.Text;
+            var savedBankLsb = _bankLsb.Text;
+            var savedChannel = _channel.Text;
+            try
+            {
+                var project = _document?.Project ?? SongDocument.BlankProject();
+                // Preview refreshes the form only; the tuning draft stays untouched until the picker ends.
+                // Inside the properties the pick stores no undo step: OK commits it with everything else as one step,
+                // Cancel restores the song. The engine still follows the previews live through the picker's sound.
+                var kept = await _picker.ChooseAsync(this, _adding ? null : _document, project, _track, ReloadInstrumentForm, storeUndo: _adding);
+                if (_closed) return;
+                if (kept) _pendingInstrument = _track.InstrumentName;
+                ReloadInstrument(_track.Kind != kind || !_track.StringTunings.SequenceEqual(tunings));
+                if (!kept)
+                {
+                    // A cancelled pick must not lose what was typed before it opened: the form reload showed the
+                    // restored track, so put the typed program, banks and channel back.
+                    _program.Text = savedProgram;
+                    _bankMsb.Text = savedBankMsb;
+                    _bankLsb.Text = savedBankLsb;
+                    _channel.Text = savedChannel;
+                    UpdatePicture();
+                }
+                else
+                {
+                    // A kept pick sets the program; banks are never touched by a choice, so the typed banks stay.
+                    // The channel stays typed unless the choice moved the track to the other family (drums 9 and back).
+                    _bankMsb.Text = savedBankMsb;
+                    _bankLsb.Text = savedBankLsb;
+                    if (_track.MidiChannel == savedTrackChannel) _channel.Text = savedChannel;
+                    // The capo follows the track when the choice reset it (family/kind switch to 0);
+                    // otherwise the working capo (possibly edited before the picker) is kept.
+                    if (_track.Capo != savedTrackCapo) { _capoFret = _track.Capo; LoadPartialCapos(); }
+                    UpdatePicture();
+                }
+            }
+            finally { _pickerRunning = false; }
         };
         return button;
     }
@@ -212,33 +189,37 @@ public sealed partial class TrackPropertiesWindow
     private void ShowFamilyCards()
     {
         _drumCard.IsVisible = _track.IsDrumTrack;
-        _tuningCard.IsVisible = _track.Kind is not (TrackKind.Drums or TrackKind.Keys);
+        _capoCard.IsVisible = _tuningCard.IsVisible = _track.Kind is not (TrackKind.Drums or TrackKind.Keys);
     }
 
-    // The track now has the previewed, committed or restored instrument (its program, channel, strings and kind follow): the form shows the track again.
-    private void ReloadInstrument()
+    // The previewed, committed or restored instrument (its program, channel and kind follow): the form shows the track again.
+    private void ReloadInstrumentForm()
     {
         _program.Text = _track.MidiProgram.ToString();
         _bankMsb.Text = _track.MidiBankMsb.ToString();
         _bankLsb.Text = _track.MidiBankLsb.ToString();
         _channel.Text = _track.MidiChannel.ToString();
-        _tunings.Clear();
-        _tunings.AddRange(_track.StringTunings);
-        RebuildStrings();
         ShowFamilyCards();
         UpdatePicture();
+    }
+
+    // The picker ended: reset the working strings only when it really changed them (a cancel restores the track, so an edited draft survives).
+    private void ReloadInstrument(bool resetDraft)
+    {
+        ReloadInstrumentForm();
+        if (resetDraft)
+        {
+            _draft.Reset(_track.StringTunings);
+            _disclosedUnplayable.Clear();
+        }
+        RebuildStrings();
     }
 
     private void UpdatePicture()
     {
         var program = int.TryParse(Typed(_program), out var p) ? p : _track.MidiProgram;
         var drums = _track.Kind == TrackKind.Drums || Typed(_channel) == "9";
-        var entry = InstrumentCatalog.ForTrack(_track.InstrumentName, program, drums);
-        _badge.Entry = _chooserBadge.Entry = entry;
-        var hasArt = _badge.HasArt;   // one read: the second call would only hit the cache
-        _badge.IsVisible = hasArt;
-        _picture.IsVisible = !hasArt;
-        _picture.IconKey = TrackIconKeys.KeyFor(program, drums);
-        _caption.Text = _chooserName.Text = _track.InstrumentName;
+        _chooserBadge.Entry = InstrumentCatalog.ForTrack(_track.InstrumentName, program, drums);
+        _chooserName.Text = _track.InstrumentName;
     }
 }

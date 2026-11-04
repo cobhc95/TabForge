@@ -6,6 +6,7 @@ using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Views.Docking;
 using TabForge.Documents;
 using TabForge.Models;
+using TabForge.Presenters;
 
 namespace TabForge.Avalonia.Views;
 

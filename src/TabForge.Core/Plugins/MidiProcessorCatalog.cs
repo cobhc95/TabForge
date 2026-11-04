@@ -9,9 +9,15 @@ namespace TabForge.Plugins;
 
 public enum MidiParamKind { Number, Choice, Check, Text, MapPreset, NoteSet }
 
+/// <summary>A parameter is shown only while the parameter <see cref="Key"/> holds one of <see cref="Values"/>; hidden parameters keep their values.</summary>
+public sealed record MidiShowWhen(string Key, params int[] Values)
+{
+    public bool IsShown(Func<string, int> read) => Values.Contains(read(Key));
+}
+
 /// <summary>One parameter of a MIDI processor: the window builds its control from this. Numbers with a <see cref="Scale"/> above 1 are shown in steps of 1/Scale.</summary>
 public sealed record MidiParamInfo(string Key, string Label, MidiParamKind Kind, double Min = 0, double Max = 1, double Default = 0, string Tip = "", int Scale = 1, string Unit = "",
-    IReadOnlyList<(int Value, string Label)>? Choices = null, string DefaultText = "", string Group = "Main")
+    IReadOnlyList<(int Value, string Label)>? Choices = null, string DefaultText = "", string Group = "Main", MidiShowWhen? ShowWhen = null)
 {
     public string Format(double v) => Kind == MidiParamKind.Choice ? Choices?.FirstOrDefault(c => c.Value == (int)Math.Round(v)).Label ?? v.ToString("0") : (Scale > 1 ? v.ToString("0.0#") : v.ToString("0")) + Unit;
 }
@@ -57,7 +63,6 @@ public static partial class MidiProcessorCatalog
     /// <summary>Settings listed after the others in Main (the window has no separate Advanced section).</summary>
     private static readonly Dictionary<string, string[]> AdvancedKeys = new()
     {
-        ["velocity"] = new[] { "Makeup", "Min", "Max", "Random", "Mix", "InLow", "InHigh", "Low", "High" },
         ["transpose"] = new[] { "Premultiply", "Low", "High" },
         ["humanize"] = new[] { "BaseDelayMs", "Baseline" },
         ["delay"] = new[] { "Samples", "NotesOnly" },

@@ -1,0 +1,313 @@
+name: wine-stage6
+# Stage 6: the Linux package with a pinned Wine. The build job runs on Ubuntu 22.04 (the package's glibc floor). The second
+# job is a clean Ubuntu 24.04 runner with NO Wine installed: it extracts the tar.xz to a random path, runs a moved copy and
+# the AppImage with a fresh HOME, blocks networking for the Wine step when the runner allows a user+net namespace, loads
+# the deterministic test DLL and pinned real Dexed plug-ins through the packaged engine under Xvfb, and checks the first-run
+# marker, crash-dialog setting and failure marker.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  DOTNET_NOLOGO: '1'
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget-packages
+  APPIMAGE_EXTRACT_AND_RUN: '1'
+  WINE_TARBALL: https://github.com/Kron4ek/Wine-Builds/releases/download/9.21/wine-9.21-amd64-wow64.tar.xz
+  WINE_TARBALL_SHA256: 020f8886750ff658d92ea39e696d2a57d3e8f056f00d8dfe45b65cddee5d6fa5
+  APPIMAGETOOL_URL: https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
+  APPIMAGETOOL_SHA256: ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0
+  SOUNDFONT_URL: https://github.com/mrbumpy409/GeneralUser-GS/raw/main/GeneralUser-GS.sf2
+  SOUNDFONT_SHA256: 9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe
+  DEXED_ZIP_URL: https://github.com/asb2m10/dexed/releases/download/v0.9.3/dexed-0.9.3-win.zip
+  DEXED_ZIP_SHA256: b365512bb3eb6ddb2f58db7ae5ca8707fa6ea7029e08cea5165bc8a26a25b38b
+jobs:
+  build-linux-package:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.403'
+      - name: Drop any preinstalled copy of the patched AlphaTab package
+        run: rm -rf "$HOME/.nuget/packages/tabforge.alphatab"
+      - name: Install build tools (no Wine, no display server)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake git python3 curl unzip xz-utils binutils patchelf \
+            mingw-w64 libasound2-dev libmp3lame0 libmpg123-0 libfuse2 \
+            libfreetype6 libfontconfig1 libgl1 libx11-6 libxext6 libxcursor1 libxrandr2
+      - name: Fetch and verify the pinned Wine tree and AppImage tool
+        run: |
+          mkdir -p staging
+          curl -fsSL -o staging/wine.tar.xz "$WINE_TARBALL"
+          echo "$WINE_TARBALL_SHA256  staging/wine.tar.xz" | sha256sum -c -
+          mkdir staging/wine
+          tar -xf staging/wine.tar.xz -C staging/wine --strip-components=1
+          chmod +x staging/wine/bin/wine staging/wine/bin/wineserver staging/wine/bin/wine64
+          test -f staging/wine/lib/wine/x86_64-unix/ntdll.so
+          if find staging/wine \( -iname '*mono*' -o -iname '*gecko*' \) -print -quit | grep -q .; then
+            echo "the pinned Wine tree contains wine-mono or wine-gecko"; exit 1
+          fi
+          curl -fsSL -o staging/appimagetool "$APPIMAGETOOL_URL"
+          echo "$APPIMAGETOOL_SHA256  staging/appimagetool" | sha256sum -c -
+          chmod +x staging/appimagetool
+          file staging/wine/bin/wine staging/appimagetool
+      - name: Fetch the pinned SoundFont and its licence (the Linux package bundles both)
+        run: |
+          curl -fsSL -o staging/GeneralUser-GS.sf2 "$SOUNDFONT_URL"
+          echo "$SOUNDFONT_SHA256  staging/GeneralUser-GS.sf2" | sha256sum -c -
+          test "$(stat -c %s staging/GeneralUser-GS.sf2)" = "32319396"
+          cp src/TabForge.Avalonia/licenses/GeneralUser-GS_LICENSE.txt staging/GeneralUser-GS-LICENSE.txt
+          file staging/GeneralUser-GS.sf2
+      - name: Build the deterministic test DLLs and fetch the pinned real VST2s
+        run: |
+          mkdir -p staging/testkit
+          i686-w64-mingw32-g++ -std=c++17 -O2 -shared -static-libgcc -static-libstdc++ \
+            -DUNICODE -D_UNICODE -DNOMINMAX -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -Wl,--no-insert-timestamp \
+            native/tfvst32/test/passthrough32.cpp -o staging/testkit/passthrough32.dll -luser32 -lgdi32
+          x86_64-w64-mingw32-g++ -std=c++17 -O2 -shared -static-libgcc -static-libstdc++ \
+            -DUNICODE -D_UNICODE -DNOMINMAX -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -Wl,--no-insert-timestamp \
+            native/tfvst32/test/passthrough32.cpp -o staging/testkit/passthrough64.dll -luser32 -lgdi32
+          curl -fsSL -o staging/dexed.zip "$DEXED_ZIP_URL"
+          echo "$DEXED_ZIP_SHA256  staging/dexed.zip" | sha256sum -c -
+          unzip -p staging/dexed.zip dexed-0.9.3/x64/Dexed.dll > staging/testkit/Dexed64.dll
+          unzip -p staging/dexed.zip dexed-0.9.3/win32/Dexed.dll > staging/testkit/Dexed32.dll
+          echo "b73184588577b54fe18fb0429dd6d4a554460958286e0d66fc2a395e1e9b9d91  staging/testkit/Dexed32.dll" | sha256sum -c -
+          echo "e13e1c887b633af707985ca7b2cc956fb5e9c9913b5b452ddaee6c1796ce7780  staging/testkit/Dexed64.dll" | sha256sum -c -
+          i686-w64-mingw32-objdump -p staging/testkit/passthrough32.dll | grep -q VSTPluginMain
+          x86_64-w64-mingw32-objdump -p staging/testkit/passthrough64.dll | grep -q VSTPluginMain
+          file staging/testkit/*.dll
+      - name: First-run marker, failure marker and crash-dialog call (fake Wine, no real Wine needed)
+        run: |
+          dotnet test tests/TabForge.Avalonia.Tests/TabForge.Avalonia.Tests.csproj -c Release \
+            -p:RestoreLockedMode=false --filter "FullyQualifiedName~WineRuntimeLinux" \
+            --logger "console;verbosity=detailed"
+      - name: Build the Linux package (tar.xz, xz AppImage, ELF gate, SBOM-covered Wine)
+        env:
+          TABFORGE_SOUNDFONT: ${{ github.workspace }}/staging/GeneralUser-GS.sf2
+          TABFORGE_SOUNDFONT_LICENSE: ${{ github.workspace }}/staging/GeneralUser-GS-LICENSE.txt
+        run: |
+          tools/package-linux.sh \
+            --out "$GITHUB_WORKSPACE/package" \
+            --wine "$GITHUB_WORKSPACE/staging/wine" \
+            --helpers "$GITHUB_WORKSPACE/src/TabForge.AudioEngine/native" \
+            --appimagetool "$GITHUB_WORKSPACE/staging/appimagetool"
+          stat -c '%n %s bytes' package/linux/*.tar.xz package/linux/*.AppImage | tee package/linux/SIZES.txt
+          test -f package/linux/MIN_GLIBC.txt
+          cat package/linux/MIN_GLIBC.txt
+      - name: Upload the package and the test kit
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-stage6-package
+          path: |
+            package/linux/*.tar.xz
+            package/linux/*.AppImage
+            package/linux/MIN_GLIBC.txt
+            package/linux/SIZES.txt
+          if-no-files-found: error
+      - name: Upload the test-only plug-ins (never shipped, never committed)
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-stage6-testkit
+          path: staging/testkit/*
+          if-no-files-found: error
+
+  clean-run:
+    needs: build-linux-package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Prove Wine is not installed on this runner
+        run: |
+          command -v wine && { echo "Wine is installed on the clean runner"; exit 1; } || true
+          command -v wine64 && { echo "wine64 is installed on the clean runner"; exit 1; } || true
+          test ! -e /usr/bin/wine
+          test ! -e /usr/lib/wine
+          echo "clean runner: no wine, wine64 or /usr/lib/wine"
+      - name: Install only the display, fuse and desktop runtime libraries (no Wine)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb xauth iproute2 util-linux unzip curl xz-utils \
+            libfuse2t64 || sudo apt-get install -y --no-install-recommends libfuse2
+          sudo apt-get install -y --no-install-recommends \
+            libfontconfig1 libfreetype6 libgl1 libasound2t64 libx11-6 libxext6 libxcursor1 libxrandr2 libxi6 \
+            libxfixes3 libxrender1 libxcb1 libice6 libsm6 libxcomposite1 libxdamage1 libxinerama1 libxxf86vm1 \
+            libxkbcommon0 libwayland-client0 libpulse0 libegl1
+      - uses: actions/download-artifact@v4
+        with:
+          name: wine-stage6-package
+          path: artifact
+      - uses: actions/download-artifact@v4
+        with:
+          name: wine-stage6-testkit
+          path: testkit
+      - name: Print the exact package sizes
+        run: |
+          stat -c '%n %s bytes' artifact/*.tar.xz artifact/*.AppImage | tee sizes.txt
+          cat artifact/SIZES.txt
+      - name: Extract the tar.xz to a random path and move it again
+        run: |
+          ID="$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+          echo "ID=$ID" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/pkg-$ID" "$RUNNER_TEMP/home-tar"
+          tar -xJf artifact/*.tar.xz -C "$RUNNER_TEMP/pkg-$ID"
+          mv "$RUNNER_TEMP/pkg-$ID/TabForge.AppDir" "$RUNNER_TEMP/moved-$ID"
+          echo "APP_TAR=$RUNNER_TEMP/moved-$ID" >> "$GITHUB_ENV"
+          echo "HOME_TAR=$RUNNER_TEMP/home-tar" >> "$GITHUB_ENV"
+          find "$RUNNER_TEMP/moved-$ID/usr/bin/wine" -maxdepth 2 -type f -name 'wine*' | head
+      - name: Prepare the offline runner, the fresh HOME and the fake failing Wine
+        run: |
+          cat > "$RUNNER_TEMP/run-net.sh" <<'SH'
+          #!/bin/bash
+          set -euo pipefail
+          # A private network namespace with loopback up: the engine and helper still talk over 127.0.0.1, but there is no
+          # route to the internet. Try rootless first, then sudo (the GitHub runner has passwordless sudo); drop back to
+          # the invoking user so the fresh HOME and prefix stay owned by the runner.
+          if [ "$(id -u)" -eq 0 ]; then
+            ip link set lo up
+            echo "netns: sudo network namespace, loopback only; dropping back to ${SUDO_UID:-0}:${SUDO_GID:-0}" >&2
+            if [ -n "${SUDO_UID:-}" ] && [ -n "${SUDO_GID:-}" ] && [ "${SUDO_UID}" != 0 ]; then
+              exec setpriv --reuid="$SUDO_UID" --regid="$SUDO_GID" --init-groups "$@"
+            fi
+            exec "$@"
+          fi
+          if unshare -rn true 2>/dev/null; then
+            echo "netns: rootless user+network namespace, loopback only" >&2
+            exec unshare -rn -- bash -c 'ip link set lo up; exec "$@"' -- "$@"
+          fi
+          if sudo -n true 2>/dev/null; then
+            exec sudo -n unshare -n "$0" "$@"
+          fi
+          echo "network namespace unavailable; this step runs without the extra network block" >&2
+          exec "$@"
+          SH
+          chmod +x "$RUNNER_TEMP/run-net.sh"
+          mkdir -p "$RUNNER_TEMP/fake-wine/bin"
+          cat > "$RUNNER_TEMP/fake-wine/bin/wine" <<'SH'
+          #!/bin/sh
+          if [ "$1" = "--version" ]; then echo "wine-9.21-fake-failing"; exit 0; fi
+          if [ "$1" = "wineboot" ]; then echo "mock wineboot failure" >&2; exit 9; fi
+          exit 0
+          SH
+          chmod +x "$RUNNER_TEMP/fake-wine/bin/wine"
+      - name: Load the deterministic test DLL through the moved package (offline, fresh HOME, Xvfb)
+        run: |
+          set -o pipefail
+          : > "$RUNNER_TEMP/offline.txt"
+          xvfb-run -a "$RUNNER_TEMP/run-net.sh" env -i HOME="$HOME_TAR" DISPLAY="$DISPLAY" XAUTHORITY="$XAUTHORITY" \
+            PATH=/usr/bin:/bin LANG=C.UTF-8 TABFORGE_INTERNAL=1 "$APP_TAR/AppRun" --wine-smoke "$PWD/testkit/passthrough32.dll" 0 512 12 \
+            2>&1 | tee "$RUNNER_TEMP/tar-testdll.log"
+          test -f "$HOME_TAR/.local/share/TabForge/wine/prefix/.tabforge-wine"
+          test ! -f "$HOME_TAR/.local/share/TabForge/wine/prefix/.tabforge-failed"
+          grep -q '^wine-smoke ok' "$RUNNER_TEMP/tar-testdll.log"
+          grep -q 'helper=tfvst32.exe' "$RUNNER_TEMP/tar-testdll.log"
+          grep -A3 'WineDbg' "$HOME_TAR/.local/share/TabForge/wine/prefix/user.reg" > "$RUNNER_TEMP/crash-dialog.txt"
+          grep -q 'ShowCrashDialog' "$RUNNER_TEMP/crash-dialog.txt"
+          echo "first-run marker:"; cat "$HOME_TAR/.local/share/TabForge/wine/prefix/.tabforge-wine"
+      - name: Load the pinned real 64-bit and 32-bit VST2 through the moved package
+        run: |
+          set -o pipefail
+          xvfb-run -a "$RUNNER_TEMP/run-net.sh" env -i HOME="$HOME_TAR" DISPLAY="$DISPLAY" XAUTHORITY="$XAUTHORITY" \
+            PATH=/usr/bin:/bin LANG=C.UTF-8 TABFORGE_INTERNAL=1 "$APP_TAR/AppRun" --wine-smoke "$PWD/testkit/Dexed64.dll" 1 1024 24 \
+            2>&1 | tee "$RUNNER_TEMP/tar-dexed64.log"
+          grep -q '^wine-smoke ok' "$RUNNER_TEMP/tar-dexed64.log"
+          grep -q 'helper=tfvst64.exe' "$RUNNER_TEMP/tar-dexed64.log"
+          xvfb-run -a "$RUNNER_TEMP/run-net.sh" env -i HOME="$HOME_TAR" DISPLAY="$DISPLAY" XAUTHORITY="$XAUTHORITY" \
+            PATH=/usr/bin:/bin LANG=C.UTF-8 TABFORGE_INTERNAL=1 "$APP_TAR/AppRun" --wine-smoke "$PWD/testkit/Dexed32.dll" 1 1024 24 \
+            2>&1 | tee "$RUNNER_TEMP/tar-dexed32.log"
+          grep -q '^wine-smoke ok' "$RUNNER_TEMP/tar-dexed32.log"
+          grep -q 'helper=tfvst32.exe' "$RUNNER_TEMP/tar-dexed32.log"
+      - name: Write the failure marker with a deliberately failing Wine on a separate fresh HOME
+        run: |
+          set +e
+          mkdir -p "$RUNNER_TEMP/home-fail"
+          xvfb-run -a "$RUNNER_TEMP/run-net.sh" env -i HOME="$RUNNER_TEMP/home-fail" DISPLAY="$DISPLAY" XAUTHORITY="$XAUTHORITY" \
+            PATH=/usr/bin:/bin LANG=C.UTF-8 TABFORGE_INTERNAL=1 TABFORGE_WINE="$RUNNER_TEMP/fake-wine/bin/wine" \
+            "$APP_TAR/AppRun" --wine-smoke "$PWD/testkit/passthrough32.dll" 0 256 4 \
+            > "$RUNNER_TEMP/fail.log" 2>&1
+          status=$?
+          set -e
+          test "$status" -ne 0
+          grep -q 'wine-smoke FAILED' "$RUNNER_TEMP/fail.log"
+          test -f "$RUNNER_TEMP/home-fail/.local/share/TabForge/wine/prefix/.tabforge-failed"
+          test ! -f "$RUNNER_TEMP/home-fail/.local/share/TabForge/wine/prefix/.tabforge-wine"
+          grep -q 'wineboot -u failed (exit 9)' "$RUNNER_TEMP/home-fail/.local/share/TabForge/wine/prefix/.tabforge-failed"
+          echo "failure marker:"; cat "$RUNNER_TEMP/home-fail/.local/share/TabForge/wine/prefix/.tabforge-failed"
+      - name: Run the AppImage with a fresh HOME (mount path is random)
+        run: |
+          set -o pipefail
+          mkdir -p "$RUNNER_TEMP/home-appimage" "$RUNNER_TEMP/appimage-$ID"
+          cp artifact/*.AppImage "$RUNNER_TEMP/appimage-$ID/TabForge.AppImage"
+          chmod +x "$RUNNER_TEMP/appimage-$ID/TabForge.AppImage"
+          xvfb-run -a "$RUNNER_TEMP/run-net.sh" env -i HOME="$RUNNER_TEMP/home-appimage" DISPLAY="$DISPLAY" XAUTHORITY="$XAUTHORITY" \
+            PATH=/usr/bin:/bin LANG=C.UTF-8 TABFORGE_INTERNAL=1 "$RUNNER_TEMP/appimage-$ID/TabForge.AppImage" --wine-smoke "$PWD/testkit/passthrough32.dll" 0 512 12 \
+            2>&1 | tee "$RUNNER_TEMP/appimage.log"
+          grep -q '^wine-smoke ok' "$RUNNER_TEMP/appimage.log"
+          test -f "$RUNNER_TEMP/home-appimage/.local/share/TabForge/wine/prefix/.tabforge-wine"
+          test ! -f "$RUNNER_TEMP/home-appimage/.local/share/TabForge/wine/prefix/.tabforge-failed"
+          echo "AppImage ran from a mounted, random path; first-run marker present."
+      - name: Record the package contents and the offline evidence
+        if: always()
+        run: |
+          # This step runs after a failure too (if: always()), so it must not let the inherited `bash -e` abort on the
+          # first missing file: collect what exists, record why anything is missing, then exit with the recorded status.
+          set +e -o pipefail
+          rc=0
+          {
+            echo "package file sizes:"
+            if [ -f sizes.txt ]; then cat sizes.txt; else echo "(sizes.txt missing)"; rc=1; fi
+            echo
+            echo "clean-run host checks (this runner must have no system Wine):"
+            wine_path="$(command -v wine 2>/dev/null)"
+            wine64_path="$(command -v wine64 2>/dev/null)"
+            if [ -n "$wine_path" ] || [ -n "$wine64_path" ] || [ -e /usr/bin/wine ] || [ -e /usr/lib/wine ]; then
+              echo "ERROR: a system Wine exists (wine='$wine_path' wine64='$wine64_path')"; rc=1
+            else
+              echo "no system wine, wine64, /usr/bin/wine or /usr/lib/wine"
+            fi
+            echo
+            if [ -z "${APP_TAR:-}" ] || [ ! -d "$APP_TAR/usr/bin" ]; then
+              echo "EVIDENCE INCOMPLETE: the tar.xz was not extracted (APP_TAR='${APP_TAR:-}'), so the packaged Wine, helper, SoundFont and licence checks cannot be recorded"; rc=1
+            else
+              echo "Wine runtime in the tar package:"
+              find "$APP_TAR/usr/bin/wine" -type f \( -name wine -o -name wineserver -o -name ntdll.so \) -printf '%p %s bytes\n' || rc=1
+              echo
+              echo "ThirdParty/wine:"
+              find "$APP_TAR/usr/bin/ThirdParty/wine" -type f -printf '%p %s bytes\n' || rc=1
+              echo
+              echo "helper and shim files:"
+              for f in tfvst32.exe tfvst64.exe tfvst3.dll tfvst3-x86.dll; do stat -c '%n %s bytes' "$APP_TAR/usr/bin/$f" || rc=1; done
+              echo
+              echo "bundled SoundFont:"
+              stat -c '%n %s bytes' "$APP_TAR/usr/bin/SoundFonts/GeneralUser-GS.sf2" || rc=1
+              test ! -e "$APP_TAR/usr/bin/wine/share/wine/mono" || rc=1
+              test ! -e "$APP_TAR/usr/bin/wine/share/wine/gecko" || rc=1
+            fi
+          } > evidence.txt 2>&1
+          cat evidence.txt
+          exit "$rc"
+      - name: Collect the logs, markers and the no-network proof into the workspace
+        if: always()
+        run: |
+          mkdir -p evidence
+          cp "$RUNNER_TEMP"/*.log evidence/ 2>/dev/null || true
+          cp "$RUNNER_TEMP"/*.txt evidence/ 2>/dev/null || true
+          cp "$RUNNER_TEMP/crash-dialog.txt" evidence/ 2>/dev/null || true
+          cp "$HOME_TAR/.local/share/TabForge/wine/prefix/.tabforge-wine" evidence/marker-tar.txt 2>/dev/null || true
+          cp "$RUNNER_TEMP/home-appimage/.local/share/TabForge/wine/prefix/.tabforge-wine" evidence/marker-appimage.txt 2>/dev/null || true
+          cp "$RUNNER_TEMP/home-fail/.local/share/TabForge/wine/prefix/.tabforge-failed" evidence/failure-marker.txt 2>/dev/null || true
+          grep -A4 WineDbg "$HOME_TAR/.local/share/TabForge/wine/prefix/user.reg" > evidence/crash-dialog-reg.txt 2>/dev/null || true
+          cat evidence/* 2>/dev/null || true
+      - name: Upload the clean-run evidence and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-stage6-evidence
+          path: |
+            sizes.txt
+            evidence.txt
+            evidence/**
+          if-no-files-found: warn

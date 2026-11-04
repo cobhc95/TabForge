@@ -55,8 +55,12 @@ public sealed partial class InstrumentPanelView : Control
     private const double LegendTopMinimum = 10;
     private const int LegendRows = 4;
     private const double LegendRowHeight = 18;
+    /// <summary>The legend card: its title row, the room round its contents and its width.</summary>
+    private const double LegendTitleHeight = 24, LegendCardPad = 8, LegendCardWidth = 114;
     private const double LegendScalesGap = 6;
     private const double ScalesButtonHeight = 24;
+    /// <summary>The gap between the Scales button and the Customize button under it, in real pixels.</summary>
+    private const double ButtonStackGap = 4;
     /// <summary>Text on a lit fret marker (black on the lit green), whatever the theme.</summary>
     private static readonly int[] StandardTuning = { 64, 59, 55, 50, 45, 40 };
     private static readonly int[] InlayFrets = { 3, 5, 7, 9, 12, 15, 17, 19, 21, 24 };
@@ -147,7 +151,8 @@ public sealed partial class InstrumentPanelView : Control
     private IReadOnlyList<int> Tuning => _track is { StringTunings.Count: > 0 } t ? t.StringTunings : StandardTuning;
 
     /// <summary>The layout input of the board for the current track and look: the band card sizes its pane by it too.</summary>
-    internal FretboardGeometryRules.Input FretInput => new(Tuning.Count, _look.Frets, _track?.NumberOfFrets ?? 24, _look.StringSpacing, _look.LeftHanded, _lit.Count > 0 ? _lit[0].Fret : 0, _track?.Kind == TrackKind.Bass);
+    internal FretboardGeometryRules.Input FretInput => new(Tuning.Count, _look.Frets, _track?.NumberOfFrets ?? 24, _look.StringSpacing, _look.LeftHanded, _lit.Count > 0 ? _lit[0].Fret : 0, _track?.Kind == TrackKind.Bass,
+        _track is { IsDrumTrack: false } capoTrack ? FretboardGeometryRules.PackCapos(ShownCapo, capoTrack.PartialCapos, Tuning.Count) : 0);
 
     private double _contentScale = 1;
 
@@ -321,7 +326,7 @@ public sealed partial class InstrumentPanelView : Control
     /// <summary>The centre of a fret on a string, in panel coordinates (where a click picks it).</summary>
     public UiPoint FretCentre(int stringIndex, int fret)
     {
-        var p = FretboardGeometryRules.PositionOf(FretboardLayout(), stringIndex, fret);
+        var p = FretboardGeometryRules.PositionOfTab(FretboardLayout(), stringIndex, fret);
         var s = FretboardScale();
         return new UiPoint(p.X * s, p.Y * s);
     }

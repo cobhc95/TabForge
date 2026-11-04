@@ -35,6 +35,7 @@ public sealed class FxEditorController : IDisposable
     private PluginSlot? _docked;
     private PluginSlot? _loading;
     private PluginSlot? _failed;
+    private readonly HashSet<string> _noEditorPaths = new(StringComparer.OrdinalIgnoreCase);   // plug-in files the engine said have no editor (kept while this FX window is open): their next open goes straight to the parameter panel, no attempt, no blank area
 
     /// <param name="focused">The focused plug-in row, or null.</param>
     /// <param name="reshow">Asks the window to show the focused row again (the area got its native window, or the chain was rebuilt).</param>
@@ -70,6 +71,8 @@ public sealed class FxEditorController : IDisposable
     public event Action<PluginSlot>? EditorFailed;
     /// <summary>Whether the docked editor of <paramref name="slot"/> failed to open and has not been retried.</summary>
     public bool HasFailed(PluginSlot slot) => ReferenceEquals(_failed, slot);
+    /// <summary>Whether the engine already said <paramref name="slot"/> has no editor of its own (the parameter panel is its only view).</summary>
+    public bool KnownNoEditor(PluginSlot? slot) => slot is not null && _noEditorPaths.Contains(slot.Path);
     /// <summary>Forgets the program names (another plug-in is focused).</summary>
     public void ResetPrograms() { Programs = Array.Empty<string>(); CurrentProgram = -1; }
     public PluginSlot? Docked => _docked;
@@ -103,7 +106,8 @@ public sealed class FxEditorController : IDisposable
             if (mode == FxEditorMode.Floating && !settings.DockPluginWindows && slot is not null && !_floating.Contains(slot)) Float(slot);
             return mode;
         }
-        if (ReferenceEquals(_failed, slot)) { ShowFailed(); return mode; }
+        if (ReferenceEquals(_failed, slot)) { ShowFailed(slot!); return mode; }
+        if (KnownNoEditor(slot)) { _failed = slot; _area.ShowNotice("", null); return mode; }   // known to have none: the panel takes over at once, the editor area is never shown
         if (FxGenericControls.NativeEditorMissing(_area.Surface.Area, FxGenericControls.NativeEditorAreaSupported)) { Fail(slot!); return mode; }   // no native editor host on this system: the window falls back to the generic controls
         _area.ShowEditor();
         var engine = _host.Engine!;
@@ -138,14 +142,19 @@ public sealed class FxEditorController : IDisposable
     {
         _failed = slot;
         EditorFailed?.Invoke(slot);
-        if (ReferenceEquals(_focused(), slot)) ShowFailed();
+        if (ReferenceEquals(_focused(), slot)) ShowFailed(slot);
     }
 
-    private void ShowFailed() => _area.ShowNotice(FxEditorPlan.EditorFailedNotice, FxEditorPlan.RetryButton, FxEditorPlan.SeparateWindowButton);
+    private void ShowFailed(PluginSlot slot)
+    {
+        if (KnownNoEditor(slot)) _area.ShowNotice("", null);   // not a failure: the plug-in simply has no window
+        else _area.ShowNotice(FxEditorPlan.EditorFailedNotice, FxEditorPlan.RetryButton, FxEditorPlan.SeparateWindowButton);
+    }
 
     /// <summary>Retry: the docked editor is closed and opened again the next time the row shows.</summary>
     public void Retry(PluginSlot slot)
     {
+        _noEditorPaths.Remove(slot.Path);
         if (ReferenceEquals(_docked, slot)) CloseDocked();
         else _failed = null;
     }
@@ -217,7 +226,13 @@ public sealed class FxEditorController : IDisposable
     private void OnEditorSized(int engineSlot, int index, int width, int height)
     {
         if (_docked is not { } docked || engineSlot != _host.Engine?.SlotOf(_track) || index != _track.Rig.Plugins.IndexOf(docked)) return;
-        _openCheck?.Stop();   // the engine opened it (a slow plug-in answers after the check would have given up)
+        _openCheck?.Stop();   // the engine answered (a slow plug-in answers after the check would have given up)
+        if (width <= 0 || height <= 0)   // the engine's "this plug-in has no editor" (size 0 x 0): remember it and show the panel now, not after the open check
+        {
+            _noEditorPaths.Add(docked.Path);
+            Fail(docked);
+            return;
+        }
         _opened.Add(docked);
         _area.SetEditorSize(width, height);
         if (ReferenceEquals(_failed, docked)) { _failed = null; _ui.Post(_reshow, UiPriority.ApplicationIdle); }

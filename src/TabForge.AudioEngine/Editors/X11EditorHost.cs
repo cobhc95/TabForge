@@ -30,6 +30,7 @@ public sealed unsafe class X11EditorHost : IPluginEditorHost
     private readonly Dictionary<nint, IPluginInstance> _open = new();
     private readonly Dictionary<IPluginInstance, nint> _byPlugin = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<nint, Action<int, int>> _resizeHandlers = new();
+    private readonly Dictionary<nint, Action<int, int>?> _sizedCallbacks = new();
     private readonly Dictionary<nint, (int W, int H)> _sizes = new();
     private readonly Dictionary<nint, EditorRate> _rates = new();
     private int _vst3Open;
@@ -95,6 +96,10 @@ public sealed unsafe class X11EditorHost : IPluginEditorHost
         XSync(_display, 0);
 
         var errorsBefore = Errors.Count;
+        // Map before attaching, as the Win32 helper does under Wine: the plug-in's child window is created in a
+        // window that is already on screen, so its first paint is not lost.
+        XMapRaised(_display, window);
+        XSync(_display, 0);
         var size = plugin.OpenEditor((IntPtr)window);
         if (size is null)
         {
@@ -103,11 +108,16 @@ public sealed unsafe class X11EditorHost : IPluginEditorHost
             XFlush(_display);
             return false;
         }
-        _open[window] = plugin;
-        _byPlugin[plugin] = window;
         if (plugin is Vst3Plugin) _vst3Open++;
         _sizes[window] = size.Value;
+        _sizedCallbacks[window] = sized;
+        // Resize before the window joins _open, then flush and drain: the map/resize notifications from the initial
+        // 400x300 window are ignored instead of being mistaken for a user resize.
         Resize(window, size.Value.Width, size.Value.Height);
+        XSync(_display, 0);
+        DrainEvents();
+        _open[window] = plugin;
+        _byPlugin[plugin] = window;
         sized?.Invoke(size.Value.Width, size.Value.Height);
         if (plugin is IEditorResizeSource source)
         {
@@ -140,7 +150,7 @@ public sealed unsafe class X11EditorHost : IPluginEditorHost
 
     private void Resize(nint window, int width, int height)
     {
-        FixSize(_display, window, width, height);
+        AllowResize(_display, window);
         XResizeWindow(_display, window, (uint)Math.Max(1, width), (uint)Math.Max(1, height));
         XFlush(_display);
     }
@@ -162,6 +172,7 @@ public sealed unsafe class X11EditorHost : IPluginEditorHost
             try { plugin.CloseEditor(); } catch (Exception ex) { _log.Write($"editor close failed: {ex.Message}"); }
         }
         _resizeHandlers.Remove(window);
+        _sizedCallbacks.Remove(window);
         _sizes.Remove(window);
         _rates.Remove(window);
         if (_display == IntPtr.Zero || alreadyGone) return;
@@ -211,10 +222,26 @@ public sealed unsafe class X11EditorHost : IPluginEditorHost
             XNextEvent(_display, &ev);
             var type = (int)ev.Slots[0];
             // ClientMessage: window in slot 4, message_type 5, data.l[0] 7. DestroyNotify: the destroyed window in slot 5.
-            var window = type == DestroyNotify ? (nint)ev.Slots[5] : (nint)ev.Slots[4];
-            if (!_open.ContainsKey(window)) continue;
+            // ConfigureNotify: event and window are pointer-sized (slots 4 and 5), then x/y share slot 6 and
+            // width/height share slot 7 as 32-bit halves (low/high), because only pointer-sized fields get a whole slot.
+            var window = type is DestroyNotify or ConfigureNotify ? (nint)ev.Slots[5] : (nint)ev.Slots[4];
+            if (!_open.TryGetValue(window, out var plugin)) continue;
             if (type == ClientMessage && ev.Slots[5] == _wmProtocols && ev.Slots[7] == _wmDelete) Close(window);
             else if (type == DestroyNotify) Close(window, alreadyGone: true);
+            else if (type == ConfigureNotify)
+            {
+                // A user resize (the WM resized our window). Tell the view, exactly as the Win32 host does on WM_SIZE; a
+                // fixed-size view ignores this (tfv3_editor_set_size checks canResize) but the window still resizes.
+                var width = (int)(ev.Slots[7] & 0xFFFFFFFF);
+                var height = (int)((ev.Slots[7] >> 32) & 0xFFFFFFFF);
+                if (width <= 0 || height <= 0) continue;
+                if (_sizes.TryGetValue(window, out var last) && last.W == width && last.H == height) continue;
+                _sizes[window] = (width, height);
+                try { if (plugin is IEditorSizeSink sink) sink.SetEditorSize(width, height); } catch (Exception ex) { _log.Write($"editor size failed: {ex.Message}"); }
+                if (_sizedCallbacks.TryGetValue(window, out var onSized)) onSized?.Invoke(width, height);
+                _log.Write($"editor window resized x11 0x{window:X} {width}x{height}");
+                continue;
+            }
             else continue;
             try { UserClosed?.Invoke(); } catch (Exception ex) { _log.Write($"editor closed handler failed: {ex.Message}"); }
         }

@@ -49,7 +49,7 @@ public static class MainWindowEngineSync
             window.Activated += (_, _) => monitor.Activate();   // only the active window's monitor sounds
             window.Closed += (_, _) => monitor.Dispose();
         }
-        playback.FrameRateCap = () => settings.Settings.Follow.MaxFps;
+        // Follow.MaxFps limits expensive score scrolling, never the lightweight playback overlays.
         playback.FrameWindow = () => window;
         panes.ArrangementCreated += arrangement =>
         {

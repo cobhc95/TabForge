@@ -8,6 +8,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Styling;
+using TabForge.Menus;
 using TabForge.Models;
 using TabForge.Platform;
 using TabForge.Platform.Theme;
@@ -88,7 +89,12 @@ public sealed class TrackHeaderColumn : Control
     {
         _timeline = timeline;
         _song = song;
-        ContextMenuBuilder.Attach(this, timeline.ContextMenus, at => ContextMenuRows.TrackRowAt(_timeline, at));
+        // PointerPressed opens the meter popup; consume the later context request too, or the dock body's panel menu opens.
+        ContextRequested += (_, e) =>
+        {
+            if (e.TryGetPosition(this, out var at) && CellAt(at) is { Cell: TrackRowCells.Cell.Meter }) e.Handled = true;
+        };
+        ContextMenuBuilder.Attach(this, timeline.ContextMenus, TrackMenuAt);
         timeline.HoverRowChanged += InvalidateVisual;
         timeline.RowScrollChanged += InvalidateVisual;
         timeline.PickedRowsChanged += InvalidateVisual;
@@ -98,10 +104,11 @@ public sealed class TrackHeaderColumn : Control
         PointerWheelChanged += (_, e) => _timeline.ScrollRowsByWheel(e);
         PointerMoved += (_, e) =>
         {
-            var tip = CellAt(e.GetPosition(this)) is { } hit ? TipOf(hit.Row, hit.Cell) : null;
+            var at = e.GetPosition(this);
+            var tip = CellAt(at) is { } hit ? TipOf(hit.Row, hit.Cell) : null;
             if (!Equals(ToolTip.GetTip(this), tip)) ToolTip.SetTip(this, tip);
-            _timeline.HoverRowAtY(e.GetPosition(this).Y);
-            UpdateCellHover(e.GetPosition(this));
+            _timeline.HoverRowAtY(at.Y);
+            UpdateCellHover(at);
         };
         PointerExited += (_, _) =>
         {
@@ -134,6 +141,10 @@ public sealed class TrackHeaderColumn : Control
             if (CellAt(e.GetPosition(this)) is { Cell: TrackRowCells.Cell.Meter } meter && meter.Row >= 0) MeterMixerRequested?.Invoke(meter.Row);
         };
     }
+
+    /// <summary>The track row menu at a right-click; a meter cell has none, its right-click opens the meter menu (PointerPressed) only.</summary>
+    private IEnumerable<MenuSpec> TrackMenuAt(Point at) =>
+        CellAt(at) is { Cell: TrackRowCells.Cell.Meter } ? Array.Empty<MenuSpec>() : ContextMenuRows.TrackRowAt(_timeline, at);
 
     /// <summary>The track row and cell under the pointer, or null when the pointer is on no drawn cell.</summary>
     public (int Row, TrackRowCells.Cell Cell)? HoverCell { get; private set; }
@@ -235,6 +246,14 @@ public sealed class TrackHeaderColumn : Control
 
     /// <summary>The rows that follow the dragged slider by the same change (the selected tracks), or null when only the dragged row moves.</summary>
     internal IReadOnlyList<int>? SliderGroup { get; set; }
+
+    /// <summary>The name the header shows for a track: the track name, with the capo badge when a full or partial capo is fitted.</summary>
+    internal static string DisplayName(TrackModel track)
+    {
+        var partials = track.PartialCapos is { Count: > 0 };
+        if (track.Capo > 0) return $"{track.Name} · Capo {track.Capo}{(partials ? " +" : "")}";
+        return partials ? $"{track.Name} · Partial +" : track.Name;
+    }
 
     /// <summary>The master row's volume in percent, read at each paint: the arrangement gives the transport's master knob here. Null shows 0.</summary>
     public Func<int>? MasterVolumePercent { get; set; }
@@ -370,7 +389,7 @@ public sealed class TrackHeaderColumn : Control
         d.DrawText(number, numberX + (numberWidth - number.Width) / 2, top + (_timeline.HeaderLineHeightOf(row) - number.Height) / 2);
         var (nameX, nameWidth) = TrackRowCells.Column("name", NameColumnWidth);
         var nameRight = nameX + nameWidth - 4;
-        var name = d.Text(track.Name, Font, 13, text, d.PixelsPerDip, weight: IsNameBold(row) ? SelectedNameWeight : NameWeight);
+        var name = d.Text(DisplayName(track), Font, 13, text, d.PixelsPerDip, weight: IsNameBold(row) ? SelectedNameWeight : NameWeight);
         // Only a name wider than its cell is clipped: a clip pushed around every name left the later cells drawn at the wrong scale in a render at a scale other than 1 (a capture, a video frame).
         var clipName = name.Width + 1 > nameRight - (nameX + 4);
         if (clipName) d.PushClip(nameX + 4, top, Math.Max(0, nameRight - (nameX + 4)), _timeline.HeaderLineHeightOf(row));
@@ -388,7 +407,6 @@ public sealed class TrackHeaderColumn : Control
         }
         if (_timeline.ShowTrackLines) d.Line(edge, 0, top + height - 0.5, ColumnWidth, top + height - 0.5);
     }
-
     /// <summary>The boxes use the colours: idle as the row, red when muted, amber when soloed; the muted letter is the higher-contrast ink on the red.</summary>
     internal static (UiColor Fill, UiColor Edge, UiColor Letter) ToggleColours(Func<string, UiColor> ink, TrackRowCells.Cell kind, bool on)
     {

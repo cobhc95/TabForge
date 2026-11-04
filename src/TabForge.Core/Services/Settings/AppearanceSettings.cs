@@ -33,6 +33,8 @@ public sealed class AppearanceSettings
         return value;
     }
     public double UiScale { get; set; } = 1.0;
+    /// <summary>True once the user chose the interface size; while false the size follows the monitor (UiScaleRecommendation) and nothing asks about it.</summary>
+    public bool UiScaleUserOverridden { get; set; }
     public bool ReduceAnimations { get; set; }
     public double AnimationSpeed { get; set; } = 1.0;
     public string SelectionColour { get; set; } = Palette.Hex("Selection", false);

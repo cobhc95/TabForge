@@ -262,8 +262,15 @@ public sealed partial class MainWindow
         var rhythm = d.Rhythm;
         var layout = d.Layout;
         var fretboardDefaults = new TabForge.Services.AppSettings();
+        // One Fretboard settings window (the Customize button and the right-click row both open it); its link goes on to Preferences.
+        void OpenFretboardSettings()
+        {
+            if (settings is null) return;
+            settings.OpenFretboardSettings(this, () => new Views.FretboardSettingsWindow(settings.Settings, () => settings.SaveSettings(),
+                () => MainWindowSettings.ShowPreferencesPage(settings, this, TabForge.Services.SettingsCatalog.Fretboard)));
+        }
         var fretboardMenu = new FretboardContextMenu(() => settings?.Settings ?? fretboardDefaults, () => settings?.SaveSettings(),
-            () => MainWindowSettings.ShowPreferencesPage(settings, this, TabForge.Services.SettingsCatalog.Fretboard),
+            OpenFretboardSettings,
             () => scorePreview.Editor.Project is { Tracks.Count: > 0 } ? scorePreview.Editor.Track : null);
         compose.FretboardMenu = fretboardMenu;
         var fretboard = new FretboardSettingsBinding(settings?.Settings ?? fretboardDefaults, d.Compose.FretboardMode);
@@ -279,6 +286,7 @@ public sealed partial class MainWindow
                 return DockPaneSetup.Detached(cachedInstrument);
             }
             cachedInstrument = new InstrumentPanelStrip(scorePreview, () => d.CloseInstrument?.Invoke(), () => songs.Songs.Count == 0 ? null : playback?.For(songs.Active), fretboardMenu, () => _ = scaleFinder.OpenAsync());
+            cachedInstrument.CustomizeRequested = OpenFretboardSettings;
             compose.InstrumentStrip = fretboard.Attach(cachedInstrument);
             return cachedInstrument;
         },keepsNaturalHeight: InstrumentPanelStrip.LocksRowHeight(settings?.Settings.Appearance));

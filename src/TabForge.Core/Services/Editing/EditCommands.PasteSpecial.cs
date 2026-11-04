@@ -53,7 +53,7 @@ public static partial class PasteCommands
             {
                 SourceTrackId = source.SourceTrackId, SourceTrackIndex = source.SourceTrackIndex, Name = source.Name,
                 InstrumentName = source.InstrumentName, TrackKind = source.TrackKind, IsDrums = source.IsDrums, MidiChannel = source.MidiChannel,
-                StringTunings = source.StringTunings.ToList(), Capo = source.Capo, NumberOfFrets = source.NumberOfFrets,
+                StringTunings = source.StringTunings.ToList(), Capo = source.Capo, PartialCapos = PartialCapoRules.Copy(source.PartialCapos), NumberOfFrets = source.NumberOfFrets,
                 DrumMapPreset = source.DrumMapPreset, Voice = source.Voice, LengthSlots = length * times
             };
             for (var i = 0; i < times; i++)

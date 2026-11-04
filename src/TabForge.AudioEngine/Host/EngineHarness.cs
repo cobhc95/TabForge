@@ -24,8 +24,17 @@ public static partial class EngineHost
 
         public static bool Attached => _session.PluginFactory is not null || (_shared is not null && _pipe is null);
 
-        /// <param name="factory">Creates each plug-in of a chain (spec, sample rate, max block); the real VST loaders are not used.</param>
-        public static void Attach(SharedBlock shared, Func<PluginSpec, double, int, IPluginInstance> factory)
+        /// <summary>Attaches with a test plug-in factory: the real VST loaders are not used.</summary>
+        /// <param name="factory">Creates each plug-in of a chain (spec, sample rate, max block).</param>
+        public static void Attach(SharedBlock shared, Func<PluginSpec, double, int, IPluginInstance> factory) => AttachCore(shared, factory);
+
+        /// <summary>
+        /// Headless harness with the real plug-in loaders (the same spec → route → VST3 / 32-bit helper path as the engine), for
+        /// end-to-end tests. No test factory: every chain slot is created exactly as the engine would create it.
+        /// </summary>
+        internal static void AttachReal(SharedBlock shared) => AttachCore(shared, null);
+
+        private static void AttachCore(SharedBlock shared, Func<PluginSpec, double, int, IPluginInstance>? factory)
         {
             if (_pipe is not null) throw new InvalidOperationException("The headless harness cannot run inside an engine process.");
             if (_shared is not null) throw new InvalidOperationException("The headless harness is already attached.");
@@ -38,6 +47,7 @@ public static partial class EngineHost
 
         public static void Configure(EngineConfig config) => _session.Configure(config);
         public static void LoadChain(int slot, string track, bool useMidiSynth, List<PluginSpec> specs) => _session.LoadChain(slot, track, useMidiSynth, specs);
+        public static void SetTrackMix(int slot, int volume, int pan) => _session.SetTrackMix(slot, volume, pan);
         public static void RemoveChain(int slot) => _session.RemoveChain(slot);
         public static void SetClips(int slot, List<ClipSpec> clips, int owner = 0) => _session.StoreClips(slot, clips, owner);
 

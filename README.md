@@ -1,6 +1,14 @@
-# TabForge 0.8.6
+# TabForge 0.8.7 — review draft
 
-**A keyboard-driven tablature and notation editor for Windows, and Linux. Opens .gp, .gpx, .gp5, .gp4 and .gp3 files and saves .gp and its own .tforge projects, and can save .gp5, .gp4 and .gp3 copies.** Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard / keyboard, an arrangement timeline, audio and MIDI recording, a mixer, VST plug-ins and offline audio and video rendering.
+> CI-only review branch: downloads below still point to the previous public release. The 0.8.7 stable packages await packaging verification and final publication approval. See the [release notes](docs/releases/0.8.7.md). No 0.8.7 release or tag has been published.
+
+**Find your scale:** automatic detection and best-match suggestions share one choice across the status bar, fretboard and piano roll. Choose the tracks and range to analyse, compare the fit, or keep a manual choice.
+
+**New in 0.8.7:** a detailed, customisable fretboard; full and partial capos; expanded tuning presets and string audition; bridged plug-in support; and experimental Linux AppImage and tar.xz packages with bundled Wine 9.21. See the [changelog](CHANGELOG.md).
+
+The proposed 11-picture fretboard, settings, Track properties and capo gallery will be applied separately; existing pictures are retained on this CI branch.
+
+**A keyboard-driven tablature and notation editor for Windows, with an experimental Linux build. Opens .gp, .gpx, .gp5, .gp4 and .gp3 files and saves .gp and its own .tforge projects, and can save .gp5, .gp4 and .gp3 copies.** Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard / keyboard, an arrangement timeline, audio and MIDI recording, a mixer, VST plug-ins and offline audio and video rendering.
 
 [![TabForge with a drum plug-in](docs/media/screenshots/github-main.jpg)](docs/media/screenshots/github-main.jpg)
 
@@ -11,23 +19,23 @@
 > [!TIP]
 > **Windows**
 >
-> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.8.6/TabForge-0.8.6-setup.exe)** · no administrator rights needed
+> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.8.5/TabForge-0.8.5-setup.exe)** · no administrator rights needed
 >
-> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.8.6/TabForge-0.8.6-win-x64-portable.zip)** · extract and run `TabForge.exe`
+> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.8.5/TabForge-0.8.5-win-x64-portable.zip)** · extract and run `TabForge.exe`
 >
-> **[SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.8.6/TabForge-0.8.6-SHA256.txt)** · to verify both Windows files
+> **[SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.8.5/TabForge-0.8.5-SHA256.txt)** · to verify both Windows files
 
 > [!WARNING]
 > **Linux (experimental)**
 >
-> **[Linux package (tar.gz)](https://github.com/cobhc95/TabForge/releases/download/v0.8.6/TabForge-0.8.6-linux-x64.tar.gz)** · [SHA-256](https://github.com/cobhc95/TabForge/releases/download/v0.8.6/TabForge-0.8.6-linux-x64.tar.gz.sha256) · Ubuntu 22.04 or newer (glibc 2.35+), 64-bit, X11 (Wayland sessions run through XWayland). The SoundFont and ffmpeg are bundled, so sound and Video export work on first run. This build is experimental. It appears fully functional in a Hyper-V Ubuntu VM, which is the only place it has been tried; it has not been tested on real hardware, and Render, microphone input and CLAP plug-ins are not yet confirmed on Linux. Expect rough edges, and please report them.
+> **[Linux package (tar.gz)](https://github.com/cobhc95/TabForge/releases/download/v0.8.5/TabForge-0.8.5-linux-x64.tar.gz)** · [SHA-256](https://github.com/cobhc95/TabForge/releases/download/v0.8.5/TabForge-0.8.5-linux-x64.tar.gz.sha256) · Ubuntu 22.04 or newer (glibc 2.35+), 64-bit, X11 (Wayland sessions run through XWayland). The SoundFont and ffmpeg are bundled, so sound and Video export work on first run. This build is experimental. It appears fully functional in a Hyper-V Ubuntu VM, which is the only place it has been tried; it has not been tested on real hardware, and Render, microphone input and CLAP plug-ins are not yet confirmed on Linux. Expect rough edges, and please report them.
 
 Windows: 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify your download](#verify-your-download). Older versions: [Releases](https://github.com/cobhc95/TabForge/releases).
 
 **Run it on Linux:**
 
 ```bash
-tar -xzf TabForge-0.8.6-linux-x64.tar.gz
+tar -xzf TabForge-0.8.5-linux-x64.tar.gz
 cd TabForge
 ./TabForge
 ```
@@ -48,7 +56,7 @@ If it does not start, install the usual desktop libraries: `sudo apt install lib
 
 ## New since 0.8.3
 
-A redesigned MIDI piano roll (Select tool, two-row toolbar, scale panel, lane picker), built-in effects, a master level meter, techniques that switch an instrument's articulation, redesigned bend and tremolo bar editors, saving copies for older programs, a redesigned preset menu and manager, and a first, experimental Linux build.
+Built-in effects, a master level meter, techniques that switch an instrument's articulation, redesigned bend and tremolo bar editors, saving copies for older programs, a redesigned preset menu and manager, and a first, experimental Linux build.
 
 <table>
 <tr>

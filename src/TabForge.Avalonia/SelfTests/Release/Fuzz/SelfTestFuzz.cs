@@ -8,8 +8,11 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using TabForge.Audio.Contracts;
 using TabForge.Models;
+using TabForge.Plugins;
 using TabForge.Services;
+using EH = TabForge.AudioEngine.EngineHost.Headless;
 
 namespace TabForge;
 
@@ -63,6 +66,25 @@ public static partial class SelfTest
             FuzzGroup("tforge-gz", 2, count, seed, root, gz, LoadTforge,
                 (r, s) => r.Next(2) == 0 ? FuzzMutateBinary(r, s, hotBytes: 32) : Gzip(FuzzMutateJson(r, plainJson)), Controlled);
 
+            // ---- .tforge with a plug-in state carried inline (the project file is the state's transport) ----
+            var pluginProject = BuildSyntheticGpSong();
+            pluginProject.Tracks[0].Rig ??= new RigPreset();
+            pluginProject.Tracks[0].Rig.Plugins.Add(new PluginSlot
+            {
+                Id = "fuzz-plugin", Name = "Fuzz FX", Path = @"C:\fuzz\fx.dll", Format = "VST2", Enabled = true,
+                State = Convert.ToBase64String(Encoding.UTF8.GetBytes("stage14-plugin-state")),
+            });
+            var pluginPath = Path.Combine(root, "seed-plugin.tforge");
+            ProjectService.Save(pluginPath, pluginProject);
+            var pluginGz = File.ReadAllBytes(pluginPath);
+            var pluginJson = Gunzip(pluginGz);
+            FuzzGroup("tforge-plugin-state", 8, count, seed, root, pluginJson, LoadTforge,
+                (r, s) => FuzzMutateJson(r, s), Controlled);
+            FuzzGroup("tforge-plugin-state-gz", 9, count, seed, root, pluginGz, LoadTforge,
+                (r, s) => r.Next(2) == 0 ? FuzzMutateBinary(r, s, hotBytes: 32) : Gzip(FuzzMutateJson(r, pluginJson)), Controlled);
+            FuzzGroup("tforge-plugin-state-field", 10, count, seed, root, pluginJson, LoadTforge,
+                (r, s) => FuzzMutatePluginState(r, s), Controlled);
+
             // ---- .gp: zip + the embedded TabForge project ----
             var gpEmbedded = GuitarProExporter.ToBytes(project, embedProject: true);
             var gpClean = GuitarProExporter.ToBytes(project, embedProject: false);
@@ -114,6 +136,93 @@ public static partial class SelfTest
         {
             TryDelete(root);
         }
+    }
+
+    /// <summary>
+    /// Stage 14: the engine's own wire frames and command parsers. Framing is fuzzed with the same mutators as the file
+    /// formats; each safe command's real reader runs on mutated payloads. Fixed seed, fixed count, per-case time limit.
+    /// </summary>
+    private static void TestEngineFrameFuzz()
+    {
+        var count = Math.Clamp(FuzzEnvInt("TABFORGE_FUZZ_COUNT", FuzzDefaultCount), 1, 100_000);
+        var seed = FuzzEnvInt("TABFORGE_FUZZ_SEED", FuzzDefaultSeed);
+        Log.Add($"  info  engine fuzz: {count} inputs per command, seed {seed}");
+        var root = Path.Combine(Path.GetTempPath(), "tf-fuzz-engine-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var shared = SharedBlock.Create($"tf-selftest-{Guid.NewGuid():N}");
+        EH.Attach(shared, (spec, rate, block) => throw new InvalidOperationException($"engine fuzz must not load {spec.Path}"));
+        try
+        {
+            EH.Configure(new EngineConfig(TabForge.AudioEngine.Output.AudioOutputFactory.Null,
+                TabForge.AudioEngine.Output.AudioOutputFactory.NullManual, 48000, 256, false));
+
+            // Framing: one valid command frame is the seed; length, type and payload mutations must be refused by the reader.
+            var validPayload = EngineMessageBytes(EngineMessageCases().First(c => c.Name == "SetTransport (with bar map)").Pair);
+            using var frameStream = new MemoryStream();
+            Frames.Write(frameStream, (byte)EngineCommand.SetTransport, w => w.Write(validPayload));
+            FuzzGroup("engine-frames", 90, count, seed, root, frameStream.ToArray(), bytes =>
+            {
+                using var stream = new MemoryStream(bytes);
+                var frame = Frames.Read(stream, FrameLimits.ForCommand);
+                frame?.Dispose();
+            }, (r, s) => FuzzMutateBinary(r, s, hotBytes: 8), Controlled);
+
+            // Real command parsers. Only commands that never load a plug-in or touch a device are included.
+            var cases = new (EngineCommand Type, string Name)[]
+            {
+                (EngineCommand.SetState, "SetState"), (EngineCommand.SetTransport, "SetTransport (with bar map)"),
+                (EngineCommand.SetClips, "SetClips"), (EngineCommand.SetPosition, "SetPosition"),
+                (EngineCommand.SetPluginGain, "SetPluginGain"), (EngineCommand.SetPluginBypass, "SetPluginBypass"),
+                (EngineCommand.SetTrackMix, "SetTrackMix"), (EngineCommand.SetMidiProcessors, "SetMidiProcessors"),
+                (EngineCommand.SetAutoPitch, "SetAutoPitch"), (EngineCommand.SetArm, "SetArm"),
+                (EngineCommand.PanicSlots, "PanicSlots"), (EngineCommand.SetGraph, "SetGraph"),
+                (EngineCommand.MeasurePitch, "MeasurePitch"), (EngineCommand.SetMidiRoute, "SetMidiRoute"),
+                (EngineCommand.SetPluginWiring, "SetPluginWiring"), (EngineCommand.SetSynth, "SetSynth"),
+                (EngineCommand.SetMidiLogWatch, "SetMidiLogWatch"), (EngineCommand.SetTunerWindow, "SetTunerWindow"),
+                (EngineCommand.SetWindowsPathOffset, "SetWindowsPathOffset"), (EngineCommand.SetLiveLimiter, "SetLiveLimiter"),
+                (EngineCommand.SetInputGain, "SetInputGain"), (EngineCommand.Ping, "Ping"),
+            };
+            for (var i = 0; i < cases.Length; i++)
+            {
+                var type = cases[i].Type;
+                var payload = EngineMessageBytes(EngineMessageCases().First(c => c.Name == cases[i].Name).Pair);
+                FuzzGroup("engine-cmd-" + type, 100 + i, count, seed, root, payload, bytes =>
+                {
+                    EH.Command(type, w => w.Write(bytes));
+                    EH.Collect();
+                }, (r, s) => FuzzMutateBinary(r, s, hotBytes: 64), ControlledEngine);
+            }
+        }
+        finally
+        {
+            EH.Detach();
+            shared.Dispose();
+            TryDelete(root);
+        }
+    }
+
+    /// <summary>Engine parsers signal malformed input with InvalidDataException; a short payload also ends in EndOfStreamException.</summary>
+    private static bool ControlledEngine(Exception ex) => ex is InvalidDataException or EndOfStreamException;
+
+    /// <summary>Replaces the project's inline plug-in State value: invalid base64, empty, small, large and non-text.</summary>
+    private static byte[] FuzzMutatePluginState(Random r, byte[] source)
+    {
+        var text = Encoding.UTF8.GetString(source);
+        const string marker = "\"State\":\"";
+        var at = text.IndexOf(marker, StringComparison.Ordinal);
+        if (at < 0) return FuzzMutateJson(r, source);
+        var start = at + marker.Length;
+        var end = text.IndexOf('"', start);
+        if (end < 0) return FuzzMutateJson(r, source);
+        var replacement = r.Next(5) switch
+        {
+            0 => "",
+            1 => "!!!!not-base64!!!!",
+            2 => Convert.ToBase64String(Encoding.UTF8.GetBytes(new string('A', r.Next(1, 256)))),
+            3 => new string('A', r.Next(1, 100_000)),
+            _ => Convert.ToBase64String(Enumerable.Range(0, r.Next(1, 4096)).Select(_ => (byte)r.Next()).ToArray()),
+        };
+        return Encoding.UTF8.GetBytes(text[..start] + replacement + text[end..]);
     }
 
     private static bool Controlled(Exception ex) => ex is InvalidDataException;

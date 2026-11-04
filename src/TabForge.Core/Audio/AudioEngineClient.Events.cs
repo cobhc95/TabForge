@@ -22,7 +22,7 @@ public sealed partial class AudioEngineClient
             case EngineEvent.Pong: Volatile.Write(ref _lastAlive, Stopwatch.GetTimestamp()); break;
             case EngineEvent.PluginSlow:
             {
-                r.ReadInt32(); r.ReadInt32(); var path = r.ReadBoundedString(1024); var kind = (PluginCallKind)r.ReadInt32(); var seconds = r.ReadInt32();
+                r.ReadInt32(); r.ReadInt32(); var path = r.ReadBoundedString(Frames.MaxPathChars); var kind = (PluginCallKind)r.ReadInt32(); var seconds = r.ReadInt32();
                 RaiseOnUi(() => PluginSlow?.Invoke(path, kind, seconds));
                 break;
             }
@@ -42,13 +42,13 @@ public sealed partial class AudioEngineClient
             }
             case EngineEvent.PluginFailed:
             {
-                r.ReadInt32(); r.ReadInt32(); var path = r.ReadBoundedString(1024); var why = r.ReadBoundedString();
+                r.ReadInt32(); r.ReadInt32(); var path = r.ReadBoundedString(Frames.MaxPathChars); var why = r.ReadBoundedString();
                 RaiseOnUi(() => PluginFailed?.Invoke(path, why));
                 break;
             }
             case EngineEvent.PluginMisbehaved:
             {
-                r.ReadInt32(); var index = r.ReadInt32(); var path = r.ReadBoundedString(1024);
+                r.ReadInt32(); var index = r.ReadInt32(); var path = r.ReadBoundedString(Frames.MaxPathChars);
                 RaiseOnUi(() => PluginMisbehaved?.Invoke(path, index));
                 break;
             }
@@ -60,7 +60,7 @@ public sealed partial class AudioEngineClient
             case EngineEvent.StateChanged: OnPluginEdited(r.ReadInt32()); break;
             case EngineEvent.Recorded:
             {
-                var slot = r.ReadInt32(); var path = r.ReadBoundedString(1024); var start = r.ReadDouble(); var length = r.ReadDouble();
+                var slot = r.ReadInt32(); var path = r.ReadBoundedString(Frames.MaxPathChars); var start = r.ReadDouble(); var length = r.ReadDouble();
                 RaiseOnUi(() => { TrackModel? track; lock (_recordingGate) _recordingTracks.TryGetValue(slot, out track); if (track is not null) Recorded?.Invoke(track, path, start, length); });
                 break;
             }
@@ -93,7 +93,7 @@ public sealed partial class AudioEngineClient
             }
             case EngineEvent.RenderFailed:
             {
-                var message = r.ReadBoundedString(); var cancelled = r.ReadBoolean(); var plugin = r.ReadBoundedString(1024);
+                var message = r.ReadBoundedString(); var cancelled = r.ReadBoolean(); var plugin = r.ReadBoundedString(Frames.MaxPathChars);
                 FailRender(new RenderException(message, cancelled, plugin));
                 break;
             }
@@ -135,7 +135,7 @@ public sealed partial class AudioEngineClient
         var generation = r.ReadInt32();
         var results = new List<PluginLoadResult>();
         for (int i = 0, n = Math.Clamp(r.ReadInt32(), 0, 512); i < n; i++)
-            results.Add(new PluginLoadResult(r.ReadInt32(), (PluginLoadStatus)r.ReadByte(), r.ReadBoundedString(1024)));
+            results.Add(new PluginLoadResult(r.ReadInt32(), (PluginLoadStatus)r.ReadByte(), r.ReadBoundedString(Frames.MaxPathChars)));
         var ack = new ChainAck(slot, generation, results);
         foreach (var changed in results.Where(x => x.Status == PluginLoadStatus.BlockedChanged)) Trust.MarkChanged(changed.Path);   // the file no longer matches its approval: untrusted until approved again
         RaiseOnUi(() => { lock (_chainLock) _lastAcks[ack.Slot] = ack; ChainAcknowledged?.Invoke(ack); ChainLoaded?.Invoke(); });
@@ -182,16 +182,33 @@ public sealed partial class AudioEngineClient
     /// <summary>A plug-in crashed the engine: it goes to the quarantine and its track chain is reloaded without it.</summary>
     private void OnPluginCrashed(BinaryReader r)
     {
-        var slot = r.ReadInt32(); r.ReadInt32(); var path = r.ReadBoundedString(1024);
+        var slot = r.ReadInt32(); r.ReadInt32(); var path = r.ReadBoundedString(Frames.MaxPathChars);
+        // Additive trailing byte from a current engine: 1 when the 32-bit helper (not the plug-in's own code) stopped.
+        // An older engine omits it, which reads as false.
+        var helper = r.BaseStream.Position < r.BaseStream.Length && r.ReadByte() != 0;
+        // Additive trailing report path: where the helper wrote its minidump and one-line text (empty when it wrote none).
+        var report = r.BaseStream.Position < r.BaseStream.Length ? r.ReadBoundedString(Frames.MaxPathChars) : "";
         RaiseOnUi(() =>
         {
             var quarantine = Quarantine?.Invoke();
             if (quarantine is not null && !quarantine.Contains(path, StringComparer.OrdinalIgnoreCase)) quarantine.Add(path);
             _sentChains.Remove(slot); // the next Sync reloads this track's chain without it
             CrashLeftEngineRunning = true;
-            PluginCrashed?.Invoke(path);
-            CrashLeftEngineRunning = false;
+            PluginCrashedInHelper = helper;
+            PluginCrashReportPath = report.Length > 0 ? report : null;
+            try { PluginCrashed?.Invoke(path); }
+            finally { PluginCrashedInHelper = false; PluginCrashReportPath = null; CrashLeftEngineRunning = false; }
         });
     }
+
+    /// <summary>While <see cref="PluginCrashed"/> runs for a helper crash: the report path it wrote, else null.</summary>
+    public string? PluginCrashReportPath { get; private set; }
+
+    /// <summary>
+    /// True only while <see cref="PluginCrashed"/> runs for a 32-bit helper that stopped. The path belongs to the bridged
+    /// plug-in (so it is quarantined like any crashed plug-in), but the engine itself kept running, so this is not an
+    /// engine crash and never counts toward <see cref="TooManyCrashes"/>.
+    /// </summary>
+    public bool PluginCrashedInHelper { get; private set; }
 
 }

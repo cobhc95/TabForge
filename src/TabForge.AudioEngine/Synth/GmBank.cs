@@ -8,7 +8,7 @@ namespace TabForge.AudioEngine.Synth;
 // Tests: AudioSmokeTests (bank switch with the local SF2), PortableBackendTests (the non-Windows fallback, with the OS flag injected).
 /// <summary>
 /// The bank choice of one engine session (the session owns one and hands it to every synth it creates). <see cref="Select"/> loads the file on the calling (main) thread and publishes one immutable
-/// <see cref="Choice"/>; each running <see cref="GmSynth"/> notices the new <see cref="Choice.Version"/> at its next block and rebuilds its synthesizer.
+/// <see cref="Choice"/>; running <see cref="GmSynth"/> instances prepare replacements on that same control thread and swap them at a block boundary.
 /// </summary>
 public sealed class GmBank
 {
@@ -69,17 +69,26 @@ public sealed class GmBank
 
     public Choice Current => _current;
 
+    // Control-thread notification only. Synths prepare replacements here; the render callback only swaps a prepared reference.
+    internal event Action<Choice>? Changed;
+
+    private void Publish(Choice choice)
+    {
+        _current = choice;
+        Changed?.Invoke(choice);
+    }
+
     /// <summary>Selects the bank: a .sf2 path, empty for Windows GM, "None" for silence. False (the bank stays as it was) when the file cannot be read.</summary>
     public bool Select(string path, out string error)
     {
         error = "";
         var old = _current;
         if (string.Equals(old.Path, path, StringComparison.OrdinalIgnoreCase)) return true;
-        if (path.Length == 0) { _current = Fallback(old.Version + 1); return true; }
-        if (string.Equals(path, TabForge.Services.SoundEngines.None, StringComparison.Ordinal)) { _current = new Choice(null, path, 0, old.Version + 1, _windowsHost, Silent: true); return true; }
+        if (path.Length == 0) { Publish(Fallback(old.Version + 1)); return true; }
+        if (string.Equals(path, TabForge.Services.SoundEngines.None, StringComparison.Ordinal)) { Publish(new Choice(null, path, 0, old.Version + 1, _windowsHost, Silent: true)); return true; }
         var font = TryLoad(path, out error);
         if (font is null) return false;
-        _current = new Choice(font, path, SoundFontMasterVolume, old.Version + 1, _windowsHost);
+        Publish(new Choice(font, path, SoundFontMasterVolume, old.Version + 1, _windowsHost));
         return true;
     }
 }

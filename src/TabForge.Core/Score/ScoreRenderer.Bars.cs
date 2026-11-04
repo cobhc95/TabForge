@@ -20,13 +20,22 @@ internal sealed partial class ScoreRenderer
         if (!ScoreLayoutEngine.HasStringTuning(track)) return;
         var tuning = track.StringTunings;
         var rowCount = Math.Max(1, (tuning.Count + 1) / 2);
-        ScoreText.DrawIn(ScoreTextArea.Header, d, TuningName(tuning), _host.GridLeft, 65, 9, faint, 600);
+        var tuningTitle = TuningName(tuning);
+        ScoreText.DrawIn(ScoreTextArea.Header, d, tuningTitle, _host.GridLeft, 65, 9, faint, 600);
+        var rowTop = 77;
+        var capoLine = PartialCapoRules.CapoLine(track.Capo, track.PartialCapos);
+        if (capoLine.Length > 0)
+        {
+            // The capo gets its own line above the first staff, not a suffix on the tuning title.
+            ScoreText.DrawIn(ScoreTextArea.Header, d, capoLine, _host.GridLeft, rowTop, 9, faint, 600);
+            rowTop += 11;
+        }
         for (var stringIndex = 0; stringIndex < tuning.Count; stringIndex++)
         {
             var column = stringIndex / rowCount;
             var row = stringIndex % rowCount;
             ScoreText.DrawIn(ScoreTextArea.Header, d, $"{stringIndex + 1} = {MusicTheoryService.NoteName(tuning[stringIndex])}",
-                _host.GridLeft + column * 72, 77 + row * 11, 9, faint);
+                _host.GridLeft + column * 72, rowTop + row * 11, 9, faint);
         }
     }
 

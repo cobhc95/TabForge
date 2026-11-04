@@ -40,6 +40,13 @@ dotnet publish "$WORK/Source/src/TabForge.Avalonia/TabForge.Avalonia.csproj" -c 
   -p:TabForgePortableBuild=true -p:EnableWindowsTargeting=true -p:RestoreLockedMode=false -p:PublishReadyToRun=false \
   -p:ContinuousIntegrationBuild=true -p:Deterministic=true -o "$PUBLISH"
 
+# 2a. Packaging guard: the private plug-in manifest is test-only and must never reach the publish output.
+private_hits="$(find "$PUBLISH" -type f -name 'manifest.private*.json' -print | sed -n '1p')"
+if [ -n "$private_hits" ]; then
+  echo "ERROR: the private plug-in manifest is in the publish output; refusing to package: $private_hits" >&2
+  exit 1
+fi
+
 # 2b. libtfportable (miniaudio audio + RtMidi MIDI, native/tfportable) built with CMake for this OS, unless a built one is given with --tfportable.
 if [ -z "$TFPORTABLE_DIR" ]; then
   command -v cmake >/dev/null 2>&1 || { echo "cmake not found: install it or pass --tfportable" >&2; exit 1; }

@@ -20,7 +20,7 @@ namespace TabForge.Avalonia.Platform;
 
 /// <summary>
 /// The timeline's playhead state: the played bar and the fraction through it, its x, and the section-bracket option that marks the section
-/// holding it. A frame that moves the playhead less than a pixel draws nothing; the body redraws only when the bar changes.
+/// holding it. Every frame moves the overlay at sub-pixel precision; the body redraws only when the bar changes.
 /// Owns: the playhead position and its x. Does not own: the playhead's moving layers (TimelinePlayheadLayer), the drawing of the brackets
 /// (TimelineView.Drawing) or the clock that moves it (the arrangement's playhead subscription).
 /// Tests: TabForge.Avalonia.Tests.TimelineViewTests.
@@ -37,8 +37,8 @@ public sealed partial class TimelineView
     public int PlayheadPass { get; private set; } = 1;
 
     /// <summary>
-    /// Moves the playhead to <paramref name="bar"/> and <paramref name="fraction"/>. The timeline repaints only when the bar changes or the
-    /// playhead's whole-DIP x changes, so a frame that moves it less than a pixel draws nothing.
+    /// Moves the playhead to <paramref name="bar"/> and <paramref name="fraction"/> with a transform, even for a fractional-pixel move.
+    /// The timeline body repaints only when the bar changes.
     /// </summary>
     public void SetPlayhead(int bar, double fraction, int pass = 1)
     {

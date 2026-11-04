@@ -21,7 +21,8 @@ public static class FxGenericControls
     public static bool Supports(PluginSlot? slot) => slot is not null && Supports(slot.Format);
 
     /// <summary>Integration point for the native editor on this system: true when a docked plug-in editor can get a native window in the FX window (Windows: always). A system without one
-    /// (Linux / macOS until their editor host exists) opens the generic panel at once instead of showing an empty area; whoever adds an editor host there widens this expression (or gives the area a handle).</summary>
+    /// (Linux, whose editors are always floating X11 windows; macOS until its editor host exists) opens the generic panel at once instead of showing an empty area; whoever adds a docked
+    /// editor there widens this expression (or gives the area a handle).</summary>
     public static bool NativeEditorAreaSupported => OperatingSystem.IsWindows();
 
     /// <summary>Whether the docked editor cannot open here: the area has no native window and this system will not give it one.</summary>

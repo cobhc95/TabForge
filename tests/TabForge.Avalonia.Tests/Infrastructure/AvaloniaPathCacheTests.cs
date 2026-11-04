@@ -61,6 +61,38 @@ public class AvaloniaPathCacheTests(ITestOutputHelper output)
     }
 
     [AvaloniaFact]
+    public void UncachedPathHasIdenticalBoundsButIsNeverRetained()
+    {
+        var paths = new AvaloniaPathsAndText();
+        var cached = paths.BuildPath(s => Shape(s, 10, 10));
+        var bytes = paths.CachedPathBytes;
+        for (var i = 0; i < 100; i++)
+        {
+            var fresh = paths.BuildUncachedPath(s => Shape(s, 10, 10));
+            Assert.NotSame(cached, fresh);
+            Assert.Equal(paths.Bounds(cached), paths.Bounds(fresh));
+        }
+        Assert.Equal(bytes, paths.CachedPathBytes);
+        Assert.Equal(1, paths.CachedPaths);
+    }
+
+    [AvaloniaFact]
+    public void LargePathsStayWithinByteBudget()
+    {
+        var paths = new AvaloniaPathsAndText();
+        for (var i = 0; i < 80; i++)
+        {
+            paths.BuildPath(s =>
+            {
+                s.BeginFigure(new UiPoint(i, 0), true, true);
+                for (var column = 0; column < 4000; column++) s.LineTo(new UiPoint(column, column % 3));
+            });
+            Assert.InRange(paths.CachedPathBytes, 0, 4 * 1024 * 1024);
+        }
+        Assert.InRange(paths.CachedPaths, 1, 12);
+    }
+
+    [AvaloniaFact]
     public void CachedShapesDrawAsFastAsFreshGeometry()
     {
         const int frames = 300, shapesPerFrame = 40;

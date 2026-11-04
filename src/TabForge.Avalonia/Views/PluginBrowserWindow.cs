@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
@@ -45,6 +46,7 @@ public sealed class PluginBrowserWindow : Window
     private readonly WrapPanel _buttons = new() { Name = "ButtonBar", Margin = new Thickness(0, 8, 0, 0) };
     private readonly StackPanel _runButtons = new() { Name = "RunButtons", Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
     private Button _pause = null!;   // set in BuildBottom: Pause, or Resume while paused
+    private Button _approveAll = null!;   // set in BuildButtons
     private readonly List<TextBlock> _sortArrows = new();
     private readonly Button _scanStandard;   // the empty-state button; shown only while the list is empty (the preview has the standard folders off)
     private int _sortColumn;
@@ -57,6 +59,9 @@ public sealed class PluginBrowserWindow : Window
     /// <summary>The plug-in of the row chosen with Enter or a double-click, or the file chosen by hand; null when the window closes without one.</summary>
     public VstPluginInfo? Chosen { get; private set; }
 
+    /// <summary>Asks to approve these plug-ins; by default the confirmation window (tests inject the answer).</summary>
+    public Func<IReadOnlyList<VstPluginInfo>, System.Threading.Tasks.Task<bool>> ConfirmApproval { get; set; }
+
     /// <param name="session">The plug-in list, scan and identify work.</param>
     /// <param name="files">The file and folder pickers.</param>
     /// <param name="openSettings">Opens the audio and plug-in settings over the given window.</param>
@@ -66,6 +71,7 @@ public sealed class PluginBrowserWindow : Window
         _session = session;
         _files = files;
         _openSettings = openSettings;
+        ConfirmApproval = plugins => PluginApprovalWindow.AskAsync(this, plugins);
         Title = "Add plug-in";
         Width = 760;
         Height = 560;
@@ -110,8 +116,10 @@ public sealed class PluginBrowserWindow : Window
     // Pause / Resume and Stop show only while an identify pass runs or is paused; the thin bar under the status line follows its progress (a scan: moving).
     private void RefreshRun()
     {
-        var active = _session.Run is IdentifyRun.Running or IdentifyRun.Paused;
+        var active = _session.Approving || _session.Run is IdentifyRun.Running or IdentifyRun.Paused;
         _runButtons.IsVisible = active && !_session.Scanning;
+        _pause.IsVisible = !_session.Approving;   // a batch only stops
+        _approveAll.IsEnabled = !_session.Approving && !_session.Scanning && !_session.Identifying;
         _pause.Content = _session.Run == IdentifyRun.Paused ? "Resume" : "Pause";
         var (done, total) = _session.IdentifyProgress;
         _progress.IsIndeterminate = _session.Scanning;
@@ -140,6 +148,22 @@ public sealed class PluginBrowserWindow : Window
     }
 
     private System.Threading.Tasks.Task Identify() => _session.IdentifyAsync(() => IsVisible);
+
+    // Approve all / selected: only the given rows, only after the one confirmation.
+    private async System.Threading.Tasks.Task ApproveRows(IReadOnlyList<PluginBrowserRow> rows)
+    {
+        try
+        {
+            var plugins = await _session.UnapprovedAsync(rows);
+            if (plugins.Count == 0) _status.Text = PluginApprovalPresenter.NothingToApproveText;
+            else if (await ConfirmApproval(plugins)) await _session.ApproveAsync(plugins);
+        }
+        catch (Exception ex)
+        {
+            // Reported, not swallowed (UiTasks.Forget pattern): the failure shows on the window's status line.
+            _status.Text = "Approving failed: " + ex.Message;
+        }
+    }
 
     private Control BuildSearchBox()
     {
@@ -189,6 +213,8 @@ public sealed class PluginBrowserWindow : Window
         });
         AddButton("Browse for a plug-in file…", "Plugins.BrowseFile", "Add a single plug-in file without adding its folder.", BrowseForFile);
         AddButton("Rescan", "Plugins.Rescan", "Scan the folders again (after installing or removing plug-ins).", () => _ = Scan(null));
+        _approveAll = AddButton("Approve all…", "Plugins.ApproveAll", "Approve every plug-in now listed that still needs approval; you confirm the list first. Never runs by itself.",
+            () => _ = ApproveRows(_list.ItemsSource as IReadOnlyList<PluginBrowserRow> ?? []));
         AddButton("Scan common folders", "Plugins.ScanCommon", "Scan the usual VST locations (Steinberg VstPlugins, Common Files VST3, VST2 ...); found plug-ins are merged into the list. Edit the folder list with Edit list.", () =>
         {
             var roots = _session.CommonRoots();
@@ -203,7 +229,7 @@ public sealed class PluginBrowserWindow : Window
 
     private void BrowseForFile()
     {
-        var path = _files.OpenFile(new TabForge.Platform.FileDialogOptions { Key = TabForge.Services.DialogKeys.PluginFile, Title = "Choose a plug-in", Filter = "Plug-ins (*.vst3;*.dll;*.clap)|*.vst3;*.dll;*.clap" }, this);
+        var path = _files.OpenFile(new TabForge.Platform.FileDialogOptions { Key = TabForge.Services.DialogKeys.PluginFile, Title = "Choose a plug-in", Filter = PluginBrowserSession.PluginFileFilter }, this);
         if (path is null) return;
         if (PluginBrowserSession.FromFile(path, out var problem) is not { } info) { _status.Text = problem ?? ""; return; }
         Chosen = info;
@@ -246,6 +272,12 @@ public sealed class PluginBrowserWindow : Window
         AutomationProperties.SetAutomationId(_list, "Plugins.List");
         AutomationProperties.SetName(_list, "Plug-ins");
         _list[!BackgroundProperty] = new DynamicResourceExtension("PanelBackground");
+        _list.SelectionMode = SelectionMode.Multiple;   // Ctrl and Shift, for Approve selected; Enter and double-click still choose one
+        var approveSelected = new MenuItem { Name = "ApproveSelectedItem", Header = "Approve selected…" };
+        AutomationProperties.SetAutomationId(approveSelected, "Plugins.ApproveSelected");
+        approveSelected.Click += (_, _) => _ = ApproveRows(_list.SelectedItems?.OfType<PluginBrowserRow>().ToList() ?? []);
+        _list.ContextMenu = new ContextMenu { Items = { approveSelected } };
+        _list.ContextMenu.Opening += (_, _) => approveSelected.IsEnabled = _approveAll.IsEnabled && _list.SelectedItem is not null;
         // Perf (H13/H15): an explicit virtualizing panel + a recycling template, so only the visible plug-in rows
         // build controls no matter how many folders were scanned.
         _list.ItemsPanel = new FuncTemplate<Panel?>(() => new VirtualizingStackPanel());
@@ -352,17 +384,16 @@ public sealed class PluginBrowserWindow : Window
     private void Accept()
     {
         if (_list.SelectedItem is not PluginBrowserRow row) return;
-        if (row.Info.IsUnsupported32) { _status.Text = VstPluginInfo.Text32; return; }
         Chosen = row.Info;
         Close(true);
     }
 
     private void Filter()
     {
-        _list.ItemsSource = PluginBrowserListPresenter.Rows(_session.All, _session.KnownRoles(), _session.NotIdentified, _search.Text ?? "", _sortColumn, _sortAscending);
+        _list.ItemsSource = PluginBrowserListPresenter.Rows(_session.All, _session.KnownRoles(), _session.NotIdentified, _search.Text ?? "", _sortColumn, _sortAscending, _session.CouldNotIdentify, _session.Refusals);
         for (var column = 0; column < _sortArrows.Count; column++)
             _sortArrows[column].Text = column != _sortColumn ? "" : _sortAscending ? "▲" : "▼";
-        if (_session.Scanning) return;
+        if (_session.Scanning || _session.Approving) return;   // keep the progress sentence
         _scanStandard.IsVisible = _session.All.Count == 0 && !_session.Settings.ScanStandardFolders;
         if (_session.Run is IdentifyRun.Paused or IdentifyRun.Stopped) return;   // keep the Paused / Stopped sentence
         _status.Text = PluginBrowserListPresenter.StatusText(_session.All.Count, _session.FoldersChosen, _session.Settings.RememberScan);

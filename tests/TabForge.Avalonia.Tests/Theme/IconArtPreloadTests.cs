@@ -1,7 +1,10 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Avalonia.Headless.XUnit;
+using Avalonia.Threading;
 using TabForge.Avalonia.Platform;
 using TabForge.Platform;
 using TabForge.Presenters;
@@ -17,6 +20,20 @@ namespace TabForge.Avalonia.Tests;
 /// </summary>
 public class IconArtPreloadTests
 {
+    [AvaloniaFact]
+    public async Task GeometryBatchesYieldToHigherPriorityUiWork()
+    {
+        var prepared = new List<int>();
+        var seenBeforeNextBatch = -1;
+        await IconArtPreloader.PrepareBatches(Enumerable.Range(0, 17).ToArray(), value =>
+        {
+            prepared.Add(value);
+            if (value == 0) Dispatcher.UIThread.Post(() => seenBeforeNextBatch = prepared.Count, DispatcherPriority.Background);
+        });
+        Assert.Equal(4, seenBeforeNextBatch);
+        Assert.Equal(Enumerable.Range(0, 17), prepared);
+    }
+
     [AvaloniaFact]
     public void PreloadOnUiThreadMakesAllSetsReady()
     {

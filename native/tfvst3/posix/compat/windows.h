@@ -11,8 +11,8 @@
 #include <cstdint>
 #include <cwchar>
 
-/* The editor handle the shim stores for a plug-in view. The editor itself is not hosted on these systems yet
-   (a plug-in reports no HWND support, so tfv3_has_editor answers 0), but the member must exist. */
+/* The editor handle the shim stores for a plug-in view. On Linux it is the X11 window id passed to
+   kPlatformTypeX11EmbedWindowID (the engine's X11EditorHost owns that window); macOS does not host editors yet. */
 typedef void* HWND;
 
 #define CP_UTF8 65001u

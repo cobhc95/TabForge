@@ -92,7 +92,7 @@ public class RfxVstFixTests
     }
 
     [Fact]
-    public void AScanListsA32BitVst2DllAsNotSupported()
+    public void AScanListsA32BitVst2DllAsBridged()
     {
         var dir = Directory.CreateTempSubdirectory("pe32");
         try
@@ -107,7 +107,7 @@ public class RfxVstFixTests
             Assert.False(PeExports.IsVst2Plugin32(new64));
             var found = VstScannerService.Scan(new[] { dir.FullName }, CancellationToken.None, new PluginTrust(), new NoFiles(), forceRefresh: true);
             Assert.Equal(VstPluginInfo.Format32, found.Single(p => p.Name == "Old32").Format);
-            Assert.True(found.Single(p => p.Name == "Old32").IsUnsupported32);
+            Assert.True(found.Single(p => p.Name == "Old32").IsBridged32);
             Assert.Equal("VST2", found.Single(p => p.Name == "New64").Format);
         }
         finally { dir.Delete(true); }
@@ -123,7 +123,7 @@ public class RfxVstFixTests
     }
 
     [Theory]
-    [InlineData(193, "32-bit plug-in; TabForge loads 64-bit plug-ins only")]
+    [InlineData(193, "needs the 32-bit helper (tfvst32.exe)")]
     [InlineData(126, "a file it needs is missing")]
     [InlineData(5, "access denied")]
     [InlineData(1114, "library could not be loaded")]

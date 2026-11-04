@@ -10,7 +10,7 @@ The checked-in DLL was built with:
 
 | Tool | Version |
 | --- | --- |
-| Visual Studio 2026 (v18) Build Tools, MSVC | 19.51.36256.0 (x64 `cl.exe` / `link.exe`) |
+| Visual Studio 2026 (v18) Build Tools, MSVC | 19.51.36257.0 (x64 `cl.exe` / `link.exe`) |
 | CMake | 4.4.3 (the project needs 3.20 or newer) |
 | Git | any recent Git for Windows (CMake uses it to fetch the SDK) |
 | Windows SDK | the one installed with the Visual Studio C++ workload |
@@ -70,17 +70,32 @@ Source/src/TabForge.AudioEngine/native/tfvst3.dll
 The audio engine project copies that file next to `TabForge.exe` (`TabForge.AudioEngine.csproj`). Without the DLL
 the app still runs; VST3 plug-ins are then unavailable.
 
+## File size (reviewed Stage 13 D6 exception)
+
+`tfvst3.cpp` is one 1,354-line translation unit. It is the thin COM/VST3 ABI shim and the connection, parameter, state and
+editor entry points share one private `Api`/instance table; splitting it would either duplicate that table or move it to
+another header without reducing the review surface. The 500-line goal is therefore recorded as an exception for this file
+until it grows past roughly 1,500 lines or a second host needs the same code, at which point the host, state and editor
+parts should be split into separate translation units.
+
 ## Reproducibility
 
-The checked-in `Source/src/TabForge.AudioEngine/native/tfvst3.dll` (636,416 bytes) has SHA-256
+The checked-in `Source/src/TabForge.AudioEngine/native/tfvst3.dll` (643,072 bytes) has SHA-256
 
 ```
-9e3e286335ead842fb062ce1f138ad1fa9ce3e4fea5488d9c10b94dc205a1589
+6a1029ad6831410b1e1abfeb32d2de69b6268a619edc9fc338ed3c732abdd86b
 ```
+
+This is the build recorded in `Source/native/BUILD_PROVENANCE.md`: MSVC 19.51.36257.0, CMake 4.4.3, the pinned SDK
+commit below. `Source/tools/Package-Release.ps1` refuses to package a DLL whose hash differs from that record, and
+`Source/tools/Write-Sbom.ps1` copies the record into `Source/docs/reference/SBOM.md`. Rebuild and update all three
+together; do not edit this paragraph by hand.
 
 **A clean build does not reproduce it byte for byte.** Rebuilding on a machine with the same compiler (MSVC
-19.51.36256.0), the same CMake (4.4.3) and the same pinned SDK gives a file of the same size that differs in a
-few bytes. Measured on 2026-09-30:
+19.51.36257.0), the same CMake (4.4.3) and the same pinned SDK gives a file of the same size that differs in a
+few bytes. The table below records the earlier measurements made on 2026-09-30 with the previous compiler
+(MSVC 19.51.36256.0); the current checked-in DLL was rebuilt on 2026-11-01 with MSVC 19.51.36257.0 and its hash is
+the one above:
 
 | Build | Source path | SHA-256 | Bytes differing from the checked-in DLL |
 | --- | --- | --- | --- |
@@ -103,16 +118,16 @@ Two builds from the same folder differ from each other only in the two timestamp
 Because of 1 and 2, the check that is meaningful is "same size, same code and data apart from timestamps and
 path-hashed names", not equal hashes. A future release could make the build reproducible by building from a fixed
 folder with `/Brepro` (`-DCMAKE_SHARED_LINKER_FLAGS=/Brepro -DCMAKE_CXX_FLAGS=/Brepro`); that changes the DLL,
-so it is not done for the current file. The upstream CI workflow (historical: windows-ci; this checkout has no CI config) builds the bridge from the pinned SDK on
-every run and runs `Source/tools/Compare-NativeBridge.ps1`: it parses the PE headers, masks the link timestamps (COFF header,
-export, resource and debug directories), the PDB identity (GUID, path, checksum) and the `?A0x<hash>` source-path hash
-names, reports how many bytes differed in each category, and fails only when a byte outside those categories (or the
-size) differs.
+so it is not done for the current file. The `windows-ci` workflow builds the bridge from the pinned SDK on every run and runs
+`Source/tools/Compare-NativeBridge.ps1`: it parses the PE headers, masks the link timestamps (COFF header, export,
+resource and debug directories), the PDB identity (GUID, path, checksum) and the `?A0x<hash>` source-path hash names,
+reports how many bytes differed in each category, and fails only when a byte outside those categories (or the size)
+differs.
 
 **Release builds.** Releases ship the checked-in DLL, in the local build and in the GitHub Actions build alike, so both
-carry the same bridge; the CI rebuild above is a check, not the source of the shipped file. The upstream
-manual build-bridge workflow (historical: no CI config in this checkout; run by hand whenever the bridge source or the SDK pin changes; the maintainer then commits its DLL
-and `Source/native/BUILD_PROVENANCE.md` as they are) builds the bridge from the pinned SDK on the runner with `Source/native/build-tfvst3.ps1`, attests it, and uploads
+carry the same bridge; the CI rebuild above is a check, not the source of the shipped file. The `build-bridge` workflow (run by hand whenever the bridge source or the SDK pin changes; the maintainer then commits
+its DLL and `Source/native/BUILD_PROVENANCE.md` as they are) builds the bridge from the pinned SDK on the runner with
+`Source/native/build-tfvst3.ps1`, attests it, and uploads
 `tfvst3.dll` together with `Source/native/BUILD_PROVENANCE.md` (compiler and SHA-256). Those two files are committed as they
 are. `Source/tools/Package-Release.ps1` refuses to package if the DLL's SHA-256 differs from the record. The release is then
 reproducible: see `Source/docs/guides/REPRODUCIBLE_BUILDS.md`.

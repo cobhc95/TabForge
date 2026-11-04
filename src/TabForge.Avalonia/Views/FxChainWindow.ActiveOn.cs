@@ -46,18 +46,19 @@ public sealed partial class FxChainWindow
     /// <summary>The toolbar button: the popup for the selected plug-in, under the button.</summary>
     private void OpenActiveOnFromButton()
     {
-        if (Selected is { } slot) OpenActiveOnFor(new object[] { slot }, _activeOnButton.Button, PlacementMode.Bottom);
+        if (Selected is { } slot) OpenActiveOnFor(new object[] { LivePlugin(slot.Id) ?? slot }, _activeOnButton.Button, PlacementMode.Bottom);
     }
 
     /// <summary>The container header's button: the popup for that container, under the button.</summary>
     internal void OpenActiveOnForContainer(ChainContainer container, Control anchor) =>
-        OpenActiveOnFor(new object[] { container }, anchor, PlacementMode.Bottom);
+        OpenActiveOnFor(new object[] { LiveContainer(container.Id) ?? container }, anchor, PlacementMode.Bottom);
 
     private void OpenActiveOnFor(IReadOnlyList<object> targets, Control anchor, PlacementMode placement)
     {
         _activeOnPopup?.Close();
-        var subject = targets[0] switch { PluginSlot p => p.Name, ChainContainer c => c.Name, _ => null };
-        _activeOnPopup = new FxActiveOnPopup(anchor, RuleOf(targets[0]), subject,
+        var live = ResolveLive(targets[0]);
+        var subject = live switch { PluginSlot p => p.Name, ChainContainer c => c.Name, _ => null };
+        _activeOnPopup = new FxActiveOnPopup(anchor, RuleOf(live), subject,
             kind => FxActiveOnDevices.Choices(kind, _host.PluginSettings, RememberedDeviceNames()),
             () => ActiveOnOutputNow,
             FxActiveOnDevices.Settled,
@@ -69,15 +70,20 @@ public sealed partial class FxChainWindow
     private void UpdateActiveOnButton()
     {
         var slot = Selected;
-        _activeOnButton.Update(slot?.ActiveOn, slot is not null);
+        _activeOnButton.Update(slot?.ActiveOn, slot is not null, ActiveOnRules.Matches(slot?.ActiveOn, ActiveOnOutputNow));
     }
 
     private void ApplyActiveOn(IReadOnlyList<object> targets, ActiveOnRule? rule) =>
-        EditTree(_ =>
+        EditTree(tree =>
         {
+            var normalized = ActiveOnRule.Normalize(rule);
             foreach (var target in targets)
-                if (target is PluginSlot plugin) plugin.ActiveOn = ActiveOnRule.Normalize(rule);
-                else if (target is ChainContainer container) container.ActiveOn = ActiveOnRule.Normalize(rule);
+            {
+                var id = target switch { PluginSlot p => p.Id, ChainContainer c => c.Id, _ => null };
+                if (id is null) continue;
+                if (target is PluginSlot && FindLivePlugin(tree, id) is { } plugin) plugin.ActiveOn = normalized;
+                else if (target is ChainContainer && FindLiveContainer(tree, id) is { } container) container.ActiveOn = normalized;
+            }
         }, refresh: true);
 
     private static ActiveOnRule? RuleOf(object target) => target switch
@@ -86,6 +92,38 @@ public sealed partial class FxChainWindow
         ChainContainer container => container.ActiveOn,
         _ => null,
     };
+
+    /// <summary>The live plug-in or container for a cached target: the rig may have replaced its objects (undo, settings reload) while the pane kept the old one.</summary>
+    private object ResolveLive(object target) => target switch
+    {
+        PluginSlot p => LivePlugin(p.Id) ?? p,
+        ChainContainer c => LiveContainer(c.Id) ?? c,
+        _ => target,
+    };
+
+    private PluginSlot? LivePlugin(string id) => _track.Rig.Plugins.FirstOrDefault(p => p.Id == id);
+
+    private ChainContainer? LiveContainer(string id) => _track.Rig.Containers?.FirstOrDefault(c => c.Id == id);
+
+    private static PluginSlot? FindLivePlugin(List<ChainItem> tree, string id)
+    {
+        foreach (var item in tree)
+        {
+            if (item.Plugin is { } plugin && plugin.Id == id) return plugin;
+            if (FindLivePlugin(item.Children, id) is { } found) return found;
+        }
+        return null;
+    }
+
+    private static ChainContainer? FindLiveContainer(List<ChainItem> tree, string id)
+    {
+        foreach (var item in tree)
+        {
+            if (item.Container is { } container && container.Id == id) return container;
+            if (FindLiveContainer(item.Children, id) is { } found) return found;
+        }
+        return null;
+    }
 
     // Every device a rule in this chain names stays in the popup (greyed when unplugged) instead of being forgotten.
     private IEnumerable<string> RememberedDeviceNames() =>

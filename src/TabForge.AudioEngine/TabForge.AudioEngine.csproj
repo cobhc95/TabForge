@@ -24,8 +24,13 @@
     <InternalsVisibleTo Include="TabForge.Avalonia.Tests" />
   </ItemGroup>
   <ItemGroup>
-    <!-- VST3 host shim (native\tfvst3, built from the Steinberg VST3 SDK); optional until it is built. -->
+    <!-- VST3 host shim (native\tfvst3, built from the Steinberg VST3 SDK); optional until it is built. The x86 copy is
+         loaded by the 32-bit helper only (Windows VST3 through tfvst32.exe). -->
     <None Include="native\tfvst3.dll" Condition="Exists('native\tfvst3.dll')" Link="tfvst3.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="native\tfvst3-x86.dll" Condition="Exists('native\tfvst3-x86.dll')" Link="tfvst3-x86.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- 32-bit and 64-bit VST2 helpers (native\tfvst32, one source); shipped loose beside TabForge.exe so the engine can start them. -->
+    <None Include="native\tfvst32.exe" Condition="Exists('native\tfvst32.exe')" Link="tfvst32.exe" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="native\tfvst64.exe" Condition="Exists('native\tfvst64.exe')" Link="tfvst64.exe" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="MeltySynth" Version="2.4.1" />

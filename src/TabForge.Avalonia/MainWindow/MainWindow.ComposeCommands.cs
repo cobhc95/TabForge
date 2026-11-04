@@ -66,7 +66,7 @@ public sealed partial class MainWindow
         Action refreshInstrumentViews = () => { compose.InstrumentStrip?.Refresh(); panes.Band?.RefreshInstrumentViews(); };   // the panel and the Band cards follow the track's instrument
         shared.RefreshInstrumentViews = refreshInstrumentViews;
         instrumentPicker.InstrumentChanged += refreshInstrumentViews;   // on commit or cancel
-        MainWindowTrackMenu.Register(commands, songs, this, contextMenus, showStatus, instrumentPicker, track => MainWindowInsertRefresh.Landed(panes, scorePreview, songs.Active, track));
+        MainWindowTrackMenu.Register(commands, songs, this, contextMenus, showStatus, instrumentPicker, track => MainWindowInsertRefresh.Landed(panes, scorePreview, songs.Active, track), playback);
         MainWindowGlobalTuning.Register(commands, songs, this, showStatus);
         MainWindowClipKeys.Register(commands, songs, panes, () => settings?.Settings.Editing.TrimEmptyBarsAtEnd ?? new EditingSettings().TrimEmptyBarsAtEnd);
         MainWindowClipEditKeys.Register(commands, songs, panes, showStatus);
@@ -199,7 +199,7 @@ public sealed partial class MainWindow
         MainWindowReRecordPass.Register(commands, songs, panes, recordingHooks);
         MainWindowTrackArmKeys.Register(commands, songs, recordingHooks.IsTrackRecording, song =>
         {
-            recordingHooks.ArmChanged(song);   // a disarm while recording ends that track's capture now
+            recordingHooks.ArmChanged();   // a disarm while recording ends that track's capture now
             playback?.SyncEngine(song, settings?.Settings.Plugins ?? new TabForge.Services.PluginSettings());
         }, showStatus);
         MainWindowTransportMenu.Register(commands, playback, songs, recordingHooks);
@@ -379,7 +379,7 @@ public sealed partial class MainWindow
         contextMenus.EmptyLaneClick = () => EmptyLaneChoice.Normalize(settings?.Settings.Editing.EmptyLaneClick);
         contextMenus.Clipboard = clipboard;
         MainWindowTrackRowEdits.Register(commands, songs, panes, this, contextMenus, clipboard, showStatus, editRouting);
-        MainWindowTrackRowOptions.Register(panes, songs, this, instrumentPicker);
+        MainWindowTrackRowOptions.Register(panes, songs, this, instrumentPicker, playback);
         MainWindowConvertToInstrument.Register(commands, songs, this, contextMenus, () => settings?.Settings ?? new TabForge.Services.AppSettings(), () => settings?.SaveSettings());
         commands.Add("Tab.Close", () => Platform.UiTasks.Forget(songs.CloseActive(), "Closing the tab", showStatus));
         commands.Add("File.Save", () => _ = saving.Save(songs.Active));

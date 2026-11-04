@@ -10,6 +10,7 @@ using Avalonia.Layout;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using TabForge.Documents;
+using TabForge.Models;
 using TabForge.Presenters;
 
 namespace TabForge.Avalonia.Platform.Controls;
@@ -168,9 +169,11 @@ public sealed class CompactTrackStrip : DockPanel
         RefreshPills();
     }
 
+    private static bool HasPartialCapos(TrackModel track) => track.PartialCapos is { Count: > 0 };
+
     private void RefreshPills()
     {
-        if (_song is { } song && (Pills.Count != song.Project.Tracks.Count || Pills.Where((pill, i) => !pill.Shows(song.Project.Tracks[i].Name, song.Project.Tracks[i].ColorHex)).Any())) Rebuild();
+        if (_song is { } song && (Pills.Count != song.Project.Tracks.Count || Pills.Where((pill, i) => !pill.Shows(song.Project.Tracks[i].Name, song.Project.Tracks[i].ColorHex, song.Project.Tracks[i].Capo, HasPartialCapos(song.Project.Tracks[i]))).Any())) Rebuild();
         else SyncLit();
     }
 
@@ -182,7 +185,7 @@ public sealed class CompactTrackStrip : DockPanel
         {
             var index = i;
             var track = song.Project.Tracks[i];
-            var pill = new TrackPillButton(track.Name, track.ColorHex, PillToolTip(track.Name));
+            var pill = new TrackPillButton(track.Name, track.ColorHex, PillToolTip(track.Name), track.Capo, HasPartialCapos(track));
             pill.Click += (_, _) => { PillClicked?.Invoke(index); SyncLit(); };
             _pills.Children.Add(pill);
         }

@@ -82,6 +82,7 @@ function Describe-Difference([string]$Name, [byte[]]$A, [byte[]]$B) {
 function Explain([string]$Name) {
     switch -Regex ($Name) {
         '(^|/)tfvst3\.dll$' { return 'native bridge: differs when a different tfvst3.dll was shipped. Both builds must use the committed DLL (Source/docs/guides/REPRODUCIBLE_BUILDS.md).' }
+        '(^|/)tfvst32\.exe$' { return '32-bit helper: differs when a different tfvst32.exe was shipped. Both builds must use the committed exe (Source/docs/guides/REPRODUCIBLE_BUILDS.md).' }
         '(^|/)TabForge\.exe$' { return 'managed single-file build: differs when the SDK version, the commit, the source text (line endings) or a build setting differs.' }
         '\.(pdb)$' { return 'symbols are not shipped; if present they embed source checksums, so line endings matter.' }
         '\.(md|txt|json|svg)$' { return 'text file: usually a line-ending difference (checkout is not eol=crlf) or a different commit.' }

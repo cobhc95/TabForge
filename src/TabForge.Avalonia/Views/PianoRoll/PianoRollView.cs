@@ -115,7 +115,7 @@ public sealed partial class PianoRollView : DockPanel
         Surface.LaneShown = editing.PianoRollVelocityLaneShown;
         _horizontal.Scroll += (_, _) => { if (_syncingBars) return; Surface.ScrollTo(_horizontal.Value, Surface.ScrollY); TellTimeline(); };
         _vertical.Scroll += (_, _) => { if (!_syncingBars) Surface.ScrollTo(Surface.ScrollX, _vertical.Value); };
-        var top = new StackPanel { Orientation = Orientation.Vertical, Children = { BuildToolbar(), BuildInfoLine() } };
+        var top = BuildToolbar();
         SetDock(top, Dock.Top);
         SetDock(_horizontal, Dock.Bottom);
         SetDock(_vertical, Dock.Right);

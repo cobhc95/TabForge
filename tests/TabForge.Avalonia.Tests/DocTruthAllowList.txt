@@ -36,3 +36,42 @@ windows-ci.yml
 TABFORGE_FFMPEG
 libmp3lame.0.dylib
 libmp3lame.so.0
+TABFORGE_WINE
+wine-9.21
+wine-9.21-amd64-wow64
+COPYING.LIB
+ThirdParty/wine/BUILD_PROVENANCE.md
+ThirdParty/wine/COPYING.LIB
+usr/bin/SoundFonts/GeneralUser-GS.sf2
+// Test-harness env var naming the checkout root (like TABFORGE_WINE above).
+TABFORGE_REPO
+// Test-harness env vars naming the 32/64-bit bridge binaries (like TABFORGE_FFMPEG above).
+TABFORGE_TFVST32_EXE/_TFVST64_EXE/_TEST_DLL/_TEST64_DLL
+// Written beside the Linux packages by tools/package-linux.sh.
+MIN_GLIBC.txt
+// Written next to SBOM.md by tools/package-linux.sh at package time.
+SBOM-package.txt
+// Written into the Linux package by tools/package-linux.sh (--wine step).
+ThirdParty/wine/README.txt
+// Written into the Linux package by tools/package-linux.sh (--wine step).
+ThirdParty/wine/LICENSE
+// Written into the Linux package by tools/package-linux.sh (--wine step).
+ThirdParty/wine/AUTHORS
+// Written into the Linux package by tools/package-linux.sh (--ffmpeg step).
+ThirdParty/ffmpeg/LICENSE.txt
+// Written into the Linux package by tools/package-linux.sh (--ffmpeg step).
+ThirdParty/ffmpeg/README.txt
+// Written into the Linux package by tools/package-linux.sh (mpg123 notice).
+ThirdParty/libmpg123/README.txt
+// Linux package notices directory written by tools/package-linux.sh.
+ThirdParty/
+// Linux package sound-bank directory written by tools/package-linux.sh.
+SoundFonts/
+// External NuGet package name used by the Linux build for desktop integration.
+Tmds.DBus.Protocol
+// External native library name shipped inside the SkiaSharp package on Linux.
+libSkiaSharp
+// External native library name shipped inside the HarfBuzzSharp package on Linux.
+libHarfBuzzSharp
+// External system library bundled beside libmp3lame.so.0 by tools/package-linux.sh.
+libmpg123.so.0

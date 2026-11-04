@@ -44,6 +44,7 @@ public static class SettingsNavigationGlyphs
             case SettingsCatalog.Tabs: Tabs(canvas); break;
             case SettingsCatalog.Hotkeys: Shortcuts(canvas); break;
             case SettingsCatalog.Files: Files(canvas); break;
+            case "Scale highlight": ScaleFinder(canvas); break;
             default: Advanced(canvas); break;
         }
     }
@@ -163,6 +164,15 @@ public static class SettingsNavigationGlyphs
         c.Line(4, 7, 9, 7); c.Circle(12, 7, 2); c.Line(15, 7, 20, 7);
         c.Line(4, 12, 5, 12); c.Circle(8, 12, 2); c.Line(11, 12, 20, 12);
         c.Line(4, 17, 12, 17); c.Circle(15, 17, 2); c.Line(18, 17, 20, 17);
+    }
+
+    // A finder over scale dots: the scale search.
+    private static void ScaleFinder(Canvas c)
+    {
+        c.Circle(10, 10, 5.5);
+        c.Line(14, 14, 20.5, 20.5);
+        c.Circle(8, 10, 1, filled: true);
+        c.Circle(11.5, 8, 1, filled: true);
     }
 
     /// <summary>The drawing calls of one glyph, with grid coordinates scaled to DIPs and the line style of the rail.</summary>

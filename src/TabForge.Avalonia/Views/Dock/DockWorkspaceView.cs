@@ -119,7 +119,7 @@ public sealed class DockWorkspaceView : Grid
                 var first = Build(node.First ?? throw Invalid(node));
                 var second = Build(node.Second ?? throw Invalid(node));
                 control = new DockSplitPanel(node, first, second, () => Edited?.Invoke(), _lockedHeights.GetValueOrDefault(first, double.NaN), _lockedHeights.GetValueOrDefault(second, double.NaN),
-                    () => MinimumHeightOf(first), () => MinimumHeightOf(second), () => MaximumHeightOf(first), () => MaximumHeightOf(second));
+                    () => MinimumHeightOf(first) + ScoreSideMinimum(node.First), () => MinimumHeightOf(second) + ScoreSideMinimum(node.Second), () => MaximumHeightOf(first), () => MaximumHeightOf(second));
                 break;
             case "editor":
                 var editor = new Border { Name = "DockEditor", Child = _contentOf(EditorContentId) };
@@ -208,6 +208,29 @@ public sealed class DockWorkspaceView : Grid
 
     /// <summary>Perf E2b (H4/H5): drops the cached natural height of <paramref name="id"/> (its content changed size).</summary>
     internal void InvalidateNaturalHeight(string id) => _naturalCache.Remove(id);
+
+    /// <summary>The least height a half holding the score editor keeps while its splitter is dragged, so the TAB never collapses to a thin strip.</summary>
+    internal const double EditorMinimumHeight = 320;
+
+    /// <summary>The room a half holding both the score editor and the fretboard reserves for the fretboard above the editor's minimum.</summary>
+    internal const double InstrumentReserveHeight = TabForge.Avalonia.Platform.InstrumentPanelView.PanelHeight + 2;
+
+    private const string InstrumentPanelId = "instrument";
+
+    /// <summary>
+    /// The extra minimum a split half keeps when its subtree holds the score editor: the editor's own minimum, plus the fretboard's
+    /// reserve when the same half stacks it above the editor. Read live by the split, so a splitter drag cannot starve the TAB.
+    /// </summary>
+    private static double ScoreSideMinimum(DockNodeState? node)
+    {
+        if (node is null || !SubtreeHasEditor(node)) return 0;
+        var minimum = EditorMinimumHeight;
+        if (DockLayoutTree.ContainsPanel(node, InstrumentPanelId)) minimum += InstrumentReserveHeight;
+        return minimum;
+    }
+
+    private static bool SubtreeHasEditor(DockNodeState? node) =>
+        node is not null && (node.Kind == "editor" || SubtreeHasEditor(node.First) || SubtreeHasEditor(node.Second));
 
     /// <summary>The shortest pixel height a tab group may take (chrome included): the timeline's minimum, or the fretboard's minimum when it is larger; read live.</summary>
     private double MinimumHeightOf(Control host)

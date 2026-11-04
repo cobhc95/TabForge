@@ -57,7 +57,7 @@ public readonly record struct RecordMessage(bool Start, string Folder, IReadOnly
     /// <summary>Slots are returned as sent (the engine range-checks them).</summary>
     public static RecordMessage Read(BinaryReader r)
     {
-        var start = r.ReadBoolean(); var folder = r.ReadBoundedString(1024);
+        var start = r.ReadBoolean(); var folder = r.ReadBoundedString(Frames.MaxPathChars);
         var count = Math.Clamp(r.ReadInt32(), 0, MaxTracks);
         var tracks = new List<(int, string)>(count);
         for (var i = 0; i < count; i++) tracks.Add((r.ReadInt32(), r.ReadBoundedString(256)));

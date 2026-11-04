@@ -199,7 +199,7 @@ public static partial class SettingsCatalog
         (General, "Confirmations", "general.confirmclose general.confirmdiscardsettings editing.confirmdelete editing.bardelete timeline.confirmdelete"),
 
         (Appearance, "Theme", "appearance.thememode"),
-        (Appearance, "Size and text", "appearance.uiscale appearance.density appearance.fontsource appearance.font* appearance.fontsize* appearance.iconsize* appearance.toolbaricons*"),
+        (Appearance, "Size and text", "appearance.uiscale appearance.uiscale.recommended appearance.density appearance.fontsource appearance.font* appearance.fontsize* appearance.iconsize* appearance.toolbaricons*"),
         (Appearance, "Panels and toolbars", "general.toolbar general.statusbar appearance.tabstrip"),
         (Appearance, "Track colours", "appearance.tracktint appearance.mutedtrackdim mixer.grouprules appearance.groupcolour.guitars* appearance.groupcolour.basses* appearance.groupcolour.keys* appearance.groupcolour.drums* appearance.groupcolour.other* appearance.groupcolour.other-instruments*"),
         (Appearance, "Interface colours", "appearance.accent appearance.playbackhighlight appearance.playbackhighlightcolour"),

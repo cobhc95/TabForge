@@ -45,16 +45,35 @@ public static partial class SettingsCatalog
     /// is found (itself or through a synonym) in the entry's text, in any order.
     /// </summary>
     public static bool Matches(SettingsEntry entry, string lowerCaseQuery, string? category = null)
+        => ParseQuery(lowerCaseQuery).Matches(entry, category);
+
+    /// <summary>Parses the words and synonyms once for a whole Preferences search, not once per registry entry.</summary>
+    public static SearchQuery ParseQuery(string lowerCaseQuery) => new(lowerCaseQuery);
+
+    // Owns: immutable, per-search query terms. Does not own: the registry, controls or a global query cache.
+    public sealed class SearchQuery
     {
-        if (!PreferencesSearchRules.PassesCategory(category, entry.Page)) return false;
-        if (lowerCaseQuery.Length == 0 || entry.SearchText.Contains(lowerCaseQuery, StringComparison.Ordinal)) return true;
-        foreach (var word in lowerCaseQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        private readonly string _text;
+        private readonly (string Word, string[] Heads)[] _terms;
+
+        internal SearchQuery(string text)
         {
-            if (entry.SearchText.Contains(word, StringComparison.Ordinal)) continue;
-            if (HeadsOf(word).Any(head => entry.SearchText.Contains(head, StringComparison.Ordinal))) continue;
-            return false;
+            _text = text;
+            _terms = text.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(word => (word, HeadsOf(word))).ToArray();
         }
-        return true;
+
+        public bool Matches(SettingsEntry entry, string? category = null)
+        {
+            if (!PreferencesSearchRules.PassesCategory(category, entry.Page)) return false;
+            if (_text.Length == 0 || entry.SearchText.Contains(_text, StringComparison.Ordinal)) return true;
+            foreach (var (word, heads) in _terms)
+            {
+                if (entry.SearchText.Contains(word, StringComparison.Ordinal)) continue;
+                if (heads.Any(head => entry.SearchText.Contains(head, StringComparison.Ordinal))) continue;
+                return false;
+            }
+            return true;
+        }
     }
 
     /// <summary>

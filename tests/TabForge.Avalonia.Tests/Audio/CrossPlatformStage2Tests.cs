@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.IO.Pipes;
+using System.Linq;
 using System.Threading.Tasks;
 using TabForge.Audio.Contracts;
 using TabForge.Platform;
@@ -103,6 +104,57 @@ public sealed class CrossPlatformStage2Tests
             Assert.Throws<IOException>(() => SharedBlock.CreatePortable(name, folder));   // the name is taken
         }
         finally { try { Directory.Delete(folder, true); } catch (IOException) { } }
+    }
+
+    /// <summary>Regression for Stage 13 A6: a pre-existing shared folder open to other users is refused, not reused.</summary>
+    [UnixFact]
+    public void PortableSharedMemoryRefusesAFolderOpenToOtherUsers()
+    {
+        if (OperatingSystem.IsWindows()) return;   // [UnixFact] skips visibly; this keeps the analyzer's platform narrowing
+        var folder = Path.Combine(Path.GetTempPath(), "tf-portable-open-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+            UnixFileMode.GroupRead | UnixFileMode.GroupWrite | UnixFileMode.OtherRead | UnixFileMode.OtherWrite);
+        try
+        {
+            var name = EngineNames.SharedMemory(Guid.NewGuid().ToString("N"));
+            Assert.Throws<IOException>(() => SharedBlock.CreatePortable(name, folder));
+        }
+        finally { try { Directory.Delete(folder, true); } catch (IOException) { } }
+    }
+
+    /// <summary>Regression for Stage 13 A6: a link in the runtime folder is not followed as if it were the private folder.</summary>
+    [UnixFact]
+    public void PortableSharedMemoryRefusesALinkedFolder()
+    {
+        if (OperatingSystem.IsWindows()) return;   // [UnixFact] skips visibly; this keeps the analyzer's platform narrowing
+        var target = Path.Combine(Path.GetTempPath(), "tf-portable-target-" + Guid.NewGuid().ToString("N"));
+        var link = Path.Combine(Path.GetTempPath(), "tf-portable-link-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(target, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        try
+        {
+            Directory.CreateSymbolicLink(link, target);
+            var name = EngineNames.SharedMemory(Guid.NewGuid().ToString("N"));
+            Assert.Throws<IOException>(() => SharedBlock.CreatePortable(name, link));
+        }
+        finally
+        {
+            try { Directory.Delete(link); } catch (IOException) { }
+            try { Directory.Delete(target, true); } catch (IOException) { }
+        }
+    }
+
+    /// <summary>The default shared folder is per-uid on Unix (a shared /tmp must not let another user pre-create it).</summary>
+    [Fact]
+    public void TheDefaultSharedMemoryFolderIsPerUser()
+    {
+        var folder = SharedMemoryPaths.Folder();
+        if (OperatingSystem.IsWindows()) Assert.Equal("tabforge-shm", Path.GetFileName(folder));
+        else
+        {
+            var name = Path.GetFileName(folder);
+            Assert.StartsWith("tabforge-shm-", name);
+            Assert.True(name["tabforge-shm-".Length..].All(char.IsDigit), name);
+        }
     }
 
     [Fact]

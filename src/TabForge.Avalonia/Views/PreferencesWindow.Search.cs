@@ -44,7 +44,8 @@ public sealed partial class PreferencesWindow
     /// <summary>Shows every registry entry matching <paramref name="query"/> and the chosen category: rows, buttons, links, info and shortcuts, grouped by page.</summary>
     private void AddSearchResults(string query)
     {
-        var found = Registry.Where(entry => SettingsCatalog.Matches(entry, query, _searchBar.SelectedCategory)).ToList();
+        var parsed = SettingsCatalog.ParseQuery(query);
+        var found = Registry.Where(entry => parsed.Matches(entry, _searchBar.SelectedCategory)).ToList();
         var cards = new List<(int Page, Control Card)>();
         foreach (var card in PreferencesPagePresenter.Cards(found.Where(entry => entry.Row is not null).Select(entry => entry.Row!).ToList(), searching: true))
             cards.Add((PageIndex(card.Category()), RowCard(card, searching: true)));

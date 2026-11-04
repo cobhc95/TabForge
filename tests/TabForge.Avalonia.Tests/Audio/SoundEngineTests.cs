@@ -213,6 +213,33 @@ public sealed class SoundEngineTests
     }
 
     [Fact]
+    public void PreparedBankSwapsAllocateNothingInTheCallback()
+    {
+        if (!OperatingSystem.IsWindows() || !File.Exists(DlsToSoundFont.WindowsBankPath)) return;
+        var bank = new GmBank();
+        using var synth = new GmSynth(48000, 512, bank);
+        var input = new[] { new float[512], new float[512] };
+        var output = new[] { new float[512], new float[512] };
+        var transport = new TransportInfo();
+        synth.Process(input, output, 512, ReadOnlySpan<BlockMidi>.Empty, transport);
+        // Warm both boundary paths before measuring another switch; construction is deliberately outside the measured callback.
+        for (var i = 0; i < 4; i++)
+        {
+            Assert.True(bank.Select(SoundEngines.None, out _));
+            synth.Process(input, output, 512, ReadOnlySpan<BlockMidi>.Empty, transport);
+            Assert.True(bank.Select("", out _));
+            synth.Process(input, output, 512, ReadOnlySpan<BlockMidi>.Empty, transport);
+        }
+        Assert.True(bank.Select(SoundEngines.None, out _));
+        synth.Process(input, output, 512, ReadOnlySpan<BlockMidi>.Empty, transport);
+        Assert.True(bank.Select("", out _));
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        synth.Process(input, output, 512, ReadOnlySpan<BlockMidi>.Empty, transport);
+        Assert.Equal(before, GC.GetAllocatedBytesForCurrentThread());
+        Assert.Equal(GmSynth.MaxVoices, synth.Polyphony);
+    }
+
+    [Fact]
     public void FontProviderMapsLogicalFamiliesAndRestores()
     {
         var fonts = new FontProvider();

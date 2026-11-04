@@ -255,10 +255,9 @@ public sealed class MediaSongFolderSaveTests
         Assert.False(Directory.Exists(Path.Combine(tmp.Root, "music", "song", "song")));
     }
 
-    [Fact]
+    [WindowsFact]
     public async Task AMoveThatFailsFallsBackToTheMediaFolderBesideAndSaysSoAsAnError()
     {
-        if (!OperatingSystem.IsWindows()) return;   // an open file blocks a rename only on Windows
         using var fs = new LocalMediaFileSystem();
         using var tmp = new MediaTestFolder();
         var rig = new Rig();

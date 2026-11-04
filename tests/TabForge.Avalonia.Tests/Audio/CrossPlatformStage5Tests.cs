@@ -104,6 +104,21 @@ public sealed class CrossPlatformStage5Tests
     }
 
     [Fact]
+    public void TheUnixGuardToleratesAChildItsOwnerAlreadyDisposed()
+    {
+        var guard = new UnixChildProcessGuard();
+        var first = StartSleeper();
+        Assert.True(guard.Add(first));
+        first.Kill(true);
+        Assert.True(first.WaitForExit(10000));
+        first.Dispose();
+        using var second = StartSleeper();
+        try { Assert.True(guard.Add(second)); }
+        finally { guard.Dispose(); }
+        Assert.True(second.WaitForExit(10000), "the guard still ends the live child after removing the disposed one");
+    }
+
+    [Fact]
     public void TheWatchdogFiresOnceWhenTheParentIsGone()
     {
         var alive = true;

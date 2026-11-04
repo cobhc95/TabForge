@@ -41,71 +41,69 @@ public sealed class TimerFrameSource : IFrameSource
     public void Stop() => _timer.Stop();
 }
 
-/// <summary>Frames in step with the screen refresh (60, 120 or 144 Hz), capped by the Follow frame-rate setting; falls back to a timer without a window.</summary>
+/// <summary>One tick per screen refresh, without a software cap; falls back to a timer only while no window is available.</summary>
 public sealed class AnimationFrameSource : IFrameSource
 {
-    /// <summary>A cap at or above this (or at 0) means no cap: every screen frame.</summary>
-    public const int UncappedFps = 240;
-    private const double MillisecondsPerSecond = 1000;
-    // A frame arriving within this share of the cap interval still counts, so a 60 Hz cap on a 60 Hz screen does not skip every other frame.
-    private const double CapIntervalTolerance = 0.9;
-
-    private readonly Func<TopLevel?> _window;
-    private readonly Func<int> _maxFps;
-    private readonly TimerFrameSource _fallback;
+    private readonly Func<Action<TimeSpan>, bool> _requestFrame;
+    private readonly IFrameSource _fallback;
     private Action<TimeSpan> _onAnimationFrame;
     private int _generation;   // each Start owns one chain of frame requests; a frame still pending from before a Stop ends instead of making a second chain
-    private bool _animating;
-    private double _lastFrameMs = double.NegativeInfinity;
+    private bool _running;
 
     /// <param name="window">The window whose refresh drives the frames; null falls back to the timer.</param>
-    /// <param name="maxFps">The live frame-rate cap (the Follow setting); 0 or <see cref="UncappedFps"/> and up is the screen rate.</param>
-    public AnimationFrameSource(IUiThread ui, Func<TopLevel?> window, Func<int> maxFps)
+    public AnimationFrameSource(IUiThread ui, Func<TopLevel?> window)
+        : this(new TimerFrameSource(ui), callback =>
+        {
+            if (window() is not { } top) return false;
+            top.RequestAnimationFrame(callback);
+            return true;
+        })
     {
-        _window = window;
-        _maxFps = maxFps;
-        _fallback = new TimerFrameSource(ui);
-        _fallback.Frame += () => Frame?.Invoke();
+    }
+
+    // The request port lets tests drive display timestamps without a real monitor. Requests always complete asynchronously.
+    internal AnimationFrameSource(IFrameSource fallback, Func<Action<TimeSpan>, bool> requestFrame)
+    {
+        _requestFrame = requestFrame;
+        _fallback = fallback;
+        _fallback.Frame += OnFallbackFrame;
         _onAnimationFrame = _ => { };
     }
 
     public event Action? Frame;
-    public bool IsRunning => _animating || _fallback.IsRunning;
+    public bool IsRunning => _running;
 
     public void Start()
     {
         if (IsRunning) return;
-        if (_window() is { } top)
-        {
-            _animating = true;
-            var generation = ++_generation;
-            _onAnimationFrame = time => OnAnimationFrame(time, generation);
-            _lastFrameMs = double.NegativeInfinity;
-            top.RequestAnimationFrame(_onAnimationFrame);
-        }
-        else _fallback.Start();
+        _running = true;
+        var generation = ++_generation;
+        _onAnimationFrame = time => OnAnimationFrame(time, generation);
+        if (!_requestFrame(_onAnimationFrame)) _fallback.Start();
     }
 
     public void Stop()
     {
-        _animating = false;
+        _running = false;
         _generation++;
         _fallback.Stop();
     }
 
+    private void OnFallbackFrame()
+    {
+        if (!_running) return;
+        var generation = _generation;
+        Frame?.Invoke();
+        // A window may attach after playback starts. Do not stay on an unsynchronised timer for the rest of the song.
+        if (_running && generation == _generation && _requestFrame(_onAnimationFrame)) _fallback.Stop();
+    }
+
     private void OnAnimationFrame(TimeSpan time, int generation)
     {
-        if (!_animating || generation != _generation) return;
-        var cap = _maxFps();
-        var now = time.TotalMilliseconds;
-        var capped = cap > 0 && cap < UncappedFps && now - _lastFrameMs < MillisecondsPerSecond / cap * CapIntervalTolerance;
-        if (!capped)
-        {
-            _lastFrameMs = now;
-            Frame?.Invoke();
-        }
-        // The frame handler may have stopped the source (the song ended); ask for the next frame only while still running.
-        if (_animating && _window() is { } top) top.RequestAnimationFrame(_onAnimationFrame);
-        else _animating = false;
+        if (!_running || generation != _generation) return;
+        Frame?.Invoke();
+        // A handler may stop or restart playback. The old chain must never enqueue a second callback for the new run.
+        if (!_running || generation != _generation) return;
+        if (!_requestFrame(_onAnimationFrame)) _fallback.Start();
     }
 }

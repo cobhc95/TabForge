@@ -53,10 +53,9 @@ public class SingleInstanceTests
         Assert.NotEqual(AvaloniaSingleInstance.LockNameFor(@"C:\App\TabForge.exe"), AvaloniaSingleInstance.LockNameFor(@"D:\Other\TabForge.exe"));
     }
 
-    [Fact]
+    [WindowsFact]
     public void SecondLaunchHandsItsSongToTheRunningInstance()
     {
-        if (!OperatingSystem.IsWindows()) return; // the pipe name is derived from the Windows account today
         var dir = Path.Combine(Path.GetTempPath(), "tf-handoff-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         var song = Path.Combine(dir, "song.gp5");

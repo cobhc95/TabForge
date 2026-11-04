@@ -18,10 +18,11 @@ using TabForge.Services;
 
 namespace TabForge.Avalonia.Views;
 
-// Owns: the piano roll's toolbar in two rows. Row 1 flows whole groups, each under a tiny upper-case caption: TOOL (the six tools keys 1-6 and Legato), SNAP (the magnet,
+// Owns: the piano roll's toolbar in one shared wrapping flow. Captioned groups: TOOL (the six tools keys 1-6 and Legato), SNAP (the magnet,
 //       the transport's own SnapSettings: toggling either lights both, right-click opens the snap settings; the note value; the new-note length; Quantize and its options
 //       popup), SCALE (the scale button naming the scale, which opens the master scale panel, and Lock to scale), STEP INPUT (the toggle and, while on, its scale filter) and
-//       NEW NOTES (the chord stamp and the tab voice). Row 2 holds the selected-note values and, at the right, Audition, Follow playback, zoom, Ghosts and the track chip.
+//       NEW NOTES (the chord stamp and the tab voice), followed by selected-note values, Audition, Follow playback, zoom, Ghosts and the track chip.
+//       Groups and label/value pairs stay intact; all use the remaining line width before starting another line.
 // Does not own: the snap settings (TransportBarView holds them), the quantize edit (PianoRollPresenter), the zoom (PianoRollSurface), the scale controls (PianoRollView.ToolbarScale).
 // Tests: TabForge.Avalonia.Tests.PianoRollViewTests, PianoRollToolbarLayoutTests.
 public sealed partial class PianoRollView
@@ -81,7 +82,7 @@ public sealed partial class PianoRollView
             tools.Add(button);
         }
         var legato = Command(IconGeometry.ToolLegato, "Legato (Ctrl+L): each selected note (or every note) lasts to the next one", () => Surface.Run(Presenter.LegatoAsync()));
-        // Row 2's audition group is configured here with the other toggles but parented by BuildInfoLine, which runs right after this.
+        // The audition group is configured here with the other toggles and appended after the selection fields by BuildInfoLine.
         PianoRollToolbarLayout.StyleButton(_magnet).Content = Icon(IconGeometry.Magnet);
         _magnet.Focusable = false;
         TabForge.Avalonia.Platform.Controls.HotkeyTip.Set(_magnet, "PianoRoll.Snap", "Snap (shared with the timeline magnet). Right-click: snap settings");
@@ -126,7 +127,7 @@ public sealed partial class PianoRollView
         foreach (var button in new Button[] { quantize, _magnet, _audition, _followButton, _scaleButton, _lockScale, _step, _names, _ghosts })
             PianoRollToolLook.Apply(button);
         PianoRollToolLook.Apply(options, _quantizePopup);
-        // Row 1: whole groups under their captions, wrapping group by group at narrow widths.
+        // One flow for the entire toolbar: no reserved right-hand strip or forced break after the captioned groups.
         var captions = PianoRollToolbarLayout.GroupCaptions;
         var flow = PianoRollToolbarLayout.Flow();
         flow.Children.Add(PianoRollToolbarLayout.Group(captions[0], false, PianoRollToolbarLayout.Frame(tools.ToArray()), PianoRollToolbarLayout.Frame(legato)));
@@ -134,22 +135,21 @@ public sealed partial class PianoRollView
         flow.Children.Add(PianoRollToolbarLayout.Group(captions[2], true, PianoRollToolbarLayout.Frame(_scaleButton, _lockScale)));
         flow.Children.Add(PianoRollToolbarLayout.Group(captions[3], true, PianoRollToolbarLayout.Frame(_step, _stepFilter)));
         flow.Children.Add(PianoRollToolbarLayout.Group(captions[4], true, PianoRollToolbarLayout.Frame(_chord, _voice)));
-        var row = PianoRollToolbarLayout.FillRow(PianoRollToolbarLayout.Row1Name, flow, null);
+        BuildInfoLine(flow);
+        var row = PianoRollToolbarLayout.FillRow(PianoRollToolbarLayout.ToolbarName, flow, null);
         return new Border { Child = row }.WithPadding(PianoRollToolbarLayout.GroupGap, PianoRollToolbarLayout.InnerGap);
     }
 
-    /// <summary>Row 2's right end: Audition, Follow playback with the zoom buttons, Ghosts and the track chip (built by BuildToolbar).</summary>
-    private Control BuildRowTwoRight()
+    /// <summary>Append independently wrapping view groups: Audition, Follow with zoom, Ghosts and the track chip.</summary>
+    private void BuildViewControls(WrapPanel flow)
     {
         var zoomOut = Command(IconGeometry.ZoomOut, "Zoom out (Ctrl+wheel)", () => Surface.ZoomOut());
         var zoomIn = Command(IconGeometry.ZoomIn, "Zoom in (Ctrl+wheel)", () => Surface.ZoomIn());
         var chip = new StackPanel { Orientation = Orientation.Horizontal, Spacing = PianoRollToolbarLayout.InnerGap, VerticalAlignment = VerticalAlignment.Center, Children = { _chipDot, _chipName, _chipKind, _source } };
-        var right = new StackPanel { Orientation = Orientation.Horizontal, Spacing = PianoRollToolbarLayout.GroupGap, VerticalAlignment = VerticalAlignment.Center };
-        right.Children.Add(PianoRollToolbarLayout.Frame(_audition));
-        right.Children.Add(PianoRollToolbarLayout.Frame(_followButton, zoomOut, zoomIn));
-        right.Children.Add(PianoRollToolbarLayout.Frame(_ghosts));
-        right.Children.Add(PianoRollToolbarLayout.Frame(chip));
-        return right;
+        flow.Children.Add(PianoRollToolbarLayout.Frame(_audition));
+        flow.Children.Add(PianoRollToolbarLayout.Frame(_followButton, zoomOut, zoomIn));
+        flow.Children.Add(PianoRollToolbarLayout.Frame(_ghosts));
+        flow.Children.Add(PianoRollToolbarLayout.Frame(chip));
     }
 
     private void BuildModeControls()

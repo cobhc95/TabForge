@@ -53,8 +53,19 @@ public sealed partial class PreferencesWindow
     {
         var saved = SavedRows().Single(r => r.Key == key).Get();
         Rows.Single(r => r.Key == key).Set(saved);
+        if (key == UiScaleKey) Working.Appearance.UiScaleUserOverridden = _baseline.Appearance.UiScaleUserOverridden;   // undo puts back who chose the size, too
         MarkChanged();
         Rebuild();
+    }
+
+    private const string UiScaleKey = "appearance.uiscale";
+
+    /// <summary>A reset of Interface size goes back to the default, which is the monitor's recommendation, not a size the user chose.</summary>
+    private void ResetUiScaleToMonitor(IEnumerable<string> resetKeys)
+    {
+        if (!resetKeys.Contains(UiScaleKey)) return;
+        Working.Appearance.UiScaleUserOverridden = false; // Reset explicitly restores automatic mode, even at the same size.
+        MonitorUiScale.UseRecommended(this, Working.Appearance);
     }
 
     void IPreferencesChangesHost.JumpToChange(string key)
@@ -98,6 +109,7 @@ public sealed partial class PreferencesWindow
         if (!await Confirm(prompt)) return;
         // The theme goes first: its preset rewrites the colours the rows after it then restore.
         foreach (var row in page.OrderBy(r => r.Key == "appearance.thememode" ? 0 : 1)) row.Set(defaults[row.Key].Get());
+        ResetUiScaleToMonitor(page.Select(r => r.Key));
         MarkChanged();
         Rebuild();
     }
@@ -111,6 +123,7 @@ public sealed partial class PreferencesWindow
         // The theme goes first: its preset rewrites the colours the rows after it then restore.
         foreach (var row in Rows.Where(r => r.Kind != SettingKind.Button).OrderBy(r => r.Key == "appearance.thememode" ? 0 : 1))
             row.Set(defaults[row.Key].Get());
+        ResetUiScaleToMonitor(new[] { UiScaleKey });
         ResetHotkeys(Working.Hotkeys);
         DropRows();   // the search registry holds the old shortcuts
         MarkChanged();
@@ -139,6 +152,7 @@ public sealed partial class PreferencesWindow
             var row = Rows.FirstOrDefault(r => r.Key == key);
             if (row is not null) row.Set(defaults[key].Get());
         }
+        ResetUiScaleToMonitor(PreferencesPagePresenter.ThemeResetKeys);
         MarkChanged();
         Rebuild();
     }

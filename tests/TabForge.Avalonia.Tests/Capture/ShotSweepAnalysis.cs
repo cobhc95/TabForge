@@ -109,7 +109,7 @@ internal static class ShotAnalysis
 {
     private const int MaxPerCheck = 25;
 
-    public static List<SweepFinding> Run(Visual root, ShotPixels px, bool light, bool darkPatches, string shot, string theme, string size, string state, string png, Dictionary<string, int> checkedCounts)
+    public static List<SweepFinding> Run(Visual root, ShotPixels px, bool light, bool darkPatches, string shot, string theme, string size, string state, string png, Dictionary<string, int> checkedCounts, Visual? within = null)
     {
         var list = new List<SweepFinding>();
         void Add(SweepFinding f)
@@ -119,7 +119,7 @@ internal static class ShotAnalysis
         void Count(string check) => checkedCounts[check] = checkedCounts.GetValueOrDefault(check) + 1;
         SweepFinding F(string check, string sev, string detail) => new(check, sev, shot, theme, size, state, detail, png);
 
-        foreach (var visual in root.GetVisualDescendants())
+        foreach (var visual in Within(root, within))
         {
             if (visual is not Control c || !c.IsEffectivelyVisible || c.Bounds.Width < 1 || c.Bounds.Height < 1) continue;
             var rect = RectIn(c, root);
@@ -181,7 +181,7 @@ internal static class ShotAnalysis
         }
         // Exempt: the instrument panel draws a wood-brown fretboard in both themes, a dark region by design.
         var instruments = root.GetVisualDescendants().OfType<global::TabForge.Avalonia.Platform.InstrumentPanelView>().Where(v => v.IsEffectivelyVisible).Select(v => RectIn(v, root)).OfType<Rect>().ToList();
-        if (darkPatches && light) DarkPatches(px, list, instruments, shot, theme, size, state, png, checkedCounts);
+        if (darkPatches && light && within is null) DarkPatches(px, list, instruments, shot, theme, size, state, png, checkedCounts);
         return list;
     }
 
@@ -249,9 +249,11 @@ internal static class ShotAnalysis
         if (tb.TextWrapping == TextWrapping.NoWrap)
         {
             if (ft.Width > tb.Bounds.Width + 1.5) return $"is {ft.Width:0} px wide in a {tb.Bounds.Width:0} px box";
+            // r is in the shot's pixels (under the UI scale); the text is measured in the block's own DIPs, so it is scaled the same way first.
+            var shown = ft.Width * (tb.Bounds.Width > 0 ? r.Width / tb.Bounds.Width : 1);
             for (var a = tb.GetVisualParent(); a is not null && !ReferenceEquals(a, root); a = a.GetVisualParent())
-                if (a is Control { ClipToBounds: true } ac && a is not ScrollViewer && RectIn(ac, root) is { } ar && r.X + ft.Width > ar.Right + 1.5)
-                    return $"runs {r.X + ft.Width - ar.Right:0} px past its clipping {a.GetType().Name}";
+                if (a is Control { ClipToBounds: true } ac && a is not ScrollViewer && RectIn(ac, root) is { } ar && r.X + shown > ar.Right + 1.5)
+                    return $"runs {r.X + shown - ar.Right:0} px past its clipping {a.GetType().Name}";
             return null;
         }
         ft.MaxTextWidth = Math.Max(1, tb.Bounds.Width);
@@ -271,11 +273,78 @@ internal static class ShotAnalysis
         return share;
     }
 
-    public static Rect? RectIn(Control c, Visual root)
+    // Through the full transform, so a control under the UI scale's LayoutTransform has its scaled size in the shot, not only its scaled origin.
+    public static Rect? RectIn(Control c, Visual root) =>
+        c.TransformToVisual(root) is { } m ? new Rect(c.Bounds.Size).TransformToAABB(m) : null;
+
+    private static bool IsOverlapItem(Control c) =>
+        c is TextBlock { Text.Length: > 0 } or Button or ComboBox or TextBox or NumericUpDown or Slider or ListBoxItem or TabItem;
+
+    /// <summary>
+    /// Text and controls that sit on top of each other (neither inside the other): what a layout that does not fit its room at a UI scale shows.
+    /// Only items in the same layer are compared (an open menu lies over the window by design); with <paramref name="within"/>, only the items inside it.
+    /// </summary>
+    public static void Overlaps(Visual root, List<SweepFinding> list, string shot, string theme, string size, string state, string png, Dictionary<string, int> counts, Visual? within = null)
     {
-        var origin = c.TranslatePoint(new Point(0, 0), root);
-        return origin is { } o ? new Rect(o, c.Bounds.Size) : null;
+        var items = new List<(Control C, Rect R)>();
+        foreach (var visual in Within(root, within))
+        {
+            if (visual is not Control c || !IsOverlapItem(c) || !c.IsEffectivelyVisible || c.Bounds.Width < 2 || c.Bounds.Height < 2) continue;
+            // Template parts (the text inside a button, a combo's presenter) are judged with the control that holds them.
+            if (c is TextBlock && c.GetVisualAncestors().TakeWhile(a => !ReferenceEquals(a, root)).Any(a => a is Control ac && ac != c && IsOverlapItem(ac) && ac is not TextBlock)) continue;
+            if (RectIn(c, root) is not { } r || VisibleShare(c, root, r) < 0.9 || EffectiveOpacity(c, root) < 0.05) continue;
+            items.Add((c, r));
+        }
+        counts["overlap"] = counts.GetValueOrDefault("overlap") + items.Count;
+        for (var i = 0; i < items.Count; i++)
+            for (var j = i + 1; j < items.Count; j++)
+            {
+                var (a, ra) = items[i];
+                var (b, rb) = items[j];
+                var cut = ra.Intersect(rb);
+                if (cut.Width < 3 || cut.Height < 3) continue;
+                var smaller = Math.Min(ra.Width * ra.Height, rb.Width * rb.Height);
+                if (cut.Width * cut.Height < 0.15 * smaller) continue;
+                if (a.GetVisualAncestors().Contains(b) || b.GetVisualAncestors().Contains(a)) continue;
+                if (!ReferenceEquals(Layer(a, root), Layer(b, root))) continue;
+                if (list.Count(f => f.Check == "overlap") >= MaxPerCheck) return;
+                list.Add(new SweepFinding("overlap", "Medium", shot, theme, size, state, $"{Name(a)} {Describe(ra)} overlaps {Name(b)} {Describe(rb)}", png));
+            }
     }
+
+    /// <summary>
+    /// A window that did not wrap to its content: the empty strip right of, or below, the last text or control is more than a fifth of the
+    /// window (and over 80 px). What a window that kept its size while the UI scale went down shows as a grey margin.
+    /// </summary>
+    public static void ExcessMargins(Window window, List<SweepFinding> list, string shot, string theme, string size, string state, string png, Dictionary<string, int> counts)
+    {
+        double right = 0, bottom = 0;
+        foreach (var visual in window.GetVisualDescendants())
+        {
+            if (visual is not Control c || !IsOverlapItem(c) || !c.IsEffectivelyVisible || c.Bounds.Width < 2 || c.Bounds.Height < 2) continue;
+            if (RectIn(c, window) is not { } r) continue;
+            right = Math.Max(right, r.Right);
+            bottom = Math.Max(bottom, r.Bottom);
+        }
+        var frame = window.Bounds;
+        counts["excess-margin"] = counts.GetValueOrDefault("excess-margin") + 1;
+        var emptyRight = frame.Width - right;
+        var emptyBottom = frame.Height - bottom;
+        if (emptyRight > 80 && emptyRight > 0.2 * frame.Width)
+            list.Add(new SweepFinding("excess-margin", "Medium", shot, theme, size, state, $"{emptyRight:0} px empty right of the content in a {frame.Width:0}x{frame.Height:0} window", png));
+        if (emptyBottom > 80 && emptyBottom > 0.2 * frame.Height)
+            list.Add(new SweepFinding("excess-margin", "Medium", shot, theme, size, state, $"{emptyBottom:0} px empty below the content in a {frame.Width:0}x{frame.Height:0} window", png));
+    }
+
+    // The visuals of root, or only those inside within (and within itself).
+    private static IEnumerable<Visual> Within(Visual root, Visual? within) =>
+        within is null ? root.GetVisualDescendants() : root.GetVisualDescendants().Where(v => ReferenceEquals(v, within) || v.GetVisualAncestors().Contains(within));
+
+    // The popup (a child of the overlay layer or a popup's own root) the visual is in, or the root for the window's content.
+    private static Visual Layer(Visual v, Visual root) =>
+        v.GetVisualAncestors().FirstOrDefault(a => a.GetVisualParent() is OverlayLayer || a is PopupRoot) ?? root;
+
+    private static string Name(Control c) => c is TextBlock tb ? $"\"{Trim(tb.Text ?? "")}\"" : $"{c.GetType().Name}{(string.IsNullOrEmpty(c.Name) ? "" : " " + c.Name)}{(c is ContentControl { Content: string s } ? $" \"{Trim(s)}\"" : "")}";
 
     private static double EffectiveOpacity(Visual v, Visual root)
     {

@@ -135,6 +135,14 @@ public static class UiMetrics
 
     /// <summary>Opens <paramref name="menu"/> under its button, left edges aligned (the dropdown buttons' menus).</summary>
     public static void PlaceUnderLeft(ContextMenu menu) => menu.Placement = PlacementMode.BottomEdgeAlignedLeft;
+
+    /// <summary>Opens <paramref name="content"/> in a flyout to the right of <paramref name="anchor"/>, top edges aligned (the Customize Fretboard panel).</summary>
+    public static Flyout ShowBesideTop(Control anchor, Control content)
+    {
+        var flyout = new Flyout { Content = content, Placement = PlacementMode.RightEdgeAlignedTop };
+        flyout.ShowAt(anchor);
+        return flyout;
+    }
 }
 
 /// <summary>

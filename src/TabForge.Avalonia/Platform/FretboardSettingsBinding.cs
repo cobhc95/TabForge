@@ -68,8 +68,17 @@ public sealed class FretboardSettingsBinding
         bool ScaleDimOutside = false,
         bool ScaleOnlyInView = false,
         UiColor? ScaleCustom = null,
-        bool PreviewPrevious = true)
+        bool PreviewPrevious = true,
+        FretboardStyles.Look? StyleOverride = null,
+        double VibrationPeak = 1.0,
+        double VibrationRate = 1.0,
+        bool StringNumbers = false,
+        int BoardBrightness = FretboardStyles.DefaultBoardBrightness,
+        int NoteBrightness = FretboardStyles.DefaultNoteBrightness)
     {
+        /// <summary>The fretboard look drawn: the settings' own names (the Rosewood preset until they are read).</summary>
+        public FretboardStyles.Look Style => StyleOverride ?? FretboardStyles.DefaultLook;
+
         /// <summary>The look the settings describe; preview is -1 (skip the look-ahead, like the drum map) when preview notes are off.</summary>
         public static Look From(AppSettings settings)
         {
@@ -101,7 +110,13 @@ public sealed class FretboardSettingsBinding
                 ScaleDimOutside: editing.ScaleDimOutside,
                 ScaleOnlyInView: editing.ScaleOnlyInView,
                 ScaleCustom: CustomColour(editing.ScaleHighlightColour, editing.ScaleHighlightCustomColour),
-                PreviewPrevious: editing.PreviewPreviousNotesEnabled);
+                PreviewPrevious: editing.PreviewPreviousNotesEnabled,
+                StyleOverride: FretboardStyles.Normalize(FretboardStyles.LookOf(editing)),
+                VibrationPeak: FretboardStyles.VibrationPeak(editing.FretboardVibration),
+                VibrationRate: FretboardStyles.VibrationRate(editing.FretboardVibrationSpeed),
+                StringNumbers: editing.FretboardStringNumbers,
+                BoardBrightness: FretboardStyles.ClampBrightness(editing.FretboardBrightness),
+                NoteBrightness: FretboardStyles.ClampBrightness(editing.FretboardNoteBrightness));
         }
     }
 

@@ -57,8 +57,8 @@ public sealed partial class InstrumentPanelView
                 var pitchClass = (Tuning[s] + fret) % 12;
                 var inside = _look.ScalePitches[pitchClass] == '1';
                 if (inside ? !tint || !FretMarked(fret, layout) : !_look.ScaleDimOutside) continue;
-                var left = TabForge.Presenters.FretboardGeometryRules.FretX(layout, fret - 0.5);
-                var right = TabForge.Presenters.FretboardGeometryRules.FretX(layout, fret + 0.5);
+                var left = TabForge.Presenters.FretboardGeometryRules.WireX(layout, fret - 1);
+                var right = TabForge.Presenters.FretboardGeometryRules.WireX(layout, fret);
                 d.Rect(inside ? colour.WithOpacity(ScaleAlpha(pitchClass, ScaleCellShare)) : dim, null, left, top, right - left, layout.StringGap);
             }
         }

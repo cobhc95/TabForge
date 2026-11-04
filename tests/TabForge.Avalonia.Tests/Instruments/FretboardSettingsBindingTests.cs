@@ -48,6 +48,8 @@ public class FretboardSettingsBindingTests
         new("KeyboardKeyColours", s => s.Editing.KeyboardKeyColours = KeyboardKeyStyles.Grey, null),
         new("FretMarkerColour", s => s.Editing.FretMarkerColour = "Amber", null),
         new("FretMarkerBrightness", s => s.Editing.FretMarkerBrightness = "Brightest", null),
+        new("FretboardBrightness", s => s.Editing.FretboardBrightness = 60, null),
+        new("FretboardNoteBrightness", s => s.Editing.FretboardNoteBrightness = 140, null),
     };
 
     [AvaloniaFact]
@@ -102,7 +104,7 @@ public class FretboardSettingsBindingTests
         var canvas = new InstrumentFretNumberTests.RecordingDrawContext();
         panel.Draw(canvas, light: false);
         Assert.Contains(canvas.Ellipses, e => e.Fill == AvaloniaPalette.Get("InstrumentCurrent", false));
-        Assert.Contains(canvas.Ellipses, e => e.Fill == AvaloniaPalette.Get("InstrumentNext", false));
+        Assert.Contains(AvaloniaPalette.Get("InstrumentNext", false).WithOpacity(0.45), canvas.PathFills);
     }
 
     private static InstrumentLitNotes.Lit[] FirstLitNotes(TrackModel track)

@@ -10,6 +10,7 @@ using TabForge.Documents;
 using TabForge.Models;
 using TabForge.Plugins;
 using TabForge.Presenters;
+using TabForge.Services;
 using TabForge.Services.Features;
 using Xunit;
 
@@ -191,5 +192,99 @@ public class FxActiveOnPopupTests
         Assert.Equal("Speakers", track.Rig.Containers![0].ActiveOn?.DeviceName);
         Assert.Equal("Active on: Speakers. Click to change.", ToolTip.GetTip(button));
         window.Close();
+    }
+
+    [AvaloniaFact]
+    public void ContainerHeaderButtonAppliesRuleThroughCombosAndUpdatesHint()
+    {
+        var track = FxTestKit.Track(FxChainWindow.SampleChain());
+        var engine = new FxTestKit.FakeEngine { ActiveOutput = new ActiveOnOutput("WASAPI (shared)", "Speakers") };
+        var settings = new PluginSettings();
+        settings.OutputProfiles[PluginSettings.OutputKey("WASAPI (shared)", "Headphones")] = new OutputProfile();
+        var window = FxTestKit.Window(track, FxTestKit.Host(track, engine, settings));
+        window.Show();
+        try
+        {
+            var list = FxTestKit.List(window);
+            list.Click(0);
+            list.Click(1, shift: true);
+            Assert.True(window.Run(FxChainIds.GroupSelected));
+            list.Click(0);
+            var button = DialogTestKit.Named<Button>(window, "ContainerActiveOnButton");
+            button.RaiseEvent(new global::Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            var popup = Assert.IsType<FxActiveOnPopup>(window.ActiveOnPopup);
+            popup.ChooseDriver(ActiveOnDriverKind.Wasapi);
+            popup.ChooseDevice("Headphones");
+            popup.DoneButton.RaiseEvent(new global::Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            Assert.Equal(ActiveOnDriverKind.Wasapi, track.Rig.Containers![0].ActiveOn?.DriverKind);
+            Assert.Equal("Headphones", track.Rig.Containers![0].ActiveOn?.DeviceName);
+            Assert.False(ActiveOnRules.Enabled(track.Rig, true, engine.ActiveOutput)[0]);
+            Assert.Contains(list.RowAt(0).GetLogicalDescendants().OfType<TextBlock>(), t => t.Name == "ActiveOnHint");
+            Assert.Contains("Headphones", ToolTip.GetTip(button) as string ?? "");
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public void ContainerHeaderButtonResolvesStaleShownById()
+    {
+        var track = FxTestKit.Track(FxChainWindow.SampleChain());
+        var settings = new PluginSettings();
+        settings.OutputProfiles[PluginSettings.OutputKey("WASAPI (shared)", "Headphones")] = new OutputProfile();
+        var window = FxTestKit.Window(track, FxTestKit.Host(track, null, settings));
+        window.Show();
+        try
+        {
+            var list = FxTestKit.List(window);
+            list.Click(0);
+            list.Click(1, shift: true);
+            Assert.True(window.Run(FxChainIds.GroupSelected));
+            list.Click(0);
+            track.Rig.Containers = track.Rig.Containers!.Select(c => c.Clone()).ToList();
+            var live = track.Rig.Containers[0];
+            var button = DialogTestKit.Named<Button>(window, "ContainerActiveOnButton");
+            button.RaiseEvent(new global::Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            var popup = Assert.IsType<FxActiveOnPopup>(window.ActiveOnPopup);
+            popup.ChooseDriver(ActiveOnDriverKind.Wasapi);
+            popup.ChooseDevice("Headphones");
+            popup.DoneButton.RaiseEvent(new global::Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            Assert.Equal("Headphones", live.ActiveOn?.DeviceName);
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public void ContainerHeaderButtonOnMonitorChainUpdatesGlobalRig()
+    {
+        var document = new SongDocument(() => null) { Project = SongDocument.BlankProject() };
+        document.MarkClean();
+        var global = new BusChain { On = true };
+        global.Rig.Plugins.Add(new PluginSlot { Name = "IR Loader", Type = PluginSlotType.Effect });
+        global.Rig.Plugins.Add(new PluginSlot { Name = "Reverb", Type = PluginSlotType.Effect });
+        var track = MixerBuses.MonitorTrack(document.Project, global);
+        var host = new SongFxChainHost(document, null, null, () => null, null, new PluginTrust());
+        host.PluginSettings.OutputProfiles[PluginSettings.OutputKey("WASAPI (shared)", "Headphones")] = new OutputProfile();
+        var window = new FxChainWindow(host, track);
+        window.Dialogs.AskLoadPreset = (_, _, _, _, preferred) => System.Threading.Tasks.Task.FromResult<FxPresetLoadAnswer?>(new FxPresetLoadAnswer(preferred, Remember: false));
+        window.Show();
+        try
+        {
+            var list = FxTestKit.List(window);
+            list.Click(0);
+            list.Click(1, shift: true);
+            Assert.True(window.Run(FxChainIds.GroupSelected));
+            list.Click(0);
+            var button = DialogTestKit.Named<Button>(window, "ContainerActiveOnButton");
+            button.RaiseEvent(new global::Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            var popup = Assert.IsType<FxActiveOnPopup>(window.ActiveOnPopup);
+            popup.ChooseDriver(ActiveOnDriverKind.Wasapi);
+            popup.ChooseDevice("Headphones");
+            popup.DoneButton.RaiseEvent(new global::Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            Assert.Equal(ActiveOnDriverKind.Wasapi, global.Rig.Containers![0].ActiveOn?.DriverKind);
+            Assert.Equal("Headphones", global.Rig.Containers![0].ActiveOn?.DeviceName);
+            Assert.False(ActiveOnRules.Enabled(global.Rig, true, new ActiveOnOutput("WASAPI (shared)", "Speakers"))[0]);
+            Assert.Contains(list.RowAt(0).GetLogicalDescendants().OfType<TextBlock>(), t => t.Name == "ActiveOnHint");
+        }
+        finally { window.Close(); }
     }
 }

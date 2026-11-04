@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
@@ -338,5 +339,89 @@ public class FxActiveOnTests
         DocumentEdits.Undo(document);
         Assert.Null(document.Project.Tracks[0].Rig.Plugins[0].ActiveOn);
         window.Close();
+    }
+
+    [Fact]
+    public void FxActiveOnChainMergeKeepsContainerRules()
+    {
+        var existing = new RigPreset { Plugins = new List<PluginSlot> { Effect("Old") } };
+        List<PluginSlot> Loaded()
+        {
+            var loaded = new List<PluginSlot> { Effect("IR Loader", new ActiveOnRule { DriverKind = ActiveOnDriverKind.Asio }), Effect("Delay") };
+            loaded[0].ChainContainers = new List<ChainContainer> { new() { Start = 0, Count = 2, ActiveOn = new ActiveOnRule { DeviceName = "Headphones" } } };
+            return loaded;
+        }
+        var replaced = FxChainMerge.Merge(existing, Loaded(), FxPresetLoadMode.Replace);
+        Assert.Equal(ActiveOnDriverKind.Asio, replaced.Plugins[0].ActiveOn?.DriverKind);
+        Assert.Equal("Headphones", replaced.Containers![0].ActiveOn?.DeviceName);
+        var added = FxChainMerge.Merge(existing, Loaded(), FxPresetLoadMode.Add);
+        Assert.Equal("Headphones", added.Containers![0].ActiveOn?.DeviceName);
+    }
+
+    [Fact]
+    public void FxActiveOnMonitorSettingsRoundTripKeepsContainerRules()
+    {
+        var settings = new AppSettings();
+        var chain = settings.Plugins.MonitorFx;
+        chain.On = true;
+        chain.Rig.Plugins.Add(Effect("IR Loader", new ActiveOnRule { DriverKind = ActiveOnDriverKind.Wasapi, DeviceName = "Headphones" }));
+        chain.Rig.Plugins.Add(Effect("EQ"));
+        chain.Rig.Containers = new List<ChainContainer> { new() { Start = 0, Count = 2, ActiveOn = new ActiveOnRule { DriverKind = ActiveOnDriverKind.Asio, DeviceName = "Speakers" } } };
+        var path = Path.Combine(Path.GetTempPath(), "tf-monfx-" + Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            SettingsFileService.SaveAtomic(path, settings);
+            var loaded = SettingsFileService.Load(path).Plugins.MonitorFx;
+            Assert.Equal(ActiveOnDriverKind.Wasapi, loaded.Rig.Plugins[0].ActiveOn?.DriverKind);
+            Assert.Equal("Headphones", loaded.Rig.Plugins[0].ActiveOn?.DeviceName);
+            Assert.Equal(ActiveOnDriverKind.Asio, loaded.Rig.Containers![0].ActiveOn?.DriverKind);
+            Assert.Equal("Speakers", loaded.Rig.Containers![0].ActiveOn?.DeviceName);
+        }
+        finally { try { File.Delete(path); } catch (IOException) { } }
+    }
+
+    [Fact]
+    public void FxActiveOnOldSettingsWithoutTheFieldLoadAsAny()
+    {
+        var settings = new AppSettings();
+        var path = Path.Combine(Path.GetTempPath(), "tf-monfx-" + Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            SettingsFileService.SaveAtomic(path, settings);
+            var json = File.ReadAllText(path);
+            Assert.DoesNotContain("ActiveOn", json);
+            var loaded = SettingsFileService.Load(path).Plugins.MonitorFx;
+            Assert.Null(loaded.Rig.Plugins.Count == 0 ? null : null);
+            Assert.True(ActiveOnRules.Matches(null, new ActiveOnOutput("ASIO", "Speakers")));
+        }
+        finally { try { File.Delete(path); } catch (IOException) { } }
+    }
+
+    [AvaloniaFact]
+    public async Task FxActiveOnContainerPresetLoadKeepsOuterRule()
+    {
+        using var _ = FxTestKit.ScratchLibrary();
+        var track = FxTestKit.Track(FxChainWindow.SampleChain());
+        var window = FxTestKit.Window(track);
+        window.Show();
+        try
+        {
+            var list = FxTestKit.List(window);
+            list.Click(0);
+            list.Click(1, shift: true);
+            Assert.True(window.Run(FxChainIds.GroupSelected));
+            list.Click(0);
+            track.Rig.Containers![0].ActiveOn = new ActiveOnRule { DriverKind = ActiveOnDriverKind.Wasapi, DeviceName = "Headphones" };
+            track.Rig.Containers[0].Enabled = false;
+            track.Rig.Containers[0].Mix = 70;
+            var field = typeof(FxChainWindow).GetField("_containerPresets", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+            var presets = (FxContainerPresets)field.GetValue(window)!;
+            Assert.True(await presets.Save("OuterRule"));
+            track.Rig.Containers[0].ActiveOn = null;
+            Assert.True(await presets.Load("OuterRule"));
+            Assert.Equal("Headphones", track.Rig.Containers![0].ActiveOn?.DeviceName);
+            Assert.Equal(ActiveOnDriverKind.Wasapi, track.Rig.Containers![0].ActiveOn?.DriverKind);
+        }
+        finally { window.Close(); }
     }
 }

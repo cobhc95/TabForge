@@ -54,7 +54,7 @@ public readonly record struct SetLiveLimiterMessage(bool On)
 public readonly record struct SetSoundBankMessage(string Path)
 {
     public void Write(BinaryWriter w) => w.Write(Path);
-    public static SetSoundBankMessage Read(BinaryReader r) => new(r.ReadBoundedString(1024));
+    public static SetSoundBankMessage Read(BinaryReader r) => new(r.ReadBoundedString(Frames.MaxPathChars));
 }
 
 /// <summary><see cref="EngineCommand.SetWindowsPathOffset"/>: dB as a float32.</summary>

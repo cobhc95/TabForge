@@ -12,7 +12,7 @@ namespace TabForge.Avalonia.Shell.Win32;
 public static class PluginEditorWin32
 {
     public const string EditorPopupClass = "TabForgePluginEditor";
-    private const int WsChild = 0x40000000, WsVisible = 0x10000000, WsClipChildren = 0x02000000;
+    private const int WsChild = 0x40000000, WsVisible = 0x10000000, WsClipChildren = 0x02000000, SsBlackRect = 0x4;   // SS_BLACKRECT: the empty area paints dark, not the light static-control grey
     private const uint GwOwner = 4, GwChild = 5;
     private const uint SwpNoSize = 0x1, SwpNoZOrder = 0x4, SwpNoActivate = 0x10, SwpAsyncWindowPos = 0x4000;
     private const int ClassNameChars = 64, SwHide = 0, SwShowNoActivate = 8;
@@ -38,7 +38,7 @@ public static class PluginEditorWin32
 
     /// <summary>Creates the plain child window of <paramref name="parent"/> the engine parents an editor to; zero off Windows or on failure.</summary>
     public static IntPtr CreateArea(IntPtr parent) =>
-        OperatingSystem.IsWindows() ? CreateWindowEx(0, "STATIC", null, WsChild | WsVisible | WsClipChildren, 0, 0, 100, 100, parent, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero) : IntPtr.Zero;
+        OperatingSystem.IsWindows() ? CreateWindowEx(0, "STATIC", null, WsChild | WsVisible | WsClipChildren | SsBlackRect, 0, 0, 100, 100, parent, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero) : IntPtr.Zero;
 
     public static void DestroyArea(IntPtr area) { if (OperatingSystem.IsWindows() && area != IntPtr.Zero) DestroyWindow(area); }
 

@@ -11,12 +11,17 @@ namespace TabForge.AudioEngine;
 
 // Owns: the engine session's output device: open, configure, reconfigure, ASIO input and the Windows volume follow, split from EngineSession.cs.
 // Does not own: the other parts of the engine session (EngineSession).
+// P2-01: Windows-only NAudio types (AsioOut, MMDevice) sit behind #if WINDOWS; other OSes get no-op stubs so no Windows type is JIT-loaded off-Windows.
 internal sealed partial class EngineSession
 {
     // ---- Device ----
 
+#if WINDOWS
     /// <summary>True when the open output is an ASIO driver (the Windows-only check, so the rest of the engine never names NAudio.Wave.AsioOut).</summary>
     private bool PlayerIsAsio => Player is NAudio.Wave.AsioOut;
+#else
+    private bool PlayerIsAsio => false;
+#endif
 
     /// <summary>Opens the audio device on the current mix and starts it (also reopens it after an offline render).</summary>
     private (int LatencyMs, string Description) OpenOutput()
@@ -25,12 +30,14 @@ internal sealed partial class EngineSession
         var (player, latencyMs, description) = AudioBackends.For(Config).OpenOutput(Config, Mix!, Threads);
         Player = player;
         _asioBufferFrames = 0;
+#if WINDOWS
         if (player is NAudio.Wave.AsioOut asioOut)
         {
             _asioBufferFrames = asioOut.FramesPerBuffer;
             PrepareAsioScratch(_asioBufferFrames, Math.Max(2, AudioOutputFactory.AsioInputChannelsUsed));
             asioOut.AudioAvailable += OnAsioInput;
         }
+#endif
         Mix!.OutputLatencyTicks = latencyMs * Stopwatch.Frequency / 1000;
         Shared!.LatencyTicks = Mix.DelayTicks;
         Shared.SampleRate = SampleRate;
@@ -179,6 +186,7 @@ internal sealed partial class EngineSession
     private int _asioBufferFrames;
     private float[] _asioScratch = new float[4096];
 
+#if WINDOWS
     /// <summary>Engine thread, when an ASIO driver opens: room for the largest input block it can deliver.</summary>
     private void PrepareAsioScratch(int bufferFrames, int inputChannels)
     {
@@ -203,11 +211,16 @@ internal sealed partial class EngineSession
 
     /// <summary>True while the Windows volume is followed (the main loop then refreshes the Volume Mixer slider about once a second).</summary>
     public bool FollowingWindowsVolume => _volumeDevice is not null;
+#else
+    /// <summary>Linux/macOS: no Windows volume to follow; always false (no MMDevice type is loaded).</summary>
+    public bool FollowingWindowsVolume => false;
+#endif
 
     /// <summary>
     /// ASIO does not pass through the Windows mixer, so the Windows volume keys do nothing to it. When asked, the Windows
     /// master volume (and mute) of the default playback device becomes a software gain on the engine's output.
     /// </summary>
+#if WINDOWS
     private void FollowWindowsVolume(bool on)
     {
         AssertMain();
@@ -240,6 +253,14 @@ internal sealed partial class EngineSession
             Log.Write($"windows volume not available: {ex.Message}");
         }
     }
+#else
+    private void FollowWindowsVolume(bool on)
+    {
+        AssertMain();
+        _endpointGain = 1f; _sessionGain = 1f; _following = false;
+        if (Mix is not null) Mix.MasterGain = 1f;
+    }
+#endif
 
     private float _endpointGain = 1f, _sessionGain = 1f, _pathOffsetGain = 1f;
     private bool _following;
@@ -256,6 +277,7 @@ internal sealed partial class EngineSession
     }
 
     /// <summary>Engine thread, about once a second while following: TabForge's app volume in the Windows Volume Mixer.</summary>
+#if WINDOWS
     public void RefreshSessionVolume()
     {
         AssertMain();
@@ -283,6 +305,9 @@ internal sealed partial class EngineSession
         }
         catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException or ArgumentException) { }
     }
+#else
+    public void RefreshSessionVolume() { }
+#endif
 
     /// <summary>
     /// The endpoint volume Windows really applies is its MasterVolumeLevel in dB (measured on an Audient iD4: loopback level
@@ -294,6 +319,7 @@ internal sealed partial class EngineSession
     private static float SessionGain(float scalar, bool muted) => muted ? 0f : Math.Clamp(scalar, 0f, 1f) * Math.Clamp(scalar, 0f, 1f);
 
     /// <summary>COM notification thread.</summary>
+#if WINDOWS
     private void OnWindowsVolume(NAudio.CoreAudioApi.AudioVolumeNotificationData data)
     {
         float db;
@@ -302,6 +328,7 @@ internal sealed partial class EngineSession
         _endpointGain = EndpointGain(db, data.Muted);
         ApplyFollowedGain();
     }
+#endif
 
     public void StopOutput()
     {
@@ -310,7 +337,9 @@ internal sealed partial class EngineSession
         FollowWindowsVolume(false);
         _lossWatch?.Dispose();
         _lossWatch = null;
+#if WINDOWS
         if (Player is NAudio.Wave.AsioOut asioOut) asioOut.AudioAvailable -= OnAsioInput;
+#endif
         try { Player?.Stop(); Player?.Dispose(); }
         catch (Exception ex) { Log.Write($"output stop failed: {ex.Message}"); }
         Player = null;
@@ -323,8 +352,12 @@ internal sealed partial class EngineSession
     public void ProbeAsio(int requestId, string driver)
     {
         AssertMain();
+#if WINDOWS
         var held = Config.Driver == AudioOutputFactory.Asio ? Player as NAudio.Wave.AsioOut : null;
         var answer = AsioProbe.Answer(requestId, driver, () => held is null ? null : AudioOutputFactory.ResolveAsioName(Config.Device), AudioOutputFactory.ResolveAsioName, () => AsioProbe.Read(held!, Log), name => AsioProbe.OpenBriefly(name, Log), _asioOffers, Log);
+#else
+        var answer = AsioProbe.Answer(requestId, driver, () => null, AudioOutputFactory.ResolveAsioName, () => throw new InvalidOperationException("ASIO is Windows-only."), _ => throw new InvalidOperationException("ASIO is Windows-only."), _asioOffers, Log);
+#endif
         Send(EngineEvent.AsioProbed, answer.Write);
     }
 
@@ -335,11 +368,15 @@ internal sealed partial class EngineSession
     public void ShowAsioPanel(int requestId, string driver)
     {
         AssertMain();
+#if WINDOWS
         var held = Config.Driver == AudioOutputFactory.Asio ? Player as NAudio.Wave.AsioOut : null;
         Volatile.Write(ref PanelOpenedTicks, Stopwatch.GetTimestamp());
         AsioPanelShownMessage answer;
         try { answer = AsioProbe.ShowPanel(requestId, driver, held is null ? null : AudioOutputFactory.ResolveAsioName(Config.Device), AudioOutputFactory.ResolveAsioName, () => held!.ShowControlPanel(), AsioProbe.ShowBriefly, Log); }
         finally { Volatile.Write(ref PanelOpenedTicks, 0); }
+#else
+        var answer = new AsioPanelShownMessage(requestId, "ASIO is Windows-only.");
+#endif
         Send(EngineEvent.AsioPanelShown, answer.Write);
     }
 }

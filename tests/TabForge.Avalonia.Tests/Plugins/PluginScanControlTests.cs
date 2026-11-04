@@ -17,6 +17,7 @@ namespace TabForge.Avalonia.Tests;
 /// Does not own: the identify work itself (FxAddPluginTests) or the buttons' drawing.
 /// Tests: this class.
 /// </summary>
+[Collection("PluginProbeSeam")]
 public class PluginScanControlTests
 {
     private const int Count = 24;

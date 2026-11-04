@@ -218,7 +218,7 @@ public class MidiProcessingWindowTests
         var slot = new PluginSlot { Name = "P", Type = PluginSlotType.Instrument, MidiProcessors = { MidiProcessorCatalog.Create(MidiProcessorCatalog.Find("velocity")!) } };
         var made = Open(slot);
         var info = MidiProcessorCatalog.Find("velocity")!;
-        var number = info.Params.First(p => p.Kind == MidiParamKind.Number && p.Group == "Main");
+        var number = info.Params.First(p => p.Key == "Mul");
         var knob = made.Window.GetLogicalDescendants().OfType<KnobControl>().Distinct().First(k => k.Name == "Param_" + number.Key);
         var scale = Math.Max(1, number.Scale);
         var target = Math.Clamp(number.Default + 1, number.Min, number.Max);
@@ -234,6 +234,37 @@ public class MidiProcessingWindowTests
             combo.SelectedItem = other;
             Assert.Equal((int)other.Tag!, (int)MidiProcessorCatalog.ParseParams(slot.MidiProcessors[0], info)[choice.Key]!.GetValue<double>());
         }
+        made.Window.Close();
+    }
+
+    private static string[] ShownVelocityKnobs(Made made) => made.Window.GetLogicalDescendants().OfType<KnobControl>().Distinct()
+        .Where(k => k.Name!.StartsWith("Param_") && k.IsEffectivelyVisible).Select(k => k.Name!.Substring(6)).ToArray();
+
+    [AvaloniaFact]
+    public void VelocityPanelShowsOnlyTheControlsOfTheChosenModeAndKeepsHiddenValues()
+    {
+        var slot = new PluginSlot { Name = "P", Type = PluginSlotType.Instrument, MidiProcessors = { MidiProcessorCatalog.Create(MidiProcessorCatalog.Find("velocity")!) } };
+        var made = Open(slot);
+        var info = MidiProcessorCatalog.Find("velocity")!;
+        var mode = made.Window.GetLogicalDescendants().OfType<ComboBox>().Distinct().First(c => c.Name == "Param_Mode");
+        var always = new[] { "Min", "Max", "Random", "Mix", "InLow", "InHigh", "Low", "High" };
+        Assert.Equal(new[] { "Mul", "Add" }.Concat(always).OrderBy(k => k), ShownVelocityKnobs(made).OrderBy(k => k));
+
+        var mul = made.Window.GetLogicalDescendants().OfType<KnobControl>().Distinct().First(k => k.Name == "Param_Mul");
+        mul.Value = 5 * 10;   // Multiply is scaled by 10
+        mode.SelectedIndex = 1;
+        Assert.Equal(new[] { "Fixed" }.Concat(always).OrderBy(k => k), ShownVelocityKnobs(made).OrderBy(k => k));
+        mode.SelectedIndex = 2;
+        Assert.Equal(new[] { "Threshold", "Ratio", "Makeup" }.Concat(always).OrderBy(k => k), ShownVelocityKnobs(made).OrderBy(k => k));
+        mode.SelectedIndex = 0;
+        Assert.Equal(5, MidiProcessorCatalog.ParseParams(slot.MidiProcessors[0], info)["Mul"]!.GetValue<double>(), 3);   // hidden values are kept
+
+        var applies = made.Window.GetLogicalDescendants().OfType<ComboBox>().Distinct().First(c => c.Name == "Param_NoteMode");
+        applies.SelectedIndex = 1;   // Only these notes: the note numbers group is redundant
+        Assert.DoesNotContain("Low", ShownVelocityKnobs(made));
+        Assert.DoesNotContain("High", ShownVelocityKnobs(made));
+        applies.SelectedIndex = 2;
+        Assert.Contains("Low", ShownVelocityKnobs(made));
         made.Window.Close();
     }
 

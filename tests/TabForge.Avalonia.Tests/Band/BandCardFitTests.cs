@@ -177,7 +177,8 @@ public sealed class BandCardFitTests
         size.Commit();
         Assert.Equal(1, saves);
         Assert.True(settings.InstrumentWidth > 0);
-        Assert.Equal(ChosenHeight, new BandFretboardSize(() => settings, () => { }).UserHeight(ReferenceShape)!.Value, 1);
+        // The height goes through the stored width and back: it comes back within a twentieth of a DIP (the wider nut gutter moved the rounding to 0.052).
+        Assert.Equal(ChosenHeight, new BandFretboardSize(() => settings, () => { }).UserHeight(ReferenceShape)!.Value, 0.1);
         size.Reset();
         Assert.Null(size.UserHeight(ReferenceShape));
     }

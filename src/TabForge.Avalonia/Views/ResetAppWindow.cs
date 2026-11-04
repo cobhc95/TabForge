@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using TabForge.Avalonia.Platform;
@@ -60,7 +61,10 @@ internal sealed class ResetAppWindow : Window
         _stepOne.Children.Add(new ScrollViewer { MaxHeight = DialogMetrics.ResetAppListMaxHeight, Content = ItemList() });
         _stepOne.Children.Add(ToolWindowParts.Row(_selectAll, _selectNone));
         _stepOne.Children.Add(_status);
-        _stepOne.Children.Add(PromptChrome.Footer(backup, backupHint, PromptChrome.Action("ResetAppCancel", "Cancel", primary: false, isCancel: true), _wipe));
+        _cancel = PromptChrome.Action("ResetAppCancel", "Cancel", primary: false, isCancel: true);
+        _cancel.Click += (_, _) => Cancel();
+        KeyDown += (_, e) => { if (e.Key == Key.Escape) { e.Handled = true; Cancel(); } };
+        _stepOne.Children.Add(PromptChrome.Footer(backup, backupHint, _cancel, _wipe));
 
         _back = PromptChrome.Action("ResetAppBack", "Back", primary: false);
         _back.Click += (_, _) => ShowStep(two: false);
@@ -86,7 +90,10 @@ internal sealed class ResetAppWindow : Window
 
     private readonly Button _selectAll;
     private readonly Button _selectNone;
+    private readonly Button _cancel;
 
+    /// <summary>True only after the user confirmed (Wipe and close). Cancel, Esc and the title-bar X leave it false and wipe nothing.</summary>
+    public bool Confirmed { get; private set; }
     /// <summary>The ticks that will be written to the pending-wipe marker (only valid after the dialog returned true).</summary>
     public IReadOnlyList<ResetAppItemKind> SelectedKinds => _selection.CheckedItems;
     /// <summary>True when a backup zip was written before the dialog returned true.</summary>
@@ -162,7 +169,15 @@ internal sealed class ResetAppWindow : Window
                 return;
             }
         }
+        Confirmed = true;
         Close(true);
+    }
+
+    /// <summary>Cancel, Esc: close with the cancelled result (false) before anything is written.</summary>
+    private void Cancel()
+    {
+        Confirmed = false;
+        Close(false);
     }
 
     private static Button ActionButton(string name, string text, bool danger)

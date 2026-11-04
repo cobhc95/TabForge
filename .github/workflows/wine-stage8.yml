@@ -1,0 +1,182 @@
+name: wine-stage8
+# Stage 8: native Linux VST3 editors. The native job builds libtfportable.so and libtfvst3.so from this
+# commit on CI (no prebuilt .so is used). The package job puts those exact libraries into the real tar.xz
+# package. The gate job opens the real Dexed 1.0.1 Linux VST3 editor through X11EditorHost under Xvfb,
+# screenshots it, checks pixels, resizes, closes and reopens it, and uploads the screenshots and logs.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  DOTNET_NOLOGO: '1'
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget-packages
+  APPIMAGE_EXTRACT_AND_RUN: '1'
+  # Bundled Wine stays the Stage 6 pinned 9.21 (unchanged by Stage 8).
+  WINE_TARBALL: https://github.com/Kron4ek/Wine-Builds/releases/download/9.21/wine-9.21-amd64-wow64.tar.xz
+  WINE_TARBALL_SHA256: 020f8886750ff658d92ea39e696d2a57d3e8f056f00d8dfe45b65cddee5d6fa5
+  APPIMAGETOOL_URL: https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
+  APPIMAGETOOL_SHA256: ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0
+  SOUNDFONT_URL: https://github.com/mrbumpy409/GeneralUser-GS/raw/main/GeneralUser-GS.sf2
+  SOUNDFONT_SHA256: 9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe
+  # Real free native Linux VST3 from its maker (Dexed 1.0.1, GPL-3.0), never committed.
+  # Dexed 1.1.0 Linux needs GLIBC_2.43 and cannot load on the Ubuntu 24.04 runner (glibc 2.39);
+  # 1.0.1 needs at most GLIBC_2.38 and is the same release used for the Stage 7 VST3 editor.
+  DEXED_LNX_ZIP: https://github.com/asb2m10/dexed/releases/download/v1.0.1/Dexed-1.0.1-lnx.zip
+  DEXED_LNX_SHA256: 2bac3d0c4237e8c22c4274b6d5b59fe6329fcae72864f81b5830393eff354fc1
+  DEXED_LNX_SO_SHA256: e229e87aedb4b2e08bdb77c642ee1293cde88c0ed96fffd28b2a9c7625f13fc6
+jobs:
+  native-build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install CMake and development headers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential cmake git libasound2-dev
+      - name: Build libtfvst3.so and libtfportable.so from this commit
+        run: |
+          mkdir -p native-libs
+          cmake -S native/tfvst3/posix -B build/tfvst3 -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/tfvst3 --config Release --parallel
+          cp "$(find build/tfvst3 -name 'libtfvst3.so' | head -n1)" native-libs/libtfvst3.so
+          cmake -S native/tfportable -B build/tfportable -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/tfportable --config Release --parallel
+          cp "$(find build/tfportable -name 'libtfportable.so' | head -n1)" native-libs/libtfportable.so
+          {
+            echo "libtfvst3 exports:"
+            nm -D --defined-only native-libs/libtfvst3.so | grep -E 'tfv3_(create|has_editor|open_editor|editor_|run_loop_wait|close_editor)' || true
+            echo "libtfportable exports:"
+            nm -D --defined-only native-libs/libtfportable.so | grep -E 'tf_' | head -n 20 || true
+            sha256sum native-libs/libtfvst3.so native-libs/libtfportable.so
+          } | tee native-libs/symbols.txt
+          for symbol in tfv3_create tfv3_has_editor tfv3_open_editor tfv3_close_editor tfv3_run_loop_wait; do
+            nm -D --defined-only native-libs/libtfvst3.so | grep -q " $symbol$" || { echo "missing export: $symbol" >&2; exit 1; }
+          done
+      - name: Upload the CI-built native libraries
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-stage8-native-libs
+          path: native-libs/**
+          if-no-files-found: error
+
+  build-package:
+    needs: native-build
+    runs-on: ubuntu-22.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.403'
+      - name: Drop any preinstalled copy of the patched AlphaTab package
+        run: rm -rf "$HOME/.nuget/packages/tabforge.alphatab"
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake git python3 curl unzip xz-utils binutils patchelf \
+            mingw-w64 libasound2-dev libmp3lame0 libmpg123-0 libfreetype6 libfontconfig1 libgl1 \
+            libx11-6 libxext6 libxcursor1 libxrandr2
+      - uses: actions/download-artifact@v4
+        with:
+          name: wine-stage8-native-libs
+          path: native-libs
+      - name: Fetch the pinned Wine tree, SoundFont and AppImage tool
+        run: |
+          mkdir -p staging
+          curl -fsSL -o staging/wine.tar.xz "$WINE_TARBALL"
+          echo "$WINE_TARBALL_SHA256  staging/wine.tar.xz" | sha256sum -c -
+          mkdir staging/wine && tar -xf staging/wine.tar.xz -C staging/wine --strip-components=1
+          chmod +x staging/wine/bin/wine staging/wine/bin/wineserver staging/wine/bin/wine64
+          curl -fsSL -o staging/appimagetool "$APPIMAGETOOL_URL"
+          echo "$APPIMAGETOOL_SHA256  staging/appimagetool" | sha256sum -c -
+          chmod +x staging/appimagetool
+          curl -fsSL -o staging/GeneralUser-GS.sf2 "$SOUNDFONT_URL"
+          echo "$SOUNDFONT_SHA256  staging/GeneralUser-GS.sf2" | sha256sum -c -
+          cp src/TabForge.Avalonia/licenses/GeneralUser-GS_LICENSE.txt staging/GeneralUser-GS-LICENSE.txt
+      - name: Build the Linux package with the CI-built native libraries (tar.xz)
+        env:
+          TABFORGE_SOUNDFONT: ${{ github.workspace }}/staging/GeneralUser-GS.sf2
+          TABFORGE_SOUNDFONT_LICENSE: ${{ github.workspace }}/staging/GeneralUser-GS-LICENSE.txt
+        run: |
+          tools/package-linux.sh \
+            --out "$GITHUB_WORKSPACE/package" \
+            --wine "$GITHUB_WORKSPACE/staging/wine" \
+            --helpers "$GITHUB_WORKSPACE/src/TabForge.AudioEngine/native" \
+            --tfportable "$GITHUB_WORKSPACE/native-libs" \
+            --tfvst3 "$GITHUB_WORKSPACE/native-libs" \
+            --appimagetool "$GITHUB_WORKSPACE/staging/appimagetool"
+          stat -c '%n %s bytes' package/linux/*.tar.xz package/linux/*.AppImage | tee package/linux/SIZES.txt
+          test -f package/linux/MIN_GLIBC.txt
+          objdump -T package/linux/TabForge.AppDir/usr/bin/libtfvst3.so | grep -E 'tfv3_(has_editor|open_editor|run_loop_wait)' | tee package/linux/VST3-EXPORTS.txt
+      - name: Upload the package
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-stage8-package
+          path: |
+            package/linux/*.tar.xz
+            package/linux/*.AppImage
+            package/linux/MIN_GLIBC.txt
+            package/linux/SIZES.txt
+            package/linux/VST3-EXPORTS.txt
+          if-no-files-found: error
+
+  native-editor-gate:
+    needs: build-package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the display, screenshot and runtime libraries (no system Wine)
+        run: |
+          command -v wine && { echo "Wine is installed on the clean runner"; exit 1; } || true
+          command -v wine64 && { echo "wine64 is installed on the clean runner"; exit 1; } || true
+          test ! -e /usr/bin/wine
+          test ! -e /usr/lib/wine
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb xauth x11-utils imagemagick xdotool xz-utils openbox wmctrl \
+            libfontconfig1 libfreetype6 libgl1 libasound2t64 libx11-6 libxext6 libxcursor1 libxrandr2 libxi6 \
+            libxfixes3 libxrender1 libxss1 libxcb1 libice6 libsm6 libxcomposite1 libxdamage1 libxinerama1 libxxf86vm1 \
+            libxkbcommon0 libwayland-client0 libpulse0 libegl1
+          echo "clean runner: no wine, wine64, /usr/bin/wine or /usr/lib/wine"
+      - uses: actions/download-artifact@v4
+        with:
+          name: wine-stage8-package
+          path: artifact
+      - name: Fetch the real Dexed 1.0.1 Linux VST3 (maker release, SHA-256 pinned)
+        run: |
+          mkdir -p fixtures/Dexed.vst3/Contents/x86_64-linux fixtures/Dexed.vst3/Contents/Resources
+          curl -fsSL -o staging-dexed-lnx.zip "$DEXED_LNX_ZIP"
+          echo "$DEXED_LNX_SHA256  staging-dexed-lnx.zip" | sha256sum -c -
+          unzip -p staging-dexed-lnx.zip 'Dexed.vst3/Contents/x86_64-linux/Dexed.so' > fixtures/Dexed.vst3/Contents/x86_64-linux/Dexed.so
+          unzip -p staging-dexed-lnx.zip 'Dexed.vst3/Contents/Resources/moduleinfo.json' > fixtures/Dexed.vst3/Contents/Resources/moduleinfo.json
+          echo "$DEXED_LNX_SO_SHA256  fixtures/Dexed.vst3/Contents/x86_64-linux/Dexed.so" | sha256sum -c -
+          file fixtures/Dexed.vst3/Contents/x86_64-linux/Dexed.so | tee fixture.txt
+          ldd fixtures/Dexed.vst3/Contents/x86_64-linux/Dexed.so | tee fixture-ldd.txt
+      - name: Extract the tar.xz to a random path
+        run: |
+          stat -c '%n %s bytes' artifact/*.tar.xz artifact/*.AppImage | tee sizes.txt
+          ID="$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+          mkdir -p "$RUNNER_TEMP/pkg-$ID"
+          tar -xJf artifact/*.tar.xz -C "$RUNNER_TEMP/pkg-$ID"
+          echo "APP_TAR=$RUNNER_TEMP/pkg-$ID/TabForge.AppDir" >> "$GITHUB_ENV"
+          ls -l "$RUNNER_TEMP/pkg-$ID/TabForge.AppDir/usr/bin/libtfvst3.so"
+          objdump -T "$RUNNER_TEMP/pkg-$ID/TabForge.AppDir/usr/bin/libtfvst3.so" | grep -E 'tfv3_(has_editor|open_editor|run_loop_wait)'
+      - name: Open, screenshot, resize, close and reopen the real native VST3 editor under Xvfb
+        run: |
+          chmod +x tools/test-native-editors.sh
+          tools/test-native-editors.sh --app "$APP_TAR" --fixture "$PWD/fixtures/Dexed.vst3" --out "$PWD/native-editor-evidence"
+          find native-editor-evidence -name '*.png' -printf '%p %s bytes\n' | sort | tee native-editor-evidence/screenshots.txt
+      - name: Upload the native editor screenshots, logs and pixel checks
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-stage8-native-editor-evidence
+          path: |
+            native-editor-evidence/**
+            sizes.txt
+            fixture.txt
+            fixture-ldd.txt
+          if-no-files-found: warn

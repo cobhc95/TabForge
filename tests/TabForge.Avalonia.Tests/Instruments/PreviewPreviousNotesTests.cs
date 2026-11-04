@@ -76,29 +76,6 @@ public class PreviewPreviousNotesTests
         finally { System.IO.File.Delete(path); }
     }
 
-    [Fact]
-    public void MenuRowSitsUnderPreviewNextAndTogglesTheSetting()
-    {
-        var settings = new AppSettings();
-        var saves = 0;
-        var menu = new FretboardContextMenu(() => settings, () => saves++, () => { }, () => null);
-        var ids = menu.RowsFor(InstrumentPanelKind.Fretboard).Select(r => r.Id).ToList();
-        Assert.Equal(ids.IndexOf(FretboardContextMenu.PreviewId) + 1, ids.IndexOf(FretboardContextMenu.PreviewPreviousId));
-        Assert.False(menu.RowsFor(InstrumentPanelKind.Keyboard).Single(r => r.Id == FretboardContextMenu.PreviewPreviousId).Checked);
-
-        menu.Run(FretboardContextMenu.PreviewPreviousId, null);
-        Assert.True(settings.Editing.PreviewPreviousNotesEnabled);
-        Assert.True(settings.Editing.PreviewNotesEnabled);
-        Assert.Equal(1, saves);
-        Assert.True(menu.RowsFor(InstrumentPanelKind.Fretboard).Single(r => r.Id == FretboardContextMenu.PreviewPreviousId).Checked);
-
-        var row = SettingsCatalogRow(settings);
-        row.set(false);
-        Assert.False(menu.RowsFor(InstrumentPanelKind.Fretboard).Single(r => r.Id == FretboardContextMenu.PreviewPreviousId).Checked);
-    }
-
-    private static (System.Action<bool> set, bool value) SettingsCatalogRow(AppSettings settings) => (v => settings.Editing.PreviewPreviousNotesEnabled = v, settings.Editing.PreviewPreviousNotesEnabled);
-
     [AvaloniaTheory]
     [InlineData(InstrumentPanelKind.Fretboard, true, true)]
     [InlineData(InstrumentPanelKind.Fretboard, true, false)]

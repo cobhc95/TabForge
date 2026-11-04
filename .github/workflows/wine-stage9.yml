@@ -1,0 +1,144 @@
+name: wine-stage9
+# Stage 9: Linux probe, Approve all, trust and status text. The build job makes the real
+# Linux package (tar.xz) with the pinned Wine and rebuilt helpers. The gate job runs the
+# packaged app on a clean Ubuntu 24.04 runner (no system Wine): it approves the deterministic
+# test DLL plus real Dexed 32/64 through the real bridged probe path (Approve-all logic) with
+# the bridged ceiling, checks stale shm sweep, refusal text and the first-run marker.
+on:
+  workflow_dispatch:
+  # Registration trigger removed after Stage 18: this old gate watched tools/package-linux.sh, so every packaging
+  # change re-ran it by accident. It is dispatch-only now.
+permissions:
+  contents: read
+env:
+  DOTNET_NOLOGO: '1'
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget-packages
+  APPIMAGE_EXTRACT_AND_RUN: '1'
+  WINE_TARBALL: https://github.com/Kron4ek/Wine-Builds/releases/download/9.21/wine-9.21-amd64-wow64.tar.xz
+  WINE_TARBALL_SHA256: 020f8886750ff658d92ea39e696d2a57d3e8f056f00d8dfe45b65cddee5d6fa5
+  APPIMAGETOOL_URL: https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
+  APPIMAGETOOL_SHA256: ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0
+  SOUNDFONT_URL: https://github.com/mrbumpy409/GeneralUser-GS/raw/main/GeneralUser-GS.sf2
+  SOUNDFONT_SHA256: 9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe
+  DEXED_ZIP_URL: https://github.com/asb2m10/dexed/releases/download/v0.9.3/dexed-0.9.3-win.zip
+  DEXED_ZIP_SHA256: b365512bb3eb6ddb2f58db7ae5ca8707fa6ea7029e08cea5165bc8a26a25b38b
+jobs:
+  build-package:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.403'
+      - name: Drop any preinstalled copy of the patched AlphaTab package
+        run: rm -rf "$HOME/.nuget/packages/tabforge.alphatab"
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake git python3 curl unzip xz-utils binutils patchelf \
+            mingw-w64 libasound2-dev libmp3lame0 libmpg123-0 libfreetype6 libfontconfig1 libgl1 \
+            libx11-6 libxext6 libxcursor1 libxrandr2
+      - name: Fetch the pinned Wine tree, SoundFont and fixtures
+        run: |
+          mkdir -p staging/testkit
+          curl -fsSL -o staging/wine.tar.xz "$WINE_TARBALL"
+          echo "$WINE_TARBALL_SHA256  staging/wine.tar.xz" | sha256sum -c -
+          mkdir staging/wine && tar -xf staging/wine.tar.xz -C staging/wine --strip-components=1
+          chmod +x staging/wine/bin/wine staging/wine/bin/wineserver staging/wine/bin/wine64
+          curl -fsSL -o staging/appimagetool "$APPIMAGETOOL_URL"
+          echo "$APPIMAGETOOL_SHA256  staging/appimagetool" | sha256sum -c -
+          chmod +x staging/appimagetool
+          curl -fsSL -o staging/GeneralUser-GS.sf2 "$SOUNDFONT_URL"
+          echo "$SOUNDFONT_SHA256  staging/GeneralUser-GS.sf2" | sha256sum -c -
+          cp src/TabForge.Avalonia/licenses/GeneralUser-GS_LICENSE.txt staging/GeneralUser-GS-LICENSE.txt
+          i686-w64-mingw32-g++ -std=c++17 -O2 -shared -static-libgcc -static-libstdc++ \
+            -DUNICODE -D_UNICODE -DNOMINMAX -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -Wl,--no-insert-timestamp \
+            native/tfvst32/test/passthrough32.cpp -o staging/testkit/passthrough32.dll -luser32 -lgdi32
+          x86_64-w64-mingw32-g++ -std=c++17 -O2 -shared -static-libgcc -static-libstdc++ \
+            -DUNICODE -D_UNICODE -DNOMINMAX -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -Wl,--no-insert-timestamp \
+            native/tfvst32/test/passthrough32.cpp -o staging/testkit/passthrough64.dll -luser32 -lgdi32
+          curl -fsSL -o staging/dexed.zip "$DEXED_ZIP_URL"
+          echo "$DEXED_ZIP_SHA256  staging/dexed.zip" | sha256sum -c -
+          unzip -p staging/dexed.zip dexed-0.9.3/x64/Dexed.dll > staging/testkit/Dexed64.dll
+          unzip -p staging/dexed.zip dexed-0.9.3/win32/Dexed.dll > staging/testkit/Dexed32.dll
+          echo "b73184588577b54fe18fb0429dd6d4a554460958286e0d66fc2a395e1e9b9d91  staging/testkit/Dexed32.dll" | sha256sum -c -
+          echo "e13e1c887b633af707985ca7b2cc956fb5e9c9913b5b452ddaee6c1796ce7780  staging/testkit/Dexed64.dll" | sha256sum -c -
+          file staging/testkit/*.dll
+      - name: Build the Linux package with the rebuilt helpers (tar.xz)
+        env:
+          TABFORGE_SOUNDFONT: ${{ github.workspace }}/staging/GeneralUser-GS.sf2
+          TABFORGE_SOUNDFONT_LICENSE: ${{ github.workspace }}/staging/GeneralUser-GS-LICENSE.txt
+        run: |
+          tools/package-linux.sh \
+            --out "$GITHUB_WORKSPACE/package" \
+            --wine "$GITHUB_WORKSPACE/staging/wine" \
+            --helpers "$GITHUB_WORKSPACE/src/TabForge.AudioEngine/native" \
+            --appimagetool "$GITHUB_WORKSPACE/staging/appimagetool"
+          stat -c '%n %s bytes' package/linux/*.tar.xz package/linux/*.AppImage | tee package/linux/SIZES.txt
+          test -f package/linux/MIN_GLIBC.txt
+      - name: Upload the package and test-only fixtures
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-stage9-package
+          path: |
+            package/linux/*.tar.xz
+            package/linux/*.AppImage
+            package/linux/MIN_GLIBC.txt
+            package/linux/SIZES.txt
+          if-no-files-found: error
+      - name: Upload the real fixtures (never shipped, never committed)
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-stage9-testkit
+          path: staging/testkit/**
+          if-no-files-found: error
+
+  approve-gate:
+    needs: build-package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the display and runtime libraries (no Wine)
+        run: |
+          command -v wine && { echo "Wine is installed on the clean runner"; exit 1; } || true
+          command -v wine64 && { echo "wine64 is installed on the clean runner"; exit 1; } || true
+          test ! -e /usr/bin/wine
+          test ! -e /usr/lib/wine
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb xauth x11-utils xz-utils \
+            libfontconfig1 libfreetype6 libgl1 libasound2t64 libx11-6 libxext6 libxcursor1 libxrandr2 libxi6 \
+            libxfixes3 libxrender1 libxcb1 libice6 libsm6 libpulse0 libegl1
+          echo "clean runner: no wine, wine64, /usr/bin/wine or /usr/lib/wine"
+      - uses: actions/download-artifact@v4
+        with:
+          name: wine-stage9-package
+          path: artifact
+      - uses: actions/download-artifact@v4
+        with:
+          name: wine-stage9-testkit
+          path: testkit
+      - name: Print the exact package size and extract the tar.xz to a random path
+        run: |
+          stat -c '%n %s bytes' artifact/*.tar.xz artifact/*.AppImage | tee sizes.txt
+          ID="$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+          mkdir -p "$RUNNER_TEMP/pkg-$ID"
+          tar -xJf artifact/*.tar.xz -C "$RUNNER_TEMP/pkg-$ID"
+          echo "APP_TAR=$RUNNER_TEMP/pkg-$ID/TabForge.AppDir" >> "$GITHUB_ENV"
+      - name: Approve the test DLL and real plug-ins through the packaged app
+        run: |
+          chmod +x tools/test-wine-approve.sh
+          xvfb-run -a tools/test-wine-approve.sh --app "$APP_TAR" --fixtures "$PWD/testkit" --out "$PWD/approve-evidence"
+          find approve-evidence -type f -printf '%p %s bytes\n' | sort | tee approve-evidence/files.txt
+      - name: Upload the approve logs and prefix marker
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-stage9-approve-evidence
+          path: |
+            approve-evidence/**
+            sizes.txt
+          if-no-files-found: warn

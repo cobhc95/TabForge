@@ -105,6 +105,8 @@ public sealed partial class MainWindow : Window
         // A malformed settings file already falls back to defaults without overwriting it (AppSettingsStore.LoadFailed):
         // say so on the top bar, so the silence is not mistaken for a clean start.
         if (Settings?.LoadFailed == true) _topBar.Show(SettingsLoadFailedNotice, Views.NotificationKind.Warn, Views.NoticeCategory.Error);
+        // Until the user picks an interface size, the window follows the size recommended for its monitor (first start included); never asked.
+        MonitorUiScale.Follow(this, settings);
     }
 
     /// <summary>

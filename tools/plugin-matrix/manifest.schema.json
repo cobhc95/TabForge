@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tabforge.local/plugin-matrix/manifest.schema.json",
+  "title": "TabForge Stage 10 test plug-in manifest",
+  "type": "object",
+  "required": ["schema", "plugins"],
+  "properties": {
+    "schema": { "type": "integer", "minimum": 1 },
+    "generated": { "type": "string" },
+    "description": { "type": "string" },
+    "policy": { "type": "object" },
+    "counts": { "type": "object" },
+    "public_copy": { "type": "boolean" },
+    "plugins": {
+      "type": "array",
+      "minItems": 50,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "version", "format", "bitness", "role", "sha256", "licence"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "version": { "type": "string", "minLength": 1 },
+          "vendor": { "type": "string" },
+          "official_page": { "type": "string" },
+          "download_url": { "type": "string" },
+          "archive": { "type": "string" },
+          "download_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "member": { "type": "string" },
+          "binary_member": { "type": "string" },
+          "extract_dir": { "type": ["string", "null"] },
+          "bundle": { "type": "boolean" },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "licence": { "type": "string", "minLength": 1 },
+          "licence_url": { "type": "string" },
+          "format": { "enum": ["VST2", "VST3"] },
+          "bitness": { "enum": [32, 64] },
+          "role": { "enum": ["Instrument", "Effect"] },
+          "features": { "type": "array", "items": { "type": "string" } },
+          "risk_group": { "type": ["string", "null"] },
+          "skip_audio_reason": { "type": ["string", "null"] },
+          "automated_testing": { "type": "string" },
+          "notes": { "type": "string" },
+          "size_bytes": { "type": "integer", "minimum": 1 }
+        }
+      }
+    }
+  }
+}

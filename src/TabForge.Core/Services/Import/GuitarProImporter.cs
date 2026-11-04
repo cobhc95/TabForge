@@ -7,6 +7,7 @@ using System.Text;
 using AlphaTab;
 using AlphaTab.Importer;
 using TabForge.Models;
+using TabForge.Playback;
 using TabForge.Plugins;
 using static TabForge.Services.GuitarProBarConverter;
 using static TabForge.Services.GuitarProBeatReader;
@@ -164,7 +165,6 @@ public static class GuitarProImporter
         context.RawMixes = null;
         context.Check();
     }
-
     /// <summary>alphaTab parses the score; a Guitar Pro 3-5 file that ends inside its bars (cut-off download) keeps the bars before the cut, and says so in <paramref name="cutOffNotice"/>.</summary>
     private static object LoadScoreOrKeepCompleteBars(byte[] data, out string? cutOffNotice)
     {

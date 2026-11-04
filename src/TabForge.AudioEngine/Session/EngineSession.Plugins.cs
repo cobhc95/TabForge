@@ -82,8 +82,15 @@ internal sealed partial class EngineSession
         void Size(int w, int h) => Send(EngineEvent.EditorSize, x => { x.Write(slot); x.Write(index); x.Write(w); x.Write(h); });
         if (plugin is Isolation.RemotePlugin remote)   // its window lives in its own process
         {
-            remote.EditorSized = Size;
-            if (remote.OpenEditor(owner, docked) is { } opened) Size(opened.Width, opened.Height);
+            // Bounded pipe waits, never blamed: an unresponsive helper must not trip the engine's own hang watchdog.
+            var remoteCall = EnterCall(slot, index, remote, path, PluginCallKind.Editor);
+            try
+            {
+                remote.EditorSized = Size;
+                if (remote.OpenEditor(owner, docked) is { } opened) Size(opened.Width, opened.Height);
+                else if (docked) Size(0, 0);   // no editor: 0 x 0 tells the window to show the parameter panel now
+            }
+            finally { LeaveCall(remoteCall); }
             return;
         }
         var spec = request.Specs[index];
@@ -93,7 +100,7 @@ internal sealed partial class EngineSession
         bool shown;
         try { shown = Editors.Show(plugin, $"{name} — {request.Track}", owner, dark, docked, onTop, Size); }
         finally { LeaveCall(entered); }
-        if (!shown) Log.Write($"editor: {path} has no editor or its window could not be created");
+        if (!shown) { Log.Write($"editor: {path} has no editor or its window could not be created"); if (docked) Size(0, 0); }
     }
 
     /// <summary>

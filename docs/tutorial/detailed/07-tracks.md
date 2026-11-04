@@ -48,7 +48,7 @@ For the quick way, open the **Insert** menu and choose one of **Insert > Track >
 
 For the careful way, click **+ Track** at the top left of the track list. Hover over it and its tooltip says what it does. Right-click it to see a small menu with **Add track…** and **Mixer…**.
 
-The **Add track** window is the same window as **Track properties**, with a few extras. It has a **Details** card for the name and colour, an **Instrument** card, a **Mixer** card, and a **Tuning** card. At the bottom is a **Position** list, and the **Add track** and **Cancel** buttons.
+The **Add track** window is the same window as **Track properties**, with the same cards: **Details**, **Instrument**, **Mixer**, **Tuning**, and the **Capo** card at the bottom. It adds the new track at the end of the song (there is no position choice), and the Mixer card's Effects button stays dimmed until the track exists.
 
 The **Position** list decides where the new track lands in the list. You can choose **Last**, **First**, **After the selected track**, or **As track number…**, which lets you type a number.
 
@@ -101,8 +101,9 @@ The window has four cards.
 
 - **Details** holds the **Track name**, **Played by**, **Colour**, a tick box to tint the track's row and lane with its colour, and a **Notes** box for your own reminders.
 - **Instrument** has the **Change…** button, plus **MIDI program** and **Channel**. Leave those two alone unless you know you need them.
-- **Mixer** has the **Volume** and **Pan** knobs and a button for the track's plug-ins.
-- **Tuning** is for guitars and basses. It is where strings, frets and the capo live.
+- **Mixer** has the **Volume** and **Pan** knobs and a button for the track's plug-ins (dimmed while the track is being added).
+- **Tuning** is for guitars and basses. It is where strings, frets and presets live.
+- **Capo** sits full-width at the bottom. It holds the full-capo stepper and the partial capos.
 
 The window for a bass looks the same, with bass tuning.
 
@@ -114,9 +115,9 @@ To set a knob exactly, double-click it, or right-click it. A small box opens. Ty
 
 A tuning is the note each open string plays. Standard guitar tuning, from the lowest string to the highest, is E A D G B E. If you tune the lowest string down to D, you have Drop D, and a fret number on that string now means a different note.
 
-Open **Track properties** and look at the **Tuning** card. At the top is the **Preset** list. It offers the common tunings for the number of strings the track has. For a six-string guitar that includes standard, a half step down, Drop D, Drop C and Open G. Choose one and the strings below follow.
+Open **Track properties** and look at the **Tuning** card. At the top is the **Preset** menu. It groups the common tunings by instrument — guitar and bass first for that kind of track, then ukulele, banjo, mandolin and the rest — with a search box and a **Show all string counts** switch. Your own saved tunings live under **My tunings**: **Save current tuning…** keeps the working strings, and each saved tuning has rename and delete buttons beside it. For a six-string guitar that includes standard, a half step down, Drop D, Drop C and Open G. Choose one and the strings below follow.
 
-Each string has its own row. The row shows the string's note, a **-** button and a **+** button. Click **-** to tune that string down by a semitone, and **+** to tune it up. You can also double-click the note and type one, such as `Eb3`, then press `Enter`.
+Each string has its own row: a speaker button that repeats the string's ring until you switch it off, the string number, the drawn string, a **-** button and a **+** button, and a note box on the right. Click the drawn string to hear it (it briefly vibrates). Click **-** to tune that string down by a semitone, and **+** to tune it up. You can also double-click the note and type one, such as `Eb3`, then press `Enter` to apply it; `Esc` or leaving the box puts the old note back.
 
 Below the strings are **All -1** and **All +1**, which move every string by a semitone. If you type a tuning that matches no preset, the list shows **Custom**.
 
@@ -139,19 +140,25 @@ The tick box **Keep fret numbers** is ticked by default. Ticked, every note keep
 
 The numbers on the lowest string went up by two when you unticked the box, because the notes stayed the same.
 
-### Seven strings, eight strings and a five-string bass
+### Three strings to ten
 
-There is no box for the number of strings. Click **+ Low string** on the **Tuning** card to add a string a fourth below the lowest, and **- Low string** to remove the lowest one. The label beside the **Preset** list shows how many strings you have, such as "7 strings".
+The **string count** box at the top of the card sets how many strings the track has, from 3 to 10. Behind **Advanced tuning** (off until you switch it on) are four buttons that add or remove the low or high string. The label beside the **Preset** menu shows how many strings you have, such as "7 strings".
 
 Add the string first, then choose a preset. The list changes to match the new count, so a seven-string guitar offers presets such as standard B and Drop A.
 
 Ashen Meridian has all three. **Rhythm Gtr L** has seven strings, **Rhythm Gtr R** has eight, and **Bass** has five. Select one and the TAB gains a line for each string, and the fretboard grows with it.
 
+Removing a string that holds notes asks first. **Yes** moves the notes to other strings. When no remaining string can keep a note's pitch, the warning says so, and the note moves to the nearest playable pitch and changes pitch. Retuning after that can ask a second question before **OK** writes anything.
+
 ## Use a capo
 
 A capo is a clamp across the neck that raises every open string by the same number of semitones. It lets a player use open-string shapes in a higher key. In TAB, fret numbers are counted from the capo, so fret `0` means the open string at the capo.
 
-The **Tuning** card has two boxes at the bottom. **Frets** sets how many frets the neck has, from 12 to 36. **Capo** sets the capo fret, from 0 to 12. Type a number and click **OK**.
+The **Capo** card sits full-width at the bottom of the window. Its stepper shows **Off** or **Fret N** for the track's full capo (0 to 12). Below it, **Add partial capo** adds a partial capo, up to four per track. Each partial has a fret and a row of tick boxes for the strings it covers; the higher of the full capo and any covering partial sets the string's pitch. Fret numbers always count from the capo. Everything on the card, capo included, writes with **OK** as one undo step.
+
+You can also drag a drawn capo on the fretboard: grab it, drop it on its new fret, and the song updates on release as one undo step (not yet tried in the running app).
+
+The score writes a capo line above the staff (`Capo 2`, or `Partial 5 (1-3)` for a partial), and the track row shows a badge (`Capo 2`, with a `+` when partials join in). The full capo is untouched by this: it is still imported from and exported to the score formats that carry one. The partial capos live only in `.tforge` songs. They are not written to `.gp`, `.gp5` or MusicXML exports, and they are not read from `.gp` or `.gp5` imports (no documented field, not checked against a real file).
 
 You can change the capo at any time. The fret numbers you have already written stay as they are, and the notes sound higher or lower to match, as they would if you moved a real capo. Fret numbers always count from the capo.
 
@@ -162,7 +169,7 @@ You can change the capo at any time. The fret numbers you have already written s
 1. Choose **File > Open…** (`Ctrl+O`), go to the `Samples` folder beside `TabForge.exe`, and open `TabForge Demo - Ashen Meridian.gp`. The song opens as an unsaved song.
 2. Click the **Clean Gtr** track in the track list.
 3. Press `F6`. **Track properties** opens.
-4. Look at the **Tuning** card. The **Capo** box shows `5`.
+4. Look at the **Capo** card. The stepper shows **Fret 5**.
 5. Look at the **Notes** box on the **Details** card. It says that frets are relative to the capo.
 6. Click **Cancel**. Nothing changes.
 
@@ -210,9 +217,9 @@ Play one string. The window shows the note name, how many cents sharp or flat yo
 ## Quick recap
 
 - Each track is one player, with its own notes, sound, volume and pan. The score shows the selected track.
-- **Insert > Track > Bass**, **Add Guitar**, **Add Drums** and **Add Keys** add ready-made tracks. **+ Track** opens the **Add track** window with a **Position** list.
+- **Insert > Track > Bass**, **Add Guitar**, **Add Drums** and **Add Keys** add ready-made tracks at the end of the song. **+ Track** opens the **Add track** window, which is the same window and also adds at the end (move the track with `Alt+Up` / `Alt+Down`).
 - The instrument sets the sound. **Track properties** (`F6`) holds the name, colour, mixer knobs and tuning, and changes apply when you click **OK**.
-- Choose a tuning from the **Preset** list or edit each string. **Keep fret numbers** decides whether existing notes change pitch.
+- Choose a tuning from the **Preset** menu or edit each string. **Keep fret numbers** decides whether existing notes change pitch. Removing a string with notes on it asks first. The **Capo** card holds the full capo and up to four partial capos; partials stay in `.tforge` songs only.
 - Fret numbers are counted from the capo. Changing the capo keeps the numbers and moves the sound.
 - **Transpose** rewrites notes, **Pitch** changes the sound only, and **Global tuning** retunes every tab track.
 

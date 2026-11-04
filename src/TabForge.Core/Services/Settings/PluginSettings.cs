@@ -108,6 +108,12 @@ public sealed class PluginSettings
     public const int MaxRecentImpulseFiles = 10;
     /// <summary>Plug-ins switched off after they crashed (full paths).</summary>
     public List<string> Quarantined { get; set; } = new();
+    /// <summary>
+    /// Native 64-bit plug-ins that already ended the engine once (full paths). They keep their normal approval, but the engine
+    /// loads them in its existing isolation host from then on, so a second fault loses only that plug-in, not the audio engine.
+    /// Filled automatically by the UI on an engine crash; "Allow again" clears the quarantine, not this list.
+    /// </summary>
+    public List<string> CrashProne { get; set; } = new();
     /// <summary>Plug-in paths the user explicitly approved (full normalised paths; uncapped). Each needs its record in <see cref="TrustRecords"/> to be trusted.</summary>
     public List<string> ApprovedPluginPaths { get; set; } = new();
     /// <summary>Scan the plug-in folders once and remember the list (Rescan updates it); the default. Off: scan each time.</summary>
@@ -174,6 +180,11 @@ public sealed class PluginFingerprint
     public string Sha256 { get; set; } = "";
     /// <summary>Subject of the valid Authenticode signer (WinVerifyTrust), empty when unsigned or the signature does not verify.</summary>
     public string Signer { get; set; } = "";
+    /// <summary>
+    /// Hash of the plug-in's local DLL dependency closure at approval (see <see cref="TabForge.Audio.Contracts.PeImports"/>).
+    /// Empty = an approval from before this check; the engine then refuses the load when the closure is not empty.
+    /// </summary>
+    public string Dependencies { get; set; } = "";
     /// <summary>Recorded by a scan (a baseline only: the plug-in still needs approval); false = recorded by an explicit approval.</summary>
     public bool Scanned { get; set; }
 }

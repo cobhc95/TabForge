@@ -25,3 +25,10 @@ dotnet publish $project -c Release -r win-x64 --no-restore --self-contained true
     -p:PublishTrimmed=false -p:IncludeNativeLibrariesForSelfExtract=true `
     -p:ContinuousIntegrationBuild=true -p:Deterministic=true @ExtraArgs -o $Output
 if ($LASTEXITCODE) { throw 'publish failed' }
+# Packaging guard: the private plug-in manifest is test-only and must never be in a publish folder.
+$privateManifests = @(Get-ChildItem -LiteralPath $Output -Recurse -Force -File -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -like 'manifest.private*.json' })
+if ($privateManifests.Count -gt 0) {
+    $privateManifests | ForEach-Object { Write-Output $_.FullName }
+    throw 'The private plug-in manifest (manifest.private*.json) is in the publish folder; refusing to package.'
+}

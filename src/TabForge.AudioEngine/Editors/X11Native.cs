@@ -12,9 +12,9 @@ internal unsafe static class X11Native
 {
     private const string Lib = "libX11.so.6";
 
-    public const int ClientMessage = 33, DestroyNotify = 17;
+    public const int ClientMessage = 33, DestroyNotify = 17, ConfigureNotify = 22;
     public const long StructureNotifyMask = 1L << 17, SubstructureNotifyMask = 1L << 19, SubstructureRedirectMask = 1L << 20;
-    public const int PropModeReplace = 0, PMinSize = 1 << 4, PMaxSize = 1 << 5;
+    public const int PropModeReplace = 0, PMinSize = 1 << 4;
     public const nint XaAtom = 4, XaString = 31;
 
     [StructLayout(LayoutKind.Sequential)]
@@ -80,10 +80,15 @@ internal unsafe static class X11Native
         fixed (nint* p = atoms) XChangeProperty(display, window, property, XaAtom, 32, PropModeReplace, (byte*)p, atoms.Length);
     }
 
-    /// <summary>Fixes the window to one size (the plug-in's): the window manager offers no resize border, as on Windows.</summary>
-    public static void FixSize(IntPtr display, nint window, int width, int height)
+    /// <summary>
+    /// A floating editor window is resizable like the Win32 floating window: only a small minimum is set, no maximum.
+    /// A fixed-size plug-in view ignores the size it is told (tfv3_editor_set_size checks canResize), exactly as on Windows.
+    /// </summary>
+    private const int ResizeMinWidthHint = 100, ResizeMinHeightHint = 60;
+
+    public static void AllowResize(IntPtr display, nint window)
     {
-        var hints = new XSizeHints { Flags = PMinSize | PMaxSize, MinWidth = width, MinHeight = height, MaxWidth = width, MaxHeight = height };
+        var hints = new XSizeHints { Flags = PMinSize, MinWidth = ResizeMinWidthHint, MinHeight = ResizeMinHeightHint };
         XSetWMNormalHints(display, window, &hints);
     }
 

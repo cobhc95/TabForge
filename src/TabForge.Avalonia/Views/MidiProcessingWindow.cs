@@ -47,12 +47,14 @@ public sealed partial class MidiProcessingWindow : Window
     private readonly MidiPresetBars? _presets;
     private readonly TextBox _search = new() { Name = "SearchBox", ClipToBounds = true };
     private readonly ListBox _catalog = new() { BorderThickness = DialogMetrics.PresetNoOutline, Name = "CatalogList", ClipToBounds = true };
-    private readonly ListBox _list = new() { BorderThickness = DialogMetrics.PresetNoOutline, Name = "ProcessorList", ClipToBounds = true };
+    private readonly ListBox _list = new() { BorderThickness = DialogMetrics.PresetNoOutline, Name = "ProcessorList", ClipToBounds = true, SelectionMode = SelectionMode.Multiple };
     private readonly TextBlock _title = new() { FontSize = 15, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap, Name = "TitleText" };
     private readonly TextBlock _description = new() { TextWrapping = TextWrapping.Wrap, Name = "DescriptionText" };
     private readonly TextBlock _parameterNote = new() { TextWrapping = TextWrapping.Wrap, Name = "ParameterNote", IsVisible = false };
     private readonly StackPanel _params = new() { Name = "ParamPanel" };
     private readonly Dictionary<string, (Border Box, MidiParamInfo Param)> _elems = new();
+    private readonly List<(TextBlock Header, WrapPanel Wrap)> _sections = new();
+    private System.Text.Json.Nodes.JsonObject? _shownValues;
     private MidiNoteMapRows? _mapRows;
     private ScrollViewer? _detailViewer;
     private string[] _queryWords = Array.Empty<string>();
@@ -108,7 +110,9 @@ public sealed partial class MidiProcessingWindow : Window
                 (proc, json, applied) => { _edit(() => { proc.Params = json; proc.AppliedPreset = applied; }); ShowSelected(); });
         }
         Content = BuildRoot();
+        InitChainSelect();
         WireEvents();
+        WireChainSelect();
         if (slot is not null)
         {
             _catalog.ItemsSource = MidiProcessorCatalog.SearchAll("");
@@ -134,7 +138,7 @@ public sealed partial class MidiProcessingWindow : Window
     };
 
     private List<PluginMidiProcessor> Procs => _slot?.MidiProcessors ?? _noSlotProcessors;
-    private PluginMidiProcessor? Selected => _list.SelectedItem as PluginMidiProcessor;
+    private PluginMidiProcessor? Selected => FocusedProc ?? _list.SelectedItem as PluginMidiProcessor;
     private bool HasLog => Procs.Any(p => p.Enabled && p.Type == "log");
 
     // ---------- layout ----------
@@ -213,7 +217,7 @@ public sealed partial class MidiProcessingWindow : Window
         DockPanel.SetDock(buttons, Dock.Bottom);
         _list.ItemsPanel = new FuncTemplate<Panel?>(() => new VirtualizingStackPanel());
         _list.ItemTemplate = new FuncDataTemplate<PluginMidiProcessor>((proc, _) => ProcessorRow(proc), supportsRecycling: true);
-        pane.Children.Add(heading); pane.Children.Add(buttons); pane.Children.Add(Frame(_list));
+        pane.Children.Add(heading); pane.Children.Add(buttons); pane.Children.Add(WrapChainList(Frame(_list)));
         return pane;
     }
 
@@ -268,11 +272,16 @@ public sealed partial class MidiProcessingWindow : Window
             if (_catalog.SelectedItem is MidiProcessorCatalog.SearchHit hit) MidiSharedRows.Tip(_catalog, hit.Param?.Tip is { Length: > 0 } tip ? tip : hit.Info.Description);
         };
         _add.Click += (_, _) => AddSelected();
-        _list.SelectionChanged += (_, _) => { if (!_building) ShowSelected(); };
-        _list.KeyDown += (_, e) => { if (e.Key == Key.Delete) RemoveSelected(); };
-        _up.Click += (_, _) => Move(-1);
-        _down.Click += (_, _) => Move(1);
-        _remove.Click += (_, _) => RemoveSelected();
+        _list.SelectionChanged += (_, _) => SyncChainFromList();
+        _list.KeyDown += (_, e) =>
+        {
+            if (e.Key == Key.Delete) { RemoveChainSelected(); e.Handled = true; }
+            else if (e.Key == Key.A && e.KeyModifiers.HasPrimary()) { SelectAllChain(); e.Handled = true; }
+            else if (e.Key == Key.Escape && _chainSel.SelectedRows.Count > 1) { _chainSel.CollapseToFocused(); SyncChainFromHelper(); ShowSelected(); e.Handled = true; }
+        };
+        _up.Click += (_, _) => MoveChain(-1);
+        _down.Click += (_, _) => MoveChain(1);
+        _remove.Click += (_, _) => RemoveChainSelected();
     }
 
     private void SearchKey(KeyEventArgs e)
@@ -282,7 +291,7 @@ public sealed partial class MidiProcessingWindow : Window
         else if (e.Key == Key.Up && _catalog.ItemCount > 0) { _catalog.SelectedIndex = ScoreEditorGeometry.ClampIndex(_catalog.SelectedIndex - 1, _catalog.ItemCount); e.Handled = true; }
     }
 
-    // ---------- list ----------
+    // ---------- list (selection in MidiProcessingWindow.ChainSelect.cs) ----------
 
     private void AddSelected()
     {
@@ -296,7 +305,7 @@ public sealed partial class MidiProcessingWindow : Window
             _jumpKey = hit.Param.Key;
             if (existing is not null)
             {
-                if (Selected == existing) ShowSelected(); else _list.SelectedIndex = Procs.IndexOf(existing);
+                if (Selected == existing) ShowSelected(); else ClickChainRow(Procs.IndexOf(existing));
                 return;
             }
         }
@@ -305,38 +314,6 @@ public sealed partial class MidiProcessingWindow : Window
         var created = MidiProcessorCatalog.Create(info);
         _edit(() => Procs.Insert(MidiProcessingListPresenter.InsertIndex(selectedIndex, Procs.Count), created));
         RefreshList(Procs.IndexOf(created));
-    }
-
-    private void RemoveSelected()
-    {
-        if (Selected is not { } p) return;
-        var index = _list.SelectedIndex;
-        _edit(() => Procs.Remove(p));
-        RefreshList(index);
-    }
-
-    private void Move(int delta)
-    {
-        if (Selected is not { } p) return;
-        var from = Procs.IndexOf(p);
-        if (MidiProcessingListPresenter.MoveTarget(from, delta, Procs.Count) is not { } to) return;
-        _edit(() => { Procs.RemoveAt(from); Procs.Insert(to, p); });
-        RefreshList(to);
-    }
-
-    /// <summary>Rebuilds the rows from the slot's processors and selects <paramref name="select"/> (clamped into the list).</summary>
-    private void RefreshList(int select)
-    {
-        _building = true;
-        try
-        {
-            // Perf: virtualized (ItemsSource + recycling template): only visible rows build controls.
-            _list.ItemsSource = Procs.ToList();
-            if (Procs.Count > 0) _list.SelectedIndex = ScoreEditorGeometry.ClampIndex(select, Procs.Count);
-        }
-        finally { _building = false; }
-        ShowSelected();
-        UpdateWatch();
     }
 
     /// <summary>Applies the search text to the catalog and the parameter highlight now.</summary>
@@ -389,7 +366,7 @@ public sealed partial class MidiProcessingWindow : Window
     private void ShowSelected()
     {
         var selected = Selected;
-        var listButtons = MidiProcessingListPresenter.ButtonStates(selected is null ? null : _list.SelectedIndex, Procs.Count);
+        var listButtons = MidiProcessingListPresenter.ButtonStates(_chainSel.SelectedRows.Count > 0 ? _chainSel.SelectedRows : selected is null ? Array.Empty<int>() : new[] { Procs.IndexOf(selected) }, Procs.Count);
         _up.IsEnabled = listButtons.Up;
         _down.IsEnabled = listButtons.Down;
         _remove.IsEnabled = listButtons.Remove;
@@ -409,7 +386,11 @@ public sealed partial class MidiProcessingWindow : Window
         var values = MidiProcessorCatalog.ParseParams(selected, info);
         _editors!.Viewer = _detailViewer;
         if (info.Type == "noteMap") _mapRows = new MidiNoteMapRows(this, values, (key, name) => { _edit(() => { values[key] = name; selected.Params = values.ToJsonString(); }); _mapRows?.Refresh(); }) { Viewer = _detailViewer };
-        foreach (var group in new[] { "Applies to", "Main" })
+        _sections.Clear();
+        _shownValues = values;
+        _editors.Changed = ApplyVisibility;
+        var groups = new[] { "Applies to" }.Concat(info.Params.Select(p => p.Group).Where(g => g != "Applies to").Distinct()).ToList();
+        foreach (var group in groups)
         {
             var ps = info.Params.Where(p => p.Group == group).ToList();
             if (ps.Count == 0) continue;
@@ -423,14 +404,27 @@ public sealed partial class MidiProcessingWindow : Window
                 wrap.Children.Add(box);
             }
             var header = Heading(group);
-            if (group == "Main" && info.Params.Any(p => p.Group == "Applies to")) header.Spaced(DialogMetrics.MidiSectionGap); else header.Spaced(DialogMetrics.MidiHeadGap);
+            if (group == groups.ElementAtOrDefault(1) && groups[0] == "Applies to" && info.Params.Any(p => p.Group == "Applies to")) header.Spaced(DialogMetrics.MidiSectionGap); else header.Spaced(DialogMetrics.MidiHeadGap);
             _params.Children.Add(header);
             _params.Children.Add(wrap);
+            _sections.Add((header, wrap));
         }
+        ApplyVisibility();
         if (_detailViewer is { } scrolled && _editors!.NoteEditor is { } noted) MidiSharedRows.ConstrainToViewport(noted, scrolled);
         ApplyFilter();
         UpdateWatch();
         if (_jumpKey is { } key) { _jumpKey = null; Highlight(key); }
+    }
+
+    /// <summary>Shows each parameter whose ShowWhen holds for the stored values (hidden ones keep their value) and hides a heading whose parameters are all hidden.</summary>
+    private void ApplyVisibility()
+    {
+        if (_shownValues is not { } values) return;
+        int Read(string key) => values[key] is { } node && double.TryParse(node.ToJsonString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var number) ? (int)Math.Round(number) : 0;
+        foreach (var (box, p) in _elems.Values)
+            if (p.ShowWhen is { } when) box.IsVisible = when.IsShown(Read);
+        foreach (var (header, wrap) in _sections)
+            header.IsVisible = wrap.IsVisible = wrap.Children.Any(c => c.IsVisible);
     }
 
     private static string ParamText(MidiParamInfo p) =>

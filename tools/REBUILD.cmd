@@ -27,13 +27,17 @@ cd /d "%~dp0..\.."
 title TabForge - Clean rebuild
 
 echo ============================================================
-echo  TabForge - clean rebuild (kill, wipe caches, build, test, backup, launch)
+echo  TabForge - clean rebuild (close check, wipe caches, build, test, backup, launch)
 echo ============================================================
 
 echo.
-echo [1/7] Stopping running TabForge instances...
-taskkill /F /IM TabForge.exe >nul 2>nul
-powershell -NoProfile -Command "Get-Process TabForge -ErrorAction SilentlyContinue | Wait-Process -Timeout 10 -ErrorAction SilentlyContinue"
+echo [1/7] Checking for a running TabForge...
+rem Never kill by image name: a running TabForge is the owner's session (and its engine and helpers end with it).
+tasklist /FI "IMAGENAME eq TabForge.exe" 2>nul | find /I "TabForge.exe" >nul
+if not errorlevel 1 (
+    echo TabForge is running. Close it yourself, then run this rebuild again.
+    goto :fail
+)
 rem Settings are kept (plug-in folders, audio driver, colours...). "REBUILD.cmd fresh" resets them to defaults.
 if "%FRESH%"=="1" (
     echo Resetting TabForge settings to defaults...

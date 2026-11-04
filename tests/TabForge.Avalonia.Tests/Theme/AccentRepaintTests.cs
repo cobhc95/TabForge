@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
@@ -68,6 +67,7 @@ public class AccentRepaintTests(ITestOutputHelper output)
     [AvaloniaFact]
     public void AccentChangeRepaintsOnceAndWithinTheBudgetOnALargeTree()
     {
+        // Counts the work, not the clock: two publishes in a row must queue one coalesced repaint that reaches the probe exactly once.
         var appearance = new AppearanceSettings { ThemeMode = "Custom", Accent = "#FF0080" };
         try
         {
@@ -75,19 +75,25 @@ public class AccentRepaintTests(ITestOutputHelper output)
             var window = new Window { RequestedThemeVariant = global::Avalonia.Styling.ThemeVariant.Dark };
             var panel = new StackPanel();
             for (var i = 0; i < 10; i++) panel.Children.Add(MenuRowToggles.Build(new MainWindowCommands(window, () => { })));
+            var probe = new Border();
+            panel.Children.Add(probe);
+            var repaints = 0;
+            AvaloniaPalette.FollowTheme(probe, () => repaints++);
             window.Content = panel;
             window.Show();
             Flush();   // the first layout and render are not the accent change
-            var timer = Stopwatch.StartNew();
+            repaints = 0;
+            var versionBefore = AvaloniaPalette.PublishVersion;
             appearance.Accent = "#00FF00";
             AvaloniaPalette.Publish(appearance);
             appearance.Accent = "#0000FF";
             AvaloniaPalette.Publish(appearance);
+            Assert.Equal(versionBefore + 2, AvaloniaPalette.PublishVersion);
+            Assert.True(AvaloniaPalette.InvalidateQueued);
             Flush();
-            var elapsed = timer.Elapsed.TotalMilliseconds;
-            output.WriteLine($"accent change ms: {elapsed:F1}");
+            output.WriteLine($"accent repaint passes: {repaints}");
             Assert.False(AvaloniaPalette.InvalidateQueued);
-            Assert.True(elapsed < 50);
+            Assert.Equal(1, repaints);
             window.Close();
         }
         finally { AvaloniaPalette.Publish(new AppearanceSettings()); }

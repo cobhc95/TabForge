@@ -15,7 +15,7 @@ namespace TabForge.Avalonia;
 internal sealed class MainWindowTrackListFit
 {
     private const string PanelId = "timeline";
-    private const double ScoreKeepHeight = 300;   // the least the score keeps: about one system of tab and staff with its header
+    private const double ScoreKeepHeight = 360;   // the least the score keeps: the header plus a full system of tab and staff, so the TAB stays readable while the track list fits
     private const double TrackListMaxShare = 1;   // the track list shows every row; only the score's least height caps it
     private readonly DockWorkspaceController _dock;
     private readonly DockWorkspaceView _view;

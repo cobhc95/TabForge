@@ -164,8 +164,8 @@ internal static class FretboardPlaybackMarkers
     /// <summary>The movement line: one cubic curve from a sounding position to the one the same finger plays next, bending toward the target.</summary>
     internal static void DrawMovement(IDrawContext d, Func<string, UiColor> ink, FretboardGeometryRules.Layout layout, (int String, int Fret) from, (int String, int Fret) to)
     {
-        var start = FretboardGeometryRules.PositionOf(layout, from.String, from.Fret);
-        var end = FretboardGeometryRules.PositionOf(layout, to.String, to.Fret);
+        var start = FretboardGeometryRules.PositionOfTab(layout, from.String, from.Fret);
+        var end = FretboardGeometryRules.PositionOfTab(layout, to.String, to.Fret);
         var midY = (start.Y + end.Y) / 2 + (end.Y - start.Y) * MovementLineBend;
         var path = d.Paths.BuildPath(sink =>
         {
@@ -176,14 +176,15 @@ internal static class FretboardPlaybackMarkers
     }
 
     private static UiPoint? PositionOf(FretboardGeometryRules.Layout layout, NoteEvent note) =>
-        note.StringIndex < 0 || note.StringIndex >= layout.Strings ? null : FretboardGeometryRules.PositionOf(layout, note.StringIndex, note.Fret);
+        note.StringIndex < 0 || note.StringIndex >= layout.Strings ? null : FretboardGeometryRules.PositionOfTab(layout, note.StringIndex, note.Fret);
 
     /// <summary>A marker's number, inked for contrast on the marker's surface: its fill over the board, or <paramref name="over"/> when it is translucent.</summary>
     private static void DrawNumber(IDrawContext d, Func<string, UiColor> ink, UiPoint at, string label, UiColor fill, double size, bool bold, UiColor? over = null)
     {
-        var light = IsLight(ink);   // light: a bold white number on the solid disc
+        var light = IsLight(ink);
         var surface = Over(over ?? fill, ink("InstrumentBoard"));
-        var text = d.Text(label, InstrumentPanelView.Font, size, light ? ink("InstrumentWhite") : ThemeColours.InkOn(surface), d.PixelsPerDip, weight: bold || light ? 700 : 600);
+        // User-brightened markers may approach white even in the light theme: choose contrast from the actual fill, not the theme.
+        var text = d.Text(label, InstrumentPanelView.Font, size, ThemeColours.InkOn(surface), d.PixelsPerDip, weight: bold || light ? 700 : 600);
         d.DrawText(text, at.X - text.Width / 2, at.Y - text.Height / 2);
     }
 

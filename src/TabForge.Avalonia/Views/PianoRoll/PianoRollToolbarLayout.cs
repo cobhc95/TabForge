@@ -9,13 +9,13 @@ using TabForge.Avalonia.Views.Dialogs;
 
 namespace TabForge.Avalonia.Views;
 
-// Owns: the piano roll toolbar's two-row geometry: the one control height, corner, gaps, group frames, row assembly and sizing helpers.
+// Owns: the piano roll toolbar's shared wrapping flow, control height, corner, gaps, group frames and sizing helpers.
 // Does not own: the buttons' paint (PianoRollToolLook), which control is active (PianoRollView.RefreshTools), the clicks (PianoRollView.BuildToolbar).
 // Tests: TabForge.Avalonia.Tests.PianoRollToolbarLayoutTests.
 internal static class PianoRollToolbarLayout
 {
-    /// <summary>The rows' names, which the layout test finds them by.</summary>
-    public const string Row1Name = "PianoRollToolbarRow1", Row2Name = "PianoRollToolbarRow2";
+    /// <summary>The shared flow's container name.</summary>
+    public const string ToolbarName = "PianoRollToolbar";
 
     /// <summary>Every toolbar control's height, the dialog button height token, so buttons, dropdowns and value boxes share one baseline.</summary>
     public static double ControlHeight => DialogMetrics.MediaButtonHeight;
@@ -40,13 +40,13 @@ internal static class PianoRollToolbarLayout
         return frame;
     }
 
-    /// <summary>The first row's group captions in order (each shown in upper case above its group).</summary>
+    /// <summary>The toolbar's group captions in order (each shown in upper case above its group).</summary>
     public static string[] GroupCaptions => new[] { "Tool", "Snap", "Scale", "Step input", "New notes" };
 
     /// <summary>The name a group's cell (<c>PianoRollGroup</c> + key) and its caption (<c>PianoRollCaption</c> + key) carry, key being the caption without spaces.</summary>
     public static string GroupName(string caption) => "PianoRollGroup" + caption.Replace(" ", "");
 
-    /// <summary>One group of row 1: a tiny upper-case muted caption above <paramref name="content"/>, a thin divider before it (all but the first group), moving as a whole when the row wraps.</summary>
+    /// <summary>A tiny upper-case muted caption above <paramref name="content"/>, a thin divider before it (all but the first group), moving as a whole when the toolbar wraps.</summary>
     public static Border Group(string caption, bool divider, params Control[] content)
     {
         var label = new TextBlock { Name = "PianoRollCaption" + caption.Replace(" ", ""), Text = caption.ToUpperInvariant(), FontSize = DialogMetrics.PianoRollCaptionSize };

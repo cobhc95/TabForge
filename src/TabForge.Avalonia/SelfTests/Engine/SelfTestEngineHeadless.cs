@@ -23,6 +23,45 @@ namespace TabForge;
 /// </summary>
 public static partial class SelfTest
 {
+    /// <summary>
+    /// Stage 14 leak tracking: 200 real chain load/unload cycles through the headless engine (the test VST2 effect is
+    /// created, processed and disposed each time). After a warm-up, managed memory and process handles must stay flat.
+    /// </summary>
+    private static void TestPluginLoadUnloadLoop()
+    {
+        var shared = SharedBlock.Create($"tf-selftest-{Guid.NewGuid():N}");
+        EH.Attach(shared, (spec, rate, block) => spec.Path == EP.Vst2Plugin.TestEffect.PathName
+            ? EP.Vst2Plugin.TestEffect.Create(rate, block, EH.Threads) : throw new InvalidOperationException($"selftest: unexpected plug-in {spec.Path}"));
+        try
+        {
+            EH.Configure(NullConfig(48000, 256, manual: true));
+            var specs = new List<PluginSpec> { new(EP.Vst2Plugin.TestEffect.PathName, "VST2", false, true, 100, null, Id: "loop", LocationTrusted: true) };
+            for (var i = 0; i < 5; i++) { EH.LoadChain(0, "loop", false, specs); EH.RemoveChain(0); EH.Collect(); }
+            GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
+            var before = GC.GetTotalMemory(true);
+            var beforeHandles = HandleCount();
+            for (var i = 0; i < 200; i++)
+            {
+                EH.LoadChain(0, "loop", false, specs);
+                EH.RemoveChain(0);
+                EH.Collect();
+            }
+            GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
+            var after = GC.GetTotalMemory(true);
+            var handles = HandleCount();
+            var growth = after > before ? after - before : 0;
+            Check("S14: 200 engine chain load/unload cycles keep managed memory flat (<= 8 MiB after warm-up)",
+                growth <= 8 * 1024 * 1024, $"managed {before / 1024} KiB -> {after / 1024} KiB (+{growth / 1024} KiB)");
+            Check("S14: 200 engine chain load/unload cycles keep process handles flat (<= 32 after warm-up) and leave nothing retiring",
+                handles <= beforeHandles + 32 && EH.Retiring == 0, $"handles {beforeHandles} -> {handles}, retiring {EH.Retiring}");
+        }
+        finally
+        {
+            EH.Detach();
+            shared.Dispose();
+        }
+    }
+
     /// <summary>R-03: 4 producers x 100k sequence numbers through AudioEngineClient.Write against one consumer.</summary>
     private static void TestSharedRingProducers()
     {

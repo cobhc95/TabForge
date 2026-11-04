@@ -29,9 +29,10 @@ public static class PluginFactory
     /// <paramref name="create"/> is a test seam (a counter, to prove an unapproved file is never executed).
     /// </summary>
     public static IPluginInstance CreateVerified(string path, string format, bool isInstrument, double sampleRate, int maxBlock,
-        string expectedSha256, bool locationTrusted, EngineThreads threads, Func<string, IPluginInstance>? create = null)
+        string expectedSha256, bool locationTrusted, EngineThreads threads, Func<string, IPluginInstance>? create = null,
+        string expectedDependencies = "")
     {
-        using var hold = TabForge.Audio.Contracts.PluginIdentity.Hold(path, expectedSha256, locationTrusted);
+        using var hold = TabForge.Audio.Contracts.PluginIdentity.Hold(path, expectedSha256, locationTrusted, expectedDependencies);
         return create is not null ? create(path) : Create(path, format, isInstrument, sampleRate, maxBlock, threads);
     }
 }

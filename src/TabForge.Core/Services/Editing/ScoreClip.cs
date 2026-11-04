@@ -241,6 +241,12 @@ public sealed class ScoreClip
         if (clipTrack.Capo is < 0 or > 48 || clipTrack.NumberOfFrets is < 1 or > InputLimits.MaxFrets ||
             clipTrack.SourceTrackIndex is < -1 or >= InputLimits.MaxTracks || clipTrack.MidiChannel is < 0 or > 15)
             throw Invalid("A copied track has values outside the supported range.");
+        if (clipTrack.PartialCapos is { } partials)
+        {
+            if (partials.Count > PartialCapoRules.MaxCount || partials.Any(p => p is null || p.Fret is < PartialCapoRules.MinFret or > PartialCapoRules.MaxFret))
+                throw Invalid("A copied track has invalid partial capos.");
+            clipTrack.PartialCapos = PartialCapoRules.Normalize(partials, tunings.Count);
+        }
         return clipTrack.ToTrackModel();
     }
 
@@ -313,6 +319,9 @@ public sealed class ScoreClipTrack
     /// <summary>Open-string pitches, high to low (<see cref="TrackModel.StringTunings"/>); the count is the string count.</summary>
     public List<int> StringTunings { get; set; } = new();
     public int Capo { get; set; }
+    /// <summary>Partial capos of the source track (optional; a clip from before them has none).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<PartialCapo>? PartialCapos { get; set; }
     public int NumberOfFrets { get; set; } = 24;
     public string DrumMapPreset { get; set; } = "";
     /// <summary>Beats clips: the voice copied (0 = voice 1, 1 = voice 2). Bars clips: null (both voices).</summary>
@@ -338,6 +347,7 @@ public sealed class ScoreClipTrack
         MidiChannel = track.MidiChannel,
         StringTunings = track.StringTunings.ToList(),
         Capo = track.Capo,
+        PartialCapos = PartialCapoRules.Copy(track.PartialCapos),
         NumberOfFrets = track.NumberOfFrets,
         DrumMapPreset = track.DrumMapPreset
     };
@@ -355,6 +365,7 @@ public sealed class ScoreClipTrack
         MidiChannel = IsDrums && TrackKind != TrackKind.Drums ? 9 : MidiChannel,
         StringTunings = StringTunings.ToList(),
         Capo = Capo,
+        PartialCapos = PartialCapoRules.Copy(PartialCapos),
         NumberOfFrets = NumberOfFrets,
         DrumMapPreset = string.IsNullOrEmpty(DrumMapPreset) ? new TrackModel().DrumMapPreset : DrumMapPreset,
         Measures = new List<MeasureModel>()

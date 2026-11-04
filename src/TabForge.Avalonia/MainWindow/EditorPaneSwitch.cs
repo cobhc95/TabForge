@@ -25,7 +25,7 @@ namespace TabForge.Avalonia;
 //       the refresh after its edits).
 // Does not own: the score view or the piano roll themselves (ScorePreviewView, PianoRollView), the dock (DockPaneSetup), the loop rules (SelectionLoopLink).
 // Tests: TabForge.Avalonia.Tests.PianoRollViewTests.
-public sealed class EditorPaneSwitch
+public sealed partial class EditorPaneSwitch
 {
     private readonly ScrollViewer _score;
     private readonly ScorePreviewView _scoreView;
@@ -88,6 +88,7 @@ public sealed class EditorPaneSwitch
         if (panes.Arrangement is { } arrangement) Follow(arrangement);
         panes.ArrangementCreated += Follow;
         Watch(songs.Active);
+        AttachEditingFocus(owner());
     }
 
     /// <summary>The Piano / Tab pills the menu row shows (disabled for no track or a track the piano roll cannot show).</summary>
@@ -164,7 +165,7 @@ public sealed class EditorPaneSwitch
         _auto = roll ? (document, document.TrackIndex) : null;
         if (!roll) _autoLane = null;
         Update();
-        if (roll && _shown.Roll) PianoRoll.Surface.Focus();
+        RestoreEditingFocus(claimSelection: true);
     }
 
     private void OnTimelineScrolled()
@@ -184,6 +185,11 @@ public sealed class EditorPaneSwitch
     public void Register(MainWindowCommands commands)
     {
         _commands.Inner = commands;
+        commands.Dispatched += id =>
+        {
+            if (MainWindowTransportMenu.Commands.Contains(id) || id == MainWindowTransportMenu.EscapeStopCommand
+                || id.StartsWith("Bar.", StringComparison.Ordinal) || id.StartsWith("Section.", StringComparison.Ordinal)) RestoreEditingFocus(claimSelection: true);
+        };
         _panes.Selection.SelectAllFirst = () => _shown.Roll && PianoRoll.IsKeyboardFocusWithin && PianoRoll.RunEdit(null);
         _panes.Selection.InvertFirst = () => _shown.Roll && PianoRoll.IsKeyboardFocusWithin && PianoRoll.RunInvert();
         commands.Add(ScoreMenus.ShowInPianoRollId, () => SetView(TrackEditorView.PianoRoll));
@@ -260,6 +266,7 @@ public sealed class EditorPaneSwitch
         }
         else PianoRoll.Hidden();
         if (modeChanged) ModeChanged?.Invoke(roll);   // every path that changes the pane (pill, menu, take click, tab click, track or song change, undo) tells the window here
+        RestoreEditingFocus();
     }
 
     /// <summary>Saves the view choice on the selected track as one undo step (the song is marked changed, so the choice is saved), then switches.</summary>
@@ -279,7 +286,7 @@ public sealed class EditorPaneSwitch
             return true;
         }, invalidatesTimeline: false, label: view == TrackEditorView.PianoRoll ? "Show in piano roll" : "Show in score");
         Update();
-        if (_shown.Roll) PianoRoll.Surface.Focus();
+        RestoreEditingFocus(claimSelection: true);
     }
 
     // A piano-roll edit landed: the score repaints its notes, and the timeline does its post-edit work (song growth, lane compaction, engine sync, rows).

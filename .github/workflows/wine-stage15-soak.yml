@@ -1,0 +1,87 @@
+name: wine-stage15-soak
+# Stage 15 long soak, deliberately separate from the fault/load gate: 60 minutes, one chain of eight mixed 32/64-bit
+# plug-ins under the pinned Wine, sampled once a minute. Dispatch-only; the run id is the evidence link. The 1024-frame
+# size is used because the measured load table shows 256 frames cannot carry eight bridged plug-ins in one callback;
+# the 256-frame claim is reported separately from the load gate's data.
+on:
+  workflow_dispatch:
+  # Dispatch needs the file on the default branch; this branch-only test workflow starts from a push that touches it.
+  push:
+    paths:
+      - '.github/workflows/wine-stage15-soak.yml'
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: '1'
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  WINE_TARBALL: https://github.com/Kron4ek/Wine-Builds/releases/download/9.21/wine-9.21-amd64-wow64.tar.xz
+  WINE_TARBALL_SHA256: 020f8886750ff658d92ea39e696d2a57d3e8f056f00d8dfe45b65cddee5d6fa5
+
+jobs:
+  soak:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    env:
+      TABFORGE_WINE: ${{ github.workspace }}/wine/bin/wine
+      TABFORGE_TFVST32_EXE: ${{ github.workspace }}/src/TabForge.AudioEngine/native/tfvst32.exe
+      TABFORGE_TFVST64_EXE: ${{ github.workspace }}/src/TabForge.AudioEngine/native/tfvst64.exe
+      TABFORGE_TFVST32_TEST_DLL: ${{ github.workspace }}/native/tfvst32/test-bin-linux/passthrough32.dll
+      TABFORGE_TFVST64_TEST_DLL: ${{ github.workspace }}/native/tfvst32/test-bin-linux/passthrough64.dll
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.403'
+
+      - name: Install display libraries and cross compilers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb mingw-w64 unzip libfreetype6 libfontconfig1
+
+      - name: Fetch the pinned Wine tree
+        run: |
+          curl -fsSL -o wine.tar.xz "$WINE_TARBALL"
+          echo "$WINE_TARBALL_SHA256  wine.tar.xz" | sha256sum -c -
+          mkdir wine && tar -xf wine.tar.xz -C wine --strip-components=1
+          chmod +x wine/bin/wine wine/bin/wineserver
+
+      - name: Build the deterministic 32-bit and 64-bit test DLLs
+        run: |
+          mkdir -p native/tfvst32/test-bin-linux
+          i686-w64-mingw32-g++ -std=c++17 -O2 -shared -static-libgcc -static-libstdc++ \
+            -DUNICODE -D_UNICODE -DNOMINMAX -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS \
+            -Wl,--no-insert-timestamp native/tfvst32/test/passthrough32.cpp \
+            -o native/tfvst32/test-bin-linux/passthrough32.dll -luser32 -lgdi32
+          x86_64-w64-mingw32-g++ -std=c++17 -O2 -shared -static-libgcc -static-libstdc++ \
+            -DUNICODE -D_UNICODE -DNOMINMAX -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS \
+            -Wl,--no-insert-timestamp native/tfvst32/test/passthrough32.cpp \
+            -o native/tfvst32/test-bin-linux/passthrough64.dll -luser32 -lgdi32
+          i686-w64-mingw32-objdump -p native/tfvst32/test-bin-linux/passthrough32.dll | grep -q VSTPluginMain
+          x86_64-w64-mingw32-objdump -p native/tfvst32/test-bin-linux/passthrough64.dll | grep -q VSTPluginMain
+
+      - name: 60-minute soak, 8 plug-ins, one sample a minute
+        env:
+          TABFORGE_SOAK: '1'
+          TABFORGE_SOAK_MINUTES: '60'
+          TABFORGE_SOAK_SAMPLE_SECONDS: '60'
+          TABFORGE_SOAK_FRAMES: '1024'
+          TABFORGE_SOAK_OUT: ${{ github.workspace }}/stage15-soak-wine.csv
+        run: |
+          xvfb-run -a dotnet test tests/TabForge.Avalonia.Tests/TabForge.Avalonia.Tests.csproj -c Release \
+            -p:RestoreLockedMode=false \
+            --filter "FullyQualifiedName~Stage15StressTests.SixtyMinuteSoak" \
+            --logger "console;verbosity=detailed" \
+            --logger "trx;LogFileName=stage15-soak-wine.trx" \
+            --results-directory "${{ github.workspace }}/stage15-results"
+
+      - name: Upload the soak data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage15-soak-evidence
+          path: |
+            stage15-soak-wine.csv
+            stage15-results/**
+          if-no-files-found: warn

@@ -3,6 +3,8 @@
     <!-- Same target per OS as TabForge.Avalonia (it references that project; a net10.0 test project cannot reference the net10.0-windows build). -->
     <TargetFramework Condition="$([MSBuild]::IsOSPlatform('Windows'))">net10.0-windows</TargetFramework>
     <TargetFramework Condition="!$([MSBuild]::IsOSPlatform('Windows'))">net10.0</TargetFramework>
+    <!-- The Linux CI job builds the portable graph (and its own lock file), so the Windows lock file stays untouched. -->
+    <NuGetLockFilePath Condition="'$(TargetFramework)' == 'net10.0'">packages.portable.lock.json</NuGetLockFilePath>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <!-- Same rule as TabForge.AudioEngine: its test hooks (the fake CLAP plug-in) exist only in Debug and full-suite builds, so the tests that use them do too. -->
@@ -26,6 +28,14 @@
     <Compile Remove="Plugins/FxAddPluginTests.cs" />
     <Compile Remove="Plugins/PluginBrowserWindowTests.cs" />
     <Compile Remove="Plugins/RfxReviewFixTests.cs" />
+    <!-- The 32-bit editor/STA tests use Thread.SetApartmentState (Windows-only) and have no Linux equivalent yet. -->
+    <Compile Remove="Plugins/Vst32FxChainBridgedEditorTests.cs" />
+    <Compile Remove="Plugins/Vst32PresetChangeTests.cs" />
+    <Compile Remove="Plugins/Native64EngineCrashTests.cs" />
+    <Compile Remove="Plugins/Native64CrashUiTests.cs" />
+    <Compile Remove="Plugins/Vst32BridgeControlTests.cs" />
+    <Compile Remove="Plugins/Vst32EditorShotsTests.cs" />
+    <Compile Remove="Plugins/FxChainNoEditorTests.cs" />
     <Compile Remove="Video/LiveVideoRecordTests.cs" />
     <Compile Remove="Video/Mp4ReadBack.cs" />
     <Compile Remove="Video/VideoEncoderPortTests.cs" />
@@ -52,5 +62,7 @@
     <PackageReference Include="NAudio.Lame" Version="2.1.0" ExcludeAssets="compile;runtime" />
     <!-- Test-only: the dev build of native/tfportable (miniaudio + RtMidi), when it was built (native/tfportable/bin/tfportable.dll); the portable backend tests skip without it. -->
     <None Include="..\..\native\tfportable\bin\tfportable.dll" Condition="Exists('..\..\native\tfportable\bin\tfportable.dll')" Link="tfportable.dll" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Test-only: the TFVST32_TEST_HOOKS copy of the helper (stall tests only). The shipped tfvst32.exe comes from the audio engine project. -->
+    <None Include="..\..\native\tfvst32\test-bin\tfvst32-testhooks.exe" Condition="Exists('..\..\native\tfvst32\test-bin\tfvst32-testhooks.exe')" Link="tfvst32-testhooks.exe" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

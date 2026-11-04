@@ -166,7 +166,7 @@ internal static class ParityShotMap
         var window = new CurveEffectWindow(kind, bend ? "Bend editor" : "Tremolo bar editor", bend ? 0 : EffectCurve.TremoloMinValue,
             bend ? EffectCurve.BendMaxValue : EffectCurve.TremoloMaxValue, EffectPresetStore.BuiltIn(kind)[0].Points, new EffectPresetStore(new AppSettings()),
             false, () => { });
-        window.SizeToContent = SizeToContent.Manual;
+        if (!NativeSizes) window.SizeToContent = SizeToContent.Manual;
         return window;
     }
 
@@ -265,9 +265,12 @@ internal static class ParityShotMap
         view.Editor.Effects.EnterFret(5, autoAdvance: false);
         var flow = new OrnamentEditorFlow(view, _ => System.Threading.Tasks.Task.FromResult<EffectValuesAnswer?>(null));
         var dialog = build(flow)!.Window;
-        dialog.SizeToContent = SizeToContent.Manual;
+        if (!NativeSizes) dialog.SizeToContent = SizeToContent.Manual;
         return Sized(dialog, width, height);
     }
+
+    /// <summary>True while the scale audit builds windows: they keep the size their own code gives them, not the WPF parity size.</summary>
+    internal static bool NativeSizes { get; set; }
 
     /// <summary>
     /// A WPF window shot at the outer Width and Height the window was given. The shot paints the frame area with the window
@@ -275,6 +278,7 @@ internal static class ParityShotMap
     /// </summary>
     private static ParityCapture Sized(Window window, double width, double height)
     {
+        if (NativeSizes) return new ParityCapture(window);   // the scale audit shows the window at the size its own code gives it
         window.Width = width;
         window.Height = height;
         window.Padding = new Thickness(0, 0, WpfWindowFrameWidth, WpfWindowFrameHeight);
@@ -284,6 +288,7 @@ internal static class ParityShotMap
     /// <summary>A pane shot whose WPF reference is the element itself, not a window: the size is used as it is.</summary>
     private static ParityCapture Pane(Window window, double width, double height)
     {
+        if (NativeSizes) return new ParityCapture(window);   // the scale audit shows the window at the size its own code gives it
         window.Width = width;
         window.Height = height;
         return new ParityCapture(window);
@@ -291,7 +296,10 @@ internal static class ParityShotMap
 
     private static PreferencesWindow PreferencesOn(string page)
     {
-        var window = new PreferencesWindow(new AvaloniaDialogHost(), new AppSettings());
+        // The Settings window follows its own saved appearance, so the scale audit's scale goes in there (1.0 outside the audit).
+        var saved = new AppSettings();
+        saved.Appearance.UiScale = WindowUiScale.CurrentAppearance.UiScale;
+        var window = new PreferencesWindow(new AvaloniaDialogHost(), saved);
         window.ShowPage(page);
         return window;
     }

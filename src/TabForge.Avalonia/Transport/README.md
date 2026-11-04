@@ -15,6 +15,7 @@ lands there.
 | `AvaloniaEngineEvents` | One window's answers to the engine's events and settings: a crashed plug-in (quarantine save, notice, resync), a failed or slow plug-in (notice and the one "loading slowly" question), a device reopen, and audio route settings applied at once. |
 | `PlayheadTrace` | The opt-in playhead trace (`TABFORGE_TRACE=playback`, written to `trace-playback.log`): one line per performed bar and one per frame for the first second after a start or jump. |
 | `SessionKeyboardSongPosition` | The keyboard view's song position (ms) read from one playback session. |
+| `EngineStringRinger` | One track-properties window's string sound: each ring fires one fire-and-forget preview note through the track's live device, channel and program (the engine cuts it after `StringVibration.RingMs`), retuned by live tuning and capo, and each silence cuts only that owned note with one note-off, never a panic. |
 
 Rules: playback stays light — no per-frame layout work; the clock is the only source of the drawn position; UI thread only.
 

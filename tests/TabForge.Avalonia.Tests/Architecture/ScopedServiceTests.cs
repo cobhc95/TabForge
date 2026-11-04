@@ -83,10 +83,9 @@ public sealed class ScopedServiceTests
         Assert.Equal(second.Path, two.Folder);
     }
 
-    [Fact]
+    [WindowsFact]
     public void TwoMediaPathServicesKeepTheirOwnFileSystem()
     {
-        if (!OperatingSystem.IsWindows()) return;
         var network = new MediaPathPolicyService(new FixedFileSystem(DriveType.Network));
         var local = new MediaPathPolicyService(new FixedFileSystem(DriveType.Fixed));
 

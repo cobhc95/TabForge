@@ -114,7 +114,7 @@ public sealed class DrumLiveAndNoScaleTests
         {
             view.Show(document, 3, newVisit: true);
             window.UpdateLayout();
-            var row = window.GetVisualDescendants().OfType<DockPanel>().Single(p => p.Name == PianoRollToolbarLayout.Row1Name);
+            var row = window.GetVisualDescendants().OfType<DockPanel>().Single(p => p.Name == PianoRollToolbarLayout.ToolbarName);
             var drumTips = row.GetVisualDescendants().OfType<Control>()
                 .Where(c => (ToolTip.GetTip(c) as string) == "Drum tracks have no scale").ToList();
             Assert.Equal(3, drumTips.Count);   // the scale button, Lock to scale and the step filter

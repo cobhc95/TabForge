@@ -48,20 +48,18 @@ public class AppManifestTests
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern uint SizeofResource(IntPtr module, IntPtr resource);
 
-    [Fact]
+    [WindowsFact]
     public void BuiltExeEmbedsPerMonitorV2Manifest()
     {
-        if (!OperatingSystem.IsWindows()) return;   // the manifest is a Windows resource; the other targets build no exe with it
         var exe = Path.Combine(AppContext.BaseDirectory, "TabForge.exe");
         Assert.True(File.Exists(exe), "The built Avalonia exe is not next to the test assembly.");
 
         Assert.Contains("PerMonitorV2", ReadEmbeddedManifest(exe));
     }
 
-    [Fact]
+    [WindowsFact]
     public void BuiltExeDeclaresWindows8OrLaterForLayeredChildWindows()
     {
-        if (!OperatingSystem.IsWindows()) return;   // the manifest is a Windows resource; the other targets build no exe with it
         var exe = Path.Combine(AppContext.BaseDirectory, "TabForge.exe");
         Assert.True(File.Exists(exe), "The built Avalonia exe is not next to the test assembly.");
 

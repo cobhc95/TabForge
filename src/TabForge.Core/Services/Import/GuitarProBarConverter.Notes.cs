@@ -85,7 +85,7 @@ return note;
         double? harmonicFret = null;
         if (IsHarmonic(harmonic) && track.Kind != TrackKind.Drums && pitchStringIndex < track.StringTunings.Count)
         {
-            var open = track.StringTunings[pitchStringIndex] + Math.Max(0, track.Capo);   // the capo raises the open string
+            var open = track.StringTunings[pitchStringIndex] + track.EffectiveCapo(pitchStringIndex);   // the capo raises the open string
             midi = HarmonicMidi(harmonic!, open, pitchFret, HarmonicNode(pitchSource));
         }
         // The drawn mark stays with the note that wrote it: a tie destination shows its own harmonic, not the origin's.
@@ -96,7 +96,7 @@ return note;
         if (gpString <= 0 && track.Kind == TrackKind.Keys && midi > 0)
             (stringIndex, fret) = PlacePitch(track.StringTunings, midi);
         else if (gpString <= 0 && track.Kind is TrackKind.Guitar or TrackKind.Bass && midi > 0 && track.StringTunings.Count > 0 && !tiedDestination)
-            (stringIndex, fret) = PlacePitch(track.StringTunings.Select(t => t + Math.Max(0, track.Capo)).ToList(), midi);
+            (stringIndex, fret) = PlacePitch(Enumerable.Range(0, track.StringTunings.Count).Select(s => track.StringTunings[s] + track.EffectiveCapo(s)).ToList(), midi);
         // Drum notes: the TAB shows the GM percussion number (like the reference) on a line per kit group.
         if (track.Kind == TrackKind.Drums)
         {

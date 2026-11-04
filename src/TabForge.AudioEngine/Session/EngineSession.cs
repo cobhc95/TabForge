@@ -231,13 +231,29 @@ internal sealed partial class EngineSession
     public void CloseEditor(int slot, int index)
     {
         AssertMain();
-        if (PluginAt(slot, index) is { } p) Editors.CloseFor(p);
+        if (PluginAt(slot, index) is not { } p) return;
+        // A remote plug-in's window belongs to its own process, not to this session's EditorWindows registry.
+        if (p is Isolation.RemotePlugin remote)
+        {
+            var entered = EnterCall(slot, index, remote, p.Path, PluginCallKind.Editor);
+            try { remote.CloseEditor(); }
+            finally { LeaveCall(entered); }
+        }
+        else Editors.CloseFor(p);
     }
 
     public void SetProgram(int slot, int index, int program)
     {
         AssertMain();
-        if (PluginAt(slot, index) is Vst2Plugin v) { v.SetProgram(program); SendPrograms(slot, index); }
+        if (PluginAt(slot, index) is not { } p) return;
+        var entered = EnterCall(slot, index, p, p.Path, PluginCallKind.Other);
+        try
+        {
+            if (p is Isolation.RemotePlugin remote) { remote.SetProgram(program); SendPrograms(slot, index); }
+            else if (p is Vst2Plugin v) { v.SetProgram(program); SendPrograms(slot, index); }
+        }
+        catch (Exception ex) { Log.Write($"set program failed: {ex.Message}"); }
+        finally { LeaveCall(entered); }
     }
 
     public void SetState(int slot, int index, string state)

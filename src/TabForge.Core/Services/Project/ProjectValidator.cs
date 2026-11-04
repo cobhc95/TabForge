@@ -99,6 +99,13 @@ public static partial class ProjectValidator
         var tunings = track.StringTunings ?? throw Invalid("A track has no valid tuning list.");
         if (tunings.Count > InputLimits.MaxStringsPerTrack) throw Invalid("A track contains too many strings.");
         if (tunings.Any(tuning => tuning is < 0 or > MidiLimits.Max)) throw Invalid("A track contains an invalid string tuning.");
+        if (track.PartialCapos is { } partials)
+        {
+            if (partials.Count > PartialCapoRules.MaxCount || partials.Any(p => p is null || p.Fret is < PartialCapoRules.MinFret or > PartialCapoRules.MaxFret))
+                throw Invalid("A track contains invalid partial capos.");
+            // Refit the masks to this track's strings and drop off/empty entries; a drum or audio track keeps none.
+            track.PartialCapos = track.IsDrumTrack || track.IsAudio ? null : PartialCapoRules.Normalize(partials, tunings.Count);
+        }
         ValidateRig(track.Rig);
         ValidateTrackBindings(track.ArticulationBindings);
         if (!SoundSources.All.Contains(track.SoundSource)) throw Invalid("A track has an unknown sound source.");
@@ -251,7 +258,9 @@ public static partial class ProjectValidator
             RequireText(plugin.Path, InputLimits.MaxPathLength, "plug-in path");
             if (plugin.Path.Any(c => c < 32)) throw Invalid("A plug-in path holds control characters.");
             // A relative plug-in path would be resolved against the process folder by the loader: only full paths are accepted (empty = none).
-            if (plugin.Path.Length > 0 && !Path.IsPathFullyQualified(plugin.Path) && !TabForge.Audio.Contracts.Builtin.BuiltinEffects.IsBuiltin(plugin.Path)) throw Invalid("A plug-in path is not a full path.");
+            // A foreign-absolute path (Windows form on Linux, Unix form on Windows) from a project saved on the other OS
+            // can never resolve against this process folder; the loader reports it missing readably, so accept it here.
+            if (plugin.Path.Length > 0 && !Path.IsPathFullyQualified(plugin.Path) && !TabForge.Audio.Contracts.Builtin.BuiltinEffects.IsBuiltin(plugin.Path) && !IsForeignAbsolutePath(plugin.Path)) throw Invalid("A plug-in path is not a full path.");
             if ((plugin.Format != "" && !TabForge.Plugins.PluginFormats.IsKnown(plugin.Format)) || plugin.Wet is < 0 or > 100 || !double.IsFinite(plugin.OutputDb) || plugin.OutputDb is < -60 or > 12
                 || !PluginRoles.All.Contains(plugin.RoleMode) || !PluginPins.All.Contains(plugin.Pins) || (plugin.Vendor ?? "").Length > 256)
                 throw Invalid("The project contains an invalid plug-in entry.");
@@ -414,6 +423,13 @@ public static partial class ProjectValidator
     {
         if (value is not null) RequireText(value, limit, description);
     }
+
+    /// <summary>A path that is absolute on the other OS (Stage 17 round trips): a Windows
+    /// drive-absolute or UNC path on Linux/macOS, or a Unix-absolute path on Windows.</summary>
+    private static bool IsForeignAbsolutePath(string path) =>
+        (path.Length >= 3 && char.IsLetter(path[0]) && path[1] == ':' && (path[2] == '\\' || path[2] == '/')) ||
+        path.StartsWith(@"\\", StringComparison.Ordinal) ||
+        (path.StartsWith('/') && !path.Contains('\\'));
 
     private static InvalidDataException Invalid(string message) => new(message);
 }

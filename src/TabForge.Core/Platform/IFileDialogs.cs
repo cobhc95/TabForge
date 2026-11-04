@@ -1,3 +1,5 @@
+using System.Threading.Tasks;
+
 namespace TabForge.Platform;
 
 /// <summary>
@@ -12,6 +14,9 @@ public interface IFileDialogs
     string? OpenFile(FileDialogOptions options, object? owner);
     /// <summary>Shows an open dialog for files (the options set multi-select); returns the paths, or null when cancelled.</summary>
     string[]? OpenFiles(FileDialogOptions options, object? owner);
+    /// <summary>The same dialog as <see cref="OpenFiles"/> without holding the calling thread: an adapter awaits its picker instead of running a nested message loop.
+    /// The default runs the synchronous call (for ports and test doubles that never block).</summary>
+    Task<string[]?> OpenFilesAsync(FileDialogOptions options, object? owner) => Task.FromResult(OpenFiles(options, owner));
     /// <summary>Shows a save dialog; returns the path, or null when cancelled.</summary>
     string? SaveFile(FileDialogOptions options, object? owner);
     /// <summary>Shows a folder dialog for one folder; returns its path, or null when cancelled.</summary>

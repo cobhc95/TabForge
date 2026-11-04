@@ -32,6 +32,8 @@ public sealed class MainWindowDocumentsTests : IDisposable
     {
         public string[]? Open { get; set; }
         public string? Save { get; set; }
+        public Func<Task<string[]?>>? Pick { get; set; }
+        public Task<string[]?> OpenFilesAsync(FileDialogOptions options, object? owner) => Pick?.Invoke() ?? Task.FromResult(Open);
         public string? SaveFile(FileDialogOptions options, object? owner) => Save;
         public string? OpenFile(FileDialogOptions options, object? owner) => throw new InvalidOperationException();
         public string[]? OpenFiles(FileDialogOptions options, object? owner) => Open;
@@ -40,6 +42,45 @@ public sealed class MainWindowDocumentsTests : IDisposable
     }
 
     private static MainWindowTabs Tabs() => new(MainWindowTabs.NewSong(), _ => Task.FromResult(PromptButton.Cancel), _ => Task.FromResult(false));
+
+    [AvaloniaFact]
+    public async Task OpenIgnoresReentryAndAllowsRetryAfterCancellationAndPickerFailure()
+    {
+        var pending = new TaskCompletionSource<string[]?>();
+        var calls = 0;
+        var dialogs = new Dialogs { Pick = () => { calls++; return pending.Task; } };
+        var tabs = Tabs();
+        var reports = new List<string>();
+        var files = new MainWindowFile(dialogs, null, tabs, reports.Add);
+        var first = files.Open();
+        await files.Open(inNewTab: true);
+        Assert.Equal(1, calls);
+        pending.SetResult(null);
+        await first;
+        Assert.Empty(reports);
+        dialogs.Pick = () => throw new InvalidOperationException("picker unavailable");
+        await files.Open();
+        Assert.Contains("picker unavailable", Assert.Single(reports));
+        dialogs.Pick = () => Task.FromException<string[]?>(new IOException("picker failed asynchronously"));
+        await files.Open();
+        Assert.Equal(2, reports.Count);
+        dialogs.Pick = () => { calls++; return Task.FromResult<string[]?>(null); };
+        await files.Open();
+        Assert.Equal(2, calls);
+        Assert.Single(tabs.Songs);
+    }
+
+    [AvaloniaFact]
+    public async Task MissingOpenPathReportsAndKeepsTheActiveDocument()
+    {
+        var tabs = Tabs();
+        var active = tabs.Active;
+        var reports = new List<string>();
+        Assert.False(await new MainWindowFile(new Dialogs(), null, tabs, reports.Add)
+            .OpenPath(Path.Combine(_folder, "missing.tforge"), replaceActive: true));
+        Assert.Same(active, tabs.Active);
+        Assert.Single(reports);
+    }
 
     private static MenuItem Item(MainWindow main, string id) => main.GetLogicalDescendants().OfType<MenuItem>().Single(m => (m.Tag as string) == id);
 

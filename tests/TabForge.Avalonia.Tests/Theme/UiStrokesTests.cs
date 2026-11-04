@@ -27,7 +27,8 @@ public sealed class UiStrokesTests
         Assert.Equal(1.0, UiStrokes.Width("hairline", new AppearanceSettings { Density = "Comfortable", UiScale = 1.0 }), 9);
         Assert.Equal(1.5, UiStrokes.Width("hairline", new AppearanceSettings { Density = "Comfortable", UiScale = 1.5 }), 9);
         Assert.Equal(1.5, UiStrokes.Width("hairline", new AppearanceSettings { Density = "Comfortable", UiScale = 9.9 }), 9);
-        Assert.Equal(0.8, UiStrokes.Width("hairline", new AppearanceSettings { Density = "Comfortable", UiScale = 0.1 }), 9);
+        Assert.Equal(0.7, UiStrokes.Width("hairline", new AppearanceSettings { Density = "Comfortable", UiScale = 0.7 }), 9);
+        Assert.Equal(0.7, UiStrokes.Width("hairline", new AppearanceSettings { Density = "Comfortable", UiScale = 0.1 }), 9);
     }
 
     [Fact]

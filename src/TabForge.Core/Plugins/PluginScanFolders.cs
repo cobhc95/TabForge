@@ -8,10 +8,12 @@ namespace TabForge.Plugins;
 // Tests: PluginScanFolderTests.
 
 /// <summary>The inputs the folder rules read; <see cref="Current"/> takes them from this machine.</summary>
-public sealed record PluginScanInputs(HostOs Os, string Home, string CommonProgramFiles, string ProgramFiles, string UserPluginRoot, string LocalAppData = "")
+public sealed record PluginScanInputs(HostOs Os, string Home, string CommonProgramFiles, string ProgramFiles, string UserPluginRoot,
+    string LocalAppData = "", string WinePrefix = "")
 {
     public static PluginScanInputs Current() => new(HostSystem.Current, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles), ProgramFolders.Current.ProgramFiles, AppFolders.Current.UserPluginRoot);
+        Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles), ProgramFolders.Current.ProgramFiles, AppFolders.Current.UserPluginRoot,
+        WinePrefix: HostSystem.Current == HostOs.Linux ? WineBridgeSupport.PrefixPath : "");
 }
 
 public static class PluginScanFolders
@@ -68,6 +70,20 @@ public static class PluginScanFolders
         return roots.Distinct(PathComparer.Default).ToList();
     }
 
+    /// <summary>The VST2 folders inside a private Wine prefix (only Linux; empty when no prefix is given).</summary>
+    public static IReadOnlyList<string> Vst2(PluginScanInputs i)
+    {
+        var roots = new List<string>();
+        if (i.Os != HostOs.Linux || string.IsNullOrWhiteSpace(i.WinePrefix)) return roots;
+        foreach (var programFiles in new[] { "Program Files", "Program Files (x86)" })
+        {
+            Add(roots, i.WinePrefix, "drive_c", programFiles, "VstPlugins");
+            Add(roots, i.WinePrefix, "drive_c", programFiles, "Steinberg", "VstPlugins");
+            Add(roots, i.WinePrefix, "drive_c", programFiles, "Common Files", "VST2");
+        }
+        return roots.Distinct(PathComparer.Default).ToList();
+    }
+
     /// <summary>The standard folders as shown to the user, with environment or home names, never an expanded user path.</summary>
     public static IReadOnlyList<string> Labels(HostOs os) => os switch
     {
@@ -88,8 +104,12 @@ public static class PluginScanFolders
         _ => new[] { "~/.clap", "/usr/lib/clap" },
     };
 
-    /// <summary>VST2 hosting exists on Windows only (decision 6): the scanner skips VST2 libraries elsewhere.</summary>
+    /// <summary>VST2 hosting exists on Windows, and on Linux when a Wine bridge helper is present. The scanner also checks the PE bitness.</summary>
     public static bool Vst2Supported(HostOs os) => os == HostOs.Windows;
+
+    /// <summary>The same rule with the Linux Wine bridge's availability passed in (the scanner's one call site).</summary>
+    public static bool Vst2Supported(HostOs os, bool wineBridgeAvailable) =>
+        os == HostOs.Windows || (os == HostOs.Linux && wineBridgeAvailable);
 
     private static void Add(List<string> roots, string root, params string[] parts)
     {

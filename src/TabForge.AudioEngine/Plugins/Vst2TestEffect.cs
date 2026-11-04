@@ -104,6 +104,13 @@ public sealed unsafe partial class Vst2Plugin
         private static IntPtr Dispatcher(AEffect* effect, int opcode, int index, IntPtr value, IntPtr ptr, float opt)
         {
             if (opcode == EffProcessEvents) return 1;
+            if (opcode == EffClose)
+            {
+                // The test effect owns its AEffect; release it so the 200-cycle leak loop measures the host, not the fixture.
+                lock (Gate) { if (_next == effect) _next = null; }
+                NativeMemory.Free(effect);
+                return 0;
+            }
             if (opcode == EffOpen && Volatile.Read(ref _openDelayMs) > 0) Thread.Sleep(_openDelayMs);
             if (opcode == EffSetSampleRate) Volatile.Write(ref _sampleRate, opt);
             if (opcode == EffSetBlockSize) Volatile.Write(ref _blockSize, (int)value);

@@ -145,6 +145,18 @@ internal static class DialogMetrics
     /// <summary>The margin with its left side set (the other sides as given).</summary>
     public static Thickness WithLeft(this Thickness t, double left) => new(left, t.Top, t.Right, t.Bottom);
 
+    public static T WithPadding<T>(this T control, Thickness padding) where T : TemplatedControl
+    {
+        control.Padding = padding;
+        return control;
+    }
+
+    public static Border WithPadding(this Border border, Thickness padding)
+    {
+        border.Padding = padding;
+        return border;
+    }
+
     public static T WithMargin<T>(this T control, Thickness margin) where T : global::Avalonia.Controls.Control
     {
         control.Margin = margin;
@@ -164,6 +176,8 @@ internal static class DialogMetrics
     public const double InsertBarsWidth = 340, InsertBarsCountWidth = 72;
 
     /// <summary>The "Audio crosses this section" prompt: its width, the card corner, the gaps below the question and between cards, the card inset and outline, the hint indent, the gap above the Remember row.</summary>
+    public const double PluginApprovalWidth = 520, PluginApprovalListMaxHeight = 160;
+
     public const double SectionAudioWidth = 480, SectionAudioCardCorner = 6;
     public static readonly Thickness SectionAudioQuestionGap = new(0, 0, 0, 10), SectionAudioCardGap = new(0, 0, 0, 6), SectionAudioCardInset = new(10, 6),
         SectionAudioCardOutline = new(1), SectionAudioHintIndent = new(22, 1, 0, 0), SectionAudioRememberGap = new(0, 6, 0, 0);
@@ -300,11 +314,11 @@ internal static class DialogMetrics
 
     /// <summary>The Active on popup: width, inset, corner, outline, gaps, and the icon button (glyph, dot, padding, corner of the dot).</summary>
     public const double ActiveOnPopupWidth = 300, ActiveOnPopupPadding = 14, ActiveOnPopupCorner = 8, ActiveOnPopupBorder = 1, ActiveOnGroupGap = 8,
-        ActiveOnTitleSize = 14, ActiveOnSubtitleSize = 12, ActiveOnButtonGap = 8, ActiveOnIconSize = 14, ActiveOnIconStroke = 1.2, ActiveOnDotSize = 7, ActiveOnDotStroke = 1;
+        ActiveOnTitleSize = 14, ActiveOnSubtitleSize = 12, ActiveOnButtonGap = 8, ActiveOnIconSize = 16, ActiveOnIconStroke = 2, ActiveOnButtonSize = 28, ActiveOnButtonRadius = 6, ActiveOnDotSize = 6, ActiveOnDotStroke = 1;
 
     /// <summary>The Active on popup and button: gap above a label, the subtitle gap, the button padding and gap, the dot's offset.</summary>
     public static readonly Thickness ActiveOnSectionMargin = new(0, 6, 0, 2), ActiveOnSubtitleMargin = new(0, 0, 0, 4), ActiveOnStatusMargin = new(0, 6, 0, 0),
-        ActiveOnButtonRowMargin = new(0, 10, 0, 0), ActiveOnButtonPadding = new(10, 3, 10, 3), ActiveOnButtonMargin = new(0, 0, 4, 0), ActiveOnDotMargin = new(0, -4, -5, 0);
+        ActiveOnButtonRowMargin = new(0, 10, 0, 0), ActiveOnButtonPadding = new(10, 3, 10, 3), ActiveOnButtonMargin = new(0, 0, 4, 0), ActiveOnDotMargin = new(0, 3, 3, 0);
 
     /// <summary>The MIDI export window: field widths, size and minimum size.</summary>
     public const double MidiExportBarWidth = 60, MidiExportSecWidth = 70, MidiExportWidth = 560, MidiExportHeight = 560,
@@ -384,4 +398,29 @@ internal static class DialogMetrics
         MidiButtonPad = new(10, 2), MidiButtonGap = new(6, 0, 0, 0), MidiSearchGap = new(0, 0, 0, 6), MidiBarGap = new(0, 6, 0, 0),
         MidiItemPad = new(10, 3), MidiMapButtonsGap = new(140, 6, 0, 0), MidiMapSummaryGap = new(140, 8, 0, 0),
         MidiFrameBorder = new(1), MidiHighlightBorder = new(2);
+
+    /// <summary>The dropdown caption (COMPACT MODE / piano roll lane picker): shared font size, gap, chevron size and stroke.</summary>
+    public const double DropdownCaptionFontSize = 12.65, DropdownCaptionGap = 4,
+        DropdownCaptionChevronWidth = 10, DropdownCaptionChevronHeight = 6, DropdownCaptionChevronStroke = 1.4;
+
+    /// <summary>The track properties window (tuning card, capo card, string rows, MIDI card, left column): exact widths, heights, font sizes and board geometry.</summary>
+    public const double TrackTuningControlsWidth = 150, TrackTuningCountBoxWidth = 116, TrackTuningPresetMenuWidth = 300, TrackTuningPresetListHeight = 260,
+        TrackTuningHeaderGap = 6, TrackTuningGroupHeaderFontSize = 11, TrackLeftColumnWidth = 220, TrackMidiBoxHeight = 22, TrackMidiFontSize = 11,
+        TrackCapoBoardHeight = 115, TrackCapoCardBoardHeight = 95, TrackCapoBoardRadius = 6,
+        TrackCapoBarShare = 96.0 / 443.0, TrackCapoBarRadius = 5, TrackCapoSelectionThickness = 2,
+        TrackCapoNumberFontSize = 10, TrackCapoNumberTop = 2, TrackCapoLabelGap = 6, TrackCapoOffOpacity = 0.35, TrackCapoFieldHeight = 24, TrackCapoFretBoxWidth = 44, TrackCapoStringBoxWidth = 58,
+        TrackCapoImageHeight = 1774.0, TrackCapoImageVisible = 1603.0, TrackCapoImageTop = 93.0, TrackCapoImageCentreX = 489.5, TrackCapoImageWidth = 887.0,
+        TrackStringRowHeight = 24, TrackStringNumberWidth = 26, TrackStringSpeakerWidth = 26, TrackStringNoteBoxWidth = 64,
+        TrackStringStepWidth = 24, TrackStringStepHeight = 20, TrackStringSpeakerIconSize = 14, TrackStringSpeakerStroke = 1;
+
+    /// <summary>The track properties window insets: tuning card, capo card, MIDI card and string rows.</summary>
+    public static readonly Thickness TrackTuningButtonPadding = new(6, 1), TrackTuningHeaderPartGap = new(0, 0, TrackTuningHeaderGap, 0),
+        TrackTuningControlGap = new(0, 0, 0, 4), TrackTuningColumnGap = new(0, 0, 8, 0), TrackTuningPresetAllCountsGap = new(0, 6, 0, 6),
+        TrackTuningPresetNoneInset = new(4, 6), TrackTuningGroupHeaderGap = new(4, 8, 0, 2), TrackMidiBoxPadding = new(4, 1),
+        TrackMidiCellGap = new(0, 0, 6, 4), TrackCapoChipPadding = new(8, 2), TrackCapoChipGap = new(0, 0, 4, 0), TrackCapoFieldLabelGap = new(12, 0, 4, 0), TrackCapoTitleGap = new(0, 0, 10, 0), TrackCapoHintGap = new(0), TrackCapoStripGap = new(0, 6, 0, 0),
+        TrackCapoStripPadding = new(8, 4), TrackCapoStripItemGap = new(0, 0, 12, 0), TrackCapoTickGap = new(0, 0, 4, 0),
+        TrackStringRowsGap = new(0, 4, 0, 0), TrackStringNoteBoxMargin = new(6, 0, 0, 0), TrackStringNoteBoxPadding = new(4, 0),
+        TrackStringStepButtonPadding = new(0), TrackCapoBorderThickness = new(1), TrackCapoTickPadding = new(0),
+        TrackErrorGap = new(0, 0, 12, 0), TrackLeftColumnGap = new(0, 0, 10, 0), TrackColumnsInset = new(12, 8, 12, 0), TrackInstrumentCardGap = new(0, 0, 8, 6),
+        TrackStringStepButtonGap = new(2, 0), TrackMidiLabelGap = new(0, 0, 0, 1);
 }

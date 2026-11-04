@@ -18,7 +18,6 @@ Source/src/TabForge.Avalonia/Platform/AvaloniaFormControlStyles.cs|2
 Source/src/TabForge.Avalonia/Platform/AvaloniaScoreClipboard.cs|2
 Source/src/TabForge.Avalonia/Platform/AvaloniaSingleInstance.cs|1
 Source/src/TabForge.Avalonia/Platform/BandScoreMenu.cs|1
-Source/src/TabForge.Avalonia/Platform/FretboardContextMenu.cs|1
 Source/src/TabForge.Avalonia/Platform/InstrumentBadgeView.cs|1
 Source/src/TabForge.Avalonia/Platform/InstrumentPanelView.cs|2
 Source/src/TabForge.Avalonia/Platform/TimelineAudioClips.Fold.cs|1

@@ -40,6 +40,36 @@ public static class MidiProcessingListPresenter
         Down: selectedIndex is int down && down < count - 1,
         Remove: selectedIndex is not null);
 
+    /// <summary>Up needs a row above the whole selection, Down a row below it, and Remove any selection; with none all are off.</summary>
+    public static ListButtonStates ButtonStates(IReadOnlyList<int> selected, int count) => new(
+        Up: selected.Count > 0 && selected.Min() > 0,
+        Down: selected.Count > 0 && selected.Max() < count - 1,
+        Remove: selected.Count > 0);
+
+    /// <summary>Moves a multi-selection by <paramref name="delta"/> (±1) as one step, keeping the relative order and the gaps:
+    /// each selected row swaps with the unselected neighbour in the move direction. Returns the new order (old indexes by new
+    /// position), the new selection and the new focus, or null when the move leaves the chain.</summary>
+    public static (IReadOnlyList<int> Order, IReadOnlyList<int> Selected, int Focus)? MoveMany(IReadOnlyList<int> selected, int focused, int delta, int count)
+    {
+        if ((delta != -1 && delta != 1) || selected.Count == 0 || count <= 0) return null;
+        var set = selected.ToHashSet();
+        if (delta < 0 && selected.Min() <= 0) return null;
+        if (delta > 0 && selected.Max() >= count - 1) return null;
+        var order = Enumerable.Range(0, count).ToList();
+        var walk = delta < 0 ? selected.OrderBy(i => i).ToList() : selected.OrderByDescending(i => i).ToList();
+        foreach (var old in walk)
+        {
+            var pos = order.IndexOf(old);
+            var swap = pos + delta;
+            if (pos < 0 || swap < 0 || swap >= count) return null;
+            if (set.Contains(order[swap])) continue;   // the neighbour moves too: keep the block together
+            (order[pos], order[swap]) = (order[swap], order[pos]);
+        }
+        var focusOld = set.Contains(focused) ? focused : selected.Min();
+        var selectedNew = order.Select((old, pos) => (old, pos)).Where(t => set.Contains(t.old)).Select(t => t.pos).OrderBy(i => i).ToList();
+        return (order, selectedNew, order.IndexOf(focusOld));
+    }
+
     /// <summary>The row label of a processor: its catalog name, or its type marked as unknown.</summary>
     public static string RowLabel(string type, string? catalogName) => catalogName ?? $"{type} (unknown)";
 

@@ -27,9 +27,10 @@ public static class FretboardSizeRules
     /// <summary>The fret count the even fret cell is taken over (24 frets span 486 mm of a guitar, a cell of 20.25 mm).</summary>
     public const int CellFrets = 24;
 
-    /// <summary>The average string pitch in millimetres: about 9 on a guitar (nut 43 over 6 strings, 48 over 7), about 15 on a bass.</summary>
-    public const double GuitarStringPitchMm = 9;
-    public const double BassStringPitchMm = 15;
+    /// <summary>The average string pitch in millimetres the board is drawn at: 8 on a guitar and 13.5 on a bass. A real neck is about 7.3 and 10.4 mm between strings;
+    /// the drawn pitch keeps room for the note bubbles while the 24-fret board reads about 10 : 1, long and slim as a real one.</summary>
+    public const double GuitarStringPitchMm = 8;
+    public const double BassStringPitchMm = 13.5;
 
     /// <summary>The real length of one even fret cell in millimetres: 20.25 on a guitar, 27 on a bass.</summary>
     public static double FretCellMm(bool bass) => (bass ? BassScaleLengthMm : ScaleLengthMm) * FretSpanOfScale / CellFrets;

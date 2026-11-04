@@ -38,6 +38,8 @@ public interface IPathSink
 public interface IPathFactory
 {
     IUiPath BuildPath(System.Action<IPathSink> figures, UiFillRule fillRule = UiFillRule.EvenOdd);
+    /// <summary>Builds a dynamic or caller-cached path without retaining it in the factory's deduplication cache.</summary>
+    IUiPath BuildUncachedPath(System.Action<IPathSink> figures, UiFillRule fillRule = UiFillRule.EvenOdd) => BuildPath(figures, fillRule);
     /// <summary>The geometry's bounds without any stroke.</summary>
     UiRect Bounds(IUiPath path);
 }

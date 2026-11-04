@@ -243,7 +243,7 @@ public class DockWorkspaceControllerTests
     }
 
     [AvaloniaFact]
-    public void SplitterDragStopsAtTheTreeClamp()
+    public void SplitterDragStopsAtTheScoreMinimum()
     {
         var window = Open();
         var root = window.State.Root!;
@@ -252,7 +252,12 @@ public class DockWorkspaceControllerTests
         window.MouseDown(new Point(300, y), MouseButton.Left);
         window.MouseMove(new Point(300, y - 5000), RawInputModifiers.LeftMouseButton);
         window.MouseUp(new Point(300, y - 5000), MouseButton.Left);
-        Assert.Equal(0.02, root.Ratio, 6);
+        // The score side never collapses to a thin strip: the drag stops where the upper half keeps the editor's minimum plus the fretboard's reserve.
+        var floor = (DockWorkspaceView.EditorMinimumHeight + DockWorkspaceView.InstrumentReserveHeight) / available;
+        Assert.Equal(floor, root.Ratio, 2);
+        var score = window.View.HostControl("score-editor")!;
+        Assert.True(score.Bounds.Height >= DockWorkspaceView.EditorMinimumHeight - DockSplitter.BarThickness,
+            $"score keeps {score.Bounds.Height} of its {DockWorkspaceView.EditorMinimumHeight} minimum");
     }
 
     [AvaloniaFact]

@@ -10,10 +10,9 @@ namespace TabForge.Avalonia.Tests;
 // Does not own: encoding itself (VideoExportCancelTests, LiveVideoRecordTests).
 public sealed class VideoEncoderFrameSizeTests
 {
-    [Fact]
+    [WindowsFact]
     public void FramesThatAreNotExactlyWidthByHeightBy4AreRefused()
     {
-        if (!OperatingSystem.IsWindows()) return;   // Media Foundation is Windows-only
         var path = Path.Combine(Path.GetTempPath(), "tf-frame-size-" + Guid.NewGuid().ToString("N") + ".mp4");
         try
         {

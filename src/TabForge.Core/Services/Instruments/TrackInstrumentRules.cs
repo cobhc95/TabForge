@@ -36,6 +36,7 @@ public static class TrackInstrumentRules
             track.Kind = TrackKind.Keys;
             track.InstrumentName = InstrumentNaming.WithoutStringCount(track.InstrumentName ?? "");
             track.Capo = 0;
+            track.PartialCapos = null;
             changed++;
         }
         return changed;

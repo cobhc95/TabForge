@@ -87,14 +87,19 @@ public sealed class MainWindowCommands : TabForge.Avalonia.Views.IMenuCommandRun
     /// <summary>False when the command's guard (AddWhen) says it does not apply now; true for every command without a guard.</summary>
     public bool Applies(string commandId) => !_guards.TryGetValue(commandId, out var applies) || applies();
 
+    /// <summary>Raised after a synchronous command dispatch (not after an async dialog it starts).</summary>
+    public event Action<string>? Dispatched;
+
     /// <summary>Runs the command with the row's argument (null for a row without one); an id with no handler throws, because the menu never enables one.</summary>
     public void Run(string commandId, string? argument = null)
     {
         if (_argumentHandlers.TryGetValue(commandId, out var withArgument))
         {
             withArgument(argument ?? throw new InvalidOperationException($"Command '{commandId}' needs an argument."));
+            Dispatched?.Invoke(commandId);
             return;
         }
         (_handlers.GetValueOrDefault(commandId) ?? throw new InvalidOperationException($"No handler for command '{commandId}'.")).Invoke();
+        Dispatched?.Invoke(commandId);
     }
 }

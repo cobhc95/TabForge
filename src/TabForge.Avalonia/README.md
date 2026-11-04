@@ -23,6 +23,11 @@ The ported windows and the preview Tools menu are listed in `Source/src/TabForge
 
 The adapters and drawing hosts are listed in `Source/src/TabForge.Avalonia/Platform/README.md`.
 
+## Windows-only and diagnostics pieces
+
+- `Platform/Windows/WindowsProcessExit.cs`: ends the one-shot matrix process without running plug-in DLL detach (kernel32 `TerminateProcess`, `Environment.Exit` fallback). It lives in the Windows platform folder so the portability guard does not count the imports.
+- `Diagnostics/PluginMatrix.Native.Windows.cs`: the Win32 externs (owner window, message pump) the plug-in matrix diagnostics call; every call site is a Windows-only path.
+
 Not added: an `IAppServices` adapter. Its property bag has no Avalonia equivalent, so an adapter would invent its semantics.
 
 ## Score opening

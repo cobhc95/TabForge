@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using TabForge.AudioEngine.Isolation;
 using TabForge.Models;
 using TabForge.Plugins;
 using TabForge.Presenters;
@@ -31,7 +32,7 @@ public sealed class FxAddPlugin
         return chosen is null ? null : await SlotFor(chosen);
     }
 
-    /// <summary>Approves the picked plug-in, identifies it when needed and returns the slot (not yet on any chain).</summary>
+    /// <summary>Approves the picked plug-in, identifies it when needed and returns the slot (not yet on any chain). Bridged plug-ins on Linux prepare Wine once off the UI thread with a preparing status and use the bridged probe ceiling; a refusal stays on the status line.</summary>
     public async Task<PluginSlot> SlotFor(VstPluginInfo chosen)
     {
         var settings = _host.PluginSettings;
@@ -44,13 +45,22 @@ public sealed class FxAddPlugin
         var vendor = chosen.Vendor;
         if (role.Length == 0)
         {
-            // Find out what the plug-in is by asking it (in a throwaway process, crash-safe).
-            _status($"Checking {chosen.Name}…");
-            var described = await Task.Run(() => PluginCatalog.Describe(chosen.Path, settings, _host.Trust, _host.PluginFiles));
+            // Find out what the plug-in is by asking it (in a throwaway process, crash-safe, never on the UI thread).
+            string? wineFailure = null;
+            if (PluginCatalog.NeedsBridgedProbe(chosen.Path, chosen.Format) && OperatingSystem.IsLinux())
+            {
+                _status(PluginBrowserListPresenter.WinePreparingText);
+                try { await Task.Run(() => { WineRuntime.SweepStaleBlocks(); WineRuntime.Locate()?.EnsureReady(); }); }
+                catch (Exception ex) { wineFailure = $"{ProbeRefusal.BrokenPrefixText} ({ex.GetBaseException().Message})"; }
+            }
+            if (wineFailure is null) _status($"Checking {chosen.Name}…");
+            var detailed = wineFailure is null
+                ? await Task.Run(() => PluginCatalog.DescribeDetailed(chosen.Path, settings, _host.Trust, _host.PluginFiles, PluginCatalog.DefaultProbeTimeoutMs, chosen.Format))
+                : (Role: "", Vendor: "", Name: "", Refusal: wineFailure);
             _host.SaveSettings();
-            role = described.Role;
-            if (vendor.Length == 0) vendor = described.Vendor;
-            _status("");
+            role = detailed.Role;
+            if (vendor.Length == 0) vendor = detailed.Vendor;
+            _status(detailed.Refusal ?? "");
         }
         return new PluginSlot
         {

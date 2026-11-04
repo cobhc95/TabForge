@@ -61,14 +61,22 @@ public class AvaloniaEngineRoutingTests
     /// routing on a fake running engine, equal the stream the WPF AudioRouting.Apply sends with the same default settings: every message to
     /// the same engine slot, none to Windows MIDI. The golden is the stream's line count and SHA-256 ("ms Eslot status d1 d2" per line);
     /// the WPF AudioRouting no longer exists, so when the demo song or its compile changes on purpose, diff the new stream against one built from the previous source (write the text built below to a file), explain every difference, then paste the new line count and SHA-256.
+    /// 2026-11-02: the stream used to change on every run. TrackModel.Id defaults to a fresh Guid (SongProject.cs:155) and ChannelAllocator
+    /// settles the per-track effect channels in Id order (ChannelAllocator.cs:22, AssignEffect), so the bent-note tracks got channels 10-13
+    /// in a different order each run: 11909 lines every time, but 24 possible hashes. The four trees compared (pristine devrepo, Source with
+    /// the automation/partial-capo/performed-bar work, and their merge) produced byte-identical streams once the Ids were pinned, so there was
+    /// no compile difference at all; the old golden 29836B03 was one such random sample (not reachable from any current tree). Pinning the Ids
+    /// keeps the stream deterministic without weakening the check; the golden below is that single stream, and every line is still compared.
     /// </summary>
     [Fact]
     public void DemoSongFromBar85SendsTheWpfEngineStream()
     {
         const int FromBar = 84;   // 0-based: bar 85
         const int GoldenLines = 11909;
-        const string GoldenSha256 = "29836B03ACC72A8CF697749B5FFC452507506E5ACF08239F57242D9D9891A571";
+        const string GoldenSha256 = "AE6004A01C3B23CBF8D46ADCD42814B15CF85F5C6D150070AD56853E691F31AC";
         var project = FullDemoSongFactory.Create();
+        // Pinned so ChannelAllocator (which orders tracks by Id) hands the effect channels out in a fixed order; the music is unchanged.
+        for (var ti = 0; ti < project.Tracks.Count; ti++) project.Tracks[ti].Id = new Guid(ti, 0, 0, new byte[8]);
         using var client = new AudioEngineClient(new TabForge.Plugins.PluginTrust());
         client.AttachFakeForTest();
         var stream = new StringBuilder();

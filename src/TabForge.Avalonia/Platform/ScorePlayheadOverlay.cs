@@ -11,7 +11,7 @@ using TabForge.Views.Score;
 namespace TabForge.Avalonia.Platform;
 
 /// <summary>The overlay's job: draws the moving line above the retained page. Thread: UI.</summary>
-internal sealed class ScorePlayheadOverlay : Control
+internal sealed class ScorePlayheadOverlay : Decorator
 {
     private readonly ScoreGeometryProbe _probe;
     private readonly System.Func<double> _zoom;
@@ -24,6 +24,7 @@ internal sealed class ScorePlayheadOverlay : Control
         _probe = probe;
         _zoom = zoom;
         IsHitTestVisible = false;
+        Child = new MarksLayer(this);
         RenderTransform = _move;
     }
 
@@ -56,10 +57,10 @@ internal sealed class ScorePlayheadOverlay : Control
         // The layer is drawn at the x of this moment and moved from there, so a redraw also resets the transform.
         _drawn = (top, bottom, zoom, thickness, light, x, colour);
         _move.X = 0;
-        InvalidateVisual();
+        Child!.InvalidateVisual();
     }
 
-    public override void Render(DrawingContext context)
+    private void DrawMarks(DrawingContext context)
     {
         RedrawCount++;
         if (_probe.Play.PlayheadLine(_probe) is not var (nowX, _, _)) return;
@@ -68,5 +69,11 @@ internal sealed class ScorePlayheadOverlay : Control
         // line is drawn there, however long the render took to arrive.
         using var anchored = context.PushTransform(Matrix.CreateTranslation(_drawn.X - nowX, 0));
         _probe.DrawPlayhead(_draw.Use(context));
+    }
+
+    // A moving Avalonia transform invalidates its owner. The child keeps the actual drawing retained across those moves.
+    private sealed class MarksLayer(ScorePlayheadOverlay owner) : Control
+    {
+        public override void Render(DrawingContext context) => owner.DrawMarks(context);
     }
 }

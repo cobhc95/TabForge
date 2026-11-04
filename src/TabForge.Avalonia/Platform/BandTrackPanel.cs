@@ -83,6 +83,7 @@ public sealed partial class BandTrackPanel : Border
     private bool _selected;
     private AvaloniaPlaybackSession? _instrumentSession;
     private bool _attached;
+    private bool _instrumentSubscribed;
     private int _windowFirst;
 
     /// <summary>Whether the card is the selected one.</summary>
@@ -212,15 +213,16 @@ public sealed partial class BandTrackPanel : Border
 
     private void SubscribeInstrument()
     {
-        if (_instrumentSession is null) return;
+        if (_instrumentSubscribed || !_attached || !_fretboardShown || _instrumentSession is null) return;
+        _instrumentSubscribed = true;
         _instrumentSession.PlayheadFrame += ShowInstrumentPlayback;
-        _instrumentSession.PlayheadBarChanged += ShowInstrumentPlayback;
         _instrumentSession.StateChanged += ShowInstrumentPlayback;
     }
 
     private void UnsubscribeInstrument()
     {
         if (_instrumentSession is null) return;
+        _instrumentSubscribed = false;
         _instrumentSession.PlayheadFrame -= ShowInstrumentPlayback;
         _instrumentSession.PlayheadBarChanged -= ShowInstrumentPlayback;
         _instrumentSession.StateChanged -= ShowInstrumentPlayback;
@@ -229,7 +231,7 @@ public sealed partial class BandTrackPanel : Border
     // The playing notes of this card's track at the playhead, or none when the song is not playing (the view's own dedup repaints only on change).
     private void ShowInstrumentPlayback()
     {
-        if (!Instrument.Look.FollowFretboard || _instrumentSession is not { IsPlaying: true } session || session.Transport.Timeline is not { } timeline)
+        if (!_fretboardShown || !Instrument.IsEffectivelyVisible || !Instrument.Look.FollowFretboard || _instrumentSession is not { IsPlaying: true } session || session.Transport.Timeline is not { } timeline)
         {
             Instrument.ShowPlayback(null, 0);
             return;
@@ -410,6 +412,9 @@ public sealed partial class BandTrackPanel : Border
     {
         _fretboardShown = shown;
         Instrument.IsVisible = shown;
+        if (shown) { SubscribeInstrument(); RefreshInstrumentCursor(); }
+        else UnsubscribeInstrument();
+        ShowInstrumentPlayback();
         ApplyPlacement();
         ApplyLook();
     }

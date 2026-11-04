@@ -7,6 +7,7 @@ using TabForge.Audio.Contracts;
 using TabForge.Avalonia.Views;
 using TabForge.Documents;
 using TabForge.Platform;
+using TabForge.Plugins;
 using TabForge.Presenters;
 using TabForge.Services;
 
@@ -82,10 +83,12 @@ public sealed class AvaloniaEngineEvents : IDisposable
         _engine.TrackLimitReached += OnTrackLimitReached;
     }
 
-    /// <summary>The notice for a crash: the plug-in's name when the engine said which one, the restart notice when it hung, the give-up notice after several crashes.</summary>
-    public static string CrashNotice(string path, bool tooManyCrashes) =>
+    /// <summary>The notice for a crash: the plug-in's name when the engine said which one, the helper's stop for a bridged plug-in, the restart notice when it hung, the give-up notice after several crashes.</summary>
+    public static string CrashNotice(string path, bool tooManyCrashes, bool helperStopped = false, string? reportPath = null) =>
         tooManyCrashes ? TooManyCrashesNotice
         : string.IsNullOrEmpty(path) ? EngineStoppedNotice
+        : helperStopped ? $"{FileName(path)} crashed in its 32-bit helper and was switched off; playback continues" +
+                          (string.IsNullOrEmpty(reportPath) ? "" : $". Report: {reportPath}")
         : $"{FileName(path)} stopped working and was switched off; playback continues";
 
     /// <summary>The audio route settings (driver, device, channel pair, rate, buffer, latency, play-all) as one key: a change of any of them reaches the engine.</summary>
@@ -125,8 +128,15 @@ public sealed class AvaloniaEngineEvents : IDisposable
     private void OnPluginCrashed(string path)
     {
         if (_disposed) return;
-        _host.SaveSettings();   // the quarantine list the engine wrote is kept
-        _host.ShowStatus(CrashNotice(path, _engine.TooManyCrashes));
+        // A native 64-bit VST2 ended the engine. Remember that so the next sync loads it in the existing isolation host
+        // (spec.Isolate): a later fault then loses only that plug-in. "Allow again" clears the quarantine, not this.
+        if (!_engine.CrashLeftEngineRunning && !_engine.PluginCrashedInHelper && path.Length > 0 && PeExports.IsVst2Plugin64(path))
+        {
+            var crashProne = _host.Plugins.CrashProne ??= new();
+            if (!crashProne.Contains(path, StringComparer.OrdinalIgnoreCase)) crashProne.Add(path);
+        }
+        _host.SaveSettings();   // the quarantine and crash-prone lists the engine wrote are kept
+        _host.ShowStatus(CrashNotice(path, _engine.TooManyCrashes, _engine.PluginCrashedInHelper, _engine.PluginCrashReportPath));
         if (_engine.TooManyCrashes) return;
         // The restarted engine's synths are new (piano): the owner's song sends its programs again once their chains are loaded.
         _setupPending = true;

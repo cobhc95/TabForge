@@ -39,6 +39,7 @@ public sealed partial class ScalePanel
     private ListBox? _results;
     private TextBlock? _count;
     private TextBox? _searchBox;
+    private int _pickedRow = -1;   // the row the user last picked: a rebuild keeps the highlight on it while it still shows the applied scale
 
     /// <summary>The scale list the search is open on, each library entry once (tests).</summary>
     internal IReadOnlyList<ScaleSearchHit> Hits => _hits;
@@ -161,8 +162,16 @@ public sealed partial class ScalePanel
             _rowToHit.Add(i);
         }
         _results!.ItemsSource = rows;
-        _results.SelectedIndex = _rowToHit.FindIndex(r => r >= 0);
+        _results.SelectedIndex = SelectedRowFor(_host.Current.Effective.Root, _host.Current.Effective.Scale);
         _count!.Text = _hits.Count == 0 ? string.Format(NoMatchText, _query.Trim()) : ScaleSearch.CountText(_hits.Count) + (ranked.Count > 0 ? "  ·  % = how likely this is the key" : "");
+    }
+
+    // The row to highlight: the row the user picked when it still shows the applied scale, else the first row that shows it (a scale can sit in two groups), else the first row.
+    private int SelectedRowFor(int root, string scale)
+    {
+        bool Shows(int row) => row >= 0 && row < _rowToHit.Count && _rowToHit[row] >= 0 && _hits[_rowToHit[row]] is var hit && hit.Root == root && hit.Scale == scale;
+        if (Shows(_pickedRow)) return _pickedRow;
+        return Enumerable.Range(0, _rowToHit.Count).Where(Shows).Cast<int?>().FirstOrDefault() ?? _rowToHit.FindIndex(r => r >= 0);
     }
 
     // A header is a bold line; a scale row is its text with a star at the right. The star marks the scale type (all 12 keys) as a favourite.
@@ -209,6 +218,7 @@ public sealed partial class ScalePanel
         var hitIndex = _rowToHit[_results.SelectedIndex];
         if (hitIndex < 0 || hitIndex >= _hits.Count) return;
         var hit = _hits[hitIndex];
+        _pickedRow = _results.SelectedIndex;
         _pickAnother = true;
         _host.Pick(new ScaleMatch(hit.Root, hit.Scale, 1, 0));
         Rebuild();   // the drop-downs show the pick; the list stays open

@@ -30,6 +30,7 @@ public static class SettingsMigration
         settings.Hotkeys.Bindings2 ??= new Dictionary<string, string>();
         settings.Hotkeys.DisabledActions2 ??= new List<string>();
         settings.Appearance.RecentColours ??= new List<string>();
+        settings.TuningUserPresets ??= new List<TuningUserPresetEntry>();
     }
 
     /// <summary>Moves an older settings document to the current shape, one named step per change, then bounds every value.</summary>
@@ -188,6 +189,10 @@ public static class SettingsMigration
             if (string.Equals(settings.Appearance.Density, "Comfortable", StringComparison.OrdinalIgnoreCase)) settings.Appearance.Density = "Compact";
             settings.Appearance.DensityVersion = 1;
         }
+
+        // The interface size follows the monitor until the user picks one: a file from before the marker that holds a size other than 1 held the user's own choice.
+        if (!Has(Find(root, "Appearance"), "UiScaleUserOverridden"))
+            settings.Appearance.UiScaleUserOverridden = Math.Abs(settings.Appearance.UiScale - TabForge.Platform.Theme.UiDensity.DefaultScale) > 1e-9;
 
         // Ledger lines share the staff lines' colour and opacity. Appearance.LedgerLineOpacity / LedgerOpacityVersion keys in a file
         // are not properties: loading ignores them and the next save leaves them out. Nothing needs to run here.

@@ -100,10 +100,9 @@ public sealed class VideoExportCancelTests
         Assert.EndsWith(".mp4", staging);
     }
 
-    [Fact]
+    [WindowsFact]
     public void LiveRecordingAndExportRunTheSameFinalizeSequence()
     {
-        if (!OperatingSystem.IsWindows()) return;
         var live = FinalizeSteps(live: true);
         var export = FinalizeSteps(live: false);
         Assert.Equal(VideoEncoder.FinishSteps, live);

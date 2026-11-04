@@ -16,11 +16,15 @@ namespace TabForge.Avalonia.Platform;
 public sealed class AvaloniaPathsAndText : IPathFactory, ITextMeasure
 {
     // Geometry cache. Key: the path's content (PathShapeKey: fill rule and every figure's exact bits), so equal content shares one geometry;
-    // ceiling: PathCacheLimit geometries, least recently built-or-requested dropped first; thread: the owner's UI thread (one instance per draw context).
+    // ceiling: PathCacheLimit geometries AND PathCacheBytes estimated bytes, LRU; thread: the owner's UI thread (one instance per draw context).
     // Callers never mutate a built path, so sharing one is safe.
     private const int PathCacheLimit = 1024;
-    private readonly BoundedLruCache<PathShapeKey, AvaloniaPath> _geometries = new(PathCacheLimit);
+    private const long PathCacheBytes = 4 * 1024 * 1024;
+    // Includes the exact managed key plus conservative geometry/entry overhead. Native allocator/GPU overhead is not a measured byte count.
+    private readonly BoundedLruCache<PathShapeKey, AvaloniaPath> _geometries = new(PathCacheLimit, PathCacheBytes, static (key, _) => 256L + key.Words.LongLength * sizeof(long) * 3);
     private readonly PathRecorder _recorder = new();
+    internal long CachedPathBytes => _geometries.Weight;
+    internal int CachedPaths => _geometries.Count;
 
     public IUiPath BuildPath(Action<IPathSink> figures, UiFillRule fillRule = UiFillRule.EvenOdd)
     {
@@ -37,6 +41,20 @@ public sealed class AvaloniaPathsAndText : IPathFactory, ITextMeasure
         var path = new AvaloniaPath(geometry);
         _geometries.Add(key, path);
         return path;
+    }
+
+    public IUiPath BuildUncachedPath(Action<IPathSink> figures, UiFillRule fillRule = UiFillRule.EvenOdd)
+    {
+        // Direct construction: no coordinate-array key, hash, replay or cache entry for an owner-cached waveform.
+        var geometry = new StreamGeometry();
+        using (var context = geometry.Open())
+        {
+            context.SetFillRule(fillRule == UiFillRule.EvenOdd ? FillRule.EvenOdd : FillRule.NonZero);
+            var sink = new Sink(context);
+            figures(sink);
+            sink.EndOpenFigure();
+        }
+        return new AvaloniaPath(geometry);
     }
 
     public UiRect Bounds(IUiPath path)

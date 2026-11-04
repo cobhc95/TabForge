@@ -9,6 +9,8 @@ Plug-ins that run in their own process: the engine side of the link, the shared 
 | `PluginHostBlock.cs` | Shared memory for one plug-in in its own process: audio in and out, MIDI and transport |
 | `PluginHostLink.cs` | Audio half of an isolated plug-in: each block goes to the child process and must come back |
 | `PluginHostMain.cs` | The child process that runs exactly one plug-in (the `--plugin-host` entry) |
+| `PluginHostLaunch.cs` | The immutable launch record: executable, mode, named-pipe or TCP transport, slots and Wine environment |
+| `WineRuntime.cs` | Linux: locates the bundled Wine loader and helper, the private prefix, its environment and Z: path conversion |
 | `PluginInfoProbe.cs` | The `--plugin-info` probe: loads one plug-in in a throwaway process and prints its details |
 | `RemotePlugin.cs` | A plug-in in its own process, seen by the engine as an ordinary instrument |
 

@@ -16,7 +16,7 @@ namespace TabForge.Avalonia.Views.Fx;
 // Owns: the headphones icon button of the "Active on" rule (plug-in toolbar and container header): the toolbar button look, the outline icon
 //   with no rule, the accent fill plus a small accent dot with a rule, the tooltip, and the disabled state with nothing selected.
 // Does not own: the popup it opens (FxActiveOnPopup), the rule (ActiveOnRule) or which rule it shows (the window / the container pane call Update).
-// Tests: FxActiveOnTests.
+// Tests: FxActiveOnTests, FxActiveOnButtonBrushTests.
 // Threads: UI thread.
 internal sealed class FxActiveOnButton
 {
@@ -27,7 +27,7 @@ internal sealed class FxActiveOnButton
     {
         _icon = new Path
         {
-            Data = Geometry.Parse(IconGeometry.Headphones), StrokeThickness = DialogMetrics.ActiveOnIconStroke, StrokeJoin = PenLineJoin.Round, Stretch = Stretch.Uniform,
+            Data = Geometry.Parse(IconGeometry.Headphones), StrokeThickness = DialogMetrics.ActiveOnIconStroke, StrokeJoin = PenLineJoin.Round, StrokeLineCap = PenLineCap.Round, Stretch = Stretch.Uniform,
             Width = DialogMetrics.ActiveOnIconSize, Height = DialogMetrics.ActiveOnIconSize, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
             Name = name + "Icon", IsHitTestVisible = false,
         };
@@ -37,10 +37,14 @@ internal sealed class FxActiveOnButton
             Width = DialogMetrics.ActiveOnDotSize, Height = DialogMetrics.ActiveOnDotSize, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top,
             Name = name + "Dot", IsHitTestVisible = false, IsVisible = false,
             [!Shape.FillProperty] = new DynamicResourceExtension("AccentBrush"),
-            [!Shape.StrokeProperty] = new DynamicResourceExtension("Panel2Brush"),
         }.WithMargin(DialogMetrics.ActiveOnDotMargin);
         var content = new Grid { Children = { _icon, _dot } };
-        Button = new Button { Name = name, Content = content, Focusable = true }.WithPadding(DialogMetrics.ActiveOnButtonPadding).WithMargin(DialogMetrics.ActiveOnButtonMargin);
+        Button = new Button { Name = name, Content = content, Focusable = true }.WithPadding(new global::Avalonia.Thickness(0)).WithMargin(DialogMetrics.ActiveOnButtonMargin);
+        Button.Width = Button.Height = DialogMetrics.ActiveOnButtonSize;
+        Button.CornerRadius = new global::Avalonia.CornerRadius(DialogMetrics.ActiveOnButtonRadius);
+        Button.BorderThickness = new global::Avalonia.Thickness(1);
+        Button.HorizontalContentAlignment = HorizontalAlignment.Center;
+        Button.VerticalContentAlignment = VerticalAlignment.Center;
         // Built after the window content is attached, so the default-look hook already ran: name the Core look here, as the neighbouring toolbar buttons do.
         Button.Classes.Add(AvaloniaDefaultLooks.ButtonLook);
         Button.VerticalAlignment = VerticalAlignment.Center;
@@ -57,22 +61,31 @@ internal sealed class FxActiveOnButton
     public bool HasRule { get; private set; }
 
     /// <summary>Shows the rule of the selected plug-in or container; <paramref name="hasTarget"/> false: nothing is selected (dimmed).</summary>
-    public void Update(ActiveOnRule? rule, bool hasTarget)
+    public void Update(ActiveOnRule? rule, bool hasTarget, bool activeHere = true)
     {
         HasRule = hasTarget && rule is { IsAny: false };
         Button.IsEnabled = hasTarget;
         _dot.IsVisible = HasRule;
         ToolTip.SetTip(Button, ActiveOnPresenter.ButtonToolTip(rule, hasTarget));
         AutomationProperties.SetHelpText(Button, ActiveOnPresenter.ButtonToolTip(rule, hasTarget));
-        if (HasRule)
+        _dot[!Shape.FillProperty] = new DynamicResourceExtension(activeHere ? "AccentBrush" : "Warning");
+        if (HasRule && activeHere)
         {
-            Button[!global::Avalonia.Controls.Button.BackgroundProperty] = new DynamicResourceExtension("AccentBrush");
-            _icon[!Shape.StrokeProperty] = new DynamicResourceExtension("OnAccentBrush");
+            Button[!global::Avalonia.Controls.Button.BackgroundProperty] = new DynamicResourceExtension("SelectedTintBrush");
+            Button[!global::Avalonia.Controls.Button.BorderBrushProperty] = new DynamicResourceExtension("AccentBrush");
+            _icon[!Shape.StrokeProperty] = new DynamicResourceExtension("AccentBrush");
+        }
+        else if (HasRule)
+        {
+            Button[!global::Avalonia.Controls.Button.BackgroundProperty] = new DynamicResourceExtension("FxInactiveRuleWash");
+            Button[!global::Avalonia.Controls.Button.BorderBrushProperty] = new DynamicResourceExtension("BorderSoftBrush");
+            _icon[!Shape.StrokeProperty] = new DynamicResourceExtension("TextPrimary");
         }
         else
         {
             Button.ClearValue(global::Avalonia.Controls.Button.BackgroundProperty);
-            _icon[!Shape.StrokeProperty] = new DynamicResourceExtension("TextPrimary");
+            Button[!global::Avalonia.Controls.Button.BorderBrushProperty] = new DynamicResourceExtension("BorderBrush");
+            _icon[!Shape.StrokeProperty] = new DynamicResourceExtension("TextMuted");
         }
     }
 }

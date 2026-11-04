@@ -13,10 +13,11 @@ engine process and optional per-plug-in hosts.
 | `Source/src/TabForge.Core` | UI-framework-free logic (626 .cs files): song model, playback scheduling, audio routing rules, plug-in catalogue and rules, presets, rendering inputs, services without UI-framework types, presenters (window state and commands that a view drives, `Presenters/`, 104 files) | TabForge.AlphaTab 1.8.4-tabforge.4 (alphaTab 1.8.4 with four patches: per-import .gp3/.gp4/.gp5 bar limit, exact gpif mixer volume/balance, gpif trill speed, .gp3-.gp5 link marks without a partner note; source in `Source/vendor/alphatab`); `Source/src/TabForge.Audio.Contracts` (targets `net10.0` and `net10.0-windows`; the Windows-only files listed in its csproj build only for `net10.0-windows`; no UI-framework or app types) |
 | `Source/src/TabForge.Avalonia` | Avalonia 11 preview: `App` (Fluent theme, the Core palette and look styles) and `MainWindow` (94 `MainWindow*.cs` partials, composed in `MainWindow.Compose.cs`); 524 .cs + 5 .axaml source files; test project `TabForge.Avalonia.Tests` | Avalonia packages, `TabForge.Core` |
 | `Source/src/TabForge.Audio.Contracts` | Wire contracts: `EngineProtocol` (commands, events, framing, records), `RenderProtocol`, `SharedBlock` (shared-memory layout) | none; targets `net10.0` and `net10.0-windows` (the Windows-only pieces are `net10.0-windows` only, see its folder README) |
-| `Source/src/TabForge.AudioEngine` | Audio output, mixer, track chains, VST2/VST3 hosting, MIDI processors, recorder, clip player, GM synth, offline renderer, isolated plug-in host, native bridge | NAudio 2.2.1, MeltySynth 2.4.1, SoundTouch.Net 2.3.2, native `tfvst3.dll` |
+| `Source/src/TabForge.AudioEngine` | Audio output, mixer, track chains, VST2/VST3 hosting, MIDI processors, recorder, clip player, GM synth, offline renderer, isolated plug-in host, native bridges | NAudio 2.2.1, MeltySynth 2.4.1, SoundTouch.Net 2.3.2, native `tfvst3.dll`, native `tfvst32.exe` |
 
 `Source/native/tfvst3` is a C++ VST3 host bridge built against the Steinberg VST3 SDK (pinned by `Source/native/fetch-vst3sdk.ps1`).
-`Source/native/build-tfvst3.ps1` writes `Source/native/BUILD_PROVENANCE.md`; `Source/tools/Package-Release.ps1` checks the shipped DLL against it.
+The 32-bit VST2 helper is original C++ code (no third-party library, no VST2 SDK header); its build record is kept with the release tooling and is not part of the public export.
+`Source/native/build-tfvst3.ps1` writes `Source/native/BUILD_PROVENANCE.md`; `Source/tools/Package-Release.ps1` checks both shipped native helpers against their records.
 Versions and hashes of all components: `Source/docs/reference/SBOM.md`. Restore is locked (`packages.lock.json`, `--locked-mode`).
 
 Dependency direction inside `Source/src/TabForge.Core` and the app:
@@ -70,6 +71,12 @@ Port layers, bottom to top: `TabForge.Core` (no UI-framework types, no app types
 | TabForge.exe --plugin-host <id> <pid> ...     |   optional, one process per plug-in
 |  one plug-in instance, its editor window      |   (Preferences > Audio & Plug-ins > separate process)
 +-----------------------------------------------+
+
+Linux only: a Windows plug-in is never loaded by the Linux engine. Vst32Bridge starts the
+32- or 64-bit helper (tfvst32.exe / tfvst64.exe) under the bundled Wine with the same kind of
+per-plug-in audio block, but a loopback-TCP control channel and an explicit shared-memory file
+(RemotePlugin is the engine-side proxy). Its build notes and records are kept with the release tooling and are not part
+of the public export.
 ```
 
 - **UI process.** Owns the song, documents, undo, settings and the desired audio configuration. Never runs plug-ins and never
@@ -119,8 +126,13 @@ The callback is `MixEngine.Read` (NAudio `ISampleProvider`) on the driver's thre
 4. Communication in and out is lock-free: the MIDI ring (SPSC), `Volatile`/`Interlocked` published references, `Interlocked`
    counters (meters, heartbeat, latency).
 5. Plug-in calls cannot be made real-time safe: a plug-in's `process` is native code on the audio thread. Every call sets a
-   breadcrumb first (section 8). Isolated plug-ins are called through `PluginHostLink` with a time budget.
+   breadcrumb first (section 8) and clears it when that stage returns, so a later fault is not blamed on the last plug-in.
+   Isolated plug-ins are called through `PluginHostLink` with a time budget. `IPluginInstance.TailSamples` / `IPluginInstance.LatencySamples` queries that
+   run plug-in code also hold the main-thread breadcrumb.
 6. The callback publishes a heartbeat timestamp each time it finishes; the watchdog reads it.
+7. The portable (Linux/Wine) audio block signals with a flag in shared memory: a short spin, then a 2 ms yield window, then
+   1 ms sleeps. Windows keeps the named event pair. The Wine/TCP control channel is polled separately with its own budget;
+   neither transport is the named-pipe path described in section 3.
 
 Nothing in the repository measures rules 1-2 (no allocated-bytes-per-callback or p99 test). Treat them as rules to review.
 
@@ -228,11 +240,16 @@ start disposes per-writer files and releases the input device. Capture opens onl
 ## 8. Plug-in lifetime, isolation and the watchdog
 
 - **Loading** runs on the engine's main thread (`LoadChain`), keyed by `PluginSpec.Id`. A quarantined plug-in (`Skip`) is not loaded.
-  VST2 (`Vst2Plugin`) and VST3 (native `tfvst3.dll`) implement `IPluginInstance`.
+  VST2 (`Vst2Plugin`) and VST3 (native `tfvst3.dll`) implement `IPluginInstance`. On Linux, Windows VST2/VST3 plug-ins are loaded
+  by `tfvst32.exe` / `tfvst64.exe` under the bundled Wine (`Vst32Bridge`, `WineRuntime`) and reached through `RemotePlugin`.
 - **In-process** (default): a native crash kills the engine; the UI restarts it with the breadcrumb-blamed plug-in switched off.
+  A native 64-bit VST2 that already did so is remembered in `PluginSettings.CrashProne` and loaded in the isolation host next
+  time (`PluginSpec.Isolate`); the first fault still ends that engine run, because the in-process route has no SEH guard.
 - **Separate process per plug-in** (`RemotePlugin` / `--plugin-host`): only that process dies on a crash or hang. Effects pass the sound
   through, instruments go silent, `Crashed` is raised once on the engine's main thread, and the plug-in is lost for the session.
-  **This is crash isolation, not a security sandbox.** The process runs as the same user with the same rights as TabForge.
+  The Wine helpers are already isolated this way, with a TCP control channel and an explicit file-backed block instead of the
+  named pipe and page-file mapping. **This is crash isolation, not a security sandbox.** The process runs as the same user with
+  the same rights as TabForge.
 - **Plug-in trust boundary** (`Source/src/TabForge.Core/Plugins/PluginTrust.cs`): songs, rigs, presets and auto-load chains only *name* plug-in paths.
   `AudioEngineClient.Sync` builds specs through `PluginTrust.BuildSpecs`. A path loads only if it is in the user's scan (this
   session's or the remembered list), inside a scanned folder on a local fixed drive, or in `PluginSettings.ApprovedPluginPaths`
@@ -246,7 +263,8 @@ start disposes per-writer files and releases the input device. Capture opens onl
 - Everything not approved is sent as `Skip`, so no native code runs before the user decides. The main window shows a "Review..." bar;
   the FX window shows "Blocked: not approved" with an Allow button. Adding a plug-in from the FX window's browser approves it.
 - **Breadcrumb** (`SharedBlock`): before a plug-in call the engine records slot, index and plug-in path in shared memory, so the UI can
-  read it after the engine dies. Offline render has one breadcrumb per worker thread.
+  read it after the engine dies. Each chain stage clears it when its plug-in call returns, including the non-finite early return;
+  offline render has one breadcrumb per worker thread. Main-thread latency and tail queries take the same breadcrumb.
 - **Watchdog** (`EngineHost`), two independent checks:
   1. Main thread: one queued command running for over 10 s **and** a breadcrumb naming a plug-in call -> `Environment.Exit(70)`; the
      UI blames that plug-in and restarts without it. A hang with no breadcrumb is not attributed.
@@ -297,7 +315,10 @@ raises about 60 Hz position callbacks.
 | Input limits | `Services/Files/InputLimits.cs`, `FilePathPolicy.cs`, `ProjectValidator` |
 | Documents | `Documents/*` (session, controller, undo history, tab transfer, playback-on-switch policy) |
 | Views (notation, arrangement, timeline, fretboard) | `Source/src/TabForge.Avalonia/AREA-MAP.md` lists the files that own each area |
-| MIDI compiler | `Playback/ScoreToMidiCompiler.cs` with partials `.Techniques` (note emission, dead, ghost and palm mute, grace, slides, trills, tremolo, bends, vibrato, whammy, fade-in), `.Clips`, `.Metronome` |
+| MIDI compiler | `Playback/ScoreToMidiCompiler.cs` with partials `.Techniques` (note emission, dead, ghost and palm mute, grace, slides, trills, tremolo, bends, vibrato, whammy, fade-in), `.Clips`, `.Metronome`, `.Automation` (automation-lane playback over the performed song) |
+| Automation lanes | `Models/AutomationLane.cs`, `Models/AutomationLaneCommands.cs`, `Models/AutomationLaneJsonConverter.cs` (one lane per track or master, undoable commands, bounded project JSON), `Playback/AutomationLaneMapper.cs` (imported mix-table events to lanes), the lane strips `Source/src/TabForge.Avalonia/Platform/AutomationLaneTimelineLayer.cs`, `Source/src/TabForge.Avalonia/Platform/AutomationLaneFaderSync.cs`, `Source/src/TabForge.Avalonia/Platform/AutomationLaneMetrics.cs`, `Source/src/TabForge.Avalonia/Views/AutomationLanePainter.cs`, `Source/src/TabForge.Avalonia/Views/AutomationLaneItemPicker.cs`, lane toggles in `Source/src/TabForge.Avalonia/Platform/TrackHeaderColumn.cs` |
+| Capos, tunings and fretboard rules | `Models/PartialCapo.cs`, `Models/PartialCapoRules.cs` (up to 4 partials, effective capo, score line), tuning presets (`Services/Instruments/TuningPresets.cs`, `Presenters/TuningPresetMenu.cs`, `Presenters/TuningUserPresets.cs`), `Presenters/FretboardCapoRules.cs`, `Presenters/FretboardWoodTiling.cs` (capo grab and drag fret, aspect-preserving wood tiling) |
+| Process exit, matrix native, Linux uid | `Source/src/TabForge.Avalonia/Platform/Windows/WindowsProcessExit.cs` (one-shot matrix exit without plug-in detach), `Source/src/TabForge.Avalonia/Diagnostics/PluginMatrix.Native.Windows.cs` (the Win32 externs the matrix diagnostics call), `Source/src/TabForge.Audio.Contracts/Platform/Linux/LibcUid.cs` (libc geteuid for the per-user shared-memory folder) |
 | UI host | `Source/src/TabForge.Avalonia/MainWindow/MainWindow.Compose.cs` with the `MainWindow*.cs` partials (composition root; model edits end in `DocumentEdits.Run`; no musical logic) |
 | Audio client | `Source/src/TabForge.Core/Audio/AudioEngineClient.cs`, `AvaloniaEngineRouting.cs`, `RoutedMidiOutput.cs`, `TimelineSongClock.cs`, `WaveformService.cs` (outline slots, queue and worker; `WaveformCache.cs` holds the decoder and `WaveformCache.Default`) |
 | Recording rules | `Source/src/TabForge.Core/Features/Recording/` (capture, takes, landing and the repeat-take writes), `Models/TakeGroups.cs` (the shared read-only take-group rules), `Source/src/TabForge.Avalonia/Features/Recording/Presenter/` (the toggle, live takes, landing and undo step), `Source/src/TabForge.Avalonia/Features/Recording/View/` (the armed sub-rows, input picker and live-take overlay) |
@@ -338,7 +359,7 @@ Known limits:
 - Sidechain works only for VST2 plug-ins with four or more inputs. VST3 and isolated plug-ins have no MIDI output. Render has no delay
   compensation for sidechain or buses. Vendor drum maps are unverified.
 - Rendering, device, DPI and native-window behaviour are confirmed by the live desktop pass, not by the headless suite.
-- Executables are not code-signed yet; see `Source/docs/reference/SBOM.md` and `Source/native/BUILD_PROVENANCE.md` for supply-chain records.
+- Executables are not code-signed yet; see `Source/docs/reference/SBOM.md` and `Source/native/BUILD_PROVENANCE.md` for supply-chain records (the SBOM also covers the 32-bit VST2 helper).
 
 ## 13. Central tables
 

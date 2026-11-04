@@ -59,7 +59,8 @@ internal sealed partial class ScoreToMidiCompiler
         public double WrittenEndMs;
     }
 
-    public ScoreToMidiCompiler(SongProject project, PlaybackOptions opt, IReadOnlyList<int>? playbackOrder = null, CancellationToken cancel = default)
+    public ScoreToMidiCompiler(SongProject project, PlaybackOptions opt, IReadOnlyList<int>? playbackOrder = null,
+        CancellationToken cancel = default)
     {
         _project = project;
         _opt = opt;
@@ -134,7 +135,7 @@ internal sealed partial class ScoreToMidiCompiler
 
         _timeline.TotalMs = cursorMs;
         EmitClipNotes();
-        if (_clipChased) { _timeline.StartedAfterMixPoints = true; ApplyChase(); }   // the setup carries the lane values in force at the start
+        if (_clipChased) { _timeline.StartedAfterMixPoints = true; ApplyChase(); }   // the setup carries the mix values in force at the start
         EmitFadeInEnvelopes();
         SustainResolver.Resolve(_timeline, _channels, _opt.LetRingCapMs);
         return _timeline;
@@ -165,7 +166,7 @@ internal sealed partial class ScoreToMidiCompiler
             contentSlots = ContentSlots(barIndex);
             contentCache[barIndex] = contentSlots;
         }
-        return contentSlots > 0.25 && contentSlots < slots - 0.01 ? barMs * contentSlots / slots : barMs;
+        return PerformedBarLength.IsShort(contentSlots, slots) ? barMs * contentSlots / slots : barMs;
     }
 
     /// <summary>Emits the performed bar for every sounding track; a simile bar repeats the notes of the bar one or two before it.</summary>

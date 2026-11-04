@@ -11,8 +11,8 @@ using TabForge.Presenters;
 
 namespace TabForge.Avalonia.Views;
 
-// Owns: the toolbar's second row: how many notes are selected and their Start, End, Length, Pitch, Velocity and Muted, as numbers you can
-//       type, with Audition, Follow playback, zoom, Ghosts and the track chip at the right end. One note shows its own values; several show a range ("C4 … G4"), and a typed start, pitch or velocity shifts them all by the same
+// Owns: the toolbar's selection fields: how many notes are selected and their Start, End, Length, Pitch, Velocity and Muted, as numbers you can
+//       type, followed by Audition, Follow playback, zoom, Ghosts and the track chip in the shared flow. One note shows its own values; several show a range ("C4 … G4"), and a typed start, pitch or velocity shifts them all by the same
 //       amount while a typed length or mute sets them all. Each committed field (Enter or leaving it) is one undo step.
 // Does not own: the text formats (PianoRollPositionText) or the edits (PianoRollEdits through PianoRollPresenter).
 // Tests: TabForge.Avalonia.Tests.PianoRollViewTests.
@@ -33,10 +33,9 @@ public sealed partial class PianoRollView
 
     private static TextBox Field(string name) => new() { Name = "PianoRoll" + name, MinWidth = FieldSize, VerticalAlignment = VerticalAlignment.Center };
 
-    private Control BuildInfoLine()
+    private void BuildInfoLine(WrapPanel middle)
     {
-        // Row 2: the selected notes' values on the left (wrapping as whole fields), Audition, Follow, zoom, Ghosts and the track chip at the right end.
-        var middle = PianoRollToolbarLayout.Flow();
+        // Append whole label/value pairs to the same flow as the captioned groups.
         middle.Children.Add(_count);
         foreach (var (label, box) in new[] { ("Start", _start), ("End", _end), ("Length", _length), ("Pitch", _pitch), ("Velocity", _velocity), ("Channel", _channel) })
         {
@@ -61,8 +60,7 @@ public sealed partial class PianoRollView
             Surface.Run(Presenter.CommitAsync(PianoRollEdits.SetMuted(Presenter.Notes, Presenter.Selected.ToList(), want), PianoRollEditKind.Expression, "Mute notes"));
         };
         middle.Children.Add(_muted);
-        var row = PianoRollToolbarLayout.FillRow(PianoRollToolbarLayout.Row2Name, middle, BuildRowTwoRight());
-        return new Border { Child = row }.WithPadding(PianoRollToolbarLayout.GroupGap, PianoRollToolbarLayout.InnerGap).WithMargin(0, PianoRollToolbarLayout.RowGap, 0, 0);
+        BuildViewControls(middle);
     }
 
     /// <summary>Shows the selection's values (empty fields with none selected).</summary>

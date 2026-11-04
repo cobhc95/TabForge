@@ -51,9 +51,31 @@ public sealed class EditingSettings
     public string FretNumberSize { get; set; } = FretNumberSizes.Large;
     /// <summary>Note marker (bubble and number) size, 60 to 160 percent in 10% steps; 80 is the default, 100 is the original look.</summary>
     public int FretMarkerSizePercent { get; set; } = 90;
+    /// <summary>Brightness of the entire physical neck (wood, inlays, wires, strings and capo), independent of note markers.</summary>
+    public int FretboardBrightness { get; set; } = FretboardStyles.DefaultBoardBrightness;
+    /// <summary>Brightness of cursor/playback note colours, independent of decorative position inlays and scale highlights.</summary>
+    public int FretboardNoteBrightness { get; set; } = FretboardStyles.DefaultNoteBrightness;
     /// <summary>Fretboard string spacing relative to the fret width: "Compact", "Natural" (default) or "Wide" (at most 1.5x natural).</summary>
     public string FretStringSpacing { get; set; } = FretStringSpacings.Natural;
     public int FretboardFrets { get; set; } = 24;
+    /// <summary>The fretboard's wood (see <see cref="FretboardStyles.Woods"/>); the default is the Rosewood preset's.</summary>
+    public string FretboardWood { get; set; } = FretboardStyles.DefaultLook.Wood;
+    /// <summary>The binding along the board's top and bottom edges (see <see cref="FretboardStyles.Bindings"/>).</summary>
+    public string FretboardBinding { get; set; } = FretboardStyles.DefaultLook.Binding;
+    /// <summary>The position inlays' shape (see <see cref="FretboardStyles.InlayShapes"/>).</summary>
+    public string FretboardInlayShape { get; set; } = FretboardStyles.DefaultLook.InlayShape;
+    /// <summary>The material the inlays are cut from (see <see cref="FretboardStyles.InlayMaterials"/>).</summary>
+    public string FretboardInlayMaterial { get; set; } = FretboardStyles.DefaultLook.InlayMaterial;
+    /// <summary>The capo's finish (see <see cref="FretboardStyles.CapoLooks"/>).</summary>
+    public string FretboardCapoLook { get; set; } = FretboardStyles.DefaultLook.CapoLook;
+    /// <summary>The strings' finish (see <see cref="FretboardStyles.StringLooks"/>).</summary>
+    public string FretboardStringLook { get; set; } = FretboardStyles.DefaultLook.StringLook;
+    /// <summary>How far a sounding string swings: "Off", "Mild" (default), "Medium" or "Strong".</summary>
+    public string FretboardVibration { get; set; } = "Mild";
+    /// <summary>How fast a sounding string swings: "Slow", "Normal" (default) or "Fast".</summary>
+    public string FretboardVibrationSpeed { get; set; } = "Normal";
+    /// <summary>Show the string numbers in the gutter left of the nut; off by default, as on a real neck.</summary>
+    public bool FretboardStringNumbers { get; set; }
     public int PreviewHorizon { get; set; } = 6;
     public bool PreviewNotesEnabled { get; set; } = true;
     /// <summary>Show the grey trail of notes just played (the legend's "recent"); off by default, and a settings file without the key loads as off.</summary>

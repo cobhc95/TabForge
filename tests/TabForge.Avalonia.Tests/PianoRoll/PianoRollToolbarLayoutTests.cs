@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Headless.XUnit;
+using Avalonia.LogicalTree;
 using Avalonia.VisualTree;
 using TabForge.Avalonia.Views;
 using TabForge.Documents;
@@ -11,11 +12,52 @@ using Xunit;
 
 namespace TabForge.Avalonia.Tests;
 
-// Owns: the piano roll toolbar's two-row layout: every button, dropdown, value box and check in a row shares one height and one vertical centre.
+// Owns: the piano roll toolbar's compact shared flow and consistent control heights.
 // Does not own: the edits, the commit rules or the other gestures (PianoRollViewTests).
 // Tests: PianoRollView.BuildToolbar, PianoRollView.BuildInfoLine, PianoRollToolbarLayout.
 public sealed class PianoRollToolbarLayoutTests
 {
+    [AvaloniaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AllGroupsShareAvailableWidthAndReflowWithoutOverlap(bool tab)
+    {
+        var window = Show(tab ? PianoRollSongs.Tab() : PianoRollSongs.Midi());
+        try
+        {
+            var toolbar = window.GetVisualDescendants().OfType<DockPanel>().Single(p => p.Name == PianoRollToolbarLayout.ToolbarName);
+            var flow = Assert.IsType<WrapPanel>(Assert.Single(toolbar.Children));
+            var step = flow.GetVisualDescendants().OfType<ToggleButton>().Single(b => b.Name == "PianoRollStepInput");
+            foreach (var stepOn in new[] { false, true })
+            {
+                step.IsChecked = stepOn;
+                foreach (var width in new[] { 2000, 1066, 900, 520, 2000 })
+                {
+                    window.Width = width;
+                    window.UpdateLayout();
+                    var items = flow.Children.Where(c => c.IsVisible).ToList();
+                    Assert.True(items.Count > 12, "Fields and view controls must join the captioned groups in the same flow.");
+                    for (var i = 0; i < items.Count; i++)
+                    {
+                        var item = items[i];
+                        Assert.True(item.Bounds.Right <= flow.Bounds.Width + 1 || item.Bounds.Width > flow.Bounds.Width);
+                        for (var j = 0; j < i; j++)
+                            Assert.False(item.Bounds.Deflate(0.5).Intersects(items[j].Bounds.Deflate(0.5)), "Toolbar groups overlap.");
+                        if (i == 0) continue;
+                        var previous = items[i - 1];
+                        var sameLine = item.Bounds.Top < previous.Bounds.Bottom && previous.Bounds.Top < item.Bounds.Bottom;
+                        if (sameLine)
+                            Assert.True(item.Bounds.Left >= previous.Bounds.Right + flow.ItemSpacing - 1);
+                        else
+                            Assert.True(previous.Bounds.Right + flow.ItemSpacing + item.Bounds.Width > flow.Bounds.Width - 1,
+                                $"A group wrapped despite fitting in the preceding line (width {width}, item {i}, previous {previous.Bounds}, item {item.Bounds}, flow {flow.Bounds}).");
+                    }
+                }
+            }
+        }
+        finally { window.Close(); }
+    }
+
     private static Window Show(SongDocument document) => Show(document, new FollowSettings());
 
     private static Window Show(SongDocument document, FollowSettings follow)
@@ -28,7 +70,7 @@ public sealed class PianoRollToolbarLayoutTests
         return window;
     }
 
-    private static void RowSharesOneHeightAndCentre(Window window, string rowName)
+    private static void ToolbarControlsShareOneHeight(Window window, string rowName)
     {
         var row = window.GetVisualDescendants().OfType<DockPanel>().Single(p => p.Name == rowName);
         var controls = row.GetVisualDescendants()
@@ -39,22 +81,15 @@ public sealed class PianoRollToolbarLayoutTests
         Assert.True(controls.Count >= 5, rowName + " should hold at least five toolbar controls, found " + controls.Count + ".");
         var heights = controls.Select(c => c.Bounds.Height).ToList();
         Assert.True(heights.Max() - heights.Min() < 0.5, rowName + " heights differ: " + string.Join(", ", heights.Select(h => h.ToString("0.0"))));
-        var centres = controls
-            .Select(c => c.TranslatePoint(new Point(c.Bounds.Width / 2, c.Bounds.Height / 2), window))
-            .ToList();
-        Assert.All(centres, p => Assert.NotNull(p));
-        var ys = centres.Select(p => p!.Value.Y).ToList();
-        Assert.True(ys.Max() - ys.Min() < 1.0, rowName + " vertical centres differ: " + string.Join(", ", ys.Select(y => y.ToString("0.0"))));
     }
 
     [AvaloniaFact]
-    public void EachToolbarRowSharesOneHeightAndOneVerticalCentre()
+    public void ToolbarControlsShareOneHeightAcrossWrappedLines()
     {
         var window = Show(PianoRollSongs.Midi());
         try
         {
-            RowSharesOneHeightAndCentre(window, PianoRollToolbarLayout.Row1Name);
-            RowSharesOneHeightAndCentre(window, PianoRollToolbarLayout.Row2Name);
+            ToolbarControlsShareOneHeight(window, PianoRollToolbarLayout.ToolbarName);
         }
         finally
         {
@@ -73,10 +108,9 @@ public sealed class PianoRollToolbarLayoutTests
         {
             var follow = FollowButton(window);
             Assert.True(follow.IsChecked == true, "Follow playback should be on with no saved value.");
-            var row1 = window.GetVisualDescendants().OfType<DockPanel>().Single(p => p.Name == PianoRollToolbarLayout.Row1Name);
-            var row2 = window.GetVisualDescendants().OfType<DockPanel>().Single(p => p.Name == PianoRollToolbarLayout.Row2Name);
-            Assert.Contains(row2.GetVisualDescendants(), c => ReferenceEquals(c, follow));
-            Assert.DoesNotContain(row1.GetVisualDescendants(), c => ReferenceEquals(c, follow));
+            var row = window.GetVisualDescendants().OfType<DockPanel>().Single(p => p.Name == PianoRollToolbarLayout.ToolbarName);
+            Assert.Contains(row.GetVisualDescendants(), c => ReferenceEquals(c, follow));
+            Assert.Equal(3, follow.GetLogicalAncestors().OfType<Border>().First().GetVisualDescendants().OfType<Button>().Count());
         }
         finally
         {
@@ -104,7 +138,7 @@ public sealed class PianoRollToolbarLayoutTests
         var window = Show(PianoRollSongs.Midi());
         try
         {
-            var row = window.GetVisualDescendants().OfType<DockPanel>().Single(p => p.Name == PianoRollToolbarLayout.Row1Name);
+            var row = window.GetVisualDescendants().OfType<DockPanel>().Single(p => p.Name == PianoRollToolbarLayout.ToolbarName);
             foreach (var name in new[] { "PianoRollLockScale", "PianoRollScaleButton" })
             {
                 var control = row.GetVisualDescendants().OfType<Button>().Single(b => b.Name == name);

@@ -192,11 +192,14 @@ public class InstrumentPickerRunTests
         Assert.Equal(undo, doc.Undo.UndoCount);
         Close(picker, "OK");
 
-        Assert.Equal(undo + 1, doc.Undo.UndoCount);
-        Assert.Equal(CommitLabel, doc.Undo.Latest?.Label);
+        // Draft/commit: the pick inside the properties stores no step; the window's OK commits it with the rest as one step.
+        Assert.Equal(undo, doc.Undo.UndoCount);
         Assert.Equal(target.Name, Named<TextBlock>(window, "ChooserName").Text);
         Assert.Equal(target.Program.ToString(), Named<TextBox>(window, "ProgramBox").Text);
-        window.Close();
+        Click(Named<Button>(window, "OkButton"));
+        RunQueuedUiWork();
+        Assert.Equal(undo + 1, doc.Undo.UndoCount);
+        Assert.Equal(target.Name, doc.Project.Tracks.First(t => t.Id == track.Id).InstrumentName);
     }
 
     [AvaloniaFact]

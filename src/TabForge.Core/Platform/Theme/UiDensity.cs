@@ -1,5 +1,5 @@
 // Owns: the one density and UI-scale interpretation every metric entry point shares: the Comfortable, Compact and Spacious
-//   factors and the 0.8 to 1.5 UI-scale clamp.
+//   factors and the 0.7 to 1.5 UI-scale clamp.
 // Does not own: the density setting (AppearanceSettings), the sizes the factors scale, or applying the scale to a window.
 // Tests: UiTokensTests, UiStrokesTests, UiMetricsTests.
 using System;
@@ -20,7 +20,10 @@ public static class UiDensity
     public const double DefaultScale = 1.0;
 
     /// <summary>The smallest UI scale the settings allow.</summary>
-    public const double MinScale = 0.8;
+    public const double MinScale = 0.7;
+
+    /// <summary>The reference working area, in DIPs (UiScaleRecommendation fits the interface to it, with a little headroom).</summary>
+    public const double RecommendationReferenceWidth = 1600, RecommendationReferenceHeight = 950;
 
     /// <summary>The largest UI scale the settings allow.</summary>
     public const double MaxScale = 1.5;

@@ -20,7 +20,7 @@ public static class ResetAppSettingsFile
         ResetAppSettingsGroup.Presets => new[] { "EffectPresets" },
         ResetAppSettingsGroup.PluginLibrary => new[]
         {
-            "Plugins.ApprovedPluginPaths", "Plugins.TrustRecords", "Plugins.ScanCache", "Plugins.Probed", "Plugins.Quarantined",
+            "Plugins.ApprovedPluginPaths", "Plugins.TrustRecords", "Plugins.ScanCache", "Plugins.Probed", "Plugins.Quarantined", "Plugins.CrashProne",
         },
         // Render is handled separately: it mixes last-used options with the SafetyLimiter Settings row.
         ResetAppSettingsGroup.Recents => new[] { "RememberedFolders", "MidiExport", "Video", "Plugins.RecentImpulseFiles" },

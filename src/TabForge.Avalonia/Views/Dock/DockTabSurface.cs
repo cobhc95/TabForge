@@ -31,7 +31,9 @@ public sealed class DockTabSurface : Border
     private readonly Func<string, ContextMenu?>? _menuOf;
     private readonly Action? _edited;
     private readonly StackPanel _strip = new() { Name = "DockTabs", Orientation = Orientation.Horizontal };
-    private readonly Border _body = new() { Name = "DockTabBody" };
+    // Clipped: a pane squeezed below its own minimum (the fretboard strip, the keyboard strip at a large UI scale on a small window) is
+    // arranged taller than its slot and centred on it; unclipped it would paint over the menu row, the status bar or the next pane.
+    private readonly Border _body = new() { Name = "DockTabBody", ClipToBounds = true };
     private readonly Border _stripBar;
     private (string Id, Point At, bool Dragging)? _press;
 

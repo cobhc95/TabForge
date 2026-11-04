@@ -4,26 +4,48 @@ namespace TabForge.Services;
 
 /// <summary>What the paste mapper needs to know about one side of a paste (the clip's source track or the target track).</summary>
 public sealed record InstrumentLayout(IReadOnlyList<int> StringTunings, int Capo, int NumberOfFrets, bool IsDrums,
-    string DrumMapPreset = DrumMaps.GuitarPro5, IReadOnlyList<DrumMapEntry>? CustomDrumMap = null)
+    string DrumMapPreset = DrumMaps.GuitarPro5, IReadOnlyList<DrumMapEntry>? CustomDrumMap = null, IReadOnlyList<int>? EffectiveCapos = null)
 {
     public static InstrumentLayout Of(TrackModel track) => new(
         track.StringTunings.ToArray(), Math.Max(0, track.Capo), track.NumberOfFrets,
         track.IsDrumTrack,
         string.IsNullOrEmpty(track.DrumMapPreset) ? DrumMaps.GuitarPro5 : track.DrumMapPreset,
-        track.CustomDrumMap?.Select(e => e.Clone()).ToArray());
+        track.CustomDrumMap?.Select(e => e.Clone()).ToArray(),
+        track.PartialCapos is { Count: > 0 } ? Enumerable.Range(0, track.StringTunings.Count).Select(track.EffectiveCapo).ToArray() : null);
 
     public int StringCount => StringTunings.Count;
     public int MaxFret => NumberOfFrets > 0 ? NumberOfFrets : 24;
-    public int OpenPitch(int s) => StringTunings[s] + Math.Max(0, Capo);
+
+    /// <summary>The capo the string sounds behind: its own effective capo when a partial capo covers it, else the full capo.</summary>
+    public int CapoOf(int s) => EffectiveCapos is { Count: > 0 } caps && s >= 0 && s < caps.Count ? caps[s] : Math.Max(0, Capo);
+
+    public int OpenPitch(int s) => StringTunings[s] + CapoOf(s);
     public int PitchOf(int s, int fret) => OpenPitch(s) + fret;
     public int FretOf(int s, int pitch) => pitch - OpenPitch(s);
     public bool Fits(int s, int pitch) { var f = FretOf(s, pitch); return f >= 0 && f <= MaxFret; }
     public bool FitsAnywhere(int pitch) { for (var s = 0; s < StringCount; s++) if (Fits(s, pitch)) return true; return false; }
-    public int LowestOpen => StringCount == 0 ? 0 : StringTunings.Min() + Math.Max(0, Capo);
+    public int LowestOpen
+    {
+        get
+        {
+            if (StringCount == 0) return 0;
+            var lowest = OpenPitch(0);
+            for (var s = 1; s < StringCount; s++) lowest = Math.Min(lowest, OpenPitch(s));
+            return lowest;
+        }
+    }
 
-    /// <summary>Same string count, tuning and capo: string/fret can be kept as they are.</summary>
+    /// <summary>Same string count, tuning and effective capos: string/fret can be kept as they are.</summary>
     public bool SameLayout(InstrumentLayout other) =>
-        IsDrums == other.IsDrums && Capo == other.Capo && StringTunings.SequenceEqual(other.StringTunings);
+        IsDrums == other.IsDrums && Capo == other.Capo && StringTunings.SequenceEqual(other.StringTunings)
+        && SameEffectiveCapos(other);
+
+    private bool SameEffectiveCapos(InstrumentLayout other)
+    {
+        if (StringCount != other.StringCount) return false;
+        for (var s = 0; s < StringCount; s++) if (CapoOf(s) != other.CapoOf(s)) return false;
+        return true;
+    }
 }
 
 /// <summary>Paste Special mapping mode.</summary>

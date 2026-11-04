@@ -16,7 +16,7 @@ using TabForge.Presenters;
 
 namespace TabForge.Avalonia.Views.Fx;
 
-// Owns: what the rows of the FX chain list show: a plug-in row (tick, INST/FX, name, vendor) and a container row (chevron, folder
+// Owns: what the rows of the FX chain list show: a plug-in row (tick, INST/FX, name, vendor and bridged format) and a container row (chevron, folder
 //   glyph, tick, name, number of plug-ins), indented by depth; the rows under a collapsed container are left out. Also the folder
 //   drawings: the open folder of a drop target and the New container button.
 // Does not own: the selection and drag of rows (FxChainList), what a tick or chevron does (FxChainWindow, FxChainContainers).
@@ -156,9 +156,9 @@ public static class FxChainRows
             Text = slot.Name, TextTrimming = TextTrimming.CharacterEllipsis, FontStyle = slot.GroupBypassed ? FontStyle.Italic : FontStyle.Normal,
             [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextBrush"),
         });
-        if (slot.Vendor.Length > 0)
+        if (FxChainPresenter.PluginDetail(slot) is { Length: > 0 } detail)
         {
-            var vendor = new TextBlock { Text = slot.Vendor, FontSize = SmallFontSize, TextTrimming = TextTrimming.CharacterEllipsis, Name = "RowVendor" };
+            var vendor = new TextBlock { Text = detail, FontSize = SmallFontSize, TextTrimming = TextTrimming.CharacterEllipsis, Name = "RowVendor" };
             vendor[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("SecondaryTextBrush");
             names.Children.Add(vendor);
         }

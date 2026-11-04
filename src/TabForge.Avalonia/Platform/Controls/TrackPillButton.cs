@@ -48,13 +48,21 @@ public sealed class TrackPillButton : ToggleButton
     /// <summary>The track's colour as the song stores it (a hex text).</summary>
     public string ColourHex { get; }
 
+    /// <summary>The displayed full-capo fret, or zero when no capo is fitted.</summary>
+    public int Capo { get; }
+
+    /// <summary>True when the track also has at least one partial capo (the badge then ends with a plus).</summary>
+    public bool HasPartials { get; }
+
     /// <summary>The dot of the capsule, filled with the track's colour.</summary>
     public Ellipse Dot => _dot;
 
-    public TrackPillButton(string name, string colourHex, string toolTip)
+    public TrackPillButton(string name, string colourHex, string toolTip, int capo = 0, bool hasPartials = false)
     {
         TrackName = name;
         ColourHex = colourHex;
+        Capo = capo;
+        HasPartials = hasPartials;
         Classes.Add(LookClass);
         // The look sets only control properties, so the capsule carries its own one-border template that paints them (fill, outline, radius).
         Template = AvaloniaButtonTemplates.SingleBorder(BorderPartName);
@@ -67,7 +75,16 @@ public sealed class TrackPillButton : ToggleButton
         var label = new TextBlock { Text = name, FontSize = NameSize, TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = NameMaxWidth, VerticalAlignment = VerticalAlignment.Center };
         // The name follows the capsule's foreground, which the look sets for each state (the app's TextBlock style would otherwise paint its own).
         label.Bind(TextBlock.ForegroundProperty, this.GetObservable(ForegroundProperty));
-        Content = new StackPanel { Orientation = Orientation.Horizontal, Children = { _dot, label } };
+        var content = new StackPanel { Orientation = Orientation.Horizontal, Children = { _dot, label } };
+        if (capo > 0 || hasPartials)
+        {
+            var badgeText = capo > 0 ? $"  Capo {capo}" : "  Partial";
+            if (hasPartials) badgeText += " +";
+            var badge = new TextBlock { Text = badgeText, FontSize = NameSize, VerticalAlignment = VerticalAlignment.Center };
+            badge.Bind(TextBlock.ForegroundProperty, this.GetObservable(ForegroundProperty));
+            content.Children.Add(badge);
+        }
+        Content = content;
         Padding = CapsulePadding;
         MinHeight = MinimumHeight;
         BorderThickness = new Thickness(OutlineWidth);
@@ -76,8 +93,9 @@ public sealed class TrackPillButton : ToggleButton
         ToolTip.SetTip(this, toolTip);
     }
 
-    /// <summary>True when the capsule still shows this track's name and colour, so the strip need not rebuild it.</summary>
-    public bool Shows(string name, string colourHex) => TrackName == name && ColourHex == colourHex;
+    /// <summary>True when the capsule still shows this track's name, colour and capos, so the strip need not rebuild it.</summary>
+    public bool Shows(string name, string colourHex, int capo = 0, bool hasPartials = false) =>
+        TrackName == name && ColourHex == colourHex && Capo == capo && HasPartials == hasPartials;
 
     /// <summary>The idle colours of a capsule (panel fill, soft outline, the normal text colour), for the strip that holds capsules to add to its styles; it
     /// matches only an idle capsule, so the look's hover, press and checked states (app styles, further from the capsule) still show.</summary>

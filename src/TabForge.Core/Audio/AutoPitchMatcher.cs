@@ -44,7 +44,14 @@ public sealed class AutoPitchMatcher
 
     /// <summary>Test notes in the track's range: the lowest open string, a fifth and an octave above.</summary>
     public static int[] NotesFor(TrackModel track)
-        => PitchMatch.TestNotes(track.StringTunings.Count > 0 ? track.StringTunings.Min() + track.Capo : null, track.Kind == TrackKind.Bass ? 28 : 40);
+        => PitchMatch.TestNotes(track.StringTunings.Count > 0 ? LowestOpen(track) : null, track.Kind == TrackKind.Bass ? 28 : 40);
+
+    private static int? LowestOpen(TrackModel track)
+    {
+        var lowest = track.StringTunings[0] + track.EffectiveCapo(0);
+        for (var s = 1; s < track.StringTunings.Count; s++) lowest = Math.Min(lowest, track.StringTunings[s] + track.EffectiveCapo(s));
+        return lowest;
+    }
 
     private void OnAck(ChainAck ack)
     {

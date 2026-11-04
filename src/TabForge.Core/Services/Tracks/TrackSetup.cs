@@ -54,30 +54,51 @@ public static partial class TrackSetup
         track.Kind = kind;
         track.StringTunings = strings;
         track.Capo = 0;
+        track.PartialCapos = null;
         return true;
     }
 
     /// <summary>
-    /// Sets the capo. Fret numbers are relative to the capo, so the written frets stay and the sounding pitch of every
-    /// note moves with it (sounding pitch = open string + capo + fret). Drum tracks have no capo.
+    /// Sets the full capo, keeping the partials. Fret numbers are relative to the capo, so the written frets stay and the sounding
+    /// pitch of each note moves with its string's effective capo. Drum tracks have no capo.
     /// </summary>
-    public static void SetCapo(TrackModel track, int capo)
+    public static void SetCapo(TrackModel track, int capo) => ApplyCapo(track, capo, track.PartialCapos);
+
+    /// <summary>Sets the partial capos, keeping the full capo; every note moves with its string's effective capo.</summary>
+    public static void SetPartialCapos(TrackModel track, IReadOnlyList<PartialCapo>? partials) => ApplyCapo(track, track.Capo, partials);
+
+    /// <summary>Sets the full and partial capos in one note pass (the Track properties OK path: one edit, one undo step).
+    /// <paramref name="stringCount"/> is the track's string count AFTER the same edit's tuning change, so a partial on a
+    /// string being added is not dropped before that change; it defaults to the current count.</summary>
+    public static void SetCapoAndPartials(TrackModel track, int capo, IReadOnlyList<PartialCapo>? partials, int? stringCount = null) =>
+        ApplyCapo(track, capo, partials, stringCount);
+
+    // One pitch pass: a note moves by the change of ITS string's effective capo. A string behind a higher partial capo does not
+    // move when the full capo changes below it, and a partial below the full capo adds nothing.
+    private static void ApplyCapo(TrackModel track, int capo, IReadOnlyList<PartialCapo>? partials, int? stringCount = null)
     {
         capo = Math.Max(0, capo);
-        var delta = capo - Math.Max(0, track.Capo);
-        if (delta != 0 && track.Kind != TrackKind.Drums && track.MidiChannel != 9)
+        var drums = track.Kind == TrackKind.Drums || track.MidiChannel == 9;
+        var next = drums ? null : PartialCapoRules.Normalize(partials, stringCount ?? track.StringTunings.Count);
+        var oldCapo = Math.Max(0, track.Capo);
+        var moved = capo != oldCapo || !PartialCapoRules.Same(track.PartialCapos, next);
+        if (moved && !drums)
         {
             foreach (var measure in track.Measures)
                 foreach (var cell in measure.Cells.Concat(measure.Voice2Cells))
                     foreach (var note in cell.Notes)
                     {
                         if (note.StringIndex < 0) continue;
+                        var delta = PartialCapoRules.EffectiveCapo(capo, next, note.StringIndex)
+                            - PartialCapoRules.EffectiveCapo(oldCapo, track.PartialCapos, note.StringIndex);
+                        if (delta == 0) continue;
                         note.MidiValue = Math.Clamp(note.MidiValue + delta, 0, MidiLimits.Max);
                         if (note.SlideTargetMidi > 0) note.SlideTargetMidi = Math.Clamp(note.SlideTargetMidi + delta, 0, MidiLimits.Max);
                         if (note.TrillTargetMidi > 0) note.TrillTargetMidi = Math.Clamp(note.TrillTargetMidi + delta, 0, MidiLimits.Max);
                     }
         }
         track.Capo = capo;
+        track.PartialCapos = next;
     }
 
     /// <summary>
@@ -102,10 +123,11 @@ public static partial class TrackSetup
                     }
                     else
                     {
-                        var fret = note.MidiValue - tunings[note.StringIndex] - track.Capo;
+                        var fret = note.MidiValue - tunings[note.StringIndex] - track.EffectiveCapo(note.StringIndex);
                         if (fret >= 0 && fret <= track.NumberOfFrets) note.Fret = fret;
                     }
                 }
         track.StringTunings = tunings.ToList();
+        track.PartialCapos = PartialCapoRules.Normalize(track.PartialCapos, tunings.Count);
     }
 }

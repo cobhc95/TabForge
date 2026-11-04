@@ -20,13 +20,18 @@ namespace TabForge.Avalonia.Platform;
 public sealed partial class InstrumentPanelView
 {
     /// <summary>The label inside a marker: its note name when note names are on, else its fret number.</summary>
-    private string LabelOf(NoteEvent note) => NoteNameOf(note.StringIndex, note.Fret) ?? FretLabel(note.Fret);
+    private string LabelOf(NoteEvent note) => NoteNameOf(note.StringIndex, note.Fret) ?? FretLabel(ShownFret(note.StringIndex, note.Fret));
+
+    /// <summary>The fret number a marker shows: the written fret plus its string's capo, so the dot names its real place on the neck.</summary>
+    private int ShownFret(int stringIndex, int writtenFret) =>
+        writtenFret + (_track?.EffectiveCapo(stringIndex) ?? 0);
 
     // The labels a frame draws, looked up rather than built: a pitch name depends only on its MIDI pitch, and a fret number only on the fret.
     // Keys: the pitch and the fret, each 0 to 127. Ceiling: 128 entries each, filled as they are first drawn. Thread: UI thread only.
     private const int LabelCacheSize = 128;
     private readonly string?[] _pitchNames = new string?[LabelCacheSize];
     private readonly string?[] _fretLabels = new string?[LabelCacheSize];
+    private readonly string?[] _openPitchNames = new string?[LabelCacheSize];
 
     private string FretLabel(int fret) => fret is >= 0 and < LabelCacheSize ? _fretLabels[fret] ??= fret.ToString() : fret.ToString();
 
@@ -36,7 +41,10 @@ public sealed partial class InstrumentPanelView
 
     /// <summary>The label beside the nut for a string: its open note with the octave under the note names setting, else its number.</summary>
     internal string StringLabel(int stringIndex) =>
-        _look.ShowNoteNames && stringIndex < Tuning.Count ? MusicTheoryService.NoteName(Tuning[stringIndex]) : (stringIndex + 1).ToString();
+        _look.ShowNoteNames && stringIndex >= 0 && stringIndex < Tuning.Count ? OpenPitchName(Tuning[stringIndex]) : FretLabel(stringIndex + 1);
+
+    private string OpenPitchName(int pitch) => pitch is >= 0 and < LabelCacheSize
+        ? _openPitchNames[pitch] ??= MusicTheoryService.NoteName(pitch) : MusicTheoryService.NoteName(pitch);
 
     /// <summary>The label the track's drum map gives a sound, shown on the key map; null for a track that is not drums (the GM name then shows).</summary>
     internal string? DrumLabelOf(int midi) => _track is { Kind: TrackKind.Drums } drums ? DrumMaps.For(drums, midi).Label : null;
@@ -48,7 +56,7 @@ public sealed partial class InstrumentPanelView
     private void MarkDead(IDrawContext d, Func<string, UiColor> ink, FretboardGeometryRules.Layout layout, int stringIndex, int fret, double radius)
     {
         if (stringIndex < 0 || stringIndex >= layout.Strings) return;
-        var p = FretboardGeometryRules.PositionOf(layout, stringIndex, fret);
+        var p = FretboardGeometryRules.PositionOfTab(layout, stringIndex, fret);
         var colour = ink("InstrumentCurrent");
         d.Ellipse(null, new UiStroke(colour, DeadRingWidth), p.X, p.Y, radius, radius);
         var arm = radius * DeadCrossArm;
@@ -56,9 +64,10 @@ public sealed partial class InstrumentPanelView
         d.Line(new UiStroke(colour, DeadCrossWidth), p.X - arm, p.Y + arm, p.X + arm, p.Y - arm);
     }
 
-    /// <summary>The pitch name a marker shows under the note names setting; null shows the fret number.</summary>
+    /// <summary>The pitch name a marker shows under the note names setting; null shows the fret number.
+    /// The pitch includes the string's capo, matching the shown fret number.</summary>
     private string? NoteNameOf(int stringIndex, int fret) =>
         _look.ShowNoteNames && stringIndex >= 0 && stringIndex < Tuning.Count
-            ? PitchName(Tuning[stringIndex] + fret)
+            ? PitchName(Tuning[stringIndex] + (_track?.EffectiveCapo(stringIndex) ?? 0) + fret)
             : null;
 }

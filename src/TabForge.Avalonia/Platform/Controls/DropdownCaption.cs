@@ -20,15 +20,15 @@ public static class DropdownCaption
     /// <summary>The theme brush key of the caption and the chevron stroke.</summary>
     public const string ForegroundKey = "MutedBrush";
 
-
-    public const double FontSize = 12.65, Gap = 4;
+    /// <summary>The shared caption size and gap (single source of truth lives in DialogMetrics).</summary>
+    public const double FontSize = global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.DropdownCaptionFontSize;
+    public const double Gap = global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.DropdownCaptionGap;
     private const string ChevronData = "M 1,1 L 5,5 L 9,1";
-    private const double ChevronWidth = 10, ChevronHeight = 6, ChevronStroke = 1.4;
 
     /// <summary>A caption text block in the shared font, size and colour.</summary>
     public static TextBlock Caption(string text)
     {
-        var caption = new TextBlock { Text = text, FontSize = FontSize, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+        var caption = new TextBlock { Text = text, FontSize = global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.DropdownCaptionFontSize, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center };
         caption[!TextBlock.ForegroundProperty] = new DynamicResourceExtension(ForegroundKey);
         return caption;
     }
@@ -38,7 +38,7 @@ public static class DropdownCaption
     {
         var chevron = new Path
         {
-            Name = ChevronName, Data = Geometry.Parse(ChevronData), Width = ChevronWidth, Height = ChevronHeight, Stretch = Stretch.None, StrokeThickness = ChevronStroke,
+            Name = ChevronName, Data = Geometry.Parse(ChevronData), Width = global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.DropdownCaptionChevronWidth, Height = global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.DropdownCaptionChevronHeight, Stretch = Stretch.None, StrokeThickness = global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.DropdownCaptionChevronStroke,
             StrokeLineCap = PenLineCap.Round, StrokeJoin = PenLineJoin.Round, VerticalAlignment = VerticalAlignment.Center,
         };
         chevron[!Shape.StrokeProperty] = new DynamicResourceExtension(ForegroundKey);

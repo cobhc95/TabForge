@@ -61,6 +61,29 @@ public sealed class PickAnotherListTests
     }
 
     [AvaloniaFact]
+    public void ThePickedRowStaysHighlightedAfterTheListRebuildsInsteadOfJumpingToTheFirstItem()
+    {
+        using var rig = new StatusBarTransportTests.Rig(song: SectionScaleDetectorTests.TwoSections());
+        var scale = rig.Status.Scale;
+        var popup = new ScalePanel(scale.BarHost());
+        var window = Open(popup);
+        Find<RadioCard>(popup, "ScalePickAnotherCard").Select();
+        popup.SetQuery("");
+        var list = Find<ListBox>(popup, "ScaleSearchResults");
+        var rows = Rows(popup);
+        var index = rows.Count - 1;   // the last row is a scale, well away from the first item
+        Assert.True(index > 1);
+        list.SelectedIndex = index;
+        popup.PickSelected();
+        Assert.StartsWith(scale.Current.Pick!, list.SelectedItem!.ToString());
+        Assert.Equal(index, list.SelectedIndex);
+        popup.SetQuery("");   // a filter rebuild keeps the same row highlighted
+        Assert.Equal(index, Find<ListBox>(popup, "ScaleSearchResults").SelectedIndex);
+        popup.Close();
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public void TheListShowsTheCardsConfidenceFirstAndFitSecondAndBestMatchesStartsWithAuto()
     {
         using var rig = new StatusBarTransportTests.Rig(song: SectionScaleDetectorTests.TwoSections());

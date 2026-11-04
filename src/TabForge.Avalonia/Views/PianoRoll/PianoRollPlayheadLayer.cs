@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Styling;
@@ -20,8 +21,30 @@ internal sealed class PianoRollPlayheadLayer : Control
     private readonly AvaloniaDrawContext _draw = new();
     private readonly bool[] _live = new bool[128];       // reused each paint: no allocation per frame
     private readonly bool[] _sounding = new bool[128];
+    private readonly List<int> _activeNotes = new();
     private ThemeColourCache? _theme;
     private UiColor? _playColour;   // the playback highlight colour, read once and kept: no parsing or allocation per frame
+    private IUiPath? _marker, _leftMarker, _rightMarker;
+
+    private IUiPath Marker(int direction)
+    {
+        var half = PianoRollSurface.MarkerHalf;
+        return _draw.Paths.BuildPath(s =>
+        {
+            if (direction == 0)
+            {
+                s.BeginFigure(new UiPoint(-half, -2 * half), filled: true, closed: true);
+                s.LineTo(new UiPoint(half, -2 * half));
+                s.LineTo(new UiPoint(0, 0));
+            }
+            else
+            {
+                s.BeginFigure(new UiPoint(0, -half - 1), filled: true, closed: true);
+                s.LineTo(new UiPoint(-direction * 2 * half, -2 * half - 1));
+                s.LineTo(new UiPoint(-direction * 2 * half, -1));
+            }
+        });
+    }
 
     public PianoRollPlayheadLayer(PianoRollSurface surface)
     {
@@ -51,8 +74,19 @@ internal sealed class PianoRollPlayheadLayer : Control
         var d = _draw.Use(context);
         var beat = _surface.Playing() ? _surface.PlayheadBeat() : null;
         _surface.Keys.CopyTo(_live);
-        if (beat is { } at) PianoRollKeyState.Sounding(_surface.Presenter.Notes, at, _sounding);
-        else System.Array.Clear(_sounding);
+        Array.Clear(_sounding);
+        _activeNotes.Clear();
+        if (beat is { } at)
+        {
+            var presenter = _surface.Presenter;
+            presenter.NoteIndex.Query(at, at, _activeNotes);
+            for (var i = _activeNotes.Count - 1; i >= 0; i--)
+            {
+                var note = presenter.Notes[_activeNotes[i]];
+                if (note.Muted || note.End <= at) { _activeNotes.RemoveAt(i); continue; }
+                if (note.Pitch is >= 0 and < 128) _sounding[note.Pitch] = true;
+            }
+        }
         DrawKeys(d);
         DrawLiveNotes(d);
         DrawMarker(d);
@@ -90,26 +124,18 @@ internal sealed class PianoRollPlayheadLayer : Control
         var colour = PlaybackColour;
         var x = _surface.XOf(beat);
         var bottom = _surface.GridTop;
-        var half = PianoRollSurface.MarkerHalf;
         if (x < _surface.GridLeft || x > Bounds.Width)
         {
             EdgeArrow = x < _surface.GridLeft ? -1 : 1;
             var tip = EdgeArrow < 0 ? _surface.GridLeft + 1 : Bounds.Width - 1;
-            var back = EdgeArrow < 0 ? tip + 2 * half : tip - 2 * half;
-            d.Path(colour, null, d.Paths.BuildPath(s =>
-            {
-                s.BeginFigure(new UiPoint(tip, bottom - half - 1), filled: true, closed: true);
-                s.LineTo(new UiPoint(back, bottom - 2 * half - 1));
-                s.LineTo(new UiPoint(back, bottom - 1));
-            }));
+            d.PushTranslate(tip, bottom);
+            d.Path(colour, null, EdgeArrow < 0 ? _leftMarker ??= Marker(-1) : _rightMarker ??= Marker(1));
+            d.Pop();
             return;
         }
-        d.Path(colour, null, d.Paths.BuildPath(s =>
-        {
-            s.BeginFigure(new UiPoint(x - half, bottom - 2 * half), filled: true, closed: true);
-            s.LineTo(new UiPoint(x + half, bottom - 2 * half));
-            s.LineTo(new UiPoint(x, bottom));
-        }));
+        d.PushTranslate(x, bottom);
+        d.Path(colour, null, _marker ??= Marker(0));
+        d.Pop();
         MarkerX = x;
     }
 
@@ -145,10 +171,9 @@ internal sealed class PianoRollPlayheadLayer : Control
         var wash = AvaloniaPalette.Get("PianoRollNoteSounding", ActualThemeVariant == ThemeVariant.Light);
         d.PushClip(_surface.GridLeft, _surface.GridTop, _surface.ViewportWidth, _surface.ViewportHeight);
         var notes = _surface.Presenter.Notes;
-        for (var i = 0; i < notes.Count; i++)
+        foreach (var index in _activeNotes)
         {
-            var note = notes[i];
-            if (note.Muted || note.Start > beat || note.End <= beat) continue;
+            var note = notes[index];
             var r = _surface.NoteRect(note);
             d.Rect(wash, null, r.X, r.Y, r.Width, r.Height);
         }

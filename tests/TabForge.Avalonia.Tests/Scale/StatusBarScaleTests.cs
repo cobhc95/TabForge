@@ -2,12 +2,15 @@ using System;
 using System.IO;
 using System.Linq;
 using Avalonia.Controls;
+using Avalonia.Automation;
 using Avalonia.Controls.Primitives;
 using Avalonia.Headless.XUnit;
 using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using Avalonia.Threading;
 using TabForge.Avalonia.Platform.Controls;
+using TabForge.Avalonia.Platform;
+using TabForge.Avalonia.Views;
 using TabForge.Avalonia.Views.TransportPopups;
 using TabForge.Services;
 using Xunit;
@@ -20,6 +23,26 @@ namespace TabForge.Avalonia.Tests;
 // Tests: this class.
 public sealed class StatusBarScaleTests
 {
+    [AvaloniaFact]
+    public void ScaleTooltipIsAnchoredAboveTheButtonAndCannotInterceptItsClick()
+    {
+        var bar = new StatusBarView();
+        const string context = "Verse 1 · Rhythm Gtr L · bars 19–31. Click to see the alternatives, choose your own, or change what it listens to.";
+        bar.ShowScale("A altered · auto", context);
+        var anchor = Assert.IsType<Button>(bar.ScaleAnchor);
+        var tip = Assert.IsType<ToolTip>(ToolTip.GetTip(anchor));
+        Assert.False(tip.IsHitTestVisible);
+        Assert.Equal(PlacementMode.Top, ToolTip.GetPlacement(anchor));
+        Assert.Equal(UiTiming.StatusScaleTooltipDelayMs, ToolTip.GetShowDelay(anchor));
+        Assert.Equal(context, Assert.IsType<TextBlock>(tip.Content).Text);
+        Assert.Equal(context, AutomationProperties.GetHelpText(anchor));
+        var clicks = 0;
+        bar.ScaleRequested += () => clicks++;
+        anchor.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Assert.Equal(1, clicks);
+        Assert.False(ToolTip.GetIsOpen(anchor));
+    }
+
     private static string ScaleText(StatusBarTransportTests.Rig rig) => rig.Text("StatusScaleText");
 
     private static T Find<T>(ScalePanel popup, string name) where T : Control =>

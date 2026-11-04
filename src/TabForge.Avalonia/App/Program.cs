@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Avalonia;
+using TabForge.Avalonia.Diagnostics;
 using TabForge.Capture;
 using TabForge.Platform;
 using TabForge.Services;
@@ -24,11 +25,22 @@ public static class Program
     public const int AudioEngineRefusedExitCode = 2;
 
     [STAThread]
-    public static int Main(string[] args)
+    public static async Task<int> Main(string[] args)
     {
         try
         {
-            return Run(args);
+            // --plugin-matrix is a one-shot headless gate. Some engine threads are foreground threads, so returning
+            // from Main would leave the matrix app (and its owner window) alive after it wrote result.json. A normal
+            // Environment.Exit still runs DLL_PROCESS_DETACH, and a plug-in whose DllMain waits for its own threads
+            // (Dexed 1.1.0/JUCE 8 is one) blocks it forever after the result was written. The gate has already
+            // flushed result.json, so terminate the process without detaching plug-in modules.
+            if (args.Length > 0 && args[0] == PluginMatrix.Argument)
+            {
+                if (!InternalDiagnosticsAllowed) return RefuseInternalDiagnostic(PluginMatrix.Argument);
+                var code = await PluginMatrix.RunAsync(args);
+                EndMatrixProcess(code);
+            }
+            return await RunAsync(args);
         }
         catch (Exception ex)
         {
@@ -45,7 +57,29 @@ public static class Program
         }
     }
 
-    private static int Run(string[] args)
+    /// <summary>True only when the release/CI tooling opted into the packaged diagnostic modes.</summary>
+    private static bool InternalDiagnosticsAllowed => Environment.GetEnvironmentVariable("TABFORGE_INTERNAL") == "1";
+
+    private static int InternalDiagnostic(string name, Func<string[], int> run, string[] args) =>
+        InternalDiagnosticsAllowed ? run(args) : RefuseInternalDiagnostic(name);
+
+    private static async Task<int> InternalDiagnosticAsync(string name, Func<string[], Task<int>> run, string[] args) =>
+        InternalDiagnosticsAllowed ? await run(args) : RefuseInternalDiagnostic(name);
+
+    private static int RefuseInternalDiagnostic(string name)
+    {
+        Console.Error.WriteLine($"{name} is an internal diagnostic mode. Set TABFORGE_INTERNAL=1 to run it.");
+        return 2;
+    }
+
+    /// <summary>Ends the one-shot matrix process without running plug-in DLL_PROCESS_DETACH (which can block for ever).</summary>
+    private static void EndMatrixProcess(int code)
+    {
+        if (OperatingSystem.IsWindows()) Platform.WindowsProcessExit.Terminate(code);
+        else Environment.Exit(code);
+    }
+
+    private static async Task<int> RunAsync(string[] args)
     {
         // The self-test mode opens no window and holds no single-instance mutex, so it runs beside the owner's copy; it leaves the first-chance log alone.
         if (args.Length > 0 && args[0] == SelfTest.Argument) return RunSelfTest(args);
@@ -54,6 +88,13 @@ public static class Program
         if (args.Length > 0 && args[0] == "--audio-engine") return RunAudioEngine(args);
         if (args.Length > 0 && args[0] == "--plugin-host") return RunPluginHost(args);
         if (args.Length > 0 && args[0] == "--plugin-info") return RunPluginInfo(args);
+        // The packaged screenshot/audio gates load a path from their own argument list. They are internal diagnostics, not a
+        // second trust path: without the release/CI opt-in they refuse before opening a plug-in.
+        if (args.Length > 0 && args[0] == WineSmoke.Argument) return InternalDiagnostic(WineSmoke.Argument, WineSmoke.Run, args);
+        if (args.Length > 0 && args[0] == WineApprove.Argument) return await InternalDiagnosticAsync(WineApprove.Argument, WineApprove.RunAsync, args);
+        if (args.Length > 0 && args[0] == WineEditor.Argument) return InternalDiagnostic(WineEditor.Argument, WineEditor.Run, args);
+        if (args.Length > 0 && args[0] == NativeEditor.Argument) return InternalDiagnostic(NativeEditor.Argument, NativeEditor.Run, args);
+        if (args.Length > 0 && args[0] == AudioProbe.Argument) return InternalDiagnostic(AudioProbe.Argument, AudioProbe.Run, args);
         if (args.Length > 0 && args[0] == ImportWorker.Argument)
         {
             // No pipe name: refuse before touching ImportWorker statics.
@@ -73,8 +114,8 @@ public static class Program
             try { Services.Trace.Error(Services.Trace.Ui, "reset app at startup: " + ex.Message); }
             catch (Exception) { } // swallow: the startup trace must never stop the launch
         }
-        // Shootout-M shared diagnostic (all contenders): log every first-chance managed exception so a death that
-        // bypasses Main's catch still leaves a trace. Best-effort only; never throws.
+        // Full first-chance logging is diagnostic opt-in; normal caught exceptions must not do synchronous file IO.
+        // Fatal crash recording in Main remains unconditional.
         InstallFirstChanceLog();
         // The song the shell named, resolved before the single-instance check so a second launch can hand it to the
         // running window instead of discarding it with the process.
@@ -148,6 +189,7 @@ public static class Program
     /// %LOCALAPPDATA%\TabForge\Diagnostics\firstchance.log. Best-effort only; never throws.</summary>
     private static void InstallFirstChanceLog()
     {
+        if (!string.Equals(Environment.GetEnvironmentVariable("TABFORGE_FIRST_CHANCE_LOG"), "1", StringComparison.Ordinal)) return;
         try
         {
             var dir = TabForge.Platform.AppFolders.Current.Logs;

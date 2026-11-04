@@ -137,7 +137,8 @@ public sealed partial class PianoRollSurface
             foreach (var g in Ghosts)
                 if (g.End >= from && g.Start <= to) { var r = NoteRect(g); d.Rect(ghost, null, r.X, r.Y, r.Width, r.Height, NoteRadius); }
         }
-        for (var i = 0; i < notes.Count; i++)
+        Presenter.NoteIndex.Query(from, to, _visibleNotes);
+        foreach (var i in _visibleNotes)
         {
             var note = notes[i];
             var rowIndex = RowIndex(note.Pitch);
@@ -151,6 +152,9 @@ public sealed partial class PianoRollSurface
         if (!moving) return;
         foreach (var preview in DragPreview()) DrawNote(d, preview, true, NoteDrawFill(preview, true, track, row, preview.Velocity), outline, edge);
     }
+
+    // Scratch note IDs in original paint order, shared by no other query (the live layer has its own list).
+    private readonly List<int> _visibleNotes = new();
 
     /// <summary>A note's colour in the chosen mode: the track colour brighter the louder, velocity heat, pitch class or channel.</summary>
     private UiColor FillOf(PianoRollNote note, UiColor track, UiColor row, int velocity) => ColourMode switch

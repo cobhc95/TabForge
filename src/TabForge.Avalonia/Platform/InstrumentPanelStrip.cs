@@ -33,6 +33,13 @@ public sealed class InstrumentPanelStrip : Grid
 
     private readonly ScorePreviewView _score;
     private readonly Button _scales = ScalesButton();
+    private readonly Button _customize = CustomizeButton();
+
+    /// <summary>What the Customize button does: the window host opens the Fretboard settings window. Null leaves the button doing nothing.</summary>
+    internal Action? CustomizeRequested { get; set; }
+
+    /// <summary>The track the board shows (the settings window previews it).</summary>
+    internal TrackModel? ShownTrack => _track;
 
     /// <summary>The Scales button, the anchor of the scale popup; invisible when the pane has no scale (a drum track).</summary>
     internal Control ScalesAnchor => _scales;
@@ -41,6 +48,8 @@ public sealed class InstrumentPanelStrip : Grid
     private readonly FretboardContextMenu? _contextMenu;
     private AvaloniaPlaybackSession? _playback;
     private TrackModel? _track;
+    // The song whose edits this pane follows (swapped when another song is shown).
+    private SongProject? _timelineProject;
 
     // What ShowPlaybackNotes last showed: a bar-change frame raises PlayheadBarChanged and then PlayheadFrame with the same clock, so the second
     // call would repeat the whole fill for an identical result. Remembering the inputs skips only that exact repeat; Refresh (a cursor/track change),
@@ -65,6 +74,8 @@ public sealed class InstrumentPanelStrip : Grid
         _contextMenu = contextMenu;
         contextMenu?.Attach(Panel, () => Panel.Kind, () => _scales.RaiseEvent(new global::Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent)));
         _scalesLayer.Children.Add(_scales);
+        _scalesLayer.Children.Add(_customize);
+        _customize.Click += (_, _) => CustomizeRequested?.Invoke();
         Children.Add(Panel);
         Children.Add(_scalesLayer);
         Children.Add(CloseButton(close));
@@ -72,12 +83,48 @@ public sealed class InstrumentPanelStrip : Grid
         score.ZoomChanged += ApplyScoreTextScale;
         Panel.NotePicked += OnNotePicked;
         Panel.PlacementCommitted += place => _contextMenu?.SetFretboardPosition(place);
+        Panel.CapoCommitRequested += CommitCapoDrag;
+        Panel.PartialCapoCommitRequested += CommitPartialCapoDrag;
         ApplyScoreTextScale();
         Refresh();
     }
 
     /// <summary>The pane's text scale follows the score's spacing only (never its zoom: the fretboard size is independent of score zoom).</summary>
     private void ApplyScoreTextScale() => Panel.ContentScale = ScoreInstrumentScale.ContentScaleFor(_score.Probe.Appearance.ScoreSpacing);
+
+    private bool CommitCapoDrag(int fret)
+    {
+        var track = _track;
+        if (track is null || track.IsDrumTrack) return false;
+        fret = FretboardCapoRules.Clamp(fret);
+        if (track.Capo == fret) return false;
+        // One undo step through the score's own edit path: the release writes, the drag itself only previewed.
+        // The capo moves the sounding pitch (TrackSetup.SetCapo); the written frets stay. The strip refreshes
+        // through CursorChanged, which re-reads the track's capo for the drawing.
+        return _score.Edit(editor => editor.RunEdit(() =>
+        {
+            if (track.Capo == fret) return false;
+            TrackSetup.SetCapo(track, fret);
+            return true;
+        }));
+    }
+
+    /// <summary>One undo step per partial-capo drag: the release moves that partial's fret and repitches only its strings.</summary>
+    private bool CommitPartialCapoDrag(int index, int fret)
+    {
+        var track = _track;
+        if (track is null || track.IsDrumTrack || index < 0) return false;
+        fret = FretboardCapoRules.Clamp(fret);
+        return _score.Edit(editor => editor.RunEdit(() =>
+        {
+            if (track.PartialCapos is not { } current || index >= current.Count) return false;
+            if (current[index].Fret == fret) return false;
+            var next = PartialCapoRules.Copy(current);
+            next![index].Fret = fret;
+            TrackSetup.SetPartialCapos(track, next);
+            return true;
+        }));
+    }
 
     /// <summary>A fretboard click writes or removes that note at the cursor's cell; a drum-pad click writes its sound on the drum track's line; a
     /// key click edits nothing. Through the score's own edit path, as a typed note is: the score repaints and reports the cursor change.</summary>
@@ -112,6 +159,7 @@ public sealed class InstrumentPanelStrip : Grid
     {
         base.OnAttachedToVisualTree(e);
         RebindPlayback();
+        FollowProjectTimeline(_score.Editor.Project);
         if (_contextMenu is not null) _contextMenu.TrackViewChanged += Refresh;
     }
 
@@ -119,6 +167,7 @@ public sealed class InstrumentPanelStrip : Grid
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
+        FollowProjectTimeline(null);
         if (_contextMenu is not null) _contextMenu.TrackViewChanged -= Refresh;
         UnsubscribePlayback();
         _playback = null;
@@ -195,6 +244,7 @@ public sealed class InstrumentPanelStrip : Grid
     {
         var size = base.ArrangeOverride(finalSize);
         PlaceScalesButton();
+        PlaceCustomizeButton();
         return size;
     }
 
@@ -242,6 +292,7 @@ public sealed class InstrumentPanelStrip : Grid
     /// An audio track, or no track, shows the placeholder.</summary>
     internal void Refresh()
     {
+        FollowProjectTimeline(_score.Editor.Project);
         if (_score.Editor.Project is not { Tracks.Count: > 0 }) return;
         var selected = _score.Editor.Track;
         _track = selected is { IsAudio: false } ? selected : null;
@@ -256,7 +307,21 @@ public sealed class InstrumentPanelStrip : Grid
         // Drum tracks have no scale: the Scales button stays hidden on the drum map.
         _scales.IsVisible = _track is not null && Panel.Kind != InstrumentPanelKind.Drums;
         PlaceScalesButton();
+        PlaceCustomizeButton();
     }
+
+    // A window's OK edits through DocumentEdits.Run, which marks the song's timeline but does not raise the
+    // score's CursorChanged; following the mark lets the pane refresh after that committed write, through the
+    // same CursorChanged notification every other view already uses. Display-only: the handler edits nothing.
+    private void FollowProjectTimeline(SongProject? project)
+    {
+        if (ReferenceEquals(project, _timelineProject)) return;
+        if (_timelineProject is not null) _timelineProject.TimelineMarked -= OnSongTimelineMarked;
+        _timelineProject = project;
+        if (project is not null) project.TimelineMarked += OnSongTimelineMarked;
+    }
+
+    private void OnSongTimelineMarked(SongProject _) => _score.RaiseCursorChanged();
 
     /// <summary>Under the fretboard's colour legend when the panel has one; otherwise at the top-right, left of the close X (a keyboard or drum panel).</summary>
     private void PlaceScalesButton()
@@ -273,19 +338,47 @@ public sealed class InstrumentPanelStrip : Grid
         Canvas.SetTop(_scales, CornerScalesTop);
     }
 
-    private static Button ScalesButton()
+    /// <summary>Under Scales in the legend; hidden on the keyboard and the drum map, which have no board to customise.</summary>
+    private void PlaceCustomizeButton()
     {
-        var icon = new Path
+        var anchor = Panel.CustomizeAnchor();
+        _customize.IsVisible = anchor is not null && _track is not null;
+        if (anchor is not { } point) return;
+        // Match Scales' real-DIP font and button size; the shorter label fits the legend.
+        Canvas.SetLeft(_customize, point.X);
+        Canvas.SetTop(_customize, point.Y);
+    }
+
+    private static Button CustomizeButton()
+    {
+        var button = LegendButton("FretboardCustomizeButton", "Modify", FretboardChromeMetrics.PillIconPath);
+        HotkeyTip.Set(button, "View.InstrumentPanel", "Customize the fretboard's wood, inlays, capo, strings and vibration");
+        return button;
+    }
+
+    private static Button ScalesButton() => LegendButton("ScalesButton", "Scales", global::TabForge.Platform.Theme.IconGeometry.ScaleSteps);
+
+    // Both legend actions use identical typography and geometry, independent of inherited button styles.
+    private static Button LegendButton(string name, string text, string iconPath)
+    {
+        var steps = new Path
         {
-            Data = Geometry.Parse(global::TabForge.Platform.Theme.IconGeometry.ScaleSteps), StrokeThickness = 1.6, StrokeJoin = PenLineJoin.Round,
-            Width = 13, Height = 13, Margin = new Thickness(0, 0, 5, 0), VerticalAlignment = VerticalAlignment.Center,
+            Data = Geometry.Parse(iconPath), StrokeThickness = FretboardChromeMetrics.PillStroke, StrokeJoin = PenLineJoin.Round,
         };
-        icon[!Shape.StrokeProperty] = new DynamicResourceExtension("IconActiveBrush");
-        var label = new TextBlock { Text = "Scales", FontSize = 11, VerticalAlignment = VerticalAlignment.Center };
+        steps[!Shape.StrokeProperty] = new DynamicResourceExtension("IconActiveBrush");
+        var icon = new Viewbox
+        {
+            Width = FretboardChromeMetrics.PillIcon, Height = FretboardChromeMetrics.PillIcon, Stretch = Stretch.Uniform, Margin = new Thickness(0, 0, FretboardChromeMetrics.PillIconGap, 0), VerticalAlignment = VerticalAlignment.Center,
+            Child = steps,
+        };
+        var label = new TextBlock { Text = text, FontSize = FretboardChromeMetrics.PillFontSize, FontWeight = FontWeight.Normal, FontStyle = FontStyle.Normal, VerticalAlignment = VerticalAlignment.Center };
         label[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextBrush");
         var button = new Button
         {
-            Name = "ScalesButton", Height = 24, Padding = new Thickness(6, 0, 8, 0), BorderThickness = new Thickness(1), Focusable = false,
+            Name = name, Width = FretboardChromeMetrics.PillWidth, Height = FretboardChromeMetrics.PillHeight,
+            FontSize = FretboardChromeMetrics.PillFontSize, FontWeight = FontWeight.Normal,
+            Padding = new Thickness(FretboardChromeMetrics.PillPadX, 0), BorderThickness = FretboardChromeMetrics.PillBorder,
+            CornerRadius = new CornerRadius(FretboardChromeMetrics.PillRadius), Focusable = false,
             Content = new StackPanel { Orientation = Orientation.Horizontal, Children = { icon, label } },
         };
         button[!BackgroundProperty] = new DynamicResourceExtension("Panel2Brush");

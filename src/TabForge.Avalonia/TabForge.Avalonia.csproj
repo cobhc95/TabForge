@@ -33,12 +33,18 @@
     <ProjectReference Include="..\TabForge.Core\TabForge.Core.csproj" />
     <!-- Inter and JetBrains Mono (SIL OFL): the optional bundled interface fonts, loaded from the app resources. -->
     <AvaloniaResource Include="Assets\Fonts\*.ttf" />
+    <!-- Superseded artwork stays in source, not in the application (Assets/ASSETS.md). -->
+    <AvaloniaResource Include="Assets\Fretboards\*.png" Exclude="Assets\Fretboards\wood_rosewood_dark_detailed.png;Assets\Fretboards\wood_maple_birdseye_detailed.png;Assets\Fretboards\capo_black_full_v3.png" />
+    <AvaloniaResource Include="Assets\Fretboards\*.jpg" />
     <Content Include="Assets\TabForge.ico" Link="Assets\TabForge.ico" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\Icons\TrackRows\owner-icons.json" Link="Assets\TrackRowIcons\owner-icons.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\Icons\Transport\*.svg" Link="Assets\TransportIcons\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\Icons\Tools\**\*.svg" Link="Assets\ToolIcons\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\Icons\Instruments\SVG\**\*.svg" Link="Assets\Instruments\SVG\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\Icons\Instruments\manifest.json" Link="Assets\Instruments\manifest.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Icon readers use AppContext.BaseDirectory, not bundle resources. Keep their files
+         beside the executable in single-file publishes as well as ordinary builds. -->
+    <Content Update="Assets\Icons\**\*" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
     <!-- Licence texts of the bundled components (verbatim copies); shipped as <app folder>\licenses\. -->
     <Content Include="licenses\*.txt" Link="licenses\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Resources\DrumMaps\*.json" CopyToOutputDirectory="PreserveNewest" />
@@ -46,11 +52,11 @@
     <InternalsVisibleTo Include="TabForge.Avalonia.Tests" />
   </ItemGroup>
   <!-- LGPL-2.1 (SoundTouch.Net): the library stays a loose, replaceable file beside TabForge.exe, not inside the single-file bundle.
-       The VST3 host shim (tfvst3.dll) stays loose too: Vst3Plugin loads it from the exe's folder, and a bundled copy is only
-       extracted to a temp folder, so every VST3 plug-in failed with "Dll was not found". -->
+       The native helpers stay loose too: tfvst3.dll is loaded from the exe's folder, and tfvst32.exe/tfvst64.exe are started from
+       it, so a bundled copy (extracted to a temp folder) would break VST3 plug-ins and the VST2 bridges. -->
   <Target Name="KeepSoundTouchLooseInSingleFile" AfterTargets="ComputeResolvedFilesToPublishList">
     <ItemGroup>
-      <ResolvedFileToPublish Update="@(ResolvedFileToPublish)" Condition="'%(ResolvedFileToPublish.Filename)' == 'SoundTouch.Net' Or '%(ResolvedFileToPublish.Filename)' == 'tfvst3'">
+      <ResolvedFileToPublish Update="@(ResolvedFileToPublish)" Condition="'%(ResolvedFileToPublish.Filename)' == 'SoundTouch.Net' Or '%(ResolvedFileToPublish.Filename)' == 'tfvst3' Or '%(ResolvedFileToPublish.Filename)' == 'tfvst3-x86' Or '%(ResolvedFileToPublish.Filename)' == 'tfvst32' Or '%(ResolvedFileToPublish.Filename)' == 'tfvst64'">
         <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
       </ResolvedFileToPublish>
       <!-- The native Windows-PDB reader (2.3 MB) serves only debuggers reading full PDBs; this build's portable PDBs never need it at run time. -->

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Xml;
+using System.Threading.Tasks;
 using TabForge.Platform;
 using TabForge.Platform.Theme;
 
@@ -72,9 +73,32 @@ public static class ToolIconArt
         }
     }
 
-    private static List<(string Name, AvaloniaSvgIcon.Prepared? Icon)> ReadAll()
+    internal static async Task PreloadBatched()
     {
-        var read = new List<(string, AvaloniaSvgIcon.Prepared?)>();
+        if (IsReady) return;
+        var models = await Task.Run(ReadModels);
+        var read = new List<(string Name, AvaloniaSvgIcon.Prepared? Icon)>();
+        await IconArtPreloader.PrepareBatches(models, model => read.Add((model.Name, Prepare(model.Icon))));
+        lock (Sync)
+        {
+            if (_preloadedAll) return;
+            foreach (var (name, icon) in read) Cache[name] = icon;
+            _preloadedAll = true;
+        }
+    }
+
+    private static List<(string Name, AvaloniaSvgIcon.Prepared? Icon)> ReadAll()
+        => ReadModels().Select(model => (model.Name, Prepare(model.Icon))).ToList();
+
+    private static AvaloniaSvgIcon.Prepared? Prepare(SvgIcon? model)
+    {
+        try { return model is null ? null : AvaloniaSvgIcon.Prepare(model); }
+        catch (FormatException ex) { Console.Error.WriteLine("tool icons: " + ex.Message); return null; }
+    }
+
+    private static List<(string Name, SvgIcon? Icon)> ReadModels()
+    {
+        var read = new List<(string, SvgIcon?)>();
         try
         {
             var root = Path.Combine(AppContext.BaseDirectory, "Assets", "ToolIcons");
@@ -83,10 +107,10 @@ public static class ToolIconArt
             {
                 var name = Path.GetRelativePath(root, file);
                 name = name[..^".svg".Length].Replace(Path.DirectorySeparatorChar, '/');
-                AvaloniaSvgIcon.Prepared? icon = null;
+                SvgIcon? icon = null;
                 try
                 {
-                    if (SvgIcon.Read(file) is { } svg) icon = AvaloniaSvgIcon.Prepare(svg);
+                    icon = SvgIcon.Read(file);
                 }
                 // Without the file the palette button shows no icon; the button still works from its label.
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or XmlException or FormatException) { Console.Error.WriteLine("tool icons: " + ex.Message); }

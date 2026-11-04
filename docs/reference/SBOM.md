@@ -19,7 +19,9 @@ Source: `Source/src/TabForge.AudioEngine/packages.lock.json`
 
 | Package | Version | Kind | Content hash (SHA-512, base64) |
 | --- | --- | --- | --- |
+| AlphaSkia | 3.4.135 | Transitive | `fc2/epiLLLlPsxXQD4f564oEBrwf0ZZgLJOupH1pd2PtyPcgCp5RwHS7j5iGTN28vteFXblQWTz4WmglT6Wf0w==` |
 | MeltySynth | 2.4.1 | Direct | `5Rzqh2H8bSZ+bna5hMbsQwEdqdaCEIkBaWzCSyKa5VV5oDZ9Zfi53dkGrUqdkQGT45Ltmv1WSzFlgmI9cD1I1w==` |
+| Microsoft.Win32.SystemEvents | 9.0.8 | Transitive | `64oQBN8I8EOcyHGNt6+rlcqm4tlcKfqOpswtBCJZnpzBQ15L6IFKqjnbjbOWBpG9wKq9A/aC2LFSmSqplbwTYA==` |
 | NAudio | 2.2.1 | Direct | `c0DzwiyyklM0TP39Y7RObwO3QkWecgM6H60ikiEnsV/aEAJPbj5MFCLaD8BSfKuZe0HGuh9GRGWWlJmSxDc9MA==` |
 | NAudio.Asio | 2.2.1 | Transitive | `hQglyOT5iT3XuGpBP8ZG0+aoqwRfidHjTNehpoWwX0g6KJEgtH2VaqM2nuJ2mheKZa/IBqB4YQTZVvrIapzfOA==` |
 | NAudio.Core | 2.2.1 | Transitive | `GgkdP6K/7FqXFo7uHvoqGZTJvW4z8g2IffhOO4JHaLzKCdDOUEzVKtveoZkCuUX8eV2HAINqi7VFqlFndrnz/g==` |
@@ -30,6 +32,8 @@ Source: `Source/src/TabForge.AudioEngine/packages.lock.json`
 | NLayer | 3.0.0 | Transitive | `aQrCT93NjIrJNXA7wiTSHMp9OUhGNb8YTJAwnsx2FtaNdAe74vwfguFExf6QFNU72XhNPb/bLAcdMbxvaNZgWg==` |
 | NVorbis | 0.10.5 | Transitive | `o+IptCG4Avze39HrGeztC+xIp6fOOwGVAwkoa1J++4Ji1WmZ+KIKlFl5wsgxsXqBkmdpfs/vFSUproiLKYa2bw==` |
 | SoundTouch.Net | 2.3.2 | Direct | `5A29Pll/n4kEEPvCD5DFot3MJG+VgiaRG6LbNQVkF94VerC1b5iZtJKfdLQXZPFrl3LiVbKm3txKBe5/pbv5rw==` |
+| System.Drawing.Common | 9.0.8 | Transitive | `ineIJmF+yuBEHGft9R153J9kmBFaeEfFL5Put5nzENneRcGGPUb3MvM8zrZ5pERQ0jPPSE3Wqw/clXvOq2F/Kw==` |
+| TabForge.AlphaTab | 1.8.4-tabforge.4 | Transitive | `AInxu4W9CdfGl1WTJPSbYPXTsdW9hzri9fd7JA0lpNgpBQdlXDdDKTdDnhY2zSL89yKCBynm37bd+/UpfkeN4w==` |
 
 ## Managed packages: TabForge.Avalonia
 
@@ -100,8 +104,27 @@ Source: `Source/src/TabForge.Core/packages.lock.json`
 
 | Component | Version / revision | Hash | Notes |
 | --- | --- | --- | --- |
-| tfvst3.dll (VST3 host bridge, built from `Source/native/tfvst3`) | built with MSVC 19.51.36257.0 | SHA-256 `123154c9f15dbfdd0a6c3863d9c4ccc6d3662c2c310b50c9c833c1c09cdaeb25` | shipped file matches the recorded build; recorded SHA-256 `123154c9f15dbfdd0a6c3863d9c4ccc6d3662c2c310b50c9c833c1c09cdaeb25` (see `Source/native/BUILD_PROVENANCE.md`) |
+| tfvst3.dll (VST3 host bridge, built from `Source/native/tfvst3`) | built with MSVC 19.51.36257.0 | SHA-256 `6a1029ad6831410b1e1abfeb32d2de69b6268a619edc9fc338ed3c732abdd86b` | shipped file matches the recorded build; recorded SHA-256 `6a1029ad6831410b1e1abfeb32d2de69b6268a619edc9fc338ed3c732abdd86b` (see `Source/native/BUILD_PROVENANCE.md`) |
+| tfvst3-x86.dll (32-bit VST3 host bridge, same source, loaded by tfvst32.exe) | built with MSVC 19.51.36257.0 | SHA-256 `fe88e57111eb23278de5ed2ba553588ec21f53bee77647017dfae9da10a47bae` | shipped file matches the recorded build; recorded SHA-256 `fe88e57111eb23278de5ed2ba553588ec21f53bee77647017dfae9da10a47bae` (see the 32-bit bridge build record kept with the release tooling; local-only, not part of the public export) |
+| tfvst32.exe (32-bit helper: VST2 and Windows VST3 on 32-bit, built from the private native helper source) | built with MSVC 19.51.36257.0 (x86) | SHA-256 `7a48841cab4a0d25b4316f85aae4806a04e83b88fe74440c3048007a8de7c7b2` | original TabForge code (no third-party library and no Steinberg VST2 SDK header); shipped file matches the recorded build; recorded SHA-256 `7a48841cab4a0d25b4316f85aae4806a04e83b88fe74440c3048007a8de7c7b2` (see the helper build record beside the private native sources) |
+| tfvst64.exe (64-bit helper: VST2 and Windows VST3 via tfvst3.dll, same private native source as tfvst32) | built with MSVC 19.51.36257.0 (x64) | SHA-256 `39b53c126d11ed1cf138826a69d70ce686f4d5a079723be28ce14bb40075b8d3` | original TabForge code (no third-party library and no Steinberg VST2 SDK header); shipped file matches the recorded build; recorded SHA-256 `39b53c126d11ed1cf138826a69d70ce686f4d5a079723be28ce14bb40075b8d3` (see the 64-bit helper build record kept with the release tooling; local-only, not part of the public export) |
 | Steinberg VST3 SDK (build-time only, MIT) | tag `v3.8.1_build_84`, commit `3cdf9ca5d1f5b1b21e0a86832aa4abe55607bd96` | git commit id | fetched and verified by `Source/native/fetch-vst3sdk.ps1`; not shipped |
+| Wine (bundled Linux Windows plug-in runtime; Wine 9.21) | Kron4ek wine-9.21-amd64-wow64; Wine tag `wine-9.21`, commit `c9a8333c0f274201faf33d27abda1ebb5ae07cec` | prebuilt tarball SHA-256 `020f8886750ff658d92ea39e696d2a57d3e8f056f00d8dfe45b65cddee5d6fa5`; source tarball SHA-256 `4442b47ffd9b2ea457100e36ed5fd4e6f4d829d9db79a25e605175a988ca2fff` | third-party prebuilt (not built by TabForge), copied from Kron4ek's vanilla amd64-wow64 build by `package-linux.sh --wine` with headers, development files and debug symbols removed; no Wine source is patched; no wine-mono or wine-gecko; licence LGPL-2.1-or-later, source offer in THIRD_PARTY.md and the package's `ThirdParty/wine/README.txt` |
+
+## Linux package components
+
+The Linux package is built at package time; these are its pins. The SHA-256 of every actual file (including the two
+built native libraries, LAME, mpg123 and an optional FFmpeg) is in the package-specific `SBOM-package.txt` written by
+the Linux packaging script next to `SBOM.md`.
+
+| Component | Version / revision | Licence / source |
+| --- | --- | --- |
+| libtfportable.so | miniaudio 0.11.25, commit `9634bedb5b5a2ca38c1ee7108a9358a4e233f14d`; RtMidi 6.0.0, commit `1e5b49925aa60065db52de44c366d446a902547b` | built from `Source/native/tfportable`; miniaudio MIT-0/public domain, RtMidi MIT-style; texts in `licenses/` |
+| libtfvst3.so | Steinberg VST3 SDK tag `v3.8.1_build_84`, commit `3cdf9ca5d1f5b1b21e0a86832aa4abe55607bd96` | built from `Source/native/tfvst3/posix`; MIT; text in `licenses/MIT_Steinberg_VST3_SDK.txt` |
+| GeneralUser GS SoundFont | v2.0.3, SHA-256 `9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe` | free-use licence, text in `licenses/GeneralUser-GS_LICENSE.txt` and beside the file |
+| LAME (libmp3lame.so.0) | the Ubuntu 22.04 system build, version in `SBOM-package.txt` | LGPL-2.0; separate replaceable library; source offer in `THIRD_PARTY.md` |
+| mpg123 (libmpg123.so.0) | the Ubuntu 22.04 system build, version in `SBOM-package.txt` | LGPL-2.1-or-later; separate replaceable library; source offer in `THIRD_PARTY.md` |
+| FFmpeg (optional) | only when the packager passes `--ffmpeg`; version and hash in `SBOM-package.txt` | LGPL build; separate program; not in the standard release package |
 
 VST3 SDK submodule commits (base, pluginterfaces, public.sdk):
 

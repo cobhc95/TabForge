@@ -16,14 +16,17 @@ internal readonly struct PathShapeKey(long[] words) : IEquatable<PathShapeKey>
 {
     /// <summary>Word 0 is the fill rule (0 even-odd, 1 non-zero); the rest are the recorded operations, see <see cref="PathRecorder"/>.</summary>
     public long[] Words { get; } = words;
+    private readonly int _hash = HashOf(words);
 
     public bool Equals(PathShapeKey other) => Words.AsSpan().SequenceEqual(other.Words);
     public override bool Equals(object? obj) => obj is PathShapeKey other && Equals(other);
 
-    public override int GetHashCode()
+    public override int GetHashCode() => _hash;
+
+    private static int HashOf(long[] words)
     {
         var hash = new HashCode();
-        hash.AddBytes(MemoryMarshal.AsBytes(Words.AsSpan()));
+        hash.AddBytes(MemoryMarshal.AsBytes(words.AsSpan()));
         return hash.ToHashCode();
     }
 }

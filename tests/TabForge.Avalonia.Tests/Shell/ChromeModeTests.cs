@@ -113,7 +113,7 @@ public class ChromeModeTests
         window.Close();
     }
 
-    [Fact]
+    [WindowsFact]
     public void LinuxResizeGripMatchesWindowsHitBorder()
     {
         Assert.Equal(TabForge.Avalonia.Shell.Win32.NcHitTestHook.ResizeBorderDips, LinuxChromeAdapter.GripSize);
@@ -122,7 +122,6 @@ public class ChromeModeTests
     [AvaloniaFact]
     public void WindowsChromeAdapterReportsMaximisedAfterToggle()
     {
-        if (!OperatingSystem.IsWindows()) return;
         var window = new Window { Width = 300, Height = 200 };
         window.Show();
         var chrome = new TabForge.Avalonia.Shell.Win32.WindowsChromeAdapter(window);

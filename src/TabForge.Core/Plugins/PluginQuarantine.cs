@@ -18,8 +18,11 @@ public static class PluginQuarantine
     /// The quarantine list is engine-owned state: a settings snapshot from Preferences must never replace it (a plug-in that
     /// crashed while Preferences was open would be silently allowed again). Call before the snapshot becomes the live settings.
     /// </summary>
-    public static void KeepLive(TabForge.Services.PluginSettings incoming, TabForge.Services.PluginSettings live) =>
+    public static void KeepLive(TabForge.Services.PluginSettings incoming, TabForge.Services.PluginSettings live)
+    {
         incoming.Quarantined = live.Quarantined;
+        incoming.CrashProne = live.CrashProne;   // a crash while Preferences was open must keep the isolation decision too
+    }
 
     /// <summary>Removes every entry equal to <paramref name="path"/> (any case). Returns how many were removed.</summary>
     public static int AllowAgain(List<string>? list, string? path)

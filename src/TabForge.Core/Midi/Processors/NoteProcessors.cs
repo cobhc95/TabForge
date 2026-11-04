@@ -139,12 +139,15 @@ public sealed class VelocityProcessor : NoteTransform
         _makeup = p.Double("Makeup", 0, -64, 64);
         _random = p.Int("Random", 0, 0, 100);
         _mix = p.Int("Mix", 100, 0, 100);
-        _inLow = p.Int("InLow", 1, 1, MidiLimits.Max);
-        _inHigh = p.Int("InHigh", 127, 1, MidiLimits.Max);
-        _low = p.Int("Low", 0, 0, MidiLimits.Max);
-        _high = p.Int("High", 127, 0, MidiLimits.Max);
+        var inA = p.Int("InLow", 1, 1, MidiLimits.Max);
+        var inB = p.Int("InHigh", 127, 1, MidiLimits.Max);
+        (_inLow, _inHigh) = (Math.Min(inA, inB), Math.Max(inA, inB));   // a reversed pair is swapped, not "nothing"
+        var noteA = p.Int("Low", 0, 0, MidiLimits.Max);
+        var noteB = p.Int("High", 127, 0, MidiLimits.Max);
+        (_low, _high) = (Math.Min(noteA, noteB), Math.Max(noteA, noteB));
     }
 
+    // Order: affected-range test, mode (compressor includes its makeup), min/max clamp, random, clamp again, dry/wet mix.
     protected override bool MapNote(ref int ch, ref int note, ref int vel)
     {
         if (note < _low || note > _high || vel < _inLow || vel > _inHigh) return true;   // outside the ranges: untouched
@@ -155,11 +158,12 @@ public sealed class VelocityProcessor : NoteTransform
             case 2: y = v > _threshold ? _threshold + (v - _threshold) / _ratio : v; y += _makeup; break;
             default: y = v * _mul + _add; break;
         }
-        if (_random > 0) y += _rng.Bipolar() * 64 * _random / 100.0;
-        y = v + (y - v) * _mix / 100.0;
         var lo = Math.Max(1, Math.Min(_min, _max));
-        var hi = Math.Max(lo, _max);
-        vel = (int)Math.Clamp(Math.Round(y), lo, hi);
+        var hi = Math.Max(lo, Math.Max(_min, _max));   // a reversed Min/Max is swapped
+        y = Math.Clamp(y, lo, hi);
+        if (_random > 0) y = Math.Clamp(y + _rng.Bipolar() * 64 * _random / 100.0, lo, hi);
+        y = v + (y - v) * _mix / 100.0;
+        vel = (int)Math.Clamp(Math.Round(y), 1, MidiLimits.Max);
         return true;
     }
 }

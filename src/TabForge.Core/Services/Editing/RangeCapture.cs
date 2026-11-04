@@ -38,7 +38,7 @@ public static class RangeCapture
             var copy = new RangeSnapshotTrack
             {
                 SourceTrackId = track.Id, Name = track.Name, Kind = track.Kind, InstrumentName = track.InstrumentName,
-                StringTunings = track.StringTunings.ToList(), Capo = track.Capo,
+                StringTunings = track.StringTunings.ToList(), Capo = track.Capo, PartialCapos = PartialCapoRules.Copy(track.PartialCapos),
             };
             if (track.HasNotation)
                 for (var bar = first; bar <= last; bar++)

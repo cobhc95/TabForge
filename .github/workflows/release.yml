@@ -9,6 +9,7 @@ name: release
 on:
   push:
     tags: ['v*']
+    branches: ['ci/087']
   workflow_dispatch:
 
 permissions:
@@ -119,6 +120,11 @@ jobs:
             dist/TabForge-*-SHA256.txt
             src/TabForge.AudioEngine/native/tfvst3.dll
 
+      - name: Archive the exact reviewed source
+        if: steps.guard.outputs.skip != 'true'
+        shell: pwsh
+        run: git archive --format=zip --prefix=TabForge-0.8.7-source/ --output=dist/TabForge-0.8.7-source.zip HEAD
+
       - name: Upload the release files
         if: steps.guard.outputs.skip != 'true'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -131,6 +137,7 @@ jobs:
             dist/TabForge-*-selftest.log
             dist/TabForge-*-releasegate.log
             dist/SoundTouch.Net-*-source.zip
+            dist/TabForge-*-source.zip
             native/BUILD_PROVENANCE.md
           if-no-files-found: error
 
@@ -142,3 +149,86 @@ jobs:
           name: symbols
           path: dist/symbols
           if-no-files-found: warn
+
+      - name: Preserve gate logs even when packaging fails
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-failure-logs
+          path: dist/*.log
+          if-no-files-found: warn
+
+  linux-release-build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 150
+    env:
+      APPIMAGE_EXTRACT_AND_RUN: '1'
+      WINE_TARBALL: https://github.com/Kron4ek/Wine-Builds/releases/download/9.21/wine-9.21-amd64-wow64.tar.xz
+      WINE_TARBALL_SHA256: 020f8886750ff658d92ea39e696d2a57d3e8f056f00d8dfe45b65cddee5d6fa5
+      APPIMAGETOOL_URL: https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
+      APPIMAGETOOL_SHA256: ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0
+      SOUNDFONT_URL: https://github.com/mrbumpy409/GeneralUser-GS/raw/main/GeneralUser-GS.sf2
+      SOUNDFONT_SHA256: 9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe
+      FFMPEG_URL: https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-11-03-12-50/ffmpeg-n8.1.3-32-g760d10603e-linux64-lgpl-8.1.tar.xz
+      FFMPEG_SHA256: d4adbedd1c413acfb7bbe4c2c36fa89df3d70917c7883ea897fa8dc8b136090b
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+        with:
+          global-json-file: global.json
+      - name: Install packaging dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential cmake git python3 curl xz-utils binutils patchelf libasound2-dev libmp3lame0 libmpg123-0 libfuse2 libfreetype6 libfontconfig1 libgl1 libx11-6 libxext6 libxcursor1 libxrandr2
+      - name: Fetch and verify pinned runtime inputs
+        run: |
+          mkdir -p staging/wine
+          curl -fsSL --retry 3 -o staging/wine.tar.xz "$WINE_TARBALL"
+          echo "$WINE_TARBALL_SHA256  staging/wine.tar.xz" | sha256sum -c -
+          tar -xf staging/wine.tar.xz -C staging/wine --strip-components=1
+          curl -fsSL --retry 3 -o staging/appimagetool "$APPIMAGETOOL_URL"
+          echo "$APPIMAGETOOL_SHA256  staging/appimagetool" | sha256sum -c -
+          chmod +x staging/appimagetool staging/wine/bin/wine staging/wine/bin/wineserver
+          curl -fsSL --retry 3 -o staging/GeneralUser-GS.sf2 "$SOUNDFONT_URL"
+          echo "$SOUNDFONT_SHA256  staging/GeneralUser-GS.sf2" | sha256sum -c -
+          cp src/TabForge.Avalonia/licenses/GeneralUser-GS_LICENSE.txt staging/GeneralUser-GS-LICENSE.txt
+          curl -fsSL --retry 3 -o staging/ffmpeg.tar.xz "$FFMPEG_URL"
+          echo "$FFMPEG_SHA256  staging/ffmpeg.tar.xz" | sha256sum -c -
+          mkdir -p staging/ffmpeg
+          tar -xf staging/ffmpeg.tar.xz -C staging/ffmpeg --strip-components=1
+          test -f staging/ffmpeg/LICENSE.txt
+          staging/ffmpeg/bin/ffmpeg -version | tee staging/ffmpeg-version.txt
+          if staging/ffmpeg/bin/ffmpeg -buildconf 2>&1 | grep -E -- '--enable-(gpl|nonfree)'; then
+            echo 'Refusing a GPL/nonfree FFmpeg build'; exit 1
+          fi
+          printf 'Input: %s\nSHA-256: %s\n' "$FFMPEG_URL" "$FFMPEG_SHA256" > staging/ffmpeg/BUILD_PROVENANCE.txt
+      - name: Build both experimental Linux packages
+        env:
+          TABFORGE_SOUNDFONT: ${{ github.workspace }}/staging/GeneralUser-GS.sf2
+          TABFORGE_SOUNDFONT_LICENSE: ${{ github.workspace }}/staging/GeneralUser-GS-LICENSE.txt
+        run: |
+          bash tools/package-linux.sh --out "$GITHUB_WORKSPACE/package" --wine "$GITHUB_WORKSPACE/staging/wine" --helpers "$GITHUB_WORKSPACE/src/TabForge.AudioEngine/native" --appimagetool "$GITHUB_WORKSPACE/staging/appimagetool" --ffmpeg "$GITHUB_WORKSPACE/staging/ffmpeg"
+          test -f package/linux/TabForge-0.8.7-linux-x64.tar.xz
+          test -f package/linux/TabForge-0.8.7-x86_64.AppImage
+      - name: Verify package parity and record checksums
+        working-directory: package/linux
+        run: |
+          ./TabForge-0.8.7-x86_64.AppImage --appimage-extract >/dev/null
+          diff -r squashfs-root/usr TabForge.AppDir/usr
+          test -f TabForge.AppDir/usr/bin/wine/bin/wine
+          cmp TabForge.AppDir/usr/bin/ffmpeg "$GITHUB_WORKSPACE/staging/ffmpeg/bin/ffmpeg"
+          TabForge.AppDir/usr/bin/ffmpeg -version
+          for file in tfvst32.exe tfvst64.exe tfvst3.dll tfvst3-x86.dll; do
+            cmp "TabForge.AppDir/usr/bin/$file" "$GITHUB_WORKSPACE/src/TabForge.AudioEngine/native/$file"
+          done
+          sha256sum TabForge-0.8.7-linux-x64.tar.xz TabForge-0.8.7-x86_64.AppImage > TabForge-0.8.7-linux-SHA256.txt
+      - name: Upload Linux review files
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: linux-release-files
+          path: |
+            package/linux/TabForge-*.tar.xz
+            package/linux/TabForge-*.AppImage
+            package/linux/TabForge-*-SHA256.txt
+            package/linux/MIN_GLIBC.txt
+          if-no-files-found: error

@@ -7,11 +7,13 @@
 param([switch]$Clean, [switch]$NoTest, [string]$BuildDir = '')
 $ErrorActionPreference = 'Stop'
 
-$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$candidate = Split-Path -Parent $PSScriptRoot
+if (Test-Path (Join-Path $candidate 'TabForge.sln')) { $sourceRoot = $candidate; $repoRoot = Split-Path -Parent $candidate }
+else { $repoRoot = $candidate; $sourceRoot = $candidate }
 $src = Join-Path $PSScriptRoot 'tfvst3'
 $buildDir = if ($BuildDir) { $BuildDir } else { Join-Path $src 'build' }
-$sdk = Join-Path $repoRoot 'Source\third_party\vst3sdk'
-$destDir = Join-Path $repoRoot 'Source\src\TabForge.AudioEngine\native'
+$sdk = Join-Path $sourceRoot 'third_party\vst3sdk'
+$destDir = Join-Path $sourceRoot 'src\TabForge.AudioEngine\native'
 $provenance = Join-Path $PSScriptRoot 'BUILD_PROVENANCE.md'
 
 $cmake = 'C:\Program Files\CMake\bin\cmake.exe'
@@ -70,7 +72,7 @@ if (-not $generator -and (Test-Path (Join-Path $buildDir 'CMakeCache.txt'))) {
 }
 $cmakeVersion = ((& $cmake --version | Select-Object -First 1) -replace 'cmake version ', '').Trim()
 $dllHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $dll).Hash.ToLowerInvariant()
-$sources = @('tfvst3.cpp', 'tfvst3.h', 'tfv3_connection.h', 'CMakeLists.txt') | ForEach-Object {
+$sources = @('tfvst3.cpp', 'tfvst3.h', 'tfv3_connection.h', 'tfv3_params.inc', 'CMakeLists.txt') | ForEach-Object {
     $p = Join-Path $src $_
     "- $_ SHA-256: $((Get-FileHash -Algorithm SHA256 -LiteralPath $p).Hash.ToLowerInvariant())"
 }

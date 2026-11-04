@@ -22,8 +22,19 @@ public sealed class UnixChildProcessGuard : IChildProcessGuard
         lock (_children)
         {
             if (_disposed) return false;
-            _children.RemoveAll(p => p.HasExited);
+            // A child that its owner already disposed is gone: HasExited throws "No process is associated with this object"
+            // after Process.Dispose, so it must be removed rather than queried again.
+            _children.RemoveAll(IsGone);
             _children.Add(process);
+            return true;
+        }
+    }
+
+    private static bool IsGone(Process process)
+    {
+        try { return process.HasExited; }
+        catch (Exception ex) when (ex is InvalidOperationException or NotSupportedException or System.ComponentModel.Win32Exception)
+        {
             return true;
         }
     }

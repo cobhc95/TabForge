@@ -42,8 +42,12 @@ function CpuPercent($before, $after, $seconds) {
 
 $mb = { param($v) [Math]::Round($v / 1MB, 1) }
 
-Get-Process TabForge -ErrorAction SilentlyContinue | Stop-Process -Force
-Remove-Item "$env:APPDATA\TabForge\settings.json" -ErrorAction SilentlyContinue
+# This audit only ever owns the process it starts below. Another TabForge is the owner's session: never kill it
+# (a second launch would only activate it, so the measurements would be wrong anyway). Refuse and say how to proceed.
+$running = @(Get-Process TabForge -ErrorAction SilentlyContinue)
+if ($running.Count -gt 0) {
+    throw ("TabForge is already running (pid {0}). Close it yourself, then run this audit again; this tool never kills a process it did not start." -f ($running.Id -join ', '))
+}
 
 Write-Host "== launch =="
 $t0 = Get-Date

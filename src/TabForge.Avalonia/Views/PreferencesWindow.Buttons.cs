@@ -30,6 +30,7 @@ public sealed partial class PreferencesWindow
     {
         "general.checknow" => RowButton(row, "Check now", _actions is not null, () => _actions?.RunCommand(CheckForUpdatesCommand)),
         "appearance.resetcolours" => RowButton(row, "Reset colours", true, ResetColours),
+        UiScaleRecommendation.RowKey => RecommendedScaleButton(row),
         "mixer.grouprules" => RowButton(row, "Group rules…", _actions is not null, () => _actions?.RunCommand(GroupRulesCommand)),
         "vst.asio.configure" => ConfigureAsioButton(row),
         "vst.inputsshown" => RowButton(row, "Inputs shown…", true, () => _ = OpenInputsShownAsync()),
@@ -45,6 +46,24 @@ public sealed partial class PreferencesWindow
     private void ResetColours()
     {
         ThemeColours.ResetToPreset(Working.Appearance, light: AvaloniaPalette.PaintsLight(Working.Appearance, ActualThemeVariant == ThemeVariant.Light));
+        MarkChanged();
+        Rebuild();
+    }
+
+    /// <summary>"Use 0.80× (recommended)": the size for the monitor this window is on, with what it was picked from in the tooltip.</summary>
+    private Button RecommendedScaleButton(SettingDescriptor row)
+    {
+        var advice = MonitorUiScale.Recommend(this);
+        var button = RowButton(row, advice is { } a ? $"Use {a.ScaleText} (recommended)" : "Use the recommended size", advice is not null, UseRecommendedScale);
+        if (advice is { } seen) ToolTip.SetTip(button, $"Recommended for {seen.Detail}.");
+        return button;
+    }
+
+    /// <summary>Puts Interface size on the monitor's recommendation and lets it follow the monitor again; the page is built again to show it.</summary>
+    private void UseRecommendedScale()
+    {
+        // A repeated recommendation is not an edit (including the override mark).
+        if (!MonitorUiScale.UseRecommended(this, Working.Appearance)) return;
         MarkChanged();
         Rebuild();
     }
@@ -97,4 +116,3 @@ public sealed partial class PreferencesWindow
         MarkChanged();
     }
 }
-

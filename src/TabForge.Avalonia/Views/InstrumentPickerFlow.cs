@@ -13,7 +13,8 @@ namespace TabForge.Avalonia.Views;
 
 // Owns: one Choose instrument run on a MIDI track, the same for every entry point (the track row icon and the Track properties button): the picker
 //   over its owner with the track's family open and its tile selected, every tile click sounding live (InstrumentChoice over the song's engine),
-//   Select as one undo step, Cancel and the window's close box as an exact restore.
+//   Select as one undo step (the Track properties window passes storeUndo: false and commits the pick later as part of its own one step),
+//   Cancel and the window's close box as an exact restore.
 // Does not own: the choice and its rules (InstrumentChoice), the picker window (InstrumentPickerWindow), the engine (EngineProgramSink).
 // Tests: TabForge.Avalonia.Tests.InstrumentChoiceTests.
 // Threads: UI thread only.
@@ -38,8 +39,9 @@ public sealed class InstrumentPickerFlow
 
     /// <summary>Runs the picker for <paramref name="track"/> over <paramref name="owner"/>. <paramref name="document"/> holds the track (Select is one undo step
     /// and the song's engine follows); null for a track that is not in a song yet (Select keeps the previewed sound, no step). <paramref name="previewed"/> runs
-    /// after every preview and <paramref name="finished"/> once when the run ends (Select, Cancel or close), so the caller repaints. False for an audio track or when nothing was kept.</summary>
-    public async Task<bool> ChooseAsync(Window owner, IEditableDocument? document, SongProject project, TrackModel track, Action? previewed = null, Action? finished = null)
+    /// after every preview and <paramref name="finished"/> once when the run ends (Select, Cancel or close), so the caller repaints. False for an audio track or when nothing was kept.
+    /// <paramref name="storeUndo"/> false keeps the preview sound but stores no step: the caller (the Track properties window) commits the pick later as part of its own one step.</summary>
+    public async Task<bool> ChooseAsync(Window owner, IEditableDocument? document, SongProject project, TrackModel track, Action? previewed = null, Action? finished = null, bool storeUndo = true)
     {
         if (track.IsAudio) return false;
         var sink = _playback is not null && document is SongDocument song ? new EngineProgramSink(_playback, song, _plugins) : null;
@@ -52,7 +54,7 @@ public sealed class InstrumentPickerFlow
         try
         {
             if (picked is not null && choice.RemapsNotes(picked) && !await ConfirmRemapAsync(owner, picked)) picked = null;
-            kept = picked is not null && choice.Commit(document, picked).Changed;
+            kept = picked is not null && choice.Commit(storeUndo ? document : null, picked).Changed;
         }
         finally
         {

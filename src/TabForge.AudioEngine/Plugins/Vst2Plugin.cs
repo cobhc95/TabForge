@@ -404,8 +404,7 @@ public sealed unsafe partial class Vst2Plugin : IPluginInstance, IEditorResizeSo
         IntPtr data;
         var size = (long)Dispatch(EffGetChunk, 0, IntPtr.Zero, (IntPtr)(&data), 0);
         if (size <= 0 || data == IntPtr.Zero) return null;
-        if (size > TabForge.Audio.Contracts.PluginStateLimits.MaxRawBytes)
-            throw new InvalidDataException($"The plug-in's state ({size / 1048576.0:0.0} MiB) is larger than the {TabForge.Audio.Contracts.PluginStateLimits.MaxRawBytes / 1048576} MiB limit.");
+        TabForge.Audio.Contracts.PluginStateLimits.Check(size);
         var bytes = new byte[size];
         Marshal.Copy(data, bytes, 0, (int)size);
         return bytes;
@@ -455,6 +454,8 @@ public sealed unsafe partial class Vst2Plugin : IPluginInstance, IEditorResizeSo
         // is freed here; the constructor's catch frees the same set on failure (NativeMemory.Free(null) is a no-op).
         // Instances is removed in both paths. AskString/Programs above guard on _disposed so a late query cannot touch the closed effect.
         CloseEditor();
+        // The module itself is deliberately never FreeLibrary'd (C1, by design): an unload on a thread the plug-in still
+        // owns can crash the host. One handle stays mapped per distinct DLL until the process ends; reloads reuse it.
         Dispatch(EffStopProcess, 0, IntPtr.Zero, IntPtr.Zero, 0);
         Dispatch(EffMainsChanged, 0, 0, IntPtr.Zero, 0);
         Dispatch(EffClose, 0, IntPtr.Zero, IntPtr.Zero, 0);

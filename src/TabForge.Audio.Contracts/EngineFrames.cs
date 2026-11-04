@@ -20,6 +20,9 @@ public static class Frames
 {
     public const int MaxFrameBytes = 32 * 1024 * 1024;
 
+    /// <summary>The longest file or folder path on the wire, in chars: the app's own cap (InputLimits.MaxPathLength). A shorter bound drops a path the app accepts.</summary>
+    public const int MaxPathChars = 32_767;
+
     /// <summary>A connection's frame buffer above this size is dropped after its frame, so one large message does not keep its memory.</summary>
     private const int KeptFrameBufferBytes = 256 * 1024;
     private const int LengthBytes = 4;
@@ -108,7 +111,7 @@ public static class Frames
 
     public static void WriteString(this BinaryWriter writer, string? value) => writer.Write(value ?? "");
 
-    public static string ReadBoundedString(this BinaryReader reader, int maxChars = 32_768)
+    public static string ReadBoundedString(this BinaryReader reader, int maxChars = Frames.MaxPathChars)
     {
         var value = reader.ReadString();
         if (value.Length > maxChars) throw new InvalidDataException("Text too long.");
@@ -163,7 +166,7 @@ public static class Frames
         var list = new List<ClipSpec>(count);
         for (var i = 0; i < count; i++)
         {
-            var file = r.ReadBoundedString(1024);
+            var file = r.ReadBoundedString(Frames.MaxPathChars);
             double Finite(double v, double min, double max) => double.IsFinite(v) ? Math.Clamp(v, min, max) : min;
             list.Add(new ClipSpec(file, Finite(r.ReadDouble(), 0, 86_400), Finite(r.ReadDouble(), 0, 86_400), Finite(r.ReadDouble(), 0, 86_400),
                 Finite(r.ReadDouble(), -96, 24), Finite(r.ReadDouble(), -24, 24), Finite(r.ReadDouble(), 0.25, 4), Finite(r.ReadDouble(), 0, 3_600), Finite(r.ReadDouble(), 0, 3_600)));
@@ -191,7 +194,7 @@ public static class Frames
         w.Write(chain.Count);
         foreach (var p in chain)
         {
-            w.WriteString(p.Path); w.WriteString(p.Format); w.Write(p.IsInstrument); w.Write(p.Enabled); w.Write(p.Wet); w.WriteString(p.State); w.WriteString(p.Name); w.WriteString(p.Pins); w.Write(p.OutputDb); w.WriteString(p.Id); w.Write(p.Skip); w.Write(p.Untrusted); w.WriteString(p.ExpectedSha256); w.Write(p.LocationTrusted);
+            w.WriteString(p.Path); w.WriteString(p.Format); w.Write(p.IsInstrument); w.Write(p.Enabled); w.Write(p.Wet); w.WriteString(p.State); w.WriteString(p.Name); w.WriteString(p.Pins); w.Write(p.OutputDb); w.WriteString(p.Id); w.Write(p.Skip); w.Write(p.Untrusted); w.WriteString(p.ExpectedSha256); w.Write(p.LocationTrusted); w.Write(p.Isolate); w.WriteString(p.ExpectedDependencies);
         }
     }
 
@@ -202,7 +205,7 @@ public static class Frames
         var list = new List<PluginSpec>(count);
         for (var i = 0; i < count; i++)
         {
-            var path = r.ReadBoundedString(1024); var format = r.ReadBoundedString(8); var inst = r.ReadBoolean();
+            var path = r.ReadBoundedString(Frames.MaxPathChars); var format = r.ReadBoundedString(32); var inst = r.ReadBoolean();
             var enabled = r.ReadBoolean(); var wet = Math.Clamp(r.ReadInt32(), 0, 100);
             var state = r.ReadBoundedString(PluginStateLimits.MaxBase64Chars);
             var name = r.ReadBoundedString(256);
@@ -213,8 +216,10 @@ public static class Frames
             var untrusted = r.ReadBoolean();
             var expectedSha = r.ReadBoundedString(64);
             var locationTrusted = r.ReadBoolean();
+            var isolate = r.BaseStream.Position < r.BaseStream.Length && r.ReadBoolean();
+            var expectedDependencies = r.BaseStream.Position < r.BaseStream.Length ? r.ReadBoundedString(64) : "";
             list.Add(new PluginSpec(path, format, inst, enabled, wet, state.Length == 0 ? null : state, name, pins,
-                double.IsFinite(outputDb) ? Math.Clamp(outputDb, -60, 12) : 0, id, skip, untrusted, expectedSha, locationTrusted));
+                double.IsFinite(outputDb) ? Math.Clamp(outputDb, -60, 12) : 0, id, skip, untrusted, expectedSha, locationTrusted, isolate, expectedDependencies));
         }
         return list;
     }

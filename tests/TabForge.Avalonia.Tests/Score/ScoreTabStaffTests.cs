@@ -40,4 +40,24 @@ public class ScoreTabStaffTests
             && Enumerable.Range(0, strings).Any(s => Math.Abs(r.Values[1] - (tabTop + s * probe.StringGap)) < LineTolerance));
         Assert.Equal(strings, stringLines);
     }
+
+    /// <summary>The capo stands on its own line above the first staff ("Capo N"), never as a suffix on the tuning title.</summary>
+    [AvaloniaFact]
+    public void CapoStandsOnItsOwnLineAboveTheFirstStaff()
+    {
+        var song = DemoSongFactory.Create();
+        song.Tracks[0].Capo = 5;
+        var draw = new AvaloniaDrawContext();
+        var probe = new ScoreGeometryProbe(song, draw);
+        List<DrawRecord> records;
+        using (var bitmap = new RenderTargetBitmap(new PixelSize(1280, 800), new Vector(96, 96)))
+        {
+            using var dc = bitmap.CreateDrawingContext();
+            records = probe.Draw(draw.Use(dc), 4);
+        }
+
+        var texts = records.Where(r => r.Kind == "Text").Select(r => r.Text).ToList();
+        Assert.Contains("Capo 5", texts);
+        Assert.DoesNotContain(texts, t => t is not null && t.Contains("· Capo"));
+    }
 }

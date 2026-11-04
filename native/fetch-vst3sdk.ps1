@@ -17,8 +17,10 @@ $SubmoduleCommits = [ordered]@{
     'public.sdk'    = '586dc5e6c8012c3e4b01c79389375cbe96bdb1da'
 }
 
-$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$target = Join-Path $repoRoot 'Source\third_party\vst3sdk'
+$candidate = Split-Path -Parent $PSScriptRoot
+if (Test-Path (Join-Path $candidate 'TabForge.sln')) { $sourceRoot = $candidate; $repoRoot = Split-Path -Parent $candidate }
+else { $repoRoot = $candidate; $sourceRoot = $candidate }
+$target = Join-Path $sourceRoot 'third_party\vst3sdk'
 $git = 'C:\Program Files\Git\cmd\git.exe'
 if (-not (Test-Path $git)) { $git = 'git' }
 

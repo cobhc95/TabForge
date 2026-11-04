@@ -46,7 +46,7 @@ A tuning is the note each open string plays. Standard guitar tuning, from the lo
 
 A tickbox called **Keep fret numbers** decides what happens to notes that are already written. Ticked, the numbers stay and the pitch changes, as when you retune a real guitar. Unticked, the sound stays and the numbers change.
 
-A capo clamps across the neck and raises every open string by the same amount. The tuning area has a **Capo** box, and in TAB, fret numbers count from the capo.
+A capo clamps across the neck and raises every open string by the same amount. The **Capo** card at the bottom of the window holds the full capo and up to four partial capos, and in TAB, fret numbers count from the capo.
 
 ## Mute, solo and balance
 

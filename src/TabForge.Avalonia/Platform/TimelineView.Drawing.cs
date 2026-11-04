@@ -57,7 +57,8 @@ public sealed partial class TimelineView
         d.Rect(ink("TimelineRow"), null, 0, 0, width, Bounds.Height);
         d.Rect(ink("TimelineSectionLane"), null, 0, RulerHeight, width, SectionHeight);
         DrawRuler(d, ink, edge, width);
-        DrawSections(d, light);
+        var activeSection = PlayheadBar >= 0 ? ActiveSectionIndex(PlayheadBar) : -1;
+        DrawSections(d, light, activeSection);
         d.Line(edge, 0, gridTop - 0.5, width, gridTop - 0.5);
         d.PushClip(0, gridTop, width, Math.Max(0, Bounds.Height - gridTop));
         MasterLaneStrip.Draw(d, ink, _song, _boundaries, gridTop, MasterLaneHeight, width, _masterLaneActivity, _masterLook);
@@ -71,7 +72,7 @@ public sealed partial class TimelineView
         d.Pop();
         if (LoopStart >= 0 && LoopEnd >= LoopStart && LoopStart < BarCount)   // the bracket sits on the ruler, so it draws outside the lanes' clip
             TimelineLoopMarks.Draw(d, ink, BarX(LoopStart), TimelineGeometryRules.RightOfBar(_boundaries, LoopEnd), RulerHeight, gridTop, Bounds.Height, LoopOn);
-        DrawActiveSectionBrackets(d, ink, gridTop);
+        DrawActiveSectionBrackets(d, ink, gridTop, activeSection);
         if (PlayheadBar >= 0 && PlayheadBar < BarCount && PlayheadStyles.ShowsBarMarker(_playheadStyle)) DrawBarMarker(d, ink);
         DrawSectionDrag(d, ink, gridTop);
         DrawStretchLanes(d, gridTop);
@@ -218,9 +219,11 @@ public sealed partial class TimelineView
 
     /// <summary>The [ ] brackets around the section that holds the playhead bar, in the section's colour, from the section strip down.</summary>
     internal void DrawActiveSectionBrackets(IDrawContext d, Func<string, UiColor> ink, double gridTop)
+        => DrawActiveSectionBrackets(d, ink, gridTop, ActiveSectionIndex(PlayheadBar));
+
+    private void DrawActiveSectionBrackets(IDrawContext d, Func<string, UiColor> ink, double gridTop, int index)
     {
         if (!ShowSectionBrackets || PlayheadBar < 0) return;
-        var index = ActiveSectionIndex(PlayheadBar);
         if (index < 0) return;
         var start = Math.Clamp(_sections[index].MeasureIndex, 0, BarCount);
         var end = SectionLayout.End(_sections, index, BarCount);
@@ -282,7 +285,7 @@ public sealed partial class TimelineView
         d.Line(edge, 0, RulerHeight - 0.5, width, RulerHeight - 0.5);
     }
 
-    private void DrawSections(IDrawContext d, bool light)
+    private void DrawSections(IDrawContext d, bool light, int activeSection)
     {
         var accent = AvaloniaPalette.Get("InstrumentAccent", light);
         for (var i = 0; i < _sections.Count; i++)
@@ -311,7 +314,7 @@ public sealed partial class TimelineView
                 var zone = Math.Min(SectionEdgeZone, width / 2);   // as wide as the grab zone SectionEdgeAt uses
                 d.Rect(AvaloniaPalette.Get("OverlayInk", light).WithOpacity(light ? SectionEdgeLightOpacity : SectionEdgeDarkOpacity), null, edge.Right ? left + width - zone : left, top, zone, height, 3);
             }
-            if (SectionActive(i)) DrawSectionGlow(d, colour, x + 1, y, w, _sectionGlowIntensity * SectionGlowActiveShare);
+            if (i == activeSection) DrawSectionGlow(d, colour, x + 1, y, w, _sectionGlowIntensity * SectionGlowActiveShare);
             var flash = SectionButtons.FlashAlpha(section);
             if (flash > 0) DrawSectionGlow(d, accent, x + 1, y, w, flash);
             if (!_showSectionNames || w <= 34) continue;
@@ -353,8 +356,6 @@ public sealed partial class TimelineView
         }
         SectionDragVisual.DrawColumn(d, ink, this, _song, start, end, DragSectionX, colour, _sections[DragSection].Title, SectionGlowIntensity, gridTop);
     }
-
-    private bool SectionActive(int index) => PlayheadBar >= 0 && ActiveSectionIndex(PlayheadBar) == index;
 
     /// <summary>The glow round the section that holds the playhead: a wide faint halo and a thin edge, in the section's colour.</summary>
     private void DrawSectionGlow(IDrawContext d, UiColor colour, double x, double y, double w, double intensity)

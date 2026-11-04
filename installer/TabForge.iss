@@ -57,7 +57,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "associate"; Description: "Open .gp, .gp5, .gp4, .gp3, .gpx and TabForge (.tforge) files with TabForge"; GroupDescription: "Windows integration:"
 
 [Files]
-; The whole publish folder: TabForge.exe, the loose SoundTouch.Net.dll (LGPL, replaceable), licenses\ (licence texts), Assets\, Resources\.
+; The whole publish folder: TabForge.exe, the loose SoundTouch.Net.dll (LGPL, replaceable), the loose native helpers
+; (tfvst3.dll, tfvst32.exe), licenses\ (licence texts), Assets\, Resources\.
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreversion
 ; THIRD_PARTY.md is already in the publish folder (Package-Release copies it from the repo root or docs\), so the line above installs it.

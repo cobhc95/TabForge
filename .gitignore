@@ -5,28 +5,22 @@ build/
 *.user
 .vs/
 
-# Local-only: source backups and copyrighted sample songs (see THIRD_PARTY.md)
+# Local-only backups, copyrighted songs and recordings
 backup/*.zip
+backup/night-*/
+backup/archive/
 Tabs/
-
-# Diagnostics written by the app or tools
+work/
+*.whl
 *.log
-
-# Release packages (uploaded to GitHub Releases, not committed)
 dist/
-
-# Native build output and fetched third-party SDKs
 native/tfvst3/build/
 third_party/
-
-# Stray third-party packages (not part of TabForge)
-*.whl
-
-# Local audit kits, reference data, recordings and tools (outside the product; copyrighted songs and personal recordings)
-work/
-
-# WPF temporary build projects
 *_wpftmp.csproj
-backup/night-*/
+TestResults/
+*.trx
+shots-after/
+shots-before/
 
-backup/archive/
+# Wine-bridge-only fixture inventory; never included in a release branch
+tools/plugin-matrix/manifest.private*.json

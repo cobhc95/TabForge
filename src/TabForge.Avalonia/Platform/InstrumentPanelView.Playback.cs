@@ -36,6 +36,7 @@ public sealed partial class InstrumentPanelView
             _playbackShown = false;
             _playing.Clear();
             _movement = new();
+            NoteListsChanged();
             InvalidateVisual();
             return;
         }
@@ -58,6 +59,7 @@ public sealed partial class InstrumentPanelView
         _movement = MovementOf(_playing);
         _playbackShown = true;
         _lastFadeRepaintMs = nowMs;
+        NoteListsChanged();
         InvalidateVisual();
     }
 

@@ -23,6 +23,7 @@ namespace TabForge.Avalonia.Tests;
 /// Does not own: the window, the browser's drawing (PluginBrowserWindowTests) or trust (PluginTrust).
 /// Tests: this class.
 /// </summary>
+[Collection("PluginProbeSeam")]
 public class FxAddPluginTests
 {
     private static string TempPlugin(string extension = ".dll")

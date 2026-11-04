@@ -63,6 +63,16 @@ public static class FxChainPresenter
     public static RemoveTarget ChooseRemove(bool containerSelected, int selectedPluginCount) =>
         containerSelected ? RemoveTarget.Containers : selectedPluginCount == 0 ? RemoveTarget.Nothing : RemoveTarget.Plugins;
 
+    /// <summary>The second line of a plug-in row: the vendor, plus the bridged label for a bridged 32/64-bit VST2 plug-in.</summary>
+    public static string PluginDetail(PluginSlot slot)
+    {
+        var bridged = slot.Format.Equals(PluginFormats.Bridged32, StringComparison.OrdinalIgnoreCase) ? PluginFormats.Bridged32
+            : slot.Format.Equals(PluginFormats.Bridged64, StringComparison.OrdinalIgnoreCase) ? PluginFormats.Bridged64 : "";
+        return bridged.Length > 0
+            ? string.Join(" · ", new[] { slot.Vendor, bridged }.Where(part => part.Length > 0))
+            : slot.Vendor;
+    }
+
     /// <summary>The output gain the output slider sets: its value rounded to one decimal dB.</summary>
     public static double OutputDbFromSlider(double sliderValue) => Math.Round(sliderValue, 1);
 

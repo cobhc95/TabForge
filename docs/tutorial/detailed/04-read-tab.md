@@ -176,6 +176,8 @@ On a guitar or bass, click a fret to write a note at the edit cursor. The keyboa
 
 Right-click the panel to open the fretboard menu, or focus the panel and press `Shift+F10` or the `Menu` key. It offers **Show this track as** (fretboard, keyboard or drums), **Scale**, **Note names**, **Preview next notes**, **Left-handed** and **Fretboard settings…**. **Fretboard settings…** chooses 12 or 24 frets.
 
+The board is drawn like the real thing: dark rosewood or light birdseye-maple wood (tiled, never stretched), binding rails along the top and bottom edges, position inlay dots, and fret wires at their true 12-TET places. A sounding string vibrates for its note's length. Grab a drawn capo and drop it on another fret to move it; the song updates on release as one undo step (not yet tried in the running app).
+
 ## Find the right notes with scales
 
 A scale is a set of notes that sound good together. If you know the scale of a passage, you know which notes are safe to play over it. The scale finder listens to the notes in your song and suggests which scales fit.

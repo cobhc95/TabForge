@@ -2,6 +2,33 @@
 
 TabForge is actively developed; please report anything odd on the Issues page.
 
+## 0.8.7
+
+### New
+
+- A detailed fretboard with real fret spacing, layered woods, shaded binding, wound strings, an ivory nut and material inlays. Five presets include Flame maple with green inlays; brightness starts at 65%. Fretboard settings groups Look, Notes and markers, Layout and size, Strings and capo, and Scale highlight, with contrast controls and Reset section.
+- Full and partial capos on the board and in Track properties: up to four partial capos, each with its own string selection. Drag a capo to move it in one undo step; notes, playback and the score header follow each string's effective capo. The board behind a capo is dimmed and cannot write notes.
+- Track properties has compact Details, Mixer and MIDI cards, tuning presets for 3 to 10 strings, saved custom tunings and per-string audition through the track's sound. Instrument and tuning choices stay in a draft until OK; Cancel discards them.
+- Windows 32-bit VST2 plug-ins run in a helper process. Bridged VST3 plug-ins can open their own editors. Approve all and Approve selected identify plug-ins after one confirmation, with progress and Stop.
+- Experimental Linux downloads: AppImage is the primary package; tar.xz is the fallback. Both bundle pinned Wine 9.21 and the Windows plug-in helpers for supported 32- and 64-bit Windows VST2/VST3 plug-ins. First-use preparation runs off the UI thread and missing-runtime or plug-in failures are reported readably.
+
+### Fixed
+
+- File > Open awaits its dialog and checks a slow starting folder off the UI thread with a timeout. Repeated Ctrl+O cannot open overlapping requests.
+- Playback playheads follow display frames rather than a fixed-rate timer.
+- Track-meter menus stay meter-only, scale tooltips stay anchored, and applying an already-selected recommended UI size does nothing.
+- Plug-in filtering indexes known roles once per search. A local Release smoke test measured a warm median of about 2.5 ms for 5,000 entries; this is filtering logic, not input-to-paint latency, and is not a controlled comparison with the earlier approximately 220 ms audit.
+- Piano-roll note queries use an interval index, moving markers reuse geometry, path retention is bounded, hidden built-in editors stop polling, icons prepare in batches, and General MIDI bank replacements are prepared outside the audio callback.
+- Reset entire app's Cancel button closes the window. Container Active on rules apply from the strip button and survive preset loading; inactive rules remain visible on light and dark themes.
+- The scale list keeps the selected scale highlighted. Track properties no longer commits an instrument pick before OK, and removing or retuning strings asks before losing unplayable notes.
+- Projects with absolute plug-in paths from another operating system open with readable missing-plug-in reports instead of refusing the project.
+
+### Notes
+
+- Automatic scale detection and best-match suggestions are shared by the status bar, fretboard and piano roll; these already shipped in 0.8.6 and remain a headline capability, not a newly added 0.8.7 feature.
+- Linux remains experimental and has not been validated on real hardware. Some JUCE 8 editors render black under Wine. Eight bridged plug-ins may need 1,024-frame buffers. Windows native 64-bit VST2 plug-ins are not isolated from the audio engine.
+- Release wording and screenshot captions are drafts pending owner review. No full-suite-green, real-hardware compatibility or visual-parity claim is made.
+
 ## 0.8.6
 
 ### New

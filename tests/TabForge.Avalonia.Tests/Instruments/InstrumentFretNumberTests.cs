@@ -40,6 +40,27 @@ public class InstrumentFretNumberTests
         }
     }
 
+    /// <summary>The fret numbers under the wood end inside the pane, with room to spare for the splitter below it (its grab area is 5 DIPs and its
+    /// line, 1 at rest and 2 hovered or dragged, is centred in it), at the tallest and shortest boards and for bass and guitar.</summary>
+    [AvaloniaFact]
+    public void FretNumbersEndAboveTheSplitterLine()
+    {
+        const double numberTop = 5, clearance = 4;   // the drawing's gap under the wood (FretNumberTop) and the least room kept above the pane's edge
+        var draw = new AvaloniaDrawContext();
+        var number = draw.Text("24", InstrumentPanelView.Font, FretboardSizeRules.FretNumberFontMax, new UiColor(255, 0, 0, 0), 1);
+        var pads = FretboardGeometryRules.TopPad + FretboardGeometryRules.BottomPad;
+        foreach (var bass in new[] { false, true })
+            foreach (var spare in new[] { 0.0, 30.0, 200.0 })   // spare room over the tightest pane, where the board fills the pane's height
+            {
+                var strings = bass ? 4 : 6;
+                var height = (strings - 1) * FretboardGeometryRules.MinStringGap + pads + spare;
+                var layout = FretboardGeometryRules.Compute(new FretboardGeometryRules.Input(strings, 24, 24, 1, false, 0, Bass: bass), new UiRect(0, 0, 900, height));
+                var numbersBottom = FretboardArtist.Wood(layout, bass).Bottom + numberTop + number.Height;
+                Assert.True(numbersBottom + clearance <= height,
+                    $"bass={bass} pane {height}: fret numbers end at {numbersBottom:F1}, leaving under {clearance} DIPs before the pane edge");
+            }
+    }
+
     /// <summary>Records the text each drawn fret marker shows and the stroke of each line; the other shapes are not needed by the checks.</summary>
     internal sealed class RecordingDrawContext : IDrawContext
     {
@@ -50,8 +71,12 @@ public class InstrumentFretNumberTests
         public List<(UiColor? Fill, double Radius, double X, double Y)> Ellipses { get; } = new();
         /// <summary>Each rectangle drawn: its fill (null when outlined only) and its box, in drawing order.</summary>
         public List<(UiColor? Fill, double X, double Y, double Width, double Height)> Rects { get; } = new();
+        /// <summary>Each image drawn: the image and its destination rect, in drawing order.</summary>
+        public List<(IUiImage Image, double X, double Y, double Width, double Height)> Images { get; } = new();
+        /// <summary>Each clip pushed: its box, in drawing order.</summary>
+        public List<(double X, double Y, double Width, double Height)> Clips { get; } = new();
         public double PixelsPerDip => 1;
-        public IPathFactory Paths => throw new System.NotSupportedException("The fret-number check records text only.");
+        public IPathFactory Paths { get; } = new RecordingPaths();
 
         public UiText Text(string text, string fontFamily, double size, UiColor colour, double pixelsPerDip, double maxWidth = 0, UiTextAlign align = UiTextAlign.Left,
             int weight = 400, bool italic = false, UiStroke? outline = null, bool idealLayout = false)
@@ -65,9 +90,10 @@ public class InstrumentFretNumberTests
         public List<(double X1, double Y1, double X2, double Y2)> LineOps { get; } = new();
         public void Line(UiStroke stroke, double x1, double y1, double x2, double y2) { LineStrokes.Add(stroke); LineOps.Add((x1, y1, x2, y2)); }
         public void Ellipse(UiColor? fill, UiStroke? stroke, double cx, double cy, double rx, double ry) => Ellipses.Add((fill, rx, cx, cy));
-        public void Path(UiColor? fill, UiStroke? stroke, IUiPath path) { }
-        public void Image(IUiImage image, double x, double y, double width, double height) { }
-        public void PushClip(double x, double y, double width, double height) { }
+        public List<UiColor?> PathFills { get; } = new();
+        public void Path(UiColor? fill, UiStroke? stroke, IUiPath path) => PathFills.Add(fill);
+        public void Image(IUiImage image, double x, double y, double width, double height) => Images.Add((image, x, y, width, height));
+        public void PushClip(double x, double y, double width, double height) => Clips.Add((x, y, width, height));
         public void PushTranslate(double dx, double dy) { }
         public void PushScale(double sx, double sy, double centreX = 0, double centreY = 0) { }
         public void PushRotate(double degrees, double centreX, double centreY) { }
@@ -80,5 +106,13 @@ public class InstrumentFretNumberTests
         public void PushClip(IUiPath clip) { }
         public void PushTransform(IUiTransform transform) { }
         public void PushOpacity(double opacity) { }
+    }
+
+    /// <summary>Path building for the recorder: shapes are accepted and never inspected (the checks read texts, rects, lines and ellipses).</summary>
+    private sealed class RecordingPaths : IPathFactory
+    {
+        private sealed class Shape : IUiPath { }
+        public IUiPath BuildPath(System.Action<IPathSink> figures, UiFillRule fillRule = UiFillRule.EvenOdd) => new Shape();
+        public UiRect Bounds(IUiPath path) => default;
     }
 }

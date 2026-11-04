@@ -18,9 +18,9 @@ public sealed class MidiVerifyTablesTests
 {
     private static string OutDir => "C:/tfrel-tmp/midi-verify";
     private static readonly string Song =
-        "samples/metallica/metallica/master_of_puppets_9.gpx";
+        "C:/Users/COBHC/Downloads/TabForge/samples/metallica/metallica/master_of_puppets_9.gpx";
     private static readonly string Fallback =
-        "samples/metallica/metallica/enter_sandman_9.gp5";
+        "C:/Users/COBHC/Downloads/TabForge/samples/metallica/metallica/enter_sandman_9.gp5";
 
     [Fact]
     public void MidiVerify_WriteTables()

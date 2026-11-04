@@ -78,7 +78,7 @@ public sealed class FxChainContainers
         ToolTip.SetTip(_on, "Untick to bypass every plug-in in this container; their own switches stay as they are");
         ToolTip.SetTip(_name, "The container's name (Enter applies)");
         foreach (var child in new Control[] { label, _name, _on, mixLabel, _mix, _count, _activeOn.Button }) line.Children.Add(child);
-        _activeOn.Button.Click += (_, _) => { if (_shown is { } shown) OpenActiveOn?.Invoke(shown, _activeOn.Button); };
+        _activeOn.Button.Click += (_, _) => { if (_shown is { } shown) OpenActiveOn?.Invoke(Live(shown), _activeOn.Button); };
         Pane.Children.Add(line);
         Pane.Children.Add(_presetBar);
         Pane.Children.Add(_note);
@@ -118,6 +118,10 @@ public sealed class FxChainContainers
     }
 
     private ChainContainer? Focused => _rows.Focused as ChainContainer;
+
+    /// <summary>The live container for the shown one: the rig may have replaced its objects while the pane kept the old instance.</summary>
+    private ChainContainer Live(ChainContainer shown) =>
+        _rig().Containers?.FirstOrDefault(c => c.Id == shown.Id) ?? shown;
 
     /// <summary>The container an action on the focused row means: that container, or the one the focused plug-in sits in.</summary>
     private ChainContainer? Target()

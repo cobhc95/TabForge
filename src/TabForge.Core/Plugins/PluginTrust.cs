@@ -29,8 +29,14 @@ public readonly record struct TrustVerdict(bool Trusted, string Reason, bool Loc
 /// <summary>
 /// Trust boundary for native plug-in code: a song (.tforge, embedded .gp, sidecar, rig preset, auto-load chain) names plug-in
 /// paths, but nothing is loaded from a path the user has not trusted.
-/// <para><b>What an approval covers.</b> Outside Program Files / Common Files an explicit approval covers <b>this binary</b>: its
-/// SHA-256 (with size, last-write time and the signer, recorded in <see cref="PluginSettings.TrustRecords"/>), at that path. A scan
+/// <para><b>What an approval covers.</b> Outside Program Files / Common Files an explicit approval covers <b>this binary</b> and the
+/// DLLs Windows resolves from its own folder through its static and delay import tables (the closure
+/// <see cref="TabForge.Audio.Contracts.PeImports"/> reads without loading anything): the binary's SHA-256, the closure's hash
+/// (with size, last-write time and the signer, recorded in <see cref="PluginSettings.TrustRecords"/>), at that path. A DLL planted
+/// or changed in that folder after approval is refused at load; a plug-in that loads its own DLLs keeps working because those DLLs
+/// were in the closure the user approved. <b>Limit:</b> a DLL a plug-in loads dynamically at run time, or from outside its own folder,
+/// is not part of the static closure and is not covered by the approval; the folder write right itself is the same threat as
+/// replacing the plug-in. A scan
 /// only records the fingerprint; the plug-in is listed as needing approval until the user approves it once. An approval is never a
 /// blanket approval of the path, the folder or the vendor. An approved path always keeps its record (the record cap drops only scan-only records). A binary with different content is
 /// "changed since you approved it" and is not loaded until the user approves it again, with one exception, the publisher-update
@@ -154,6 +160,35 @@ public sealed class PluginTrust
     }
 
     /// <summary>
+    /// The dependency-closure hash the engine must find at load time; "" when the location alone is the trust or the approval has no
+    /// record. A legacy approval with local dependencies is refused by <see cref="TabForge.Audio.Contracts.PluginIdentity"/>.
+    /// </summary>
+    private string ExpectedDependenciesFor(string path, PluginSettings settings, IPluginFileTrust files)
+    {
+        var full = PluginPath.Normalize(path);
+        if (full.Length == 0) return "";
+        lock (Gate)
+        {
+            if (!IsRemote(full) && IsProtectedLocation(full) && ResolvesInsideProtected(full, files)) return "";
+            return IndexFor(settings).Records.TryGetValue(full, out var rec) ? rec.Dependencies ?? "" : "";
+        }
+    }
+
+    /// <summary>
+    /// The dependency hash the identify probe must find. For a location-trusted plug-in (no per-file record) it is the current
+    /// closure's hash, so the probe still checks what it is about to load; for a recorded approval it is the recorded value.
+    /// </summary>
+    public string ProbeDependencies(string path, PluginSettings settings, IPluginFileTrust files)
+    {
+        var expected = ExpectedDependenciesFor(path, settings, files);
+        if (expected.Length > 0) return expected;
+        var bin = BinaryOf(PluginPath.Normalize(path));
+        if (bin is null) return "";
+        try { return TabForge.Audio.Contracts.PeImports.DependencyHash(bin); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Services.Trace.Error(Services.Trace.Engine, "plug-in dependencies: " + ex.Message); return ""; }
+    }
+
+    /// <summary>
     /// The SHA-256 the identify probe must find (it executes the plug-in, so it is only ever run for a trusted one): the approved hash,
     /// or, for a plug-in trusted by location (Program Files, which has no per-file record), the file's hash now. "" when there is
     /// none (missing or unreadable): the probe then refuses to load. Reads the file, so call it off the UI thread.
@@ -192,7 +227,7 @@ public sealed class PluginTrust
                 rec = new PluginFingerprint { Path = full };
                 AddRecord(settings, index, rec);
             }
-            if (now is null) { rec.Sha256 = ""; rec.Signer = ""; rec.Size = 0; rec.LastWriteUtcTicks = 0; }   // missing: whatever appears there later counts as changed
+            if (now is null) { rec.Sha256 = ""; rec.Signer = ""; rec.Size = 0; rec.LastWriteUtcTicks = 0; rec.Dependencies = ""; }   // missing: whatever appears there later counts as changed
             else CopyFingerprint(now, rec);
         }
     }
@@ -232,9 +267,11 @@ public sealed class PluginTrust
             var untrusted = !verdict.Trusted;
             // The engine hashes the file it loads against ExpectedSha256, unless the verdict says the folder alone is the trust.
             var expected = untrusted || verdict.LocationTrusted ? "" : ExpectedHashFor(p.Path, settings, files);
+            var expectedDependencies = untrusted || verdict.LocationTrusted ? "" : ExpectedDependenciesFor(p.Path, settings, files);
             specs.Add(new PluginSpec(path, p.Format, p.Type == PluginSlotType.Instrument, p.Plays, p.Wet, p.State, p.Name, p.Pins, p.OutputDb, p.Id,
                 untrusted || quarantined.Contains(path, StringComparer.OrdinalIgnoreCase), Untrusted: untrusted,
-                ExpectedSha256: expected, LocationTrusted: verdict.LocationTrusted));
+                ExpectedSha256: expected, LocationTrusted: verdict.LocationTrusted, Isolate: settings.CrashProne?.Contains(path, StringComparer.OrdinalIgnoreCase) == true,
+                ExpectedDependencies: expectedDependencies));
         }
         return specs;
     }
@@ -401,6 +438,7 @@ public sealed class PluginTrust
     private void CopyFingerprint(PluginFingerprint from, PluginFingerprint to)
     {
         to.Size = from.Size; to.LastWriteUtcTicks = from.LastWriteUtcTicks; to.Sha256 = from.Sha256; to.Signer = from.Signer;
+        to.Dependencies = from.Dependencies;
     }
 
     private string? BinaryOf(string full) => PluginIdentity.BinaryOf(full);
@@ -450,7 +488,11 @@ public sealed class PluginTrust
             using (var stream = new FileStream(bin, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, 1 << 16, FileOptions.SequentialScan))
                 sha = Convert.ToHexString(SHA256.HashData(stream));
             Interlocked.Increment(ref _hashCount);
-            var fp = new PluginFingerprint { Path = bin, Size = stat.Size, LastWriteUtcTicks = stat.Ticks, Sha256 = sha, Signer = SignerOf(bin, files) };
+            var fp = new PluginFingerprint
+            {
+                Path = bin, Size = stat.Size, LastWriteUtcTicks = stat.Ticks, Sha256 = sha, Signer = SignerOf(bin, files),
+                Dependencies = TabForge.Audio.Contracts.PeImports.DependencyHash(bin),
+            };
             Fingerprints[bin] = fp;
             return fp;
         }

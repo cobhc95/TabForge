@@ -10,8 +10,9 @@ FOLDER and refuses to package unless it exits 0 and its log says
 "TabForge self-test: N passed, 0 failed". The curated release area (--areas release) runs first, on a separate copy that is never packaged.
 The tested folder is what gets zipped and installed; the
 executable hash is re-checked after the test so nothing can be swapped in between.
-It also verifies the shipped tfvst3.dll against the SHA-256 recorded in Source\native\BUILD_PROVENANCE.md and refuses to
-package on a mismatch or a missing record, unless -AllowUnprovenancedNative is passed (then it only warns loudly).
+It also verifies the shipped tfvst3.dll, tfvst3-x86.dll, tfvst32.exe and tfvst64.exe against the SHA-256 recorded in
+Source\native\BUILD_PROVENANCE.md, BUILD_PROVENANCE_X86.md, BUILD_PROVENANCE32.md and BUILD_PROVENANCE64.md, and refuses
+to package on a mismatch or a missing record, unless -AllowUnprovenancedNative is passed (then it only warns loudly).
 The PDBs are not shipped; they are archived in dist\symbols\<version>\ so crash logs can be symbolicated later.
 The portable zip is written with forward-slash entry names and one fixed, neutral timestamp (2026-01-01 00:00) for
 every entry, so it carries no build machine time or time zone.
@@ -19,8 +20,9 @@ every entry, so it carries no build machine time or time zone.
 Reproducible builds: unless it already runs on a clean checkout (CI), the script builds from a temporary git worktree
 of the committed HEAD, never from the working folder, so line endings, stray files and uncommitted edits cannot leak
 into the release, and a local build equals a CI build of the same commit. Build settings that affect bytes live in
-Source\global.json (exact SDK), Source\Directory.Build.props and Source\tools\Publish.ps1. The one native bridge is the committed
-Source\src\TabForge.AudioEngine\native\tfvst3.dll (its hash is verified against Source\native\BUILD_PROVENANCE.md).
+Source\global.json (exact SDK), Source\Directory.Build.props and Source\tools\Publish.ps1. The four native components are the committed
+Source\src\TabForge.AudioEngine\native\tfvst3.dll, tfvst3-x86.dll, tfvst32.exe and tfvst64.exe (their hashes are verified against
+Source\native\BUILD_PROVENANCE.md, BUILD_PROVENANCE_X86.md, BUILD_PROVENANCE32.md and BUILD_PROVENANCE64.md).
 Source\tools\Compare-Release.ps1 compares two results. See Source\docs\guides\REPRODUCIBLE_BUILDS.md.
 #>
 [CmdletBinding()]
@@ -118,36 +120,68 @@ function Write-LoudWarning([string]$Message) {
 
 Write-Output "TabForge $display (version $version)"
 
-# ---- native bridge provenance ---------------------------------------------------------------------
-$shippedDll = Join-Path $srcRoot 'src\TabForge.AudioEngine\native\tfvst3.dll'
-$provenanceFile = Join-Path $srcRoot 'native\BUILD_PROVENANCE.md'
-if (-not (Test-Path -LiteralPath $shippedDll)) {
-    throw "tfvst3.dll is missing at $shippedDll (run native\build-tfvst3.ps1)."
-}
-$shippedHash = Get-Sha256 $shippedDll
-# Release signing (TABFORGE_REQUIRE_SIGNING=1): an unsigned tfvst3.dll is never packaged. Local unsigned dev packaging is unaffected.
-if ($env:TABFORGE_REQUIRE_SIGNING -eq '1') {
-    $dllSignature = Get-AuthenticodeSignature -LiteralPath $shippedDll
-    if ($dllSignature.Status -ne 'Valid') { throw "tfvst3.dll is not validly signed (status: $($dllSignature.Status)) and TABFORGE_REQUIRE_SIGNING=1. Refusing to package." }
-}
-# A native DLL that is not tied to a recorded build is fatal unless the caller explicitly accepts it.
+# ---- native component provenance ------------------------------------------------------------------
+# A native binary that is not tied to a recorded build is fatal unless the caller explicitly accepts it.
 function Stop-Unprovenanced([string]$Message) {
     if ($AllowUnprovenancedNative) { Write-LoudWarning "$Message (continuing: -AllowUnprovenancedNative)"; return }
     throw "$Message Refusing to package; pass -AllowUnprovenancedNative to override."
 }
-if (-not (Test-Path -LiteralPath $provenanceFile)) {
-    Stop-Unprovenanced "No Source\native\BUILD_PROVENANCE.md: the shipped tfvst3.dll ($shippedHash) is NOT tied to a recorded SDK commit/compiler. Run Source\native\build-tfvst3.ps1."
-} else {
-    $recorded = $null
-    foreach ($line in [IO.File]::ReadAllLines($provenanceFile)) {
-        if ($line -match '^tfvst3\.dll SHA-256:\s*`?([0-9a-fA-F]{64})`?\s*$') { $recorded = $Matches[1].ToLowerInvariant() }
+$nativeComponents = @(
+    [pscustomobject]@{
+        Name = 'tfvst3.dll'
+        Shipped = Join-Path $srcRoot 'src\TabForge.AudioEngine\native\tfvst3.dll'
+        Provenance = Join-Path $srcRoot 'native\BUILD_PROVENANCE.md'
+        Pattern = '^tfvst3\.dll SHA-256:\s*`?([0-9a-fA-F]{64})`?\s*$'
+        BuildScript = 'native\build-tfvst3.ps1'
+    },
+    [pscustomobject]@{
+        Name = 'tfvst3-x86.dll'
+        Shipped = Join-Path $srcRoot 'src\TabForge.AudioEngine\native\tfvst3-x86.dll'
+        Provenance = Join-Path $srcRoot 'native\BUILD_PROVENANCE_X86.md'
+        Pattern = '^tfvst3-x86\.dll SHA-256:\s*`?([0-9a-fA-F]{64})`?\s*$'
+        BuildScript = 'native\build-tfvst3-x86.ps1'
+    },
+    [pscustomobject]@{
+        Name = 'tfvst32.exe'
+        Shipped = Join-Path $srcRoot 'src\TabForge.AudioEngine\native\tfvst32.exe'
+        Provenance = Join-Path $srcRoot 'native\BUILD_PROVENANCE32.md'
+        Pattern = '^tfvst32\.exe SHA-256:\s*`?([0-9a-fA-F]{64})`?\s*$'
+        BuildScript = 'native\build-tfvst32.ps1'
+    },
+    [pscustomobject]@{
+        Name = 'tfvst64.exe'
+        Shipped = Join-Path $srcRoot 'src\TabForge.AudioEngine\native\tfvst64.exe'
+        Provenance = Join-Path $srcRoot 'native\BUILD_PROVENANCE64.md'
+        Pattern = '^tfvst64\.exe SHA-256:\s*`?([0-9a-fA-F]{64})`?\s*$'
+        BuildScript = 'native\build-tfvst32.ps1'
     }
-    if (-not $recorded) {
-        Stop-Unprovenanced 'Source\native\BUILD_PROVENANCE.md has no tfvst3.dll SHA-256 line. Re-run Source\native\build-tfvst3.ps1.'
-    } elseif ($recorded -ne $shippedHash) {
-        Stop-Unprovenanced "tfvst3.dll MISMATCH: shipped $shippedHash, recorded $recorded. The DLL was not produced by the recorded build. Re-run native\build-tfvst3.ps1 or investigate before releasing."
+)
+foreach ($component in $nativeComponents) {
+    $name = $component.Name
+    if (-not (Test-Path -LiteralPath $component.Shipped)) {
+        throw "$name is missing at $($component.Shipped) (run $($component.BuildScript))."
+    }
+    $shippedHash = Get-Sha256 $component.Shipped
+    # Release signing (TABFORGE_REQUIRE_SIGNING=1): an unsigned native component is never packaged. Local unsigned dev packaging is unaffected.
+    if ($env:TABFORGE_REQUIRE_SIGNING -eq '1') {
+        $signature = Get-AuthenticodeSignature -LiteralPath $component.Shipped
+        if ($signature.Status -ne 'Valid') { throw "$name is not validly signed (status: $($signature.Status)) and TABFORGE_REQUIRE_SIGNING=1. Refusing to package." }
+    }
+    $provenanceName = Split-Path $component.Provenance -Leaf
+    if (-not (Test-Path -LiteralPath $component.Provenance)) {
+        Stop-Unprovenanced "No Source\native\${provenanceName}: the shipped $name ($shippedHash) is NOT tied to a recorded build. Run Source\$($component.BuildScript)."
     } else {
-        Write-Output "tfvst3.dll matches Source\native\BUILD_PROVENANCE.md ($shippedHash)"
+        $recorded = $null
+        foreach ($line in [IO.File]::ReadAllLines($component.Provenance)) {
+            if ($line -match $component.Pattern) { $recorded = $Matches[1].ToLowerInvariant() }
+        }
+        if (-not $recorded) {
+            Stop-Unprovenanced "Source\native\$provenanceName has no $name SHA-256 line. Re-run Source\$($component.BuildScript)."
+        } elseif ($recorded -ne $shippedHash) {
+            Stop-Unprovenanced "$name MISMATCH: shipped $shippedHash, recorded $recorded. The file was not produced by the recorded build. Re-run $($component.BuildScript) or investigate before releasing."
+        } else {
+            Write-Output "$name matches Source\native\$provenanceName ($shippedHash)"
+        }
     }
 }
 
@@ -158,6 +192,26 @@ Clear-Folder $publish
 dotnet restore $project -r win-x64 --locked-mode
 if ($LASTEXITCODE) { throw 'restore failed' }
 & (Join-Path $PSScriptRoot 'Publish.ps1') -Output $publish -ExtraArgs '-p:DebugType=portable'
+# The portable zip and the installer are both made from this exact folder, so both helpers must be in it, loose beside
+# TabForge.exe (the engine starts them from AppContext.BaseDirectory; a single-file bundle copy would be invisible).
+foreach ($helperName in @('tfvst32.exe', 'tfvst64.exe')) {
+    $publishedHelper = Join-Path $publish $helperName
+    if (-not (Test-Path -LiteralPath $publishedHelper)) {
+        throw "$helperName is missing from the publish folder (Windows VST2 plug-ins would not load); refusing to package."
+    }
+    $publishedHelperHash = Get-Sha256 $publishedHelper
+    $sourceHelperHash = Get-Sha256 (Join-Path $srcRoot "src\TabForge.AudioEngine\native\$helperName")
+    if ($publishedHelperHash -ne $sourceHelperHash) { throw "The published $helperName ($publishedHelperHash) differs from the verified source helper ($sourceHelperHash); refusing to package." }
+    Write-Output "$helperName is loose in the publish folder (portable zip and installer both use it): $publishedHelperHash"
+}
+foreach ($shimName in @('tfvst3.dll', 'tfvst3-x86.dll')) {
+    $publishedShim = Join-Path $publish $shimName
+    if (-not (Test-Path -LiteralPath $publishedShim)) { throw "$shimName is missing from the publish folder (Windows VST3 plug-ins would not load); refusing to package." }
+    $publishedShimHash = Get-Sha256 $publishedShim
+    $sourceShimHash = Get-Sha256 (Join-Path $srcRoot "src\TabForge.AudioEngine\native\$shimName")
+    if ($publishedShimHash -ne $sourceShimHash) { throw "The published $shimName ($publishedShimHash) differs from the verified source shim ($sourceShimHash); refusing to package." }
+    Write-Output "$shimName is loose in the publish folder (portable zip and installer both use it): $publishedShimHash"
+}
 # Symbols: archived per release (never shipped) so crash logs can be symbolicated; moved out before the self-test
 # so the tested folder is exactly the packaged one.
 $symbols = Join-Path $dist "symbols\$version"
@@ -180,7 +234,7 @@ foreach ($patch in $alphaTabPatches) { Copy-Item -LiteralPath $patch.FullName -D
 if (-not (Test-Path -LiteralPath (Join-Path $publish 'SoundTouch.Net.dll'))) {
     throw 'SoundTouch.Net.dll is not beside TabForge.exe in the publish folder (LGPL: it must stay a loose, replaceable file); refusing to package.'
 }
-foreach ($required in @('LGPL-2.1_SoundTouch.Net.txt', 'MPL-2.0_alphaTab.txt', 'OFL-1.1_Bravura.txt', 'MIT_NAudio.txt', 'MIT_MeltySynth_and_notices.txt', 'MIT_NLayer.txt', 'MIT_NVorbis.txt', 'THIRD-PARTY-NOTICES_DotNet_runtime.txt')) {
+foreach ($required in @('LGPL-2.1_SoundTouch.Net.txt', 'LGPL-2.1_mpg123.txt', 'MPL-2.0_alphaTab.txt', 'OFL-1.1_Bravura.txt', 'MIT_NAudio.txt', 'MIT_MeltySynth_and_notices.txt', 'MIT_NLayer.txt', 'MIT_NVorbis.txt', 'MIT_Steinberg_VST3_SDK.txt', 'MIT_Avalonia.txt', 'MIT_SkiaSharp.txt', 'MIT_HarfBuzzSharp.txt', 'THIRD-PARTY-NOTICES_SkiaSharp.txt', 'MIT_Tmds.DBus.Protocol.txt', 'MIT_MicroCom.Runtime.txt', 'BSD-3-Clause_ANGLE.txt', 'MIT_DotNet_runtime_LICENSE.txt', 'MIT_DotNet_WindowsDesktop_runtime.txt', 'MIT_Microsoft_System.Drawing.Common.txt', 'THIRD-PARTY-NOTICES_DotNet_runtime.txt', 'THIRD-PARTY-NOTICES_System.Drawing.Common.txt', 'BSD-3-Clause_AlphaSkia.txt', 'MIT_CLAP.txt', 'OFL-1.1_Inter.txt', 'OFL-1.1_JetBrainsMono.txt')) {
     if (-not (Test-Path -LiteralPath (Join-Path $publish "licenses\$required"))) { throw "licenses\$required is missing from the publish folder; refusing to package." }
 }
 # Machine-neutral binaries: no local user or build paths may be embedded in anything that ships.

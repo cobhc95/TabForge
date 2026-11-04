@@ -56,6 +56,7 @@ public sealed class StatusBarView : UserControl
     private readonly Button _cancelImport;
     private readonly Button _audioDevice;
     private readonly Button _scale;
+    private readonly ToolTip _scaleTip = new() { IsHitTestVisible = false };
     private AudioDeviceTip? _audioTip;   // the facts the audio button's tooltip shows now
     private string _stateText = ReadyText;   // the transport state text; the status shows it except while an import runs
     private bool _outputWanted;  // the song sends MIDI; the output name then shows unless the audio interface button takes its place
@@ -82,6 +83,11 @@ public sealed class StatusBarView : UserControl
         _audioDevice = LinkButton("AudioDevice", _audioDeviceText, "TextMuted", AudioInterfaceTooltip, "Audio device settings", () => AudioDeviceRequested?.Invoke());
         _audioDevice.IsVisible = false;
         _scale = LinkButton("StatusScale", _scaleText, "LegibleBrush", ScaleTooltip, "Scale of this section", () => ScaleRequested?.Invoke());
+        // This footer tip belongs above its button, not at the pointer (where screen-edge adjustment can cover the button).
+        ToolTip.SetPlacement(_scale, PlacementMode.Top);
+        ToolTip.SetShowDelay(_scale, UiTiming.StatusScaleTooltipDelayMs);
+        _scale.Click += (_, _) => ToolTip.SetIsOpen(_scale, false);
+        ShowScale("", ScaleTooltip);
         _scaleText.Name = "StatusScaleText";
         var status = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Children = { _status, _cancelImport } };
         ToolTip.SetTip(_position, PositionTooltip);
@@ -122,7 +128,9 @@ public sealed class StatusBarView : UserControl
     public void ShowScale(string text, string tooltip)
     {
         _scaleText.Text = text;
-        ToolTip.SetTip(_scale, tooltip);
+        _scaleTip.Content = new TextBlock { Text = tooltip, MaxWidth = 420, TextWrapping = TextWrapping.Wrap };
+        ToolTip.SetTip(_scale, _scaleTip);
+        AutomationProperties.SetHelpText(_scale, tooltip); // The same context stays available to assistive technology.
     }
 
     /// <summary>The Cancel button of a running import was clicked.</summary>

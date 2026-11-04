@@ -98,11 +98,10 @@ public sealed class PluginPortabilityTests
         Assert.Contains("Missing.clap", ex.Message);
     }
 
-    [Fact]
+    [WindowsFact]
     public void TheShippedHashRuleStillFindsTheWindowsBundleBinary()
     {
         // PluginIdentity.BinaryOf goes through the same layout rules now: the answer for a real Windows-layout bundle is unchanged.
-        if (!OperatingSystem.IsWindows()) return;   // BinaryOf answers for the layout of the machine it runs on
         var dir = Directory.CreateTempSubdirectory("bundle");
         try
         {

@@ -30,6 +30,7 @@ public abstract class BuiltinEffectPanel : UserControl
     private readonly IUiThread _ui = TabForge.Avalonia.Platform.AvaloniaUiThread.ForApplication();
     private readonly IUiTimer _poll;
     private readonly List<IParamControl> _controls = [];
+    private readonly Dictionary<uint, PluginParameterInfo> _valuesById = new();
     private readonly TextBlock _notice = new() { Name = "FxNotice", TextWrapping = global::Avalonia.Media.TextWrapping.Wrap, [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted") };
     private int _waiting;   // ticks the last question is out (0: none)
 
@@ -60,14 +61,13 @@ public abstract class BuiltinEffectPanel : UserControl
         AttachedToVisualTree += (_, _) =>
         {
             if (_host.Engine is { } engine) engine.ParametersReceived += OnParameters;
-            Ask();
-            _poll.Start();
         };
         DetachedFromVisualTree += (_, _) =>
         {
             _poll.Stop();
             if (_host.Engine is { } e) e.ParametersReceived -= OnParameters;
         };
+        _ = new TabForge.Avalonia.Platform.VisibilityPolling(this, _poll, () => { _waiting = 0; Ask(); });
         if (_host.Engine is not { IsRunning: true }) _notice.Text = "The audio engine is not running: changes apply when it starts.";
     }
 
@@ -116,7 +116,10 @@ public abstract class BuiltinEffectPanel : UserControl
     {
         if (_host.Engine is not { } engine || engineSlot != engine.SlotOf(Track) || index != Track.Rig.Plugins.IndexOf(Slot)) return;
         _waiting = 0;
-        var byId = list.ToDictionary(p => p.Id);
+        // Reuse lookup storage: metadata/value protocol remains compatible with third-party hosts.
+        var byId = _valuesById;
+        byId.Clear();
+        foreach (var parameter in list) byId.Add(parameter.Id, parameter);
         foreach (var control in _controls)
             if (byId.TryGetValue(control.Id, out var p)) control.Show(p.Value);
         ShowValues(byId);

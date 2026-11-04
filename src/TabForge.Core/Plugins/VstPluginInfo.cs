@@ -7,12 +7,15 @@ namespace TabForge.Plugins;
 /// <param name="Role">"Instrument", "Effect", or "" when not known yet (VST2 roles are probed when first used).</param>
 public sealed record VstPluginInfo(string Name, string Path, string Format = "VST3", string Vendor = "", string Role = "", string ClassId = "")
 {
-    /// <summary>The format of a 32-bit VST2 DLL the scan found: listed so the user sees why it is not usable, never loaded.</summary>
-    public const string Format32 = "32-bit (not supported)";
+    /// <summary>The format of a 32-bit VST2 DLL: hosted through the 32-bit helper process, so it is a normal selectable plug-in.</summary>
+    public const string Format32 = PluginFormats.Bridged32;
+    /// <summary>The format of a 64-bit Windows VST2 DLL hosted through the 64-bit helper under Wine on Linux.</summary>
+    public const string Format64 = PluginFormats.Bridged64;
 
-    public const string Text32 = "This is a 32-bit plug-in; TabForge loads 64-bit plug-ins only";
-
-    public bool IsUnsupported32 => Format == Format32;
+    /// <summary>True for a 32-bit VST2 DLL the 32-bit helper hosts (the old "not supported" label is migrated by the scanner and validators).</summary>
+    public bool IsBridged32 => Format == Format32;
+    /// <summary>True for a 64-bit Windows VST2 DLL the 64-bit helper hosts under Wine.</summary>
+    public bool IsBridged64 => Format == Format64;
 
     public override string ToString() => $"{Name}  ({Format})";
 }

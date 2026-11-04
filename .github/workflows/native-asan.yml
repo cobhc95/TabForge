@@ -1,0 +1,57 @@
+# Stage 14: the helper under AddressSanitizer, its test-only fuzz harness and the 200-cycle leak loop.
+# x64 only: MSVC AddressSanitizer does not instrument x86, so tfvst32.exe stays on the normal build and is stated as
+# not covered. The fuzz harness is built only with TFVST32_BUILD_TEST=ON and is never part of a shipped helper.
+name: native-asan
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  ASAN_OPTIONS: quarantine_size_mb=2:detect_leaks=0
+  FUZZ_SEED: '20261101'
+
+jobs:
+  asan:
+    runs-on: windows-2022
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure the ASan helper (x64, test-only harnesses)
+        run: cmake -S native/tfvst32 -B build/asan -G "Visual Studio 17 2022" -A x64 -DTFVST32_BUILD_TEST=ON -DTFVST32_ASAN=ON
+
+      - name: Build the ASan helper and its harnesses
+        run: cmake --build build/asan --config Release --parallel
+
+      - name: Helper self-test under ASan
+        working-directory: build/asan/Release
+        run: .\tfvst64.exe --selftest
+
+      - name: Native VST2 host self-test under ASan
+        working-directory: build/asan/Release
+        run: .\tfvst64test.exe .\passthrough64.dll
+
+      - name: Fuzz helper frames (TCP and pipe) under ASan
+        working-directory: build/asan/Release
+        run: .\tfvst64fuzz.exe --frames 200 $env:FUZZ_SEED
+
+      - name: Fuzz helper state blobs under ASan
+        working-directory: build/asan/Release
+        run: .\tfvst64fuzz.exe --state .\passthrough64.dll 200 $env:FUZZ_SEED
+
+      - name: Leak loop (200 load/unload cycles) under ASan
+        working-directory: build/asan/Release
+        run: .\tfvst64fuzz.exe --leak .\passthrough64.dll 200
+
+      - name: Configure the plain helper (x64) for a leak baseline
+        run: cmake -S native/tfvst32 -B build/plain -G "Visual Studio 17 2022" -A x64 -DTFVST32_BUILD_TEST=ON
+
+      - name: Build the plain fuzz harness
+        run: cmake --build build/plain --config Release --parallel --target tfvst64fuzz
+
+      - name: Leak loop (200 load/unload cycles) on the plain helper
+        working-directory: build/plain/Release
+        run: .\tfvst64fuzz.exe --leak .\passthrough64.dll 200

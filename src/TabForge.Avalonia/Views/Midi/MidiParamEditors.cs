@@ -60,6 +60,9 @@ public sealed class MidiParamEditors
     /// <summary>The note-set editor of the shown processor (hidden while Applies to is All notes); null when it has none.</summary>
     public Border? NoteEditor { get; private set; }
 
+    /// <summary>A drop-down value was stored: the window re-evaluates which parameters are shown (MidiParamInfo.ShowWhen).</summary>
+    public Action? Changed { get; set; }
+
     /// <summary>The editor column's scroller: while set, labels stay inside its viewport instead of pushing editors out.</summary>
     public ScrollViewer? Viewer { get; set; }
 
@@ -159,7 +162,8 @@ public sealed class MidiParamEditors
         {
             if (combo.SelectedItem is not ComboBoxItem { Tag: int value } || (int)Math.Round(values[p.Key]!.GetValue<double>()) == value) return;
             if (p.Key == "NoteMode" && NoteEditor is not null) NoteEditor.IsVisible = value != 0;
-            _edit(() => { values[p.Key] = value; Store(proc, values); });
+            _edit(() => { values[p.Key] = (double)value; Store(proc, values); });   // a double, like every other stored value, so a later read as double works
+            Changed?.Invoke();
         };
         return combo;
     }

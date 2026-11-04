@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Avalonia.Media;
 using TabForge.Platform;
 
@@ -52,6 +53,15 @@ public static class TrackIconArt
     /// <summary>Loads the art synchronously on the UI thread (App start-up, or a test); a second call is free.</summary>
     public static void Preload() => EnsureLoaded();
 
+    internal static async Task PreloadBatched()
+    {
+        if (IsReady) return;
+        var data = await Task.Run(ReadData);
+        var art = new Dictionary<string, Art>(StringComparer.Ordinal);
+        await IconArtPreloader.PrepareBatches(data, icon => Add(art, icon));
+        lock (Sync) _art ??= art;
+    }
+
     private static Dictionary<string, Art> EnsureLoaded()
     {
         lock (Sync)
@@ -69,18 +79,32 @@ public static class TrackIconArt
     private static Dictionary<string, Art> ReadAll()
     {
         var art = new Dictionary<string, Art>(StringComparer.Ordinal);
+        foreach (var icon in ReadData()) Add(art, icon);
+        return art;
+    }
+
+    private sealed record Data(string Name, string? Ink, string? Accent, string? Shade);
+
+    private static List<Data> ReadData()
+    {
+        var data = new List<Data>();
         try
         {
             using var doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Assets", "TrackRowIcons", "owner-icons.json")));
             foreach (var icon in doc.RootElement.EnumerateObject())
-                if (Layer(icon.Value, "ink") is { } ink) art[icon.Name] = new Art(ink, Layer(icon.Value, "accent"), Layer(icon.Value, "shade"));
+                data.Add(new Data(icon.Name, LayerData(icon.Value, "ink"), LayerData(icon.Value, "accent"), LayerData(icon.Value, "shade")));
         }
         // Without the art file the rows show no icon; nothing else depends on it.
         // This read runs off the paint path (background preload, or Has in logic/tests) with no window to show a message in, so the console line is the only record.
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or FormatException) { Console.Error.WriteLine("track icons: " + ex.Message); }
-        return art;
+        return data;
     }
 
-    private static AvaloniaPath? Layer(JsonElement icon, string name) =>
-        icon.TryGetProperty(name, out var value) && value.GetString() is { Length: > 0 } data ? new AvaloniaPath(Geometry.Parse(data)) : null;
+    private static string? LayerData(JsonElement icon, string name) => icon.TryGetProperty(name, out var value) ? value.GetString() : null;
+    private static AvaloniaPath? Layer(string? data) => data is { Length: > 0 } ? new AvaloniaPath(Geometry.Parse(data)) : null;
+    private static void Add(Dictionary<string, Art> art, Data data)
+    {
+        try { if (Layer(data.Ink) is { } ink) art[data.Name] = new Art(ink, Layer(data.Accent), Layer(data.Shade)); }
+        catch (FormatException ex) { Console.Error.WriteLine("track icons: " + ex.Message); }
+    }
 }

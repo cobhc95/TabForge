@@ -35,10 +35,10 @@ public sealed class MidiArticulationVerifyTests : IDisposable
 
     internal static readonly string[] Candidates = new[]
     {
-        "samples/metallica/metallica/enter_sandman_9.gp5",
-        "samples/metallica/metallica/kirk_solos.gp5",
-        "samples/metallica/metallica/master_of_puppets_9.gpx",
-        "samples/children_of_bodom/all_for_nothing.gp5",
+        "C:/Users/COBHC/Downloads/TabForge/samples/metallica/metallica/enter_sandman_9.gp5",
+        "C:/Users/COBHC/Downloads/TabForge/samples/metallica/metallica/kirk_solos.gp5",
+        "C:/Users/COBHC/Downloads/TabForge/samples/metallica/metallica/master_of_puppets_9.gpx",
+        "C:/Users/COBHC/Downloads/TabForge/samples/children_of_bodom/all_for_nothing.gp5",
     };
 
     internal static string BestSong()

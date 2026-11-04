@@ -24,7 +24,8 @@ internal static class PlaybackEditDiff
         {
             var before = was.Tracks[i];
             var after = live.Tracks[i];
-            if (before.Capo != after.Capo || before.Transpose != after.Transpose || !before.StringTunings.SequenceEqual(after.StringTunings)) return true;
+            if (before.Capo != after.Capo || before.Transpose != after.Transpose || !before.StringTunings.SequenceEqual(after.StringTunings)
+                || !PartialCapoRules.Same(before.PartialCapos, after.PartialCapos)) return true;
         }
         var a = playing.State.Tracks;
         var b = now.State.Tracks;

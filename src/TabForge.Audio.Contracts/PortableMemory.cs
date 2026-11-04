@@ -13,4 +13,10 @@ public static class PortableMemory
 
     /// <summary>Opens the mapping the other process created.</summary>
     public static MemoryMappedFile Open(string name) => PortableSharedMemory.Open(name);
+
+    /// <summary>Creates a mapping at an explicit path that stays on disk until the caller deletes it (the Wine bridge block).</summary>
+    public static MemoryMappedFile CreateAt(string path, long capacity) => PortableSharedMemory.CreateAt(path, capacity);
+
+    /// <summary>Opens an explicit-path mapping the other process created.</summary>
+    public static MemoryMappedFile OpenAt(string path) => PortableSharedMemory.OpenAt(path);
 }

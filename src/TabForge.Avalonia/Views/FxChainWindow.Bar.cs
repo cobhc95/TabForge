@@ -81,7 +81,7 @@ public sealed partial class FxChainWindow
         _addPreset.Width = SaveButtonWidth;
         _addPreset.Padding = new Thickness(0, 2, 0, 4);
         _addPreset.Margin = new Thickness(4, 0, BarGap, 0);
-        foreach (var control in new Control[] { _presetBox, _addPreset, _wiring, _activeOnButton.Button, _midi, _parametersButton })
+        foreach (var control in new Control[] { _presetBox, _addPreset, _wiring, _activeOnButton.Button, _midi, _editorButton, _parametersButton })
         {
             control.VerticalAlignment = VerticalAlignment.Center;
             _bar.Children.Add(control);
@@ -273,6 +273,7 @@ public sealed partial class FxChainWindow
         // A track with no plug-in keeps MIDI… enabled: its Articulations tab edits the map kept on the track.
         _bar.IsEnabled = true;
         _presetBox.IsEnabled = _addPreset.IsEnabled = _wiring.IsEnabled = _parametersButton.IsEnabled = selected is not null;
+        _editorButton.IsEnabled = _editorButton.IsVisible && selected is not null && _host.Engine?.IsRunning == true;
         _volume.IsEnabled = _bypass.IsEnabled = selected is not null;
         _building = true;
         try

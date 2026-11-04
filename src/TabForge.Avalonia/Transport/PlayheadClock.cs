@@ -12,7 +12,7 @@ namespace TabForge.Avalonia.Transport;
 // Threads: UI only. Allocates nothing per frame: Position is one reused object.
 public sealed class PlayheadClock
 {
-    /// <summary>The farthest the drawn position runs ahead of the engine's last audible position, in ms: one 60 Hz frame.</summary>
+    /// <summary>The maximum speculation beyond the audible position, not a frame-rate cap. The real engine supplies a live, high-resolution position every frame.</summary>
     public const double MaxLeadMs = 1000.0 / 60;
 
     /// <summary>An engine position this many ms below the last one is an explicit jump back (a seek, a loop wrap, a count-in, a restart).</summary>

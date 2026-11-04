@@ -35,9 +35,6 @@ public static class WindowUiScale
         public EventHandler? ClosedHandler { get; set; }
         public bool Applying { get; set; }
         public bool AutoSize { get; set; }
-        public bool UserSized { get; set; }
-        public bool KeepOuterWidth { get; set; }
-        public bool KeepOuterHeight { get; set; }
         public double InnerWidth { get; set; } = double.NaN;
         public double InnerHeight { get; set; } = double.NaN;
         public double InnerMinWidth { get; set; } = double.NaN;
@@ -70,6 +67,7 @@ public static class WindowUiScale
     /// </summary>
     public static void RegisterWindowHook()
     {
+        DialogWindowPlacement.RegisterWindowHook();
         if (_hooked) return;
         _hooked = true;
         Window.ContentProperty.Changed.AddClassHandler<Window>((window, _) => Ensure(window));
@@ -97,7 +95,7 @@ public static class WindowUiScale
         if (autoSize)
         {
             CaptureInnerSizes(window, state);
-            ApplyScaledSizes(window, state, state.LastScale, initial: true);
+            ApplyScaledSizes(window, state, state.LastScale, state.LastScale, initial: true);
         }
         Action handler = () => Reapply(window, state);
         state.UiScaleHandler = handler;
@@ -118,10 +116,14 @@ public static class WindowUiScale
         Windows.TryGetValue(window, out var state) && state.Applying;
 
     /// <summary>True when <paramref name="size"/> is the size the helper applied last, not a resize by the user.</summary>
+    /// An automatic axis (NaN, sized to the content) matches when the helper left it automatic too.
     internal static bool MatchesAppliedSize(Window window, Size size) =>
         Windows.TryGetValue(window, out var state)
-        && double.IsFinite(state.LastAppliedWidth) && double.IsFinite(state.LastAppliedHeight)
-        && Math.Abs(size.Width - state.LastAppliedWidth) <= 1 && Math.Abs(size.Height - state.LastAppliedHeight) <= 1;
+        && (double.IsFinite(state.LastAppliedWidth) || double.IsFinite(state.LastAppliedHeight))
+        && SameAxis(size.Width, state.LastAppliedWidth) && SameAxis(size.Height, state.LastAppliedHeight);
+
+    private static bool SameAxis(double size, double applied) =>
+        double.IsNaN(applied) ? double.IsNaN(size) : Math.Abs(size - applied) <= 1;
 
     /// <summary>The outer-DIP size for content that is measured in inner DIPs at <paramref name="scale"/>.</summary>
     public static Size ToOuter(Size inner, double scale) => new(inner.Width * scale, inner.Height * scale);
@@ -230,44 +232,33 @@ public static class WindowUiScale
         state.InnerMinHeight = window.MinHeight;
         state.InnerMaxWidth = window.MaxWidth;
         state.InnerMaxHeight = window.MaxHeight;
-        // The Settings window keeps its remembered outer size, so a scale change must not multiply it again.
-        if (window is PreferencesWindow preferences)
-        {
-            state.KeepOuterWidth = IsUsableSettingsSize(preferences.Saved.SettingsWindowWidth, ChromeMetrics.SettingsWindowMinWidth);
-            state.KeepOuterHeight = IsUsableSettingsSize(preferences.Saved.SettingsWindowHeight, ChromeMetrics.SettingsWindowMinHeight);
-        }
     }
 
-    private static bool IsUsableSettingsSize(double value, double minimum) => double.IsFinite(value) && value >= minimum;
-
-    private static void ApplyScaledSizes(Window window, Attached state, double scale, bool initial)
+    private static void ApplyScaledSizes(Window window, Attached state, double scale, double previousScale, bool initial)
     {
-        // A size that stopped matching the helper's last applied one while the window was open came from the user: keep it.
+        // A size that stopped matching the helper's last applied one while the window was open came from the user. It is kept in
+        // inner DIPs (rebased from the outer size it has now), so it shrinks and grows with the scale like the default size.
         // A window that was never shown, or has no laid-out bounds yet, has no user size: it always follows the inner base.
         var laidOut = window.IsVisible && window.Bounds.Width > 0 && window.Bounds.Height > 0;
-        if (!initial && !state.UserSized && laidOut
-            && ((double.IsFinite(state.LastAppliedWidth) && Math.Abs(window.Bounds.Width - state.LastAppliedWidth) > 1)
-                || (double.IsFinite(state.LastAppliedHeight) && Math.Abs(window.Bounds.Height - state.LastAppliedHeight) > 1)))
-            state.UserSized = true;
+        if (!initial && laidOut && previousScale > 0)
+        {
+            if (double.IsFinite(state.LastAppliedWidth) && Math.Abs(window.Bounds.Width - state.LastAppliedWidth) > 1)
+                state.InnerWidth = window.Bounds.Width / previousScale;
+            if (double.IsFinite(state.LastAppliedHeight) && Math.Abs(window.Bounds.Height - state.LastAppliedHeight) > 1)
+                state.InnerHeight = window.Bounds.Height / previousScale;
+        }
 
         state.Applying = true;
         try
         {
             SetScaledLimit(window, state.InnerMinWidth, scale, value => window.MinWidth = value);
             SetScaledLimit(window, state.InnerMinHeight, scale, value => window.MinHeight = value);
-            if (!state.UserSized)
-            {
-                SetScaledLimit(window, state.InnerMaxWidth, scale, value => window.MaxWidth = value);
-                SetScaledLimit(window, state.InnerMaxHeight, scale, value => window.MaxHeight = value);
-                if (state.KeepOuterWidth)
-                    SetRememberedOuter(window, state.InnerWidth, state.InnerMinWidth, scale, value => window.Width = value);
-                else if (!IsAutomaticWidth(window))
-                    SetScaledSize(window, state.InnerWidth, state.InnerMinWidth, scale, value => window.Width = value);
-                if (state.KeepOuterHeight)
-                    SetRememberedOuter(window, state.InnerHeight, state.InnerMinHeight, scale, value => window.Height = value);
-                else if (!IsAutomaticHeight(window))
-                    SetScaledSize(window, state.InnerHeight, state.InnerMinHeight, scale, value => window.Height = value);
-            }
+            SetScaledLimit(window, state.InnerMaxWidth, scale, value => window.MaxWidth = value);
+            SetScaledLimit(window, state.InnerMaxHeight, scale, value => window.MaxHeight = value);
+            if (!IsAutomaticWidth(window))
+                SetScaledSize(window, state.InnerWidth, state.InnerMinWidth, scale, value => window.Width = value);
+            if (!IsAutomaticHeight(window))
+                SetScaledSize(window, state.InnerHeight, state.InnerMinHeight, scale, value => window.Height = value);
         }
         finally { state.Applying = false; }
 
@@ -290,14 +281,6 @@ public static class WindowUiScale
         set(ClampRememberedSize(new Size(inner * scale, inner * scale), new Size(minimum, minimum), window).Width);
     }
 
-    // The Settings window's remembered size is already outer: keep it, raised only to the scaled minimum and the working area.
-    private static void SetRememberedOuter(Window window, double outer, double innerMinimum, double scale, Action<double> set)
-    {
-        if (!double.IsFinite(outer)) return;
-        var minimum = double.IsFinite(innerMinimum) ? innerMinimum * scale : 0;
-        set(ClampRememberedSize(new Size(outer, outer), new Size(minimum, minimum), window).Width);
-    }
-
     private static bool IsAutomaticWidth(Window window) =>
         window.SizeToContent is SizeToContent.Width or SizeToContent.WidthAndHeight;
 
@@ -313,8 +296,9 @@ public static class WindowUiScale
         finally { state.Applying = false; }
         var scale = CurrentScale(window);
         if (Math.Abs(scale - state.LastScale) < 1e-9) return;
+        var previous = state.LastScale;
         state.LastScale = scale;
-        if (state.AutoSize) ApplyScaledSizes(window, state, scale, initial: false);
+        if (state.AutoSize) ApplyScaledSizes(window, state, scale, previous, initial: false);
         state.Changed?.Invoke(scale);
     }
 
@@ -350,13 +334,16 @@ public static class WindowUiScale
     }
 
     /// <summary>The owner screen working area in DIPs, or null when the window has no screen yet.</summary>
-    public static Size? WorkingArea(Window window)
+    public static Size? WorkingArea(Window window) => Monitor(window)?.WorkingArea;
+
+    /// <summary>The owner screen (or the primary one) as its working area in DIPs and its display scaling (1 = 100%); null when the window has no screen yet.</summary>
+    public static (Size WorkingArea, double Scaling)? Monitor(Window window)
     {
         var screens = window.Screens;
         var screen = screens?.ScreenFromWindow(window) ?? screens?.Primary;
         if (screen is null) return null;
         var scaling = screen.Scaling > 0 ? screen.Scaling : window.RenderScaling;
         if (!(scaling > 0)) scaling = 1.0;
-        return new Size(screen.WorkingArea.Width / scaling, screen.WorkingArea.Height / scaling);
+        return (new Size(screen.WorkingArea.Width / scaling, screen.WorkingArea.Height / scaling), scaling);
     }
 }

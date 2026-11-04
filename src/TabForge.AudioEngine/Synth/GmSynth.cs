@@ -19,6 +19,8 @@ public sealed class GmSynth : IPluginInstance
     private Synthesizer? _synth;
     private int _bankVersion;
     private readonly GmBank _bank;
+    private sealed record Prepared(Synthesizer? Synth, int Version);
+    private Prepared? _pending;
 
     /// <param name="bank">The sound bank choice of the engine session; null = a bank of its own (Windows GM).</param>
     public GmSynth(int sampleRate, int maxBlock, GmBank? bank = null)
@@ -26,7 +28,16 @@ public sealed class GmSynth : IPluginInstance
         _bank = bank ?? new GmBank();
         _synth = _bank.Current.Silent ? null : NewSynth(sampleRate, _bank.Current, out _bankVersion);
         SampleRate = sampleRate;
+        _bank.Changed += PrepareBank;
         _ = maxBlock;
+    }
+
+    // Owns: replacement construction on the bank's control thread. MeltySynth has no unmanaged lifetime; a retired reference can be GC'd.
+    // Does not own: channel state (only touched by the callback). Its replay happens after publication at the block boundary.
+    private void PrepareBank(GmBank.Choice choice)
+    {
+        var synth = choice.Silent ? null : NewSynth(SampleRate, choice, out _);
+        Interlocked.Exchange(ref _pending, new Prepared(synth, choice.Version));
     }
 
     /// <summary>
@@ -60,17 +71,19 @@ public sealed class GmSynth : IPluginInstance
     /// </summary>
     public void Reconfigure(double sampleRate, int maxBlock)
     {
+        Interlocked.Exchange(ref _pending, null);   // audio is stopped; the new device gets the latest bank, not a stale prepared rate
         var rate = (int)Math.Round(sampleRate);
         if (_bank.Current.Silent)
         {
             // Sound engine None: no synthesizer at all (the next non-silent bank rebuilds it below).
             var dropped = _synth;
             _synth = null;
+            _bankVersion = _bank.Current.Version;
             SampleRate = rate;
             try { dropped?.NoteOffAll(true); } catch (Exception) { } // swallow: best-effort note-off on a replaced synth
             return;
         }
-        if (rate == SampleRate && _synth is not null) return;
+        if (rate == SampleRate && _synth is not null && _bankVersion == _bank.Current.Version) return;
         // MeltySynth's Synthesizer holds no unmanaged resources of its own (the SoundFont bank is shared via
         // DlsToSoundFont's cache); dropping the reference is the dispose. Silence the old instance first so no
         // voice survives the swap (Reconfigure runs with audio stopped, but a render may have left voices ringing).
@@ -102,7 +115,8 @@ public sealed class GmSynth : IPluginInstance
         for (var ch = 0; ch < 16; ch++)
         {
             // Bank select (CC0, CC32) first: a program change picks its sound from the bank that is selected when it arrives.
-            foreach (var c in new[] { 0, 32 }) if (_cc[ch, c] >= 0) _synth.ProcessMidiMessage(ch, 0xB0, c, _cc[ch, c]);
+            if (_cc[ch, 0] >= 0) _synth.ProcessMidiMessage(ch, 0xB0, 0, _cc[ch, 0]);
+            if (_cc[ch, 32] >= 0) _synth.ProcessMidiMessage(ch, 0xB0, 32, _cc[ch, 32]);
             if (_program[ch] >= 0) _synth.ProcessMidiMessage(ch, 0xC0, _program[ch], 0);   // never set: the synth's own default (the drum kit on channel 10) stays
             for (var c = 1; c < 128; c++) if (c != 32 && _cc[ch, c] >= 0) _synth.ProcessMidiMessage(ch, 0xB0, c, _cc[ch, c]);
             if (_bend[ch] >= 0) _synth.ProcessMidiMessage(ch, 0xE0, _bend[ch] & 0x7F, _bend[ch] >> 7);
@@ -117,18 +131,16 @@ public sealed class GmSynth : IPluginInstance
 
     public void Process(float[][] input, float[][] output, int frames, ReadOnlySpan<BlockMidi> midi, in TransportInfo transport)
     {
-        var bank = _bank.Current;
-        // Sound engine None: silence. The caller cleared the buffers (TrackChain clears its mix buffer before
-        // the synth runs), so there is nothing to do: no voices, no render, one volatile read per block.
-        if (bank.Silent) return;
-        // The sound bank was switched (Settings > Sound engine): a new synthesizer on the new bank, with the channel state the song already sent replayed.
-        if (_synth is null || bank.Version != _bankVersion)
+        // No bank loading, synth construction or channel-state arrays in the callback, even on a live bank switch.
+        if (Interlocked.Exchange(ref _pending, null) is { } prepared)
         {
             try { _synth?.NoteOffAll(true); } catch (Exception) { }   // swallow: best-effort note-off on the replaced synth
-            _synth = NewSynth(SampleRate, bank, out _bankVersion);
+            _synth = prepared.Synth;
+            _bankVersion = prepared.Version;
             ReplayChannelState();
         }
         var synth = _synth;
+        if (synth is null) return;
         var left = output[0].AsSpan(0, frames);
         var right = output[1].AsSpan(0, frames);
         var at = 0;
@@ -151,7 +163,12 @@ public sealed class GmSynth : IPluginInstance
     public (int Width, int Height)? OpenEditor(IntPtr parent) => null;
     public void CloseEditor() { }
     public void EditorIdle() { }
-    public void Dispose() => _synth?.NoteOffAll(true);
+    public void Dispose()
+    {
+        _bank.Changed -= PrepareBank;
+        Interlocked.Exchange(ref _pending, null);
+        _synth?.NoteOffAll(true);
+    }
 }
 
 /// <summary>Level and effect settings that make the rendered sound match the Microsoft GS Wavetable Synth.</summary>

@@ -61,7 +61,7 @@ public class PluginBrowserWindowTests
         ("Button", "Plugins.Stop"),
         ("CheckBox", "RememberBox"),
         ("CheckBox", "ClapBox"),
-        ("Button", "Plugins.ScanStandard"), ("Button", "Plugins.AddFolder"), ("Button", "Plugins.BrowseFile"), ("Button", "Plugins.Rescan"),
+        ("Button", "Plugins.ScanStandard"), ("Button", "Plugins.AddFolder"), ("Button", "Plugins.BrowseFile"), ("Button", "Plugins.Rescan"), ("Button", "Plugins.ApproveAll"),
         ("Button", "Plugins.ScanCommon"), ("Button", "Plugins.EditList"), ("Button", "Plugins.FolderSettings"), ("Button", "Plugins.Cancel"),
         ("Button", "SortByName"), ("Button", "SortByVendor"), ("Button", "SortByFormat"), ("Button", "SortByRole"),
         ("ListBox", "Plugins.List"),
@@ -69,7 +69,7 @@ public class PluginBrowserWindowTests
 
     private static readonly string[] ExpectedButtonTexts =
     [
-        "Scan the standard VST folders", "Add folder…", "Browse for a plug-in file…", "Rescan", "Scan common folders", "Edit list…",
+        "Scan the standard VST folders", "Add folder…", "Browse for a plug-in file…", "Rescan", "Approve all…", "Scan common folders", "Edit list…",
         "Folder settings…", "Cancel",
     ];
 

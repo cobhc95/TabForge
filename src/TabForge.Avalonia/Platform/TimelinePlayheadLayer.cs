@@ -1,7 +1,6 @@
 using System;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Styling;
 using TabForge.Platform;
@@ -10,12 +9,12 @@ using TabForge.Services;
 namespace TabForge.Avalonia.Platform;
 
 // Owns: the timeline's playhead as two thin layers over the body: the moving part (white line, amber flag, lane arrow, with a blurred black
-//     shadow on the layer), drawn once around its own origin and placed with a translate transform snapped to device pixels, and the bar number,
+//     shadow on the layer), drawn once around its own origin and placed with a sub-pixel translate transform, and the bar number,
 //     drawn once per played bar. A frame only changes the transform, so the clips, ruler and rows are never redrawn for the playhead.
 // Does not own: the position (TimelineView.PlayheadX), the clock, the cue shapes (TimelinePlayheadMarks).
 // Tests: TabForge.Avalonia.Tests.PlayheadClockTests.
 // Threads: UI only. Redraw runs when the played bar, the selected lane, the size or the theme changes; Place runs every frame and allocates nothing.
-internal sealed class TimelinePlayheadLayer : Control
+internal sealed class TimelinePlayheadLayer : Decorator
 {
     public const double LineWidth = 3;
     /// <summary>The shadow round the line and arrow: a blur of this radius with no offset, at this opacity (the playhead drop shadow).</summary>
@@ -33,6 +32,7 @@ internal sealed class TimelinePlayheadLayer : Control
         _view = view;
         _number = new BarNumberLayer(view);
         IsHitTestVisible = false;
+        Child = new MarksLayer(this);
         RenderTransform = _move;
         Effect = new DropShadowEffect
         {
@@ -65,9 +65,8 @@ internal sealed class TimelinePlayheadLayer : Control
         IsVisible = !double.IsNaN(x);
         _number.IsVisible = IsVisible;
         if (!IsVisible) { _drawnBar = int.MinValue; _drawnPass = 1; return; }
-        // The line is LineWidth wide and centred on x, so its left edge lands on a whole device pixel.
-        var scale = TopLevel.GetTopLevel(this)?.RenderScaling ?? 1;
-        _move.X = LayoutHelper.RoundLayoutValue(x - LineWidth / 2, scale) + LineWidth / 2;
+        // Keep fractional motion: pixel snapping repeats positions on high-refresh displays at normal song zoom.
+        _move.X = x;
         if (_view.PlayheadBar != _drawnBar || _view.PlayheadPass != _drawnPass) Redraw();
     }
 
@@ -78,11 +77,11 @@ internal sealed class TimelinePlayheadLayer : Control
         _drawnPass = _view.PlayheadPass;
         if (Effect is DropShadowEffect shadow)
             shadow.Color = AvaloniaPalette.ColorOf(AvaloniaPalette.Get("PlayheadShadow", ActualThemeVariant == ThemeVariant.Light));
-        InvalidateVisual();
+        Child!.InvalidateVisual();
         _number.InvalidateVisual();
     }
 
-    public override void Render(DrawingContext context)
+    private void DrawMarks(DrawingContext context)
     {
         if (double.IsNaN(PlacedX)) return;
         RedrawCount++;
@@ -96,6 +95,13 @@ internal sealed class TimelinePlayheadLayer : Control
         var laneTop = _view.Compact ? TimelineView.RulerHeight + TimelineView.SectionHeight : _view.ArrowLaneTop();
         if (laneTop >= 0)
             TimelinePlayheadMarks.DrawArrow(d, Ink, -LineWidth / 2, TimelinePlayheadMarks.ArrowCentreY(laneTop, _view.Compact ? _view.MasterLaneHeight : _view.RowHeight));
+    }
+
+    // Avalonia invalidates a control's drawing when its transform moves. Keep the marks in an untransformed child,
+    // so moving the empty wrapper retains the geometry (and never rerecords the line, flag or arrow).
+    private sealed class MarksLayer(TimelinePlayheadLayer owner) : Control
+    {
+        public override void Render(DrawingContext context) => owner.DrawMarks(context);
     }
 
     /// <summary>The amber number of the played bar in the ruler; it stays at the bar's left edge, so it is drawn once per bar.</summary>

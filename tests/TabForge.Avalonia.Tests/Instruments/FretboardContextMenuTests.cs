@@ -36,13 +36,6 @@ public class FretboardContextMenuTests
     /// track's view, not a setting, so FretboardShowTrackAsTests covers it.</summary>
     private static readonly (string Id, string? Arg, Func<AppSettings, object?> Read)[] Entries =
     {
-        (FretboardContextMenu.NoteNamesId, null, s => s.Editing.ShowNoteNames),
-        (FretboardContextMenu.PreviewId, null, s => s.Editing.PreviewNotesEnabled),
-        (FretboardContextMenu.PreviewPreviousId, null, s => s.Editing.PreviewPreviousNotesEnabled),
-        (FretboardContextMenu.LeftHandedId, null, s => s.Editing.LeftHanded),
-        (FretboardContextMenu.LockId, null, s => s.Appearance.LockInstrumentSize),
-        (FretboardContextMenu.PositionId, "Right", s => s.Appearance.FretboardPosition),
-        (FretboardContextMenu.DockId, "bottom", s => s.Appearance.FretboardAtBottom),
         (FretboardContextMenu.ScaleId, "C Major", s => s.Editing.ScaleHighlight),
         (FretboardContextMenu.ClearScaleId, null, s => s.Editing.ScaleHighlight),
     };
@@ -81,23 +74,28 @@ public class FretboardContextMenuTests
     {
         var settings = new AppSettings();
         var menu = MenuFor(settings, new Doors());
-        var before = Flatten(menu.RowsFor(InstrumentPanelKind.Fretboard)).Single(r => r.Id == FretboardContextMenu.NoteNamesId);
+        var before = Flatten(menu.RowsFor(InstrumentPanelKind.Fretboard)).Single(r => r.Id == FretboardContextMenu.ScaleId && r.Arg == "C Major");
         Assert.False(before.Checked);
-        menu.Run(FretboardContextMenu.NoteNamesId, null);
-        var after = Flatten(menu.RowsFor(InstrumentPanelKind.Fretboard)).Single(r => r.Id == FretboardContextMenu.NoteNamesId);
+        menu.Run(FretboardContextMenu.ScaleId, "C Major");
+        var after = Flatten(menu.RowsFor(InstrumentPanelKind.Fretboard)).Single(r => r.Id == FretboardContextMenu.ScaleId && r.Arg == "C Major");
         Assert.True(after.Checked);
     }
 
+    /// <summary>The menu keeps the view, the scale and the door to the Fretboard settings window; everything else (note names, look-ahead,
+    /// left-handed, lock, position, dock) lives in that window once, so none of it repeats here.</summary>
     [AvaloniaFact]
-    public void PanelKindDecidesWhichPracticeRowsAppear()
+    public void TheMenuHoldsOnlyTheViewTheScaleAndTheSettingsDoor()
     {
         var menu = MenuFor(new AppSettings(), new Doors());
         var fretboardIds = Flatten(menu.RowsFor(InstrumentPanelKind.Fretboard)).Select(r => r.Id).ToList();
-        var keyboardIds = Flatten(menu.RowsFor(InstrumentPanelKind.Keyboard)).Select(r => r.Id).ToList();
         var drumIds = Flatten(menu.RowsFor(InstrumentPanelKind.Drums)).Select(r => r.Id).ToList();
-        Assert.Contains(FretboardContextMenu.LeftHandedId, fretboardIds);
-        Assert.DoesNotContain(FretboardContextMenu.LeftHandedId, keyboardIds);
-        Assert.Contains(FretboardContextMenu.NoteNamesId, keyboardIds);
-        Assert.DoesNotContain(FretboardContextMenu.NoteNamesId, drumIds);
+        Assert.Contains(FretboardContextMenu.ViewId, fretboardIds);
+        Assert.Contains(FretboardContextMenu.ScaleId, fretboardIds);
+        Assert.Contains(FretboardContextMenu.SettingsId, fretboardIds);
+        Assert.DoesNotContain(FretboardContextMenu.ScaleId, drumIds);
+        Assert.All(fretboardIds.Where(id => id is not null), id => Assert.Contains(id, new[]
+        {
+            FretboardContextMenu.ViewId, FretboardContextMenu.ScaleId, FretboardContextMenu.FindScaleId, FretboardContextMenu.ClearScaleId, FretboardContextMenu.SettingsId,
+        }));
     }
 }

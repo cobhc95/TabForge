@@ -31,6 +31,27 @@ public class ScorePreviewEditorTests
     private static Models.TabCell FirstBeat(ScoreGeometryProbe probe) => probe.Project!.Tracks[0].Measures[0].CellsForVoice(0)[0];
 
     [AvaloniaFact]
+    public void StaffAndTabClicksRespectTheTabStringAcrossSystemsAndSpacing()
+    {
+        var (probe, editor, track) = Make();
+        probe.Appearance.ScoreSpacing = 1.4;
+        var systems = probe.Layout.GetLayout(track).Systems;
+        for (var row = 0; row < systems.Count; row++)
+        {
+            var system = systems[row];
+            var x = system.Measures[0].X + 2;
+            editor.SelectedString = 4;
+            editor.Click(x, probe.StaffTop(row) + probe.StaffGap * 2);
+            Assert.Equal(system.FirstMeasure, editor.SelectedMeasure);
+            Assert.Equal(4, editor.SelectedString);
+            editor.Click(x, probe.TabTop(row) + probe.StringGap * 2);
+            Assert.Equal(2, editor.SelectedString);
+            editor.Click(x, probe.StaffTop(row));
+            Assert.Equal(2, editor.SelectedString);
+        }
+    }
+
+    [AvaloniaFact]
     public void CtrlZThenCtrlYRedoesTheFret()
     {
         var (probe, editor, track) = Make();

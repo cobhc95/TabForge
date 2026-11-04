@@ -35,11 +35,13 @@ internal sealed class EventBlockSignal : BlockSignal
 
 /// <summary>
 /// The portable signal: an int in the shared block. Set writes 1; the waiter takes it back to 0. The waiter spins briefly (a block is due within milliseconds),
-/// then sleeps a millisecond at a time, so an idle plug-in host costs almost no CPU.
+/// then yields for a short grace window before it sleeps a millisecond at a time, so a helper that sets the flag on time is not
+/// pushed onto the next 1 ms tick (Thread.Sleep rounds up under Wine), while an idle plug-in host still costs almost no CPU.
 /// </summary>
 internal sealed unsafe class FlagBlockSignal : BlockSignal
 {
     private const double SpinMilliseconds = 0.2;
+    private const double YieldMilliseconds = 2.0;
     private readonly int* _flag;
 
     public FlagBlockSignal(int* flag) => _flag = flag;
@@ -56,6 +58,7 @@ internal sealed unsafe class FlagBlockSignal : BlockSignal
             var waited = Stopwatch.GetElapsedTime(start);
             if (timeoutMs >= 0 && waited.TotalMilliseconds >= timeoutMs) return false;
             if (waited.TotalMilliseconds < SpinMilliseconds) spin.SpinOnce(-1);   // spin and yield for the first 0.2 ms
+            else if (waited.TotalMilliseconds < YieldMilliseconds) Thread.Yield();   // a late block is normally this close
             else Thread.Sleep(1);
         }
     }

@@ -97,6 +97,10 @@ public sealed partial class ScorePreviewView : Control
     public void ShowTrack(int index)
     {
         _probe.ShowTrack(index);
+        // Tracks may have different string counts. Keep the TAB string, clamping only when
+        // the new track has fewer strings; staff coordinates never choose this value.
+        if (_probe.Cursor is { } cursor)
+            _editor.SelectedString = Math.Clamp(cursor.String, 0, Math.Max(0, (_probe.Track?.StringTunings.Count ?? 1) - 1));
         var audio = _probe.Track is { IsAudio: true };
         if (audio != _audioPlaceholder) { _audioPlaceholder = audio; InvalidateMeasure(); }
         InvalidateVisual();

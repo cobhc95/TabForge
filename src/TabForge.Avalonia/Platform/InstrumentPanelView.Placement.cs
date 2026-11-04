@@ -57,6 +57,7 @@ public sealed partial class InstrumentPanelView
             _dragging = false;
             _pressAt = at;
             e.Pointer.Capture(this);
+            if (TryArmCapoDrag(at.X, at.Y)) SetHover(null);   // a grabbed capo hides the note ghost; the landing badge shows instead
             return;
         }
         if (Pick(new UiPoint(at.X, at.Y)) is { } pick) { BeginKeyPress(pick); NotePicked?.Invoke(pick); }
@@ -68,12 +69,14 @@ public sealed partial class InstrumentPanelView
         var at = e.GetPosition(this);
         if (_pressArmed)
         {
-            FollowGesture(at);
+            if (_capoDrag is not null) FollowCapoDrag(at.X, at.Y);
+            else FollowGesture(at);
             return;
         }
         (int String, int Fret)? hover = null;
         if (_kind == InstrumentPanelKind.Fretboard && Pick(new UiPoint(at.X, at.Y)) is { StringIndex: { } s, Fret: { } f }) hover = (s, f);
         SetHover(hover);
+        UpdateCapoHover(at.X, at.Y);
         UpdateFeedback(at);
     }
 
@@ -83,6 +86,17 @@ public sealed partial class InstrumentPanelView
         EndKeyPress();
         if (!_pressArmed) return;
         var at = e.GetPosition(this);
+        if (_capoDrag is not null)
+        {
+            EndCapoDrag();
+            _pressArmed = false;
+            _dragging = false;
+            _moved = false;
+            e.Pointer.Capture(null);
+            e.Handled = true;
+            UpdateCapoHover(at.X, at.Y);
+            return;
+        }
         var wasDragging = _dragging;
         var moved = _moved;
         var landing = PlaceForOffset(at.X - _pressAt.X);
@@ -90,13 +104,18 @@ public sealed partial class InstrumentPanelView
         e.Pointer.Capture(null);
         e.Handled = true;
         if (wasDragging) PlacementCommitted?.Invoke(landing);
-        else if (!moved && Pick(new UiPoint(at.X, at.Y)) is { } pick) NotePicked?.Invoke(pick);
+        else if (!moved && Pick(new UiPoint(at.X, at.Y)) is { } pick)
+        {
+            NotePicked?.Invoke(pick);
+            StartPreviewVibration(pick);
+        }
     }
 
     protected override void OnPointerExited(PointerEventArgs e)
     {
         base.OnPointerExited(e);
         SetHover(null);
+        ClearCapoHover();
         EndKeyPress();   // a release outside the panel never reaches it
         ClearKeyHover();
     }

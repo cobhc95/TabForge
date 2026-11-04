@@ -67,6 +67,32 @@ public class CompactTrackStripTests
     }
 
     [AvaloniaFact]
+    public void PillShowsTheFullCapoBadgeAndRebuildsWhenItChanges()
+    {
+        var song = new SongDocument(() => null) { Project = DemoSongFactory.Create() };
+        song.Project.Tracks[0].Capo = 5;
+        var strip = new CompactTrackStrip();
+        strip.SetOn(true, song);
+        var pill = strip.Pills[0];
+        Assert.True(pill.Shows(song.Project.Tracks[0].Name, song.Project.Tracks[0].ColorHex, 5));
+        static bool HasBadge(TrackPillButton p) => ((global::Avalonia.Controls.StackPanel)p.Content!).Children
+            .OfType<global::Avalonia.Controls.TextBlock>().Any(t => t.Text is not null && t.Text.Contains("Capo 5"));
+        Assert.True(HasBadge(pill));
+        song.Project.Tracks[0].Capo = 0;
+        song.Project.MarkTimelineChanged();
+        Assert.False(HasBadge(strip.Pills[0]));
+    }
+
+    [Fact]
+    public void RegularStripNameCarriesTheCapoBadge()
+    {
+        var track = DemoSongFactory.Create().Tracks[0];
+        Assert.Equal(track.Name, global::TabForge.Avalonia.Platform.TrackHeaderColumn.DisplayName(track));
+        track.Capo = 5;
+        Assert.Equal($"{track.Name} · Capo 5", global::TabForge.Avalonia.Platform.TrackHeaderColumn.DisplayName(track));
+    }
+
+    [AvaloniaFact]
     public void PillHasItsTrackColourDotAndTheTrackPillLook()
     {
         var song = new SongDocument(() => null) { Project = DemoSongFactory.Create() };

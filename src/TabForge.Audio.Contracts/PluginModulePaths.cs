@@ -66,6 +66,23 @@ public static class PluginModulePaths
         }
     }
 
+    /// <summary>The Windows binary of a VST3 bundle for one bitness (x86_64-win, x86-win32 or x86-win), or the flat file itself. Null when missing.</summary>
+    public static string? Vst3WindowsBinary(string path, bool sixtyFourBit, IModuleFileView files)
+    {
+        if (files.FileExists(path)) return path;
+        if (!files.DirectoryExists(path)) return null;
+        var stem = Path.GetFileName(path.TrimEnd('\\', '/'));
+        foreach (var folder in sixtyFourBit ? new[] { "x86_64-win" } : new[] { "x86-win32", "x86-win" })
+        {
+            var arch = Path.Combine(path, "Contents", folder);
+            var named = Path.Combine(arch, stem);
+            if (files.FileExists(named)) return named;
+            var any = files.FilesIn(arch).Where(f => f.EndsWith(".vst3", StringComparison.OrdinalIgnoreCase)).OrderBy(f => f, StringComparer.OrdinalIgnoreCase).FirstOrDefault();
+            if (any is not null) return any;
+        }
+        return null;
+    }
+
     /// <summary>The binary of a CLAP plug-in: the .clap file itself (Windows, Linux), or Contents/MacOS/&lt;name&gt; of the bundle (macOS). Null when missing.</summary>
     public static string? ClapBinary(string path, ModuleOs os, IModuleFileView files)
     {

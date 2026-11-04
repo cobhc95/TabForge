@@ -1,15 +1,16 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.VisualTree;
 
 namespace TabForge.Avalonia.Platform;
 
 /// <summary>
-/// Loads the track, tool and transport icon art once at App start-up (H11-icon), so the first paint does no file or SVG reads.
-/// The load runs on the UI thread: Avalonia geometry must be built there, and parsing one before the platform is set up (a module
-/// initializer, a worker thread) resolves Dispatcher.UIThread without the Win32 dispatcher, so the app dies on start.
-/// Owns: only the one start-up load, the joint readiness flag and the single repaint of the hosts that painted before the load.
+/// Loads icon art after startup: file/model parsing on a worker, bounded geometry batches on the UI thread after platform setup.
+/// Avalonia geometry must never be prepared on the worker (it can resolve the wrong dispatcher before the Win32 platform is ready).
+/// Owns: startup scheduling, batch boundaries, readiness and repaints after each icon set becomes ready.
 /// Does not own: the art itself (TrackIconArt, ToolIconArt, TransportIconArt).
 /// Tests: TabForge.Avalonia.Tests.IconArtPreloadTests.
 /// </summary>
@@ -29,7 +30,7 @@ public static class IconArtPreloader
         catch (Exception ex) { Console.Error.WriteLine("transport icons: " + ex.Message); }
     }
 
-    /// <summary>Loads all three icon sets after the first frame: startup paints first, then one idle post loads them. Call on the UI thread (Avalonia geometry must be built on it).</summary>
+    /// <summary>Starts worker reads and bounded UI preparation after the window opens. Call after Avalonia platform setup, on the UI thread.</summary>
     public static void PreloadAfterFirstFrame(Window window)
     {
         var ui = AvaloniaUiThread.ForApplication();
@@ -63,11 +64,40 @@ public static class IconArtPreloader
     }
 
     /// <summary>Loads the icon sets, then repaints the icon hosts once: hosts that painted before the load (blank) show the art at once, not on hover.</summary>
-    private static void PreloadAndRepaint(Window window)
+    private static void PreloadAndRepaint(Window window) => UiTasks.Forget(PreloadAndRepaintAsync(window), "Icon preload", text => TabForge.Services.Trace.Error(TabForge.Services.Trace.Ui, text));
+
+    private static async Task PreloadAndRepaintAsync(Window window)
     {
-        Preload();
+        // Transport is visible first; the broad catalogues follow. IO/model parsing is off-thread, geometry stays on the UI thread.
+        await TransportIconArt.PreloadBatched();
+        RefreshIconHosts(window);
+        await TrackIconArt.PreloadBatched();
+        RefreshIconHosts(window);
+        await ToolIconArt.PreloadBatched();
         _ = WarmInstrumentPicker();
         RefreshIconHosts(window);
+    }
+
+    /// <summary>At most four icon geometries per UI dispatch; input/render can run between batches. No UI timer or background Avalonia access.</summary>
+    internal static Task PrepareBatches<T>(IReadOnlyList<T> items, Action<T> prepare)
+    {
+        const int maxIconsPerBatch = 4;
+        var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var ui = AvaloniaUiThread.ForApplication();
+        var at = 0;
+        void Next()
+        {
+            try
+            {
+                var end = Math.Min(items.Count, at + maxIconsPerBatch);
+                while (at < end) prepare(items[at++]);
+                if (at < items.Count) ui.Post(Next, TabForge.Platform.UiPriority.ApplicationIdle);
+                else done.SetResult();
+            }
+            catch (Exception ex) { done.SetException(ex); }
+        }
+        ui.Post(Next, TabForge.Platform.UiPriority.ApplicationIdle);
+        return done.Task;
     }
 
     /// <summary>Invalidates the visible icon hosts under <paramref name="window"/> once, so their next render draws the loaded art. Single-shot: no timer.</summary>

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Xml;
+using System.Threading.Tasks;
 using TabForge.Platform;
 using TabForge.Platform.Theme;
 
@@ -49,6 +50,15 @@ public static class TransportIconArt
     /// <summary>Loads the art synchronously on the UI thread (App start-up, or a test); a second call is free.</summary>
     public static void Preload() => EnsureLoaded();
 
+    internal static async Task PreloadBatched()
+    {
+        if (IsReady) return;
+        var models = await Task.Run(ReadModels);
+        var art = new Dictionary<string, AvaloniaSvgIcon.Prepared>(StringComparer.Ordinal);
+        await IconArtPreloader.PrepareBatches(models, model => Add(art, model.Name, model.Icon));
+        lock (Sync) _art ??= art;
+    }
+
     private static Dictionary<string, AvaloniaSvgIcon.Prepared> EnsureLoaded()
     {
         lock (Sync)
@@ -66,13 +76,26 @@ public static class TransportIconArt
     private static Dictionary<string, AvaloniaSvgIcon.Prepared> ReadAll()
     {
         var art = new Dictionary<string, AvaloniaSvgIcon.Prepared>(StringComparer.Ordinal);
+        foreach (var model in ReadModels()) Add(art, model.Name, model.Icon);
+        return art;
+    }
+
+    private static void Add(Dictionary<string, AvaloniaSvgIcon.Prepared> art, string name, SvgIcon icon)
+    {
+        try { art[name] = AvaloniaSvgIcon.Prepare(icon); }
+        catch (FormatException ex) { Console.Error.WriteLine("transport icons: " + ex.Message); }
+    }
+
+    private static List<(string Name, SvgIcon Icon)> ReadModels()
+    {
+        var models = new List<(string, SvgIcon)>();
         try
         {
             foreach (var file in Directory.EnumerateFiles(Path.Combine(AppContext.BaseDirectory, "Assets", "TransportIcons"), "*.svg"))
-                if (SvgIcon.Read(file) is { } svg) art[Path.GetFileNameWithoutExtension(file)] = AvaloniaSvgIcon.Prepare(svg);
+                if (SvgIcon.Read(file) is { } svg) models.Add((Path.GetFileNameWithoutExtension(file), svg));
         }
         // Without the icon files the transport buttons show no icon; nothing else depends on them.
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or XmlException or FormatException) { Console.Error.WriteLine("transport icons: " + ex.Message); }
-        return art;
+        return models;
     }
 }

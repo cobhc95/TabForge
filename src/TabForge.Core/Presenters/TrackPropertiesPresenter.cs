@@ -3,14 +3,14 @@ namespace TabForge.Presenters;
 /// <summary>
 /// The track properties rules both track editors share.
 /// Owns: the window title, the typed-field checks and their texts, the name rule, the channel an instrument choice leaves,
-///     the string tools (typed note names, semitone steps, adding and removing the low string, thickness).
+///     the string tools (typed note names, semitone steps, thickness, the capo stepper text); the string edit list is TrackTuningDraft.
 /// Does not own: the windows (Views/Timeline/TrackPropertiesDialog.cs), tuning presets and the keep-frets retune
 ///     (TrackPropertiesWindow), family conversion (TrackSetup) or the undo checkpoint (MainWindow.Tracks).
-/// Tests: no dedicated test class.
+/// Tests: TabForge.Avalonia.Tests.TrackTuningDraftTests, TrackPropertiesWindowTests.
 /// </summary>
 public static class TrackPropertiesPresenter
 {
-    public const int LowestNote = 12, HighestNote = 100, FewestStrings = 3, MostStrings = 9;
+    public const int LowestNote = 12, HighestNote = 100, FewestStrings = 3, MostStrings = 10, MaxCapo = 12;
 
     public static string Title(string trackName, bool adding) => adding ? "Add track" : $"Track properties — {trackName}";
 
@@ -26,7 +26,7 @@ public static class TrackPropertiesPresenter
         if (!isDrumTrack && onDrumChannel) return "Channel 10 is for drums only.";
         if (isDrumTrack && !onDrumChannel) return "A drum track must stay on channel 10.";
         if (!InRange(frets, 12, 36)) return "Frets must be 12–36.";
-        if (!InRange(capo, 0, 12)) return "Capo must be 0–12.";
+        if (!InRange(capo, 0, MaxCapo)) return "Capo must be 0–12.";
         return null;
     }
 
@@ -47,19 +47,36 @@ public static class TrackPropertiesPresenter
 
     public static int Step(int midi, int delta) => Math.Clamp(midi + delta, LowestNote, HighestNote);
 
-    /// <summary>Adds a string a fourth below the lowest, up to nine strings.</summary>
-    public static List<int> WithLowString(List<int> highToLow)
+    /// <summary>The capo stepper's text: "Off" at fret 0, else "Fret N".</summary>
+    public static string CapoText(int capo) => capo <= 0 ? "Off" : $"Fret {capo}";
+
+    /// <summary>One capo step, held to 0 (off) .. 12 like the field check.</summary>
+    public static int StepCapo(int capo, int delta) => Math.Clamp(capo + delta, 0, MaxCapo);
+
+    /// <summary>The string-removal question: the affected notes, and how many must change pitch because no remaining string can play them.</summary>
+    public static string RemovalWarningText(int total, int unplayable)
     {
-        if (highToLow.Count < MostStrings) highToLow.Add(Math.Max(LowestNote, highToLow[^1] - 5));
-        return highToLow;
+        var affected = $"{NoteCount(total)} {IsAre(total)} affected by removing the string.";
+        if (unplayable <= 0)
+            return $"{affected} Move {(total == 1 ? "it" : "them")} to {(total == 1 ? "another string" : "other strings")} that can play the same pitch?";
+        if (unplayable >= total)
+            return total == 1
+                ? $"{affected} No remaining string can play its pitch, so it will move to the nearest playable pitch and its pitch will change. Continue?"
+                : $"{affected} No remaining string can play their pitch, so they will all move to the nearest playable pitch and their pitch will change. Continue?";
+        var keep = total - unplayable;
+        return $"{affected} {NoteCount(unplayable)} cannot keep {(unplayable == 1 ? "its" : "their")} pitch on any remaining string and will move to the nearest playable pitch, so "
+            + $"{(unplayable == 1 ? "its" : "their")} pitch will change; the other {keep} keep{(keep == 1 ? "s" : "")} {(keep == 1 ? "its" : "their")} pitch. Continue?";
     }
 
-    /// <summary>Removes the lowest string, down to three strings.</summary>
-    public static List<int> WithoutLowString(List<int> highToLow)
-    {
-        if (highToLow.Count > FewestStrings) highToLow.RemoveAt(highToLow.Count - 1);
-        return highToLow;
-    }
+    /// <summary>The question before OK when a later retune makes notes on removed strings change pitch that the removal question did not mention.</summary>
+    public static string UndisclosedPitchChangeWarningText(int newlyUnplayable) =>
+        newlyUnplayable == 1
+            ? "After your tuning change, 1 note on a removed string can no longer keep its pitch, which the removal warning did not mention. It will move to the nearest playable pitch and its pitch will change. Apply this tuning?"
+            : $"After your tuning change, {newlyUnplayable} notes on removed strings can no longer keep their pitch, which the removal warning did not mention. They will move to the nearest playable pitch and their pitch will change. Apply this tuning?";
+
+    private static string NoteCount(int count) => $"{count} note{(count == 1 ? "" : "s")}";
+
+    private static string IsAre(int count) => count == 1 ? "is" : "are";
 
     /// <summary>The drawn string's thickness: thicker for lower pitches, like wound strings.</summary>
     public static double StringThickness(int midi) => Math.Clamp(1 + (70 - midi) / 9.0, 1, 5);

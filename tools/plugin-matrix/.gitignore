@@ -1,0 +1,10 @@
+.matrix-cache/
+matrix-results/
+results/
+fixtures/
+downloads/
+*.zip
+*.7z
+*.dll
+*.vst3/
+__pycache__/

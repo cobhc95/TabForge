@@ -60,7 +60,7 @@ public sealed class PianoRollToolbarGroupTests
         var (window, _, _, _) = Show(PianoRollSongs.Midi(), width);
         try
         {
-            var row = window.GetVisualDescendants().OfType<DockPanel>().Single(p => p.Name == PianoRollToolbarLayout.Row1Name);
+            var row = window.GetVisualDescendants().OfType<DockPanel>().Single(p => p.Name == PianoRollToolbarLayout.ToolbarName);
             foreach (var group in Groups(window))
             {
                 var at = ((Visual)group).TranslatePoint(new global::Avalonia.Point(0, 0), row)!.Value;
@@ -84,7 +84,7 @@ public sealed class PianoRollToolbarGroupTests
             Dispatcher.UIThread.RunJobs();
             Assert.StartsWith("D ", (string)button.Content!);
             Assert.Equal(view.ScaleButtonText, button.Content);
-            var row = window.GetVisualDescendants().OfType<DockPanel>().Single(p => p.Name == PianoRollToolbarLayout.Row1Name);
+            var row = window.GetVisualDescendants().OfType<DockPanel>().Single(p => p.Name == PianoRollToolbarLayout.ToolbarName);
             Assert.DoesNotContain(row.GetVisualDescendants().OfType<ComboBox>(), c => ReferenceEquals(c.ItemsSource, PianoRollScale.Folds));
             Assert.DoesNotContain(row.GetVisualDescendants().OfType<ComboBox>(), c => c.ItemsSource is IEnumerable<string> items && items.Contains("Scale steps"));
             Assert.Equal("Lock to scale", row.GetVisualDescendants().OfType<ToggleButton>().Single(b => b.Name == "PianoRollLockScale").Content);

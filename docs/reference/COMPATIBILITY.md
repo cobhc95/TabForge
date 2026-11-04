@@ -1,7 +1,5 @@
 # Compatible .gp files: what is kept, what changes, what cannot be held
 
-<!-- Generated from TabForge's compatibility record by `TabForge.exe --gp-compat-doc`; a self-test regenerates it and compares, so do not edit it by hand. -->
-
 TabForge can write a compatible .gp file that other programs open. A .gp file holds the music and the common marks, but it cannot hold everything TabForge knows. This page says exactly what a compatible file keeps, what it changes and what it cannot hold. When you save or export a song that uses something in the changed or left out lists below, TabForge names it in a question before anything is written and offers to keep a full TabForge copy as well, so nothing is lost without you knowing.
 
 ## The short version
@@ -97,4 +95,4 @@ Choose "Keep a full TabForge copy" in the question, or save a .tforge project. T
 
 ## How this page stays true
 
-TabForge's own tests export a song for every row, reopen the file and compare it with the original, and they fail if a loss is found that the save question does not list or that this page does not describe. This page is written from the same rows, and a test regenerates it and compares, so it cannot fall behind the program.
+TabForge's own tests export a song for every row, reopen the file and compare it with the original, and they fail if a loss is found that the save question does not list or that this page does not describe. This page is maintained by hand alongside those tests and the export preflight; update it when the rows change.

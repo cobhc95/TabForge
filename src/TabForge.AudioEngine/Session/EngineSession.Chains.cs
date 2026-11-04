@@ -115,9 +115,9 @@ internal sealed partial class EngineSession
         string? stateProblem = null;
         try { savedState = spec.State is { Length: > 0 } state ? Convert.FromBase64String(state) : null; }
         catch (FormatException) { stateProblem = "its saved settings were not valid"; }
-        // A crash or hang while loading is attributed too (kind Load: 90 s). Not for an isolated load: that is a bounded
-        // wait on the plug-in's own process (15 s), and a failure there costs only that plug-in.
-        Shared!.EnterMain(slot, index, spec.Path, PluginCallKind.Load, blame: !Config.SeparateProcessPerPlugin);
+        // A crash or hang while loading is attributed too (kind Load: 90 s). Not for an isolated or bridged load: both are
+        // bounded waits on the plug-in's own process, and a failure there costs only that plug-in.
+        Shared!.EnterMain(slot, index, spec.Path, PluginCallKind.Load, blame: !Config.SeparateProcessPerPlugin && !spec.Isolate && !Isolation.Vst32Bridge.IsBridged(spec));
         var loadTimer = Stopwatch.StartNew();
         long createdMs;
         // A state the plug-in rejects disposes that instance (no leaked instance / process); the plug-in then loads with its defaults and it is reported.
@@ -195,23 +195,42 @@ internal sealed partial class EngineSession
 #endif
         // TabForge's own effects (C#, no file) always run here, never in a plug-in process.
         if (TabForge.Audio.Contracts.Builtin.BuiltinEffects.IsBuiltin(spec.Path)) return Builtin.BuiltinEffectFactory.Create(spec.Path, SampleRate, maxBlock);
-        if (Config.SeparateProcessPerPlugin)
+        Isolation.RemotePlugin Remote(PluginHostLaunch? launch = null)
         {
-            // Safest mode: the plug-in runs in its own process; a crash there loses only this plug-in.
-            var remote = new Isolation.RemotePlugin(spec, SampleRate, maxBlock, Threads);
-            remote.Crashed += r => { Editors.CloseFor(r); Send(EngineEvent.PluginCrashed, w => { w.Write(slot); w.Write(index); w.WriteString(r.Path); }); };
+            // A plug-in in its own process (the existing 64-bit isolation or a bitness helper): a crash there loses only this plug-in.
+            var remote = launch is null
+                ? new Isolation.RemotePlugin(spec, SampleRate, maxBlock, Threads)
+                : new Isolation.RemotePlugin(spec, SampleRate, maxBlock, Threads, launch);
+            // The last byte distinguishes a bridge helper (its own process may stop for bridge reasons). The UI names the
+            // helper, never the plug-in, but treats it as that plug-in's crash for quarantine; the engine itself is still up,
+            // so this never counts toward the engine-wide crash limit.
+            var bridged = launch is not null;
+            remote.Crashed += r => { Editors.CloseFor(r); Send(EngineEvent.PluginCrashed, w => { w.Write(slot); w.Write(index); w.WriteString(r.Path); w.Write(bridged); w.WriteString(r.CrashReportPath ?? ""); }); };
             remote.Edited += () => Send(EngineEvent.StateChanged, w => { w.Write(slot); w.Write(index); });
+            // Both isolated paths (64-bit host and a bridge helper) send one MsgEditorClosed when the user closes the editor.
+            remote.EditorClosed += () => Send(EngineEvent.EditorClosed, _ => { });
             return remote;
         }
+        // A 32-bit VST2 plug-in and a 32-bit-only VST3 always go through the 32-bit helper, and a 64-bit Windows VST2
+        // through the 64-bit helper under Wine, whether or not "run each plug-in separately" is on. A missing helper throws
+        // a readable failure here; the chain keeps playing dry without it. Windows 64-bit VST2 and 64-bit VST3 never take
+        // this path (they stay native).
+        var route = Isolation.Vst32Bridge.Route(spec, Config.SeparateProcessPerPlugin);
+        if (route is Isolation.Vst32Bridge.PluginRoute.Bridged32 or Isolation.Vst32Bridge.PluginRoute.Bridged64)
+            return Remote(Isolation.Vst32Bridge.Launch(spec));
+        if (route == Isolation.Vst32Bridge.PluginRoute.Isolated) return Remote();
         if (Plugins.PluginFactory.IsVst3(spec.Path, spec.Format) && !Vst3Plugin.Available) throw new DllNotFoundException();
         return Plugins.PluginFactory.Create(spec.Path, spec.Format, spec.IsInstrument, SampleRate, maxBlock, Threads);
     }
 
-    /// <summary>Why a plug-in did not load, in words for the user: a VST3 plug-in whose helper library is missing says so instead of the raw "Dll was not found."</summary>
+    /// <summary>Why a plug-in did not load, in words for the user: a VST3 plug-in whose helper library is missing says so instead of the raw "Dll was not found." (P2-07: per-OS shim name.)</summary>
     internal static string LoadFailureText(PluginSpec spec, Exception ex) =>
         ex.GetBaseException() is DllNotFoundException && Plugins.PluginFactory.IsVst3(spec.Path, spec.Format)
-            ? "TabForge's VST3 helper (tfvst3.dll) is missing or can't load."
+            ? $"TabForge's VST3 helper ({ShimFileName}) is missing or can't load."
             : ex.GetBaseException().Message;
+
+    /// <summary>The VST3 shim file of this OS (mirrors Vst3Plugin.ShimFile without loading it).</summary>
+    internal static string ShimFileName => OperatingSystem.IsWindows() ? "tfvst3.dll" : OperatingSystem.IsMacOS() ? "libtfvst3.dylib" : "libtfvst3.so";
 
     public void RemoveChain(int slot)
     {

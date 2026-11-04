@@ -58,7 +58,7 @@ Open **Appearance**. The **Theme** card has one list with four choices.
 
 Choosing **Dark**, **Light** or **System** applies a whole palette at once: the interface, the accent colour and the score page. You can still change any colour afterwards. The **Custom palette** colours near the bottom of the page only take effect when **Theme** is **Custom**. The **Reset theme…** button in the **Theme** card puts the built-in palette, sizes, text and motion back, after asking you first.
 
-Under **Size and text** you find **UI scale**, from 0.8x to 1.5x, and **Spacing**, which packs the toolbar and buttons **Compact**, **Comfortable** or **Spacious**. Larger scales help on a high-resolution screen. **More options** adds the interface font, its size and the icon size. **Accent colour**, in **Interface colours**, sets the colour of focus outlines and selections.
+Under **Size and text** you find **Interface size**, from 0.7x to 1.5x. Until you change it, TabForge picks the size recommended for your monitor; **Recommended size for your monitor** goes back to that size at any time. Next to it is **Spacing**, which packs the toolbar and buttons **Compact**, **Comfortable** or **Spacious**. Larger scales help on a high-resolution screen. **More options** adds the interface font, its size and the icon size. **Accent colour**, in **Interface colours**, sets the colour of focus outlines and selections.
 
 ### Try it: Go light
 

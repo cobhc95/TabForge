@@ -76,6 +76,19 @@ public sealed class ProjectPluginAndClipLimitTests : IDisposable
         Assert.Equal(@"C:\Plugins\plain.dll", specs.Single().Path);
     }
 
+    /// <summary>Regression for Stage 13 C7: a plug-in that already ended the engine is marked Isolate in the spec, so the engine's existing isolation host loads it next time.</summary>
+    [Fact]
+    public void ACrashPronePluginIsMarkedForTheIsolationHost()
+    {
+        var path = @"C:\Plugins\crashy64.dll";
+        var slot = new PluginSlot { Name = "Crashy", Path = path, Format = "VST2" };
+        var settings = new PluginSettings();
+        var trust = new PluginTrust();
+        Assert.False(trust.BuildSpecs(new[] { slot }, new List<string>(), settings, new NoFileTrust()).Single().Isolate);
+        settings.CrashProne.Add(path);
+        Assert.True(trust.BuildSpecs(new[] { slot }, new List<string>(), settings, new NoFileTrust()).Single().Isolate);
+    }
+
     /// <summary>A file-trust adapter that knows no final paths: every plug-in is untrusted, which keeps the test independent of the disk.</summary>
     private sealed class NoFileTrust : TabForge.Platform.IPluginFileTrust
     {

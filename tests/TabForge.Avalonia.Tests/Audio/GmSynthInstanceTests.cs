@@ -58,6 +58,28 @@ public class GmSynthInstanceTests
         Assert.Equal(expected[0], untouched[0]);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Prepared_bank_replays_program_controllers_and_bend(bool reconfigure)
+    {
+        if (!Available) return;
+        var state = new[] { Msg(0xB0, 0, 0), Msg(0xB0, 32, 0), Msg(0xC0, 40, 0), Msg(0xB0, 7, 96), Msg(0xB0, 10, 30), Msg(0xE0, 0, 70) };
+        var note = Msg(0x90, 60, 100);
+        using var expected = new GmSynth(Rate, Block);
+        var reference = Render(expected, state.Append(note).ToArray());
+        var bank = new GmBank();
+        using var actual = new GmSynth(Rate, Block, bank);
+        Render(actual, state);
+        Assert.True(bank.Select(SoundEngines.None, out _));
+        Render(actual);
+        Assert.True(bank.Select("", out _));
+        if (reconfigure) actual.Reconfigure(Rate, Block);
+        var switched = Render(actual, note);
+        Assert.Equal(reference[0], switched[0]);
+        Assert.Equal(reference[1], switched[1]);
+    }
+
     [Fact]
     public void The_silent_bank_renders_nothing_and_needs_no_bank_file()
     {

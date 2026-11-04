@@ -33,13 +33,13 @@ public sealed partial class TimelineView : Control
     /// <summary>Raised when <see cref="RowScrollOffset"/> changes, so the track list and its scroll bar follow.</summary>
     public event Action? RowScrollChanged;
 
-    /// <summary>Height of the track rows (all of them, scrolled or not), without the master lane.</summary>
-    public double TrackRowsContentHeight => _rows.Count == 0 ? 0 : ArrangementRowPresenter.RowsHeight(_rows, RowHeight) - MasterLaneHeight;
+    /// <summary>Height of the track rows (all of them, scrolled or not), without the master lane and its automation strip.</summary>
+    public double TrackRowsContentHeight => _rows.Count == 0 ? 0 : ArrangementRowPresenter.RowsHeight(_rows, RowHeight) - _rows.TopOffset;
 
     /// <summary>Height the track rows may show: the pane less the fixed parts; unbounded while the pane height is unknown.</summary>
     public double RowsViewportHeight => PaneHeight > 0 ? Math.Max(0, PaneHeight - FixedRowsHeight) : double.PositiveInfinity;
 
-    /// <summary>The screen top of the scrolling track rows: under the ruler, the sections and the master lane.</summary>
+    /// <summary>The screen top of the scrolling track rows: under the ruler, the sections, the master lane and its automation strip.</summary>
     public double TrackRowsTop => RulerHeight + SectionHeight + MasterLaneHeight;
 
     /// <summary>The screen bottom of the scrolling track rows: the timeline's visible bottom. The Add track strip sits directly under it, in the arrangement's own row.</summary>
@@ -68,7 +68,7 @@ public sealed partial class TimelineView : Control
     public void EnsureRowVisible(int row)
     {
         if (row < 0 || row >= RowCount) return;
-        var rowTop = ArrangementRowPresenter.RowTop(_rows, row) - MasterLaneHeight;
+        var rowTop = ArrangementRowPresenter.RowTop(_rows, row) - _rows.TopOffset;
         RowScrollOffset = RowScrollRules.ShowRow(_rowScrollOffset, rowTop, RowHeight, RowsViewportHeight);
     }
 

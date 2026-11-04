@@ -44,6 +44,7 @@ public sealed class FxEditorArea : Grid
         _popup = popup;
         _setPopupVisible = setPopupVisible ?? PluginEditorWin32.SetPopupVisible;
         Name = "EditorArea";
+        _frame[!Border.BackgroundProperty] = new DynamicResourceExtension("WindowBackground");   // an empty editor frame uses the window's theme background, never light grey
         ClipToBounds = true;
         Background = Platform.AvaloniaPalette.TransparentBrush;   // the wheel reaches the area between the editor and the bars
         ColumnDefinitions = ColumnDefinitions.Parse("*,Auto");

@@ -290,6 +290,16 @@ public static class PluginStateLimits
     public const int MaxRawBytes = 16 * 1024 * 1024;
     /// <summary>Base64 expands 3 bytes to 4 characters (padded).</summary>
     public const int MaxBase64Chars = (MaxRawBytes + 2) / 3 * 4;
+
+    /// <summary>
+    /// The one size check for a state a plug-in returns or a host is about to allocate (VST2, VST3, the helper and the
+    /// remote proxy all call this): throws the same readable message, so no format silently accepts a larger blob.
+    /// </summary>
+    public static void Check(long rawBytes, string what = "state")
+    {
+        if (rawBytes > MaxRawBytes)
+            throw new InvalidDataException($"The plug-in's {what} ({rawBytes / 1048576.0:0.0} MiB) is larger than the {MaxRawBytes / 1048576} MiB limit.");
+    }
 }
 
 /// <summary>One plug-in of a track's chain as sent to the engine.</summary>
@@ -298,8 +308,10 @@ public static class PluginStateLimits
 /// Skip: a quarantined plug-in that must not be loaded at all (Enabled is only the live bypass). LocationTrusted: the binary lies where only
 /// an administrator can write (or it is engine-internal), so no per-file hash is checked. Otherwise ExpectedSha256 is the approved binary's
 /// SHA-256, checked by the engine right before each real load (see PluginIdentity), and an empty one fails closed.
+/// Isolate: this plug-in already ended the engine once, so load it in the existing isolation host even when "run each plug-in
+/// separately" is off (crash-prone routing; the first fault still ends the engine, later ones only lose the plug-in).
 /// </remarks>
-public sealed record PluginSpec(string Path, string Format, bool IsInstrument, bool Enabled, int Wet, string? State, string Name = "", string Pins = "Stereo", double OutputDb = 0, string Id = "", bool Skip = false, bool Untrusted = false, string ExpectedSha256 = "", bool LocationTrusted = false);
+public sealed record PluginSpec(string Path, string Format, bool IsInstrument, bool Enabled, int Wet, string? State, string Name = "", string Pins = "Stereo", double OutputDb = 0, string Id = "", bool Skip = false, bool Untrusted = false, string ExpectedSha256 = "", bool LocationTrusted = false, bool Isolate = false, string ExpectedDependencies = "");
 
 /// <summary>One MIDI processor of a plug-in's list as sent to the engine: type name, enabled, and its parameters as a flat JSON object.</summary>
 public sealed record MidiProcSpec(string Type, bool Enabled, string ParamsJson);

@@ -5,7 +5,7 @@ namespace TabForge.Services;
 
 // Owns: one instrument choice on a MIDI track, whichever window runs it (the track row icon or the Track properties window): every tile click
 //   previews on the track (the model through InstrumentPreviewSession) and on the sound (the channel's program switched live; a stopped song also
-//   plays one short note), OK commits as one undo step and keeps the new sound in the running schedule, Cancel restores the track and the sound.
+//   plays one short note, as does a playing family switch whose channel moved), OK commits as one undo step and keeps the new sound in the running schedule, Cancel restores the track and the sound on every previewed channel.
 // Does not own: the picker window and its tiles, the catalogue, the apply rules (AudioToInstrumentConversion), the undo stacks, the engine
 //   (the IProgramSink the caller passes in; none means a silent choice).
 // Tests: TabForge.Avalonia.Tests.InstrumentChoiceTests.
@@ -22,6 +22,7 @@ public sealed class InstrumentChoice
     private readonly IProgramSink? _sink;
     private readonly int _channel;
     private bool _sounded;   // a preview reached the sound since the last end
+    private readonly HashSet<(int Device, int Channel)> _touched = new();   // every (device, channel) a preview reached on the sound side
 
     public InstrumentChoice(SongProject project, TrackModel track, IProgramSink? sink)
     {
@@ -58,8 +59,19 @@ public sealed class InstrumentChoice
         if (_sink is null) return;
         _sounded = true;   // the live switch or the audition note changed what the output holds: the end sends the song's own sound again
         // A switch to the other family moves the track to another channel: that channel's real tracks keep their sound, so only a note is heard.
-        if (_track.MidiChannel == _channel) _sink.BeginPreview(_track.MidiOutputDeviceId, _channel, _track.MidiProgram);
-        if (!_sink.IsPlaying) _sink.Audition(_track.MidiOutputDeviceId, _track.MidiChannel, _track.MidiProgram, NoteFor(_track), AuditionMs);
+        // Every sounded (device, channel) is remembered: a family switch auditions on a channel the track then leaves, and the end must send
+        // the song's own program again there too (the shared output keeps the audition program otherwise, corrupting the other tracks on it).
+        if (_track.MidiChannel == _channel)
+        {
+            _sink.BeginPreview(_track.MidiOutputDeviceId, _channel, _track.MidiProgram);
+            _touched.Add((_track.MidiOutputDeviceId, _channel));
+        }
+        // A stopped song always auditions; a playing family switch auditions too (no live switch then, so the note is the only preview).
+        if (!_sink.IsPlaying || _track.MidiChannel != _channel)
+        {
+            _sink.Audition(_track.MidiOutputDeviceId, _track.MidiChannel, _track.MidiProgram, NoteFor(_track), AuditionMs);
+            _touched.Add((_track.MidiOutputDeviceId, _track.MidiChannel));
+        }
     }
 
     /// <summary>OK: the track keeps <paramref name="chosen"/> as one "Change instrument" undo step (with no document the track keeps what was previewed, no step, no second sound); the running
@@ -84,6 +96,16 @@ public sealed class InstrumentChoice
     {
         if (_sink is null || !(_sounded || keep)) return;
         _sink.EndPreview(_track.MidiOutputDeviceId, _channel, keep);
+        if (!keep)
+        {
+            // A cancelled (or dropped) family switch auditioned on channels the track has since left: each keeps the audition
+            // program on the shared output until its own program is sent again, so restore every touched channel besides the
+            // original one. A commit needs nothing extra: its re-arm and schedule refresh converge every channel already.
+            foreach (var (device, channel) in _touched)
+                if (channel != _channel || device != _track.MidiOutputDeviceId)
+                    _sink.EndPreview(device, channel, keep: false);
+        }
+        _touched.Clear();
         _sounded = false;
     }
 

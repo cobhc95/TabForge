@@ -300,7 +300,7 @@ public sealed partial class TimelineView
     internal static double ArmedExtraOf(bool armed, double rowHeight, double baseBand) =>
         armed ? Math.Max(0, Math.Min(rowHeight, baseBand) + ArmedRowPainter.SubRowHeight - baseBand) : 0;
 
-    /// <summary>The height an armed track adds under its base row band (see <see cref="ArmedExtraOf"/>); 0 for an index outside the tracks.</summary>
+    /// <summary>The height a track adds under its base row band (the armed strip, then the live stack); 0 for an index outside the tracks.</summary>
     private double ExtraHeightOf(int index)
     {
         if (index < 0 || index >= _song.Tracks.Count) return 0;

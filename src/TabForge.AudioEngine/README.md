@@ -9,7 +9,7 @@ The engine process files are in `Host/` (`EngineHost`, its commands, harness, lo
 - `MixEngine`, `TrackChain`: mixing and per-track chains.
 - `GmSynth`: the built-in synthesiser.
 - `OfflineRenderer`, `SafetyLimiter`: file render and the master limiter.
-- `PluginHostMain`, `RemotePlugin`: plug-ins run in isolated child processes.
+- `PluginHostMain`, `RemotePlugin`: plug-ins run in isolated child processes; a 32-bit VST2 plug-in uses the separate `tfvst32.exe` helper (a missing helper is a readable load failure and the chain stays dry).
 - `EngineWatchdog`: detects a stalled engine so the app can restart it.
 
 ## Pathway

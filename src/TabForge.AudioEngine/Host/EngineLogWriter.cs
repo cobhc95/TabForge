@@ -93,7 +93,8 @@ public sealed class EngineLogWriter
 
     private void Start()
     {
-        new Thread(() => { while (true) { Wake.WaitOne(); Flush(); } }) { IsBackground = true, Name = "TabForge engine log", Priority = ThreadPriority.BelowNormal }.Start();
+        // Thread.Start waits until the new thread runs, so it starts at normal priority and lowers itself: a below-normal thread on a busy machine would hold this Write for seconds.
+        new Thread(() => { Thread.CurrentThread.Priority = ThreadPriority.BelowNormal; while (true) { Wake.WaitOne(); Flush(); } }) { IsBackground = true, Name = "TabForge engine log" }.Start();
         AppDomain.CurrentDomain.ProcessExit += (_, _) => Flush(500);
     }
 

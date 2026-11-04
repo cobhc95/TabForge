@@ -10,14 +10,22 @@ namespace TabForge.Avalonia.Platform;
 internal sealed class FollowFrameGate
 {
     private const double MillisecondsPerSecond = 1000;
-    private readonly Stopwatch _clock = Stopwatch.StartNew();
+    private const int ScreenRateFps = 240;
+    private const double CapIntervalTolerance = 0.9;
+    private readonly Func<double> _nowMs;
     private double _lastAllowedMs = double.NegativeInfinity;
 
-    /// <summary>True when at least 1000 / <paramref name="maxFps"/> ms have passed since the last true; that instant becomes the new last.</summary>
+    public FollowFrameGate(Func<double>? nowMs = null)
+    {
+        var clock = Stopwatch.StartNew();
+        _nowMs = nowMs ?? (() => clock.Elapsed.TotalMilliseconds);
+    }
+
+    /// <summary>Allows the configured scrolling rate with jitter tolerance; 240 (the maximum setting) follows every display frame.</summary>
     public bool Allow(int maxFps)
     {
-        var now = _clock.Elapsed.TotalMilliseconds;
-        if (now - _lastAllowedMs < MillisecondsPerSecond / Math.Max(1, maxFps)) return false;
+        var now = _nowMs();
+        if (maxFps > 0 && maxFps < ScreenRateFps && now - _lastAllowedMs < MillisecondsPerSecond / maxFps * CapIntervalTolerance) return false;
         _lastAllowedMs = now;
         return true;
     }

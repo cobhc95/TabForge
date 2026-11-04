@@ -15,7 +15,7 @@ therefore ship the files GitHub built and attested, and anyone can rebuild them 
 | Version | One `<Version>` in `Directory.Build.props`; the version string carries no git commit id (`IncludeSourceRevisionInInformationalVersion` is `false`, and source-control links are off in the PDB), so a build of the same source is identical whichever clone or commit id it was built from. |
 | Source text | `.gitattributes` forces CRLF for every text file (`* text=auto eol=crlf`), so a checkout is identical on every machine; embedded source checksums and loose text files match. |
 | Build folder | `Source/tools/Package-Release.ps1` builds from a temporary `git worktree` of the committed HEAD, never from the working folder, so uncommitted edits, stray files and local line endings cannot reach the release. It refuses a checkout that is not clean. |
-| Native bridge | One binary: the committed `Source/src/TabForge.AudioEngine/native/tfvst3.dll`, verified against `Source/native/BUILD_PROVENANCE.md`. Both builds ship it. |
+| Native components | Four committed binaries, each checked against its own build record: `tfvst3.dll` (`Source/native/BUILD_PROVENANCE.md`), and `tfvst3-x86.dll`, `tfvst32.exe` and `tfvst64.exe` (their build records are kept with the release tooling and are not part of the public export). All four ship loose beside `TabForge.exe`. |
 | Zip | Entries are sorted, use forward slashes and one fixed timestamp. |
 
 Not reproducible by design: the Inno Setup installer embeds its own timestamps. Its contents come from the same
@@ -39,22 +39,27 @@ The script lists every differing zip entry (with the number of differing bytes a
 causes) and exits with 0 only when all entries are identical. The installers are compared by payload when
 `innounp.exe` or `innoextract.exe` is on `PATH`; otherwise the script says that an installer difference is expected.
 
-## The native bridge
+## The native components
 
-`tfvst3.dll` is the one binary that is not rebuilt for a release. The release ships the DLL committed in the repository
-(`Source/src/TabForge.AudioEngine/native/tfvst3.dll`), so the GitHub build and a local build carry exactly the same bridge.
-Two rebuilds of the bridge from the same source never match byte for byte, so the committed DLL is produced once, by
-the manual `build-bridge` workflow, and then only reused:
+The four native binaries are not rebuilt for a release: `tfvst3.dll`, `tfvst3-x86.dll` (the VST3 host bridge and its
+32-bit build), `tfvst32.exe` and `tfvst64.exe` (the one helper source in both bitnesses). The release ships the files
+committed in the repository (`Source/src/TabForge.AudioEngine/native/`), so the GitHub build and a local build carry
+exactly the same helpers. Two rebuilds of a native component from the same source never match byte for byte, so each
+committed file is produced once and then only reused:
 
-1. The maintainer runs the `build-bridge` workflow (Actions, Run workflow) whenever the bridge source or the SDK pin
-   changes. It builds the bridge from the pinned, unpatched SDK on the runner, records the compiler and SHA-256 in
+1. `tfvst3.dll`: the maintainer runs the `build-bridge` workflow (Actions, Run workflow) whenever the bridge source or the
+   SDK pin changes. It builds the bridge from the pinned, unpatched SDK on the runner, records the compiler and SHA-256 in
    `Source/native/BUILD_PROVENANCE.md`, attests the DLL and uploads both files.
-2. The maintainer commits that DLL and that `BUILD_PROVENANCE.md` as they are. `Source/tools/Package-Release.ps1` refuses to
-   package when the DLL's SHA-256 differs from the record.
+2. `tfvst3-x86.dll`: the 32-bit bridge build script kept with the release tooling builds it from the same SDK pin and
+   writes the 32-bit build record beside it.
+3. `tfvst32.exe` and `tfvst64.exe`: the helper build script kept with the release tooling builds both from the same
+   private helper source, runs the native self-tests and writes both build records.
+4. The maintainer commits each DLL/EXE with its build record as they are. `Source/tools/Package-Release.ps1` refuses to
+   package when any shipped file's SHA-256 differs from its record.
 
 ### What the CI comparison checks
 
-The `native-bridge` job of `windows-ci` rebuilds the bridge on every run and runs `Source/tools/Compare-NativeBridge.ps1`,
+The `native-bridge` job of `windows-ci` rebuilds the 64-bit bridge on every run and runs `Source/tools/Compare-NativeBridge.ps1`,
 which parses the PE headers of both files, masks the expected differences and requires everything else to be
 identical. The expected differences are:
 
@@ -69,14 +74,19 @@ differed in each), and fails when the size differs or any code or data byte diff
 source, SDK or compiler). In that case run `build-bridge` and commit its output. A difference in these categories does not
 mean the shipped bridge is wrong; it is the expected result of rebuilding.
 
-## Updating the native bridge
+## Updating the native components
 
-The bridge changes rarely. When its source or the SDK pin changes:
+The components change rarely. When the VST3 bridge source or the SDK pin changes:
 
-1. Run the `build-bridge` workflow (Actions, Run workflow) on the commit.
-2. Download the `tfvst3-bridge` artifact and copy `tfvst3.dll` to `Source/src/TabForge.AudioEngine/native/` and
-   `BUILD_PROVENANCE.md` to `Source/native/`, unchanged.
-3. Commit both files together.
+1. Run the `build-bridge` workflow (Actions, Run workflow) on the commit for `tfvst3.dll`; run the 32-bit bridge build
+   kept with the release tooling for `tfvst3-x86.dll`.
+2. Download/copy each DLL to `Source/src/TabForge.AudioEngine/native/` and its build record to `Source/native/`,
+   unchanged.
+3. Commit each pair together.
+
+The helper (`tfvst32.exe` and `tfvst64.exe`) works the same way: the helper build script kept with the release tooling
+rebuilds both, runs the native self-tests in each bitness, writes both build records, and `Package-Release.ps1` refuses
+a mismatch. Its test-only binaries are built for local testing only and are never shipped.
 
 ## Updating the SDK
 

@@ -18,6 +18,7 @@
   { "name": "MonitorFxSurfaceFallback", "dark": "#FF2A2F37", "light": "#FFC0C0C0" },
   { "name": "MonitorFxAmberFallback", "dark": "#FFE6B93A", "light": "#FFC99A1E" },
   { "name": "MonitorFxHoverFallback", "dark": "#30FFFFFF", "light": "#30000000" },
+  { "name": "FxInactiveRuleWash", "dark": "#0FFFFFFF", "light": "#0F000000" },
   { "name": "MonitorFxInkOnAmber", "value": "#FF1B1605" },
   { "name": "TimelinePlayhead", "dark": "#FFFFFFFF", "light": "#FF000000" }
 ]

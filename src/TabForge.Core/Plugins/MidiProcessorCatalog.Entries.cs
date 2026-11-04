@@ -5,6 +5,10 @@ namespace TabForge.Plugins;
 
 public static partial class MidiProcessorCatalog
 {
+    private const string VelHow = "How it changes velocity";
+    private static MidiShowWhen VelMode(int mode) => new("Mode", mode);
+    private static MidiParamInfo InGroup(string group, MidiParamInfo p, MidiShowWhen? showWhen = null) => p with { Group = group, ShowWhen = showWhen };
+
     private static MidiProcessorInfo[] BuildRaw()
     {
         var all = new List<MidiProcessorInfo>(300);
@@ -64,13 +68,16 @@ public static partial class MidiProcessorCatalog
             "velocity scale multiply add min max fixed compressor dynamics random level",
             new[]
             {
-                InCh(), Choice("Mode", "Mode", 0, "How the velocity is computed", (0, "Scale + offset"), (1, "Fixed"), (2, "Compressor")),
-                Num("Mul", "Multiply", -16, 16, 1, "Scale + offset mode: out = velocity x this + offset; ignored in Fixed and Compressor modes", 10), Num("Add", "Offset", -128, 128, 0, "Scale + offset mode: added after Multiply; ignored in Fixed and Compressor modes"),
-                Num("Fixed", "Fixed velocity", 1, 127, 100, "Fixed mode: every note in range gets this velocity"), Num("Threshold", "Compressor threshold", 1, 127, 80, "Compressor mode: velocities above this are squeezed"), Num("Ratio", "Compressor ratio", 1, 20, 2, "Compressor mode: how much above the threshold is squeezed", 10, ":1"),
-                Num("Makeup", "Makeup", -64, 64, 0, "Compressor mode: added after compression"), Num("Min", "Minimum out", 0, 127, 1), Num("Max", "Maximum out", 0, 127, 127),
-                Num("Random", "Random", 0, 100, 0, "Random velocity change, percent of the range", 1, " %"), Num("Mix", "Mix", 0, 100, 100, "Dry / wet", 1, " %"),
-                Num("InLow", "Lowest velocity affected", 1, 127, 1), Num("InHigh", "Highest velocity affected", 1, 127, 127),
-                Num("Low", "Lowest note", 0, 127, 0), Num("High", "Highest note", 0, 127, 127),
+                Choice("Mode", "Mode", 0, "How the velocity is computed", (0, "Scale + offset"), (1, "Fixed"), (2, "Compressor")), InCh(),
+                InGroup(VelHow, Num("Mul", "Multiply", -16, 16, 1, "out = velocity x this + offset", 10), VelMode(0)), InGroup(VelHow, Num("Add", "Offset", -128, 128, 0, "Added after Multiply"), VelMode(0)),
+                InGroup(VelHow, Num("Fixed", "Fixed velocity", 1, 127, 100, "Every note in range gets this velocity"), VelMode(1)),
+                InGroup(VelHow, Num("Threshold", "Threshold", 1, 127, 80, "Velocities above this are squeezed"), VelMode(2)),
+                InGroup(VelHow, Num("Ratio", "Ratio", 1, 20, 2, "How much above the threshold is squeezed", 10, ":1"), VelMode(2)),
+                InGroup(VelHow, Num("Makeup", "Makeup", -64, 64, 0, "Added after compression"), VelMode(2)),
+                InGroup("Keep the result between", Num("Min", "Minimum out", 0, 127, 1)), InGroup("Keep the result between", Num("Max", "Maximum out", 0, 127, 127)),
+                InGroup("Finishing", Num("Random", "Random", 0, 100, 0, "Random velocity change, percent of the range", 1, " %")), InGroup("Finishing", Num("Mix", "Mix", 0, 100, 100, "Dry / wet", 1, " %")),
+                InGroup("Only notes with velocity", Num("InLow", "From", 1, 127, 1, "Lowest velocity that is changed")), InGroup("Only notes with velocity", Num("InHigh", "To", 1, 127, 127, "Highest velocity that is changed")),
+                InGroup("Only note numbers", Num("Low", "Lowest note", 0, 127, 0), new MidiShowWhen("NoteMode", 0, 2)), InGroup("Only note numbers", Num("High", "Highest note", 0, 127, 127), new MidiShowWhen("NoteMode", 0, 2)),
             }),
         new("humanize", "Humanizer", "Timing",
             "Random timing and velocity around a fixed base delay (0 = no added delay); a note-off keeps its note-on's shift.",

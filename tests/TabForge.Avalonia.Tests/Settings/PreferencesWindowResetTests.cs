@@ -47,7 +47,7 @@ public class PreferencesWindowResetTests
         nameof(AppSettings.MixerWindowWidth), nameof(AppSettings.MixerWindowHeight), nameof(AppSettings.MixerRules),
         nameof(AppSettings.MidiExport), nameof(AppSettings.Video), nameof(AppSettings.TrackMeter), nameof(AppSettings.Workspace),
         nameof(AppSettings.WorkspaceBeforeSideHide), nameof(AppSettings.SavedLayouts), nameof(AppSettings.LastLayout),
-        nameof(AppSettings.EffectPresets), nameof(AppSettings.RememberedFolders),
+        nameof(AppSettings.EffectPresets), nameof(AppSettings.TuningUserPresets), nameof(AppSettings.RememberedFolders),
     };
 
     /// <summary>A new AppSettings property must be classified here before it can be silently wiped by a reset.</summary>
@@ -157,6 +157,7 @@ public class PreferencesWindowResetTests
         saved.SavedLayouts.Add(new SavedLayout { Name = "My layout", State = Layout("saved"), Maximised = false, WindowWidth = 1111, WindowHeight = 777 });
         saved.LastLayout = "My layout";
         saved.EffectPresets.Add(new EffectPresetEntry { Kind = "Bend", Name = "My bend", Values = { ["Depth"] = 2 } });
+        saved.TuningUserPresets.Add(new TuningUserPresetEntry { Name = "My tuning", HighToLow = new List<int> { 64, 59, 55, 50, 45, 40 } });
         saved.RememberedFolders["OpenSong"] = @"C:\Songs";
         saved.MixerRules = new MixerAppRules
         {
@@ -196,7 +197,7 @@ public class PreferencesWindowResetTests
     /// <summary>The user data and chrome Reset all must not touch (Render's SafetyLimiter is a Settings row, so it is left out).</summary>
     private static string SnapshotUserData(AppSettings s) => JsonSerializer.Serialize(new
     {
-        s.Workspace, s.WorkspaceBeforeSideHide, s.SavedLayouts, s.LastLayout, s.EffectPresets, s.RememberedFolders, s.MixerRules,
+        s.Workspace, s.WorkspaceBeforeSideHide, s.SavedLayouts, s.LastLayout, s.EffectPresets, s.TuningUserPresets, s.RememberedFolders, s.MixerRules,
         s.WindowWidth, s.WindowHeight, s.WindowLeft, s.WindowTop, s.Maximised,
         s.SettingsWindowWidth, s.SettingsWindowHeight, s.MixerWindowWidth, s.MixerWindowHeight,
         s.MidiExport, s.Video, s.TrackMeter,

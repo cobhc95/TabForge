@@ -61,7 +61,9 @@ public sealed class RangeSnapshot
 
     private bool IsValid() =>
         Format == FormatName && Version == CurrentVersion && Bars.Count is > 0 and <= InputLimits.MaxClipBars && double.IsFinite(LengthSec) && LengthSec >= 0
-        && Tracks.All(t => t.Bars.Count == (t.Kind == TrackKind.Audio ? 0 : Bars.Count) && t.Clips.All(c => c.IsValid()));
+        && Tracks.All(t => t.Bars.Count == (t.Kind == TrackKind.Audio ? 0 : Bars.Count) && t.Clips.All(c => c.IsValid())
+            && (t.PartialCapos is null || (t.PartialCapos.Count <= PartialCapoRules.MaxCount
+                && t.PartialCapos.All(p => p is not null && p.Fret is >= PartialCapoRules.MinFret and <= PartialCapoRules.MaxFret))));
 
     /// <summary>
     /// The copied bars of one tab track as a Bars score clip, for a paste into the score: the track <paramref name="preferredTrackId"/> was copied from, else the first tab track.
@@ -75,6 +77,7 @@ public sealed class RangeSnapshot
         {
             SourceTrackId = source.SourceTrackId, SourceTrackIndex = Tracks.IndexOf(source), Name = source.Name, InstrumentName = source.InstrumentName,
             TrackKind = source.Kind, IsDrums = source.Kind == TrackKind.Drums, StringTunings = source.StringTunings.ToList(), Capo = source.Capo,
+            PartialCapos = PartialCapoRules.Copy(source.PartialCapos),
         };
         for (var i = 0; i < source.Bars.Count; i++)
         {
@@ -130,6 +133,9 @@ public sealed class RangeSnapshotTrack
     /// <summary>Open-string pitches, high to low; the count is the string count.</summary>
     public List<int> StringTunings { get; set; } = new();
     public int Capo { get; set; }
+    /// <summary>Partial capos of the source track (optional; a snapshot from before them has none).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<PartialCapo>? PartialCapos { get; set; }
     /// <summary>One bar per copied bar; empty for an audio track.</summary>
     public List<MeasureModel> Bars { get; set; } = new();
     /// <summary>The clips that touch the range, cut at its edges.</summary>

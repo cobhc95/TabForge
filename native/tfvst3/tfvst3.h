@@ -48,7 +48,8 @@ TFV3_API int32_t tfv3_state_copy(tfv3_plugin* p, uint8_t* buffer, int32_t capaci
 TFV3_API int32_t tfv3_get_state(tfv3_plugin* p, uint8_t* buffer, int32_t capacity);
 TFV3_API int32_t tfv3_set_state(tfv3_plugin* p, const uint8_t* data, int32_t size);
 
-/* Editor: attaches the plug-in view (kPlatformTypeHWND) to parent_hwnd; returns 1 and the preferred size. */
+/* Editor: Windows attaches the view (kPlatformTypeHWND) to parent_hwnd; Linux attaches it (kPlatformTypeX11EmbedWindowID)
+   to the X11 window id passed as parent_hwnd. Returns 1 and the preferred size. */
 TFV3_API int32_t tfv3_has_editor(tfv3_plugin* p);
 TFV3_API int32_t tfv3_open_editor(tfv3_plugin* p, void* parent_hwnd, int32_t* width, int32_t* height);
 TFV3_API void    tfv3_close_editor(tfv3_plugin* p);

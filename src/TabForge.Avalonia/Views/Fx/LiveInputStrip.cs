@@ -43,7 +43,7 @@ public sealed class LiveInputStrip : StripFrame
         Tuner.TunerSwitched += SwitchTuner;
         ShowKnobs();
         ShowPreferences();
-        _frames = new AnimationFrameSource(AvaloniaUiThread.ForApplication(), () => TopLevel.GetTopLevel(this), () => 0);
+        _frames = new AnimationFrameSource(AvaloniaUiThread.ForApplication(), () => TopLevel.GetTopLevel(this));
         _frames.Frame += () => Tick(Environment.TickCount64, DateTime.UtcNow);
         AttachedToVisualTree += (_, _) =>
         {

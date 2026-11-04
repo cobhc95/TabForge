@@ -9,7 +9,7 @@ namespace TabForge.AudioEngine.Isolation;
 // Owns: the single-plug-in host process (dedicated audio thread, command pipe and editor on the main thread).
 
 /// <summary>
-/// A process that runs exactly one plug-in (TabForge.exe --plugin-host id enginePid rate block instrument format path [sha256|none] [logPath|none]).
+/// A process that runs exactly one plug-in (TabForge.exe --plugin-host id enginePid rate block instrument format path [sha256|none] [logPath|none] [trust] [dependencyHash|none]).
 /// Audio is processed on a dedicated thread signalled by the engine; the main thread runs the command pipe and the
 /// plug-in's editor window. Exits when the engine goes away.
 /// </summary>
@@ -39,6 +39,8 @@ public static class PluginHostMain
         if (args.Length > 9 && args[9] != "none") log.Attach(args[9]);
         // "location": the binary lies in a folder only an administrator can write, so no hash is sent; "checked": the hash above is required.
         var locationTrusted = args.Length > 10 && args[10] == "location";
+        // The local DLL closure the engine approved (the engine also holds those files open while this process loads).
+        var expectedDependencies = args.Length > 11 && args[11] != "none" ? args[11] : "";
         Process engine;
         try { engine = Process.GetProcessById(enginePid); } catch (ArgumentException) { return 3; }
 
@@ -48,7 +50,8 @@ public static class PluginHostMain
         IPluginInstance plugin;
         try
         {
-            plugin = PluginFactory.CreateVerified(path, format, wantInstrument, rate, maxBlock, expectedSha256, locationTrusted, threads);
+            plugin = PluginFactory.CreateVerified(path, format, wantInstrument, rate, maxBlock, expectedSha256, locationTrusted, threads,
+                expectedDependencies: expectedDependencies);
         }
         catch (Exception ex)
         {
@@ -59,6 +62,8 @@ public static class PluginHostMain
         Frames.Write(pipe, RemotePlugin.MsgLoaded, w => { w.Write(plugin.IsInstrument); w.Write(plugin.HasEditor); w.Write(plugin.LatencySamples); w.Write(plugin.TailSamples); });
 
         var editors = PluginEditorHosts.Create(log);
+        // A user-closed editor in this process reaches the engine the same way a bridged editor does.
+        editors.UserClosed = () => Frames.Write(pipe, RemotePlugin.MsgEditorClosed);
         var host = new HostSession(log, threads, pipe, block, plugin, path, maxBlock, editors);
         host.StartAudioThread();
         host.StartCommandThread();
@@ -74,6 +79,34 @@ public static class PluginHostMain
         editors.CloseAll();
         plugin.Dispose();
         return 0;
+    }
+
+    /// <summary>Validates a CmdSetState payload: the wire length must match the bytes actually read (P1-06: BinaryReader.ReadBytes returns short on truncation).</summary>
+    internal static void ValidateStatePayload(int length, byte[] state)
+    {
+        if (state.Length != length) throw new InvalidDataException("Truncated state payload.");
+    }
+
+    /// <summary>
+    /// The transport passed to the plug-in: the shared block is written by the engine, but a compromised engine could put
+    /// NaN/Infinity in it. Apply the same finite/clamped values the native helper uses before any plug-in DSP sees them (A8).
+    /// </summary>
+    internal static TransportInfo TransportFor(PluginHostBlock block)
+    {
+        static double Finite(double value, double fallback) => double.IsFinite(value) ? value : fallback;
+        var numerator = Math.Clamp(block.TimeSigNumerator, 0, 64);
+        return new TransportInfo
+        {
+            Tempo = Math.Clamp(Finite(block.Tempo, 120), 1, 1000),
+            PpqPosition = Finite(block.Ppq, 0),
+            Playing = block.Playing != 0,
+            Meter = new TransportMeter
+            {
+                Numerator = numerator,
+                Denominator = numerator > 0 ? Math.Clamp(block.TimeSigDenominator, 1, 64) : 0,
+                BarStartPpq = Finite(block.BarStartPpq, 0),
+            },
+        };
     }
 
     /// <summary>What the host process runs while the plug-in is loaded: the audio thread, the command thread and the quit flag they share.</summary>
@@ -120,18 +153,17 @@ public static class PluginHostMain
                 {
                     offlineNow = _block.Offline != 0;
                     _threads.SetOfflineFlag(offlineNow);   // this thread answers "offline process level" while rendering
-                    try { _plugin.SetOfflineMode(offlineNow); } catch (Exception ex) { _log.Write($"offline mode failed: {ex.Message}"); }
+                    // This is the host's audio thread: format and queue the failure on the main thread instead of writing
+                    // the log here (the line is rare, but the audio deadline is not).
+                    try { _plugin.SetOfflineMode(offlineNow); }
+                    catch (Exception ex) { var message = ex.Message; _threads.Post(() => _log.Write($"offline mode failed: {message}")); }
                 }
                 var frames = Math.Clamp(_block.Frames, 0, _maxBlock);
                 _block.Channel(0)[..frames].CopyTo(_input[0]);
                 _block.Channel(1)[..frames].CopyTo(_input[1]);
                 var count = Math.Clamp(_block.EventCount, 0, _events.Length);
                 _block.Events[..count].CopyTo(_events);
-                var transport = new TransportInfo
-                {
-                    Tempo = _block.Tempo, PpqPosition = _block.Ppq, Playing = _block.Playing != 0,
-                    Meter = new TransportMeter { Numerator = _block.TimeSigNumerator, Denominator = _block.TimeSigDenominator, BarStartPpq = _block.BarStartPpq },
-                };
+                var transport = TransportFor(_block);
                 Interlocked.Increment(ref _processCalls);
                 _plugin.Process(_input, _output, frames, _events.AsSpan(0, count), transport);
                 _output[0].AsSpan(0, frames).CopyTo(_block.Channel(2));
@@ -179,6 +211,7 @@ public static class PluginHostMain
                     var length = r.ReadInt32();
                     if (length is < 0 or > PluginStateLimits.MaxRawBytes) throw new InvalidDataException("Bad state length.");
                     var state = r.ReadBytes(length);
+                    ValidateStatePayload(length, state);
                     threads.Post(() => PluginControlChannel.Answer(pipe, id, log, () => { plugin.SetState(state); return (RemotePlugin.MsgState, w => w.Write(0)); }));
                     break;
                 }
@@ -217,6 +250,16 @@ public static class PluginHostMain
                     {
                         var ok = plugin is IPluginParameters p && p.SetParameter(paramId, value);
                         return (RemotePlugin.MsgParams, w => w.Write(ok ? 1 : 0));
+                    }));
+                    break;
+                }
+                case RemotePlugin.CmdSetProgram:
+                {
+                    var program = r.ReadInt32();
+                    threads.Post(() => PluginControlChannel.Answer(pipe, id, log, () =>
+                    {
+                        if (plugin is Vst2Plugin vst2) vst2.SetProgram(program);
+                        return (RemotePlugin.MsgParams, w => w.Write(plugin is Vst2Plugin ? 1 : 0));
                     }));
                     break;
                 }

@@ -136,6 +136,29 @@ public class InstrumentPanelViewTests
     }
 
     [AvaloniaFact]
+    public void LegendActionsHaveIdenticalTypographyAndGeometry()
+    {
+        var strip = new InstrumentPanelStrip(new ScorePreviewView());
+        var window = new Window { Width = 1100, Height = 400, FontSize = 20, Content = strip };
+        window.Show();
+        try
+        {
+            var buttons = strip.GetLogicalDescendants().OfType<Button>()
+                .Where(b => b.Name is "ScalesButton" or "FretboardCustomizeButton").ToList();
+            Assert.Equal(2, buttons.Count);
+            var labels = buttons.Select(b => ((StackPanel)b.Content!).Children.OfType<TextBlock>().Single()).ToList();
+            Assert.All(labels, label => Assert.Equal(FretboardChromeMetrics.PillFontSize, label.FontSize));
+            Assert.Equal(labels[0].FontFamily, labels[1].FontFamily);
+            Assert.Equal(labels[0].FontWeight, labels[1].FontWeight);
+            Assert.Equal(labels[0].FontStyle, labels[1].FontStyle);
+            Assert.Equal(buttons[0].Width, buttons[1].Width);
+            Assert.Equal(buttons[0].Height, buttons[1].Height);
+            Assert.Equal(buttons[0].Padding, buttons[1].Padding);
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
     public void StripBuildsWithThePreviewScore()
     {
         var score = new ScorePreviewView();
@@ -247,6 +270,7 @@ public class InstrumentPanelViewTests
     {
         var settings = new AppSettings();
         settings.Editing.PreviewNotesEnabled = previewOn;
+        settings.Editing.PreviewPreviousNotesEnabled = true;
         var panel = new InstrumentPanelView { Kind = kind, Look = FretboardSettingsBinding.Look.From(settings) };
         panel.Show(DemoSongFactory.Create().Tracks[0], System.Array.Empty<InstrumentLitNotes.Lit>());
         panel.Measure(new Size(1100, 170));
@@ -343,5 +367,231 @@ public class InstrumentPanelViewTests
             Assert.DoesNotContain("next", labels);
             Assert.DoesNotContain("upcoming", labels);
         }
+    }
+
+    /// <summary>The wood is never stretched: every tile keeps the shipped texture's aspect (rosewood Detailed
+    /// 2022x778, maple Detailed 2157x729) at narrow, wide and very wide panes, and the tiles cover the board.</summary>
+    [Fact]
+    public void WoodTilesKeepSourceAspectAtEveryWidth()
+    {
+        foreach (var (imageWidth, imageHeight) in new[] { (2022.0, 778.0), (2157.0, 729.0) })
+        {
+            var aspect = imageWidth / imageHeight;
+            foreach (var paneWidth in new[] { 800.0, 1600.0, 4000.0 })
+            {
+                var input = new FretboardGeometryRules.Input(6, 24, 24, 1, false, 0);
+                var layout = FretboardGeometryRules.Compute(input, new UiRect(0, 0, paneWidth, 300), limits: InstrumentPanelView.BoardLimits);
+                var board = layout.Board;
+                var tiles = FretboardWoodTiling.TileCount(board.Width, board.Height, imageWidth, imageHeight);
+                Assert.True(tiles >= 1, $"no tile covers the board at pane width {paneWidth}");
+                var covered = 0.0;
+                for (var i = 0; i < tiles; i++)
+                {
+                    var tile = FretboardWoodTiling.TileRect(i, board.X, board.Y, board.Width, board.Height, imageWidth, imageHeight);
+                    Assert.Equal(aspect, tile.Width / tile.Height, 9);
+                    Assert.Equal(board.Height, tile.Height, 9);
+                    covered += tile.Width;
+                }
+                Assert.True(covered >= board.Width, $"tiles cover {covered:F1} of the {board.Width:F1} board at pane width {paneWidth}");
+            }
+        }
+    }
+
+    /// <summary>The neck widens with the string count: 3 to 10 strings give strictly taller boards in the same pane.</summary>
+    [Fact]
+    public void NeckWidensWithStringCount()
+    {
+        var heights = new System.Collections.Generic.List<double>();
+        for (var strings = 3; strings <= 10; strings++)
+        {
+            var layout = FretboardGeometryRules.Compute(new FretboardGeometryRules.Input(strings, 24, 24, 1, false, 0),
+                new UiRect(0, 0, 1600, 4000), limits: InstrumentPanelView.BoardLimits);
+            heights.Add(layout.Board.Height);
+        }
+        for (var i = 1; i < heights.Count; i++)
+            Assert.True(heights[i] > heights[i - 1], $"board for {i + 3} strings ({heights[i]:F1}) is not taller than for {i + 2} ({heights[i - 1]:F1})");
+    }
+
+    /// <summary>Fret spacing is 12-TET: each cell is 2^(-1/12) of the previous one, centres sit between their wires,
+    /// and the hit test maps each wire midpoint back to its fret.</summary>
+    [Fact]
+    public void FretCellsNarrowByTwelfthRootOfTwo()
+    {
+        var input = new FretboardGeometryRules.Input(6, 24, 24, 1, false, 0);
+        var content = new UiRect(0, 0, 1600, 300);
+        var layout = FretboardGeometryRules.Compute(input, content, limits: InstrumentPanelView.BoardLimits);
+        var ratio = System.Math.Pow(2, -1 / 12.0);
+        for (var fret = 2; fret <= layout.LastFret; fret++)
+        {
+            var previous = FretboardGeometryRules.WireX(layout, fret - 1) - FretboardGeometryRules.WireX(layout, fret - 2);
+            var cell = FretboardGeometryRules.WireX(layout, fret) - FretboardGeometryRules.WireX(layout, fret - 1);
+            Assert.Equal(ratio, cell / previous, 6);
+        }
+        for (var fret = layout.FirstFret; fret <= layout.LastFret; fret++)
+        {
+            var centre = (FretboardGeometryRules.WireX(layout, fret - 1) + FretboardGeometryRules.WireX(layout, fret)) / 2;
+            Assert.Equal(centre, FretboardGeometryRules.FretX(layout, fret), 9);
+            var middle = layout.Board.Y + layout.Board.Height / 2;
+            Assert.True(FretboardGeometryRules.HitTest(input, content, new UiPoint(centre, middle), out _, out var hit, limits: InstrumentPanelView.BoardLimits));
+            Assert.Equal(fret, hit);
+        }
+    }
+
+    /// <summary>A 50-step capo drag previews without writing and commits exactly once, with the final fret.</summary>
+    [Fact]
+    public void CapoDragCommitsOnceOverAFiftyStepDrag()
+    {
+        var previews = new System.Collections.Generic.List<int>();
+        var commits = new System.Collections.Generic.List<int>();
+        var drag = new FretboardCapoDrag(2, previews.Add, fret => { commits.Add(fret); return true; });
+        for (var i = 0; i < 50; i++) drag.Move(3 + (i % 5));
+        Assert.Equal(50, drag.PreviewCount);
+        Assert.Equal(0, drag.CommitCount);
+        Assert.True(drag.End());
+        Assert.Equal(1, drag.CommitCount);
+        Assert.Equal(new[] { 3 + (49 % 5) }, commits);
+        // A drag released where it started writes nothing: still one undo entry (none) and no sync.
+        var idle = new FretboardCapoDrag(4, _ => { }, _ => { Assert.Fail("an unchanged drag must not commit"); return false; });
+        Assert.False(idle.End());
+        Assert.Equal(0, idle.CommitCount);
+    }
+
+    /// <summary>The capo fret clamps to 0..24 on the drag path; an unchanged release commits nothing.</summary>
+    [Fact]
+    public void CapoFretClampsToZeroThroughTwentyFour()
+    {
+        Assert.Equal(0, FretboardCapoRules.Clamp(-3));
+        Assert.Equal(24, FretboardCapoRules.Clamp(99));
+        Assert.Equal(7, FretboardCapoRules.Clamp(7));
+        var drag = new FretboardCapoDrag(2, _ => { }, _ => true);
+        drag.Move(99);
+        Assert.Equal(24, drag.CurrentFret);
+        drag.Move(-5);
+        Assert.Equal(0, drag.CurrentFret);
+    }
+
+    /// <summary>The capo grabs at its fret's centre within the board's span, never at 0 (no image) or off the board;
+    /// left of the nut lands on 0 (off).</summary>
+    [Fact]
+    public void CapoGrabHitsOnlyTheDrawnCapo()
+    {
+        var input = new FretboardGeometryRules.Input(6, 24, 24, 1, false, 0);
+        var content = new UiRect(0, 0, 1600, 300);
+        var layout = FretboardGeometryRules.Compute(input, content, limits: InstrumentPanelView.BoardLimits);
+        var middle = layout.Board.Y + layout.Board.Height / 2;
+        Assert.True(FretboardCapoRules.HitTest(layout, FretboardGeometryRules.FretX(layout, 5), middle, 5));
+        Assert.False(FretboardCapoRules.HitTest(layout, FretboardGeometryRules.FretX(layout, 5), middle, 0));
+        Assert.False(FretboardCapoRules.HitTest(layout, FretboardGeometryRules.FretX(layout, 5), middle, 25));
+        Assert.False(FretboardCapoRules.HitTest(layout, FretboardGeometryRules.FretX(layout, 5), layout.Board.Bottom + 99, 5));
+        Assert.Equal(0, FretboardCapoRules.FretAtX(layout, layout.Board.X - 5));
+        Assert.Equal(5, FretboardCapoRules.FretAtX(layout, FretboardGeometryRules.FretX(layout, 5)));
+    }
+
+    /// <summary>The full capo draws at its fret's 12-TET centre, clipped to the board (never spilling past its alpha edges).</summary>
+    [AvaloniaFact]
+    public void CapoDrawsAtItsFretOverhangingTheWood()
+    {
+        var track = DemoSongFactory.Create().Tracks[0];
+        track.Capo = 5;
+        var view = new InstrumentPanelView();
+        view.Show(track, System.Array.Empty<InstrumentLitNotes.Lit>());
+        view.Measure(new Size(1100, 170));
+        view.Arrange(new Rect(0, 0, 1100, 170));
+        var draw = new InstrumentFretNumberTests.RecordingDrawContext();
+        view.Draw(draw, light: false);
+        var layout = view.FretboardLayout();
+        var wood = FretboardArtist.Wood(layout, bass: false);
+        var centre = FretboardGeometryRules.FretX(layout, 5);
+        // The bar art has asymmetric transparent margins, so the check is that the drawn bar covers its fret's centre and, like a real capo
+        // wrapping the neck, reaches past the wood at the top and the bottom.
+        Assert.Contains(draw.Images, image => image.X <= centre && centre <= image.X + image.Width
+            && image.Width / image.Height < 1.5 && image.Y <= wood.Y && image.Y + image.Height >= wood.Bottom);
+    }
+
+    /// <summary>A partial capo is grabbed only on the strings it covers, and its band stays inside those strings.</summary>
+    [AvaloniaFact]
+    public void PartialCapoGrabAndBandCoverOnlyItsStrings()
+    {
+        var input = new FretboardGeometryRules.Input(6, 24, 24, 1, false, 0);
+        var content = new UiRect(0, 0, 1600, 300);
+        var layout = FretboardGeometryRules.Compute(input, content, limits: InstrumentPanelView.BoardLimits);
+        var x = FretboardGeometryRules.FretX(layout, 5);
+        const int mask = 0b000111;
+
+        Assert.True(FretboardCapoRules.HitTestPartial(layout, x, FretboardGeometryRules.StringY(layout, 0), 5, mask));
+        Assert.True(FretboardCapoRules.HitTestPartial(layout, x, FretboardGeometryRules.StringY(layout, 2), 5, mask));
+        Assert.False(FretboardCapoRules.HitTestPartial(layout, x, FretboardGeometryRules.StringY(layout, 3), 5, mask));
+        Assert.False(FretboardCapoRules.HitTestPartial(layout, FretboardGeometryRules.FretX(layout, 6), FretboardGeometryRules.StringY(layout, 0), 5, mask));
+
+        var band = FretboardCapoRules.PartialBand(layout, mask);
+        Assert.NotNull(band);
+        Assert.True(band!.Value.Top <= FretboardGeometryRules.StringY(layout, 0));
+        Assert.True(band.Value.Bottom >= FretboardGeometryRules.StringY(layout, 2));
+        Assert.True(band.Value.Bottom < FretboardGeometryRules.StringY(layout, 3));
+    }
+
+    /// <summary>A partial capo draws at its fret, clipped to the strings it covers (not the whole board).</summary>
+    [AvaloniaFact]
+    public void PartialCapoDrawsAcrossItsStringsOnly()
+    {
+        var track = DemoSongFactory.Create().Tracks[0];
+        track.Capo = 0;
+        track.PartialCapos = new System.Collections.Generic.List<TabForge.Models.PartialCapo> { new() { Fret = 5, StringMask = 0b000111 } };
+        var view = new InstrumentPanelView();
+        view.Show(track, System.Array.Empty<InstrumentLitNotes.Lit>());
+        view.Measure(new Size(1100, 170));
+        view.Arrange(new Rect(0, 0, 1100, 170));
+        var draw = new InstrumentFretNumberTests.RecordingDrawContext();
+        view.Draw(draw, light: false);
+        var layout = view.FretboardLayout();
+        var centre = FretboardGeometryRules.FretX(layout, 5);
+
+        Assert.Contains(draw.Images, image => image.X <= centre && centre <= image.X + image.Width && image.Width / image.Height < 1.5);
+        var wood = FretboardArtist.Wood(layout, bass: false);
+        Assert.Contains(draw.Clips, clip => clip.Y >= wood.Y - 0.001 && clip.Y + clip.Height <= wood.Bottom + 0.001 && clip.Height < wood.Height);
+    }
+
+    /// <summary>Sounding strings vibrate for their note's duration only: the sounding string's line moves with the
+    /// frame phase while the others and every text stay put (no per-frame allocation, no text changes).</summary>
+    [AvaloniaFact]
+    public void SoundingStringsVibrateForTheirDurationOnly()
+    {
+        var track = DemoSongFactory.Create().Tracks[0];
+        var view = new InstrumentPanelView();
+        view.Show(track, System.Array.Empty<InstrumentLitNotes.Lit>());
+        view.Measure(new Size(1100, 170));
+        view.Arrange(new Rect(0, 0, 1100, 170));
+        view.ShowPlayback(new[] { new NoteEvent { OnsetMs = 1000, DurationMs = 800, StringIndex = 1, Fret = 3, Midi = 67 } }, 1200);
+        var layout = view.FretboardLayout();
+        var board = layout.Board;
+        static double? StringLineY(InstrumentFretNumberTests.RecordingDrawContext draw, UiRect board, double stringY)
+        {
+            // A string is several horizontal lines now (cast shadows below, the body, the glint above): the body is the one nearest its own position.
+            double? best = null;
+            foreach (var line in draw.LineOps)
+                if (line.X1 <= board.X && line.X2 == board.Right && System.Math.Abs(line.Y1 - stringY) < 5 && line.Y1 == line.Y2
+                    && (best is null || System.Math.Abs(line.Y1 - stringY) < System.Math.Abs(best.Value - stringY)))
+                    best = line.Y1;
+            return best;
+        }
+        view.TestSetVibrationPhase(0);
+        var initialOffset = view.StringWobble(1).Offset;
+        var still = new InstrumentFretNumberTests.RecordingDrawContext();
+        view.Draw(still, light: false);
+        view.TestSetVibrationPhase(37);
+        var movedOffset = view.StringWobble(1).Offset;
+        var moved = new InstrumentFretNumberTests.RecordingDrawContext();
+        view.Draw(moved, light: false);
+        var sounding = FretboardGeometryRules.StringY(layout, 1);
+        var quiet = FretboardGeometryRules.StringY(layout, 4);
+        Assert.NotEqual(initialOffset, movedOffset);
+        Assert.Equal(StringLineY(still, board, quiet), StringLineY(moved, board, quiet));
+        Assert.Equal(still.Texts.Select(t => t.Text), moved.Texts.Select(t => t.Text));
+        // Past the note's duration the string rests again.
+        view.ShowPlayback(new[] { new NoteEvent { OnsetMs = 1000, DurationMs = 800, StringIndex = 1, Fret = 3, Midi = 67 } }, 2000);
+        view.TestSetVibrationPhase(37);
+        var rested = new InstrumentFretNumberTests.RecordingDrawContext();
+        view.Draw(rested, light: false);
+        Assert.Equal(sounding, StringLineY(rested, board, sounding));
     }
 }

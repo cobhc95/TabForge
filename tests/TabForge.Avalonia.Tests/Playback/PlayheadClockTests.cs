@@ -85,6 +85,49 @@ public class PlayheadClockTests
         Assert.Equal(100, clock.Position.ElapsedMs, 3);
     }
 
+    [Theory]
+    [InlineData(60)]
+    [InlineData(120)]
+    [InlineData(144)]
+    [InlineData(240)]
+    [InlineData(360)]
+    public void ALiveAudibleClockMovesAtEveryDisplayRefresh(int refreshHz)
+    {
+        var (engine, transport) = PlayingTransport();
+        var wall = 0.0;
+        var clock = new PlayheadClock(() => wall);
+        for (var frame = 0; frame < refreshHz; frame++)
+        {
+            wall = frame * 1000.0 / refreshHz;
+            engine.Report(new PlaybackPosition { Bar = 0, ElapsedMs = 500 + wall });
+            transport.ApplyFrame();
+            clock.Update(transport);
+            Assert.Equal(500 + wall, clock.Position.ElapsedMs, 6);
+        }
+    }
+
+    [AvaloniaFact]
+    public void TimelineTransformPreservesSubPixelMotionWithoutRepainting()
+    {
+        var view = new TimelineView(FullDemoSongFactory.Create());
+        var window = new Window { Width = 1300, Height = 400, Content = view };
+        window.Show();
+        view.SetPlayhead(0, 0.25);
+        using (window.CaptureRenderedFrame()) { }
+        var bodyBefore = view.BodyRenderCount;
+        var layerBefore = view.PlayheadLayer.RedrawCount;
+        var xBefore = view.PlayheadLayer.PlacedX;
+        var transform = Assert.IsType<global::Avalonia.Media.TranslateTransform>(view.PlayheadLayer.RenderTransform);
+        view.SetPlayhead(0, 0.2501);
+        var delta = view.PlayheadLayer.PlacedX - xBefore;
+        Assert.InRange(delta, 0.00001, 0.99);
+        Assert.Equal(view.PlayheadLayer.PlacedX, transform.X, 8);
+        using (window.CaptureRenderedFrame()) { }
+        Assert.Equal(bodyBefore, view.BodyRenderCount);
+        Assert.Equal(layerBefore, view.PlayheadLayer.RedrawCount);
+        window.Close();
+    }
+
     [AvaloniaFact]
     public void TheTimelinePlayheadMovesEveryFrameWithoutRedrawingTheBody()
     {
@@ -152,6 +195,36 @@ public class PlayheadClockTests
         Assert.Null(overlay.DotCentre);
         Assert.Empty(view.Probe.Play.Sounding);
         window.Close();
+    }
+
+    [AvaloniaFact]
+    public void ScoreTransformRetainsItsDrawingAcrossRenderedFrames()
+    {
+        var document = new SongDocument(() => null) { Project = FullDemoSongFactory.Create() };
+        var view = new ScorePreviewView();
+        view.Show(document);
+        var window = new Window { Width = 1200, Height = 800, Content = view };
+        window.Show();
+        try
+        {
+            using (window.CaptureRenderedFrame()) { }
+            view.Probe.Play.Set(FourBarTimeline(), 0, 0, 0, 0.25, 500);
+            view.PlayheadOverlay.Place();
+            using (window.CaptureRenderedFrame()) { }
+            var redraws = view.PlayheadOverlay.RedrawCount;
+            var before = view.PlayheadOverlay.LineX;
+            Assert.False(double.IsNaN(before));
+            for (var frame = 1; frame <= 12; frame++)
+            {
+                view.Probe.Play.SetFraction(0.25 + frame * 0.0001);
+                view.PlayheadOverlay.Place();
+                using (window.CaptureRenderedFrame()) { }
+                Assert.Equal(redraws, view.PlayheadOverlay.RedrawCount);
+                Assert.True(view.PlayheadOverlay.LineX > before);
+                before = view.PlayheadOverlay.LineX;
+            }
+        }
+        finally { window.Close(); }
     }
 
     [Fact]

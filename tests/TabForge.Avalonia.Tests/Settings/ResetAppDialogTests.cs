@@ -1,7 +1,9 @@
 using System;
+using System.IO;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using TabForge.Avalonia.Platform;
@@ -83,6 +85,37 @@ public sealed class ResetAppDialogTests : IDisposable
             .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Assert.Equal(SettingsCatalog.Advanced, window.Page);
         window.Close();
+    }
+
+    [AvaloniaFact]
+    public void CancelEscAndCloseWipeNothing()
+    {
+        // Show() instead of ShowDialog(): no modal is opened in tests. Cancel, Esc and the X all end the window unconfirmed.
+        var marker = PendingAppWipe.MarkerPath(_folders);
+
+        var cancel = new ResetAppWindow(ResetAppPlan.Create(_folders));
+        cancel.Show();
+        var closed = false;
+        cancel.Closed += (_, _) => closed = true;
+        Click(cancel, "ResetAppCancel");
+        Assert.True(closed);
+        Assert.False(cancel.IsVisible);
+        Assert.False(cancel.Confirmed);
+        Assert.False(cancel.BackupWritten);
+        Assert.False(File.Exists(marker));
+
+        var esc = new ResetAppWindow(ResetAppPlan.Create(_folders));
+        esc.Show();
+        esc.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Escape, Source = esc });
+        Assert.False(esc.IsVisible);
+        Assert.False(esc.Confirmed);
+        Assert.False(File.Exists(marker));
+
+        var x = new ResetAppWindow(ResetAppPlan.Create(_folders));
+        x.Show();
+        x.Close();
+        Assert.False(x.Confirmed);
+        Assert.False(File.Exists(marker));
     }
 
     private static Button FindButton(Window window, string name) =>

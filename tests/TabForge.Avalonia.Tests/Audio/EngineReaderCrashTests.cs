@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using TabForge.Audio;
@@ -75,6 +76,47 @@ public sealed class EngineReaderCrashTests
             Assert.Equal(0, faults);
             Assert.Equal(1, crashed);
         }
+        engine.DisposeRetiredForTest();
+    }
+
+    [Fact]
+    public void AHelperCrashIsQuarantinedButDoesNotCountAsAnEngineCrash()
+    {
+        using var engine = new AudioEngineClient(new TabForge.Plugins.PluginTrust());
+        engine.AttachForTest(SharedBlock.Create($"tf-reader-test-{Guid.NewGuid():N}"), new InlineContext(), 0);
+        var quarantined = new List<string>();
+        engine.Quarantine = () => quarantined;
+        string? crashedPath = null;
+        var inHelper = false;
+        engine.PluginCrashed += path => { crashedPath = path; inHelper = engine.PluginCrashedInHelper; };
+        using (var server = Sent(s => Frames.Write(s, (byte)EngineEvent.PluginCrashed, w => { w.Write(1); w.Write(1); w.WriteString("b.dll"); w.Write((byte)1); })))
+        {
+            Assert.Null(Record.Exception(() => engine.ReadEvents(server)));
+        }
+        Assert.Equal("b.dll", crashedPath);
+        Assert.True(inHelper);
+        Assert.Contains("b.dll", quarantined);
+        Assert.False(engine.TooManyCrashes);   // the engine kept running: only its helper stopped
+        engine.DisposeRetiredForTest();
+    }
+
+    [Fact]
+    public void AHelperCrashWithTheLongestPathAndReportIsDelivered()
+    {
+        using var engine = new AudioEngineClient(new TabForge.Plugins.PluginTrust());
+        engine.AttachForTest(SharedBlock.Create($"tf-reader-test-{Guid.NewGuid():N}"), new InlineContext(), 0);
+        var path = @"C:\" + new string('p', Frames.MaxPathChars - 7) + ".dll";
+        var report = @"C:\Users\me\AppData\Local\TabForge\Diagnostics\tfvst32-42.dmp";
+        string? crashedPath = null;
+        string? crashedReport = null;
+        engine.PluginCrashed += p => { crashedPath = p; crashedReport = engine.PluginCrashReportPath; };
+        using (var server = Sent(s => Frames.Write(s, (byte)EngineEvent.PluginCrashed,
+                   w => { w.Write(1); w.Write(1); w.WriteString(path); w.Write((byte)1); w.WriteString(report); })))
+        {
+            Assert.Null(Record.Exception(() => engine.ReadEvents(server)));
+        }
+        Assert.Equal(path, crashedPath);
+        Assert.Equal(report, crashedReport);
         engine.DisposeRetiredForTest();
     }
 

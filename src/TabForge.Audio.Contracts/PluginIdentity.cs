@@ -23,7 +23,11 @@ public static class PluginIdentity
         {
             if (File.Exists(path)) return path;
             if (!Directory.Exists(path)) return null;
-            return PluginModulePaths.BinaryOf(path, PluginModulePaths.Current, DiskModuleFileView.Instance);   // Windows: Contents/x86_64-win/<bundle name>; macOS / Linux layouts in PluginModulePaths
+            var current = PluginModulePaths.BinaryOf(path, PluginModulePaths.Current, DiskModuleFileView.Instance);   // Windows: Contents/x86_64-win/<bundle name>; macOS / Linux layouts in PluginModulePaths
+            if (current is not null) return current;
+            // A Windows-layout bundle opened on Linux (the Wine bridge): hash the Windows binary the helper will load.
+            return PluginModulePaths.Vst3WindowsBinary(path, sixtyFourBit: true, DiskModuleFileView.Instance)
+                ?? PluginModulePaths.Vst3WindowsBinary(path, sixtyFourBit: false, DiskModuleFileView.Instance);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { return null; }
     }
@@ -39,14 +43,14 @@ public static class PluginIdentity
     /// open while loading (dispose it afterwards). Returns null for a location-trusted spec. Throws <see cref="PluginChangedException"/>
     /// when the file changed, cannot be read, or the spec has no approved hash; the message says what to do.
     /// </summary>
-    public static IDisposable? Hold(PluginSpec spec) => Hold(spec.Path, spec.ExpectedSha256, spec.LocationTrusted);
+    public static IDisposable? Hold(PluginSpec spec) => Hold(spec.Path, spec.ExpectedSha256, spec.LocationTrusted, spec.ExpectedDependencies);
 
     /// <summary>
     /// The one owner of the rule "no plug-in code runs before it is trusted", for every process that loads a plug-in (the engine,
     /// the isolated plug-in host, the identify probe). <paramref name="locationTrusted"/> skips the hash (the binary is in a folder only an
     /// administrator can write); otherwise an empty <paramref name="expectedSha256"/> fails closed: nothing is loaded without an approved SHA-256.
     /// </summary>
-    public static IDisposable? Hold(string path, string expectedSha256, bool locationTrusted)
+    public static IDisposable? Hold(string path, string expectedSha256, bool locationTrusted, string expectedDependencies = "")
     {
         if (locationTrusted) return null;
         var expected = expectedSha256;
@@ -66,16 +70,59 @@ public static class PluginIdentity
         {
             throw new PluginChangedException($"'{name}' could not be opened to check that it is unchanged since you approved it ({ex.Message}). It was not loaded. Close whatever is using the file (an installer or updater), or check the drive or network location, then try again.");
         }
+        var dependencies = new List<FileStream>();
         try
         {
             var actual = Sha256Hex(stream);
-            if (string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase)) { stream.Position = 0; return stream; }
-            throw new PluginChangedException($"'{name}' changed since you approved it (approved SHA-256 {Short(expected)}, now {Short(actual)}). It was not loaded. Use Review plug-ins to approve the new file if you trust it.");
+            if (!string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase))
+                throw new PluginChangedException($"'{name}' changed since you approved it (approved SHA-256 {Short(expected)}, now {Short(actual)}). It was not loaded. Use Review plug-ins to approve the new file if you trust it.");
+            stream.Position = 0;
+
+            // Approval covers the binary and the DLLs Windows would load from its own folder (LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR).
+            // A local dependency added or changed after approval is not covered and is refused; a plug-in that loads its own DLLs
+            // keeps working because those DLLs were part of the closure when the user approved it.
+            var local = PeImports.LocalDependencies(bin);
+            if (local.Count >= PeImports.MaxDependencies)
+                throw new PluginChangedException($"'{name}' has too many DLL dependencies in its folder to check safely ({local.Count}); it was not loaded.");
+            if (expectedDependencies.Length > 0)
+            {
+                var actualDependencies = PeImports.DependencyHash(bin);
+                if (!string.Equals(actualDependencies, expectedDependencies, StringComparison.OrdinalIgnoreCase))
+                    throw new PluginChangedException($"'{name}' has DLL dependencies that changed since you approved it (approved {Short(expectedDependencies)}, now {Short(actualDependencies)}). It was not loaded. Use Review plug-ins to approve the new files if you trust them.");
+            }
+            else if (local.Count > 0)
+            {
+                // An approval from before dependency coverage: never load a closure the user did not see.
+                throw new PluginChangedException($"'{name}' loads {local.Count} DLL(s) from its own folder, but its approval does not cover them. It was not loaded. Use Review plug-ins to approve it again.");
+            }
+            foreach (var dependency in local)
+            {
+                try { dependencies.Add(new FileStream(dependency, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 16, FileOptions.SequentialScan)); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    throw new PluginChangedException($"'{name}' has a DLL dependency that could not be held while loading ({ex.Message}). It was not loaded. Close whatever is using it, or approve it again.");
+                }
+            }
+            return new HoldSet(stream, dependencies);
         }
         catch
         {
+            foreach (var dependency in dependencies) dependency.Dispose();
             stream.Dispose();
             throw;
+        }
+    }
+
+    /// <summary>The main binary's read handle plus one read handle per local dependency, kept open until the load has finished.</summary>
+    private sealed class HoldSet : IDisposable
+    {
+        private readonly FileStream _binary;
+        private readonly List<FileStream> _dependencies;
+        public HoldSet(FileStream binary, List<FileStream> dependencies) { _binary = binary; _dependencies = dependencies; }
+        public void Dispose()
+        {
+            foreach (var dependency in _dependencies) dependency.Dispose();
+            _binary.Dispose();
         }
     }
 

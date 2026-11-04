@@ -9,6 +9,9 @@ namespace TabForge.Avalonia.Platform;
 /// <summary>The one named source of the app's UI durations, in milliseconds.</summary>
 internal static class UiTiming
 {
+    /// <summary>Rest on the status scale readout before showing its section context; passing over it must not leave a tip in the timeline.</summary>
+    public const int StatusScaleTooltipDelayMs = 700;
+
     /// <summary>How long the "Deleted ... Undo" message of a preset stays up before it goes away.</summary>
     public const double PresetUndoMs = 7_000;
 

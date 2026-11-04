@@ -19,8 +19,6 @@ public sealed class FretboardShadedScaleTests
 {
     private const string Scale = "C Major";
     private static readonly Size PaneSize = new(1000, 150);
-    /// <summary>The filled rectangles drawn whatever the scale style: the panel background and the board.</summary>
-    private const int BackgroundAndBoard = 2;
 
     [AvaloniaFact]
     public void ShadedStyleDrawsEachScaleCellBehindTheBoard()
@@ -30,18 +28,21 @@ public sealed class FretboardShadedScaleTests
         view.Show(track, System.Array.Empty<InstrumentLitNotes.Lit>());
         view.Measure(PaneSize);
         view.Arrange(new Rect(0, 0, PaneSize.Width, PaneSize.Height));
+        var background = new InstrumentFretNumberTests.RecordingDrawContext();
+        view.Draw(background, light: false);
+        var backgroundBoardAndBinding = background.Rects.Count(rect => rect.Fill is not null);
 
         var settings = new AppSettings { Editing = { ScaleHighlight = Scale, ScaleHighlightStyle = ScaleHighlightStyles.Shaded } };
         view.Look = FretboardSettingsBinding.Look.From(settings);
         var shaded = new InstrumentFretNumberTests.RecordingDrawContext();
         view.Draw(shaded, light: false);
-        var filledCells = shaded.Rects.Count(rect => rect.Fill is not null) - BackgroundAndBoard;
+        var filledCells = shaded.Rects.Count(rect => rect.Fill is not null) - backgroundBoardAndBinding;
 
         settings.Editing.ScaleHighlightStyle = ScaleHighlightStyles.Circles;
         view.Look = FretboardSettingsBinding.Look.From(settings);
         var circles = new InstrumentFretNumberTests.RecordingDrawContext();
         view.Draw(circles, light: false);
-        var filledCirclesCells = circles.Rects.Count(rect => rect.Fill is not null) - BackgroundAndBoard;
+        var filledCirclesCells = circles.Rects.Count(rect => rect.Fill is not null) - backgroundBoardAndBinding;
 
         Assert.True(filledCells > 0, "the shaded style drew no scale cells");
         Assert.Equal(0, filledCirclesCells);

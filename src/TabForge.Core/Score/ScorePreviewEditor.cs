@@ -60,6 +60,9 @@ internal sealed partial class ScorePreviewEditor : IScoreEditContext, ISelection
             return;
         }
         Sel.Clear();
+        // TAB owns the editing string: a click on the staff picks the bar and beat only and leaves the cursor on the string it was on
+        // (the staff sits above the tab band, so its y would otherwise clamp to string 0 and throw the cursor to the top string).
+        if (!_probe.OnTabBand(y)) hit = (hit.Measure, hit.Cell, Math.Clamp(SelectedString, 0, Math.Max(0, (_probe.Track?.StringTunings.Count ?? 1) - 1)));
         _probe.Cursor = hit;
     }
 
@@ -195,7 +198,7 @@ internal sealed partial class ScorePreviewEditor : IScoreEditContext, ISelection
         Sel.Clear();
         Sel.ClearHover();
         _probe.ReplaceSong(song.Project);
-        _probe.Cursor = (song.CursorBar, song.CursorCell, song.CursorString);
+        _probe.Cursor = (song.CursorBar, song.CursorCell, Math.Clamp(song.CursorString, 0, Math.Max(0, (_probe.Track?.StringTunings.Count ?? 1) - 1)));
     }
 
     private bool ExtendSelection(int direction)

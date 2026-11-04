@@ -7,6 +7,17 @@ namespace TabForge.Views.Score;
 // Tests: ScorePreviewEditorTests (Avalonia), ScoreHitRuleTests.
 internal static class ScoreHitRule
 {
+    /// <summary>True when the page point lies in the TAB band of its system (the string lines, half a gap of slack each side); false for the staff above it and the room around.</summary>
+    internal static bool OnTabBand(ScoreLayoutEngine layoutEngine, TrackModel track, double y,
+        double headerHeight, double systemHeight, Func<int, double> tabTop, double stringGap)
+    {
+        var layout = layoutEngine.GetLayout(track);
+        var system = Math.Clamp(Math.Max(0, (int)((y - headerHeight) / systemHeight)), 0, layout.SystemCount - 1);
+        var top = tabTop(system);
+        var strings = Math.Max(1, track.StringTunings.Count);
+        return y >= top - stringGap / 2 && y <= top + (strings - 1) * stringGap + stringGap / 2;
+    }
+
     /// <param name="cellsFor">The beats the cursor may sit on in a bar (the active voice).</param>
     internal static (int Measure, int Cell, int String) HitTest(ScoreLayoutEngine layoutEngine, TrackModel track, double x, double y,
         double headerHeight, double systemHeight, Func<int, double> tabTop, double stringGap,

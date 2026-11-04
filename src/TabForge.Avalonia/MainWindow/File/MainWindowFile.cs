@@ -40,6 +40,7 @@ public sealed class MainWindowFile
     private readonly Func<TabSettings?>? _tabSettings;
     private readonly Action? _saveSettings;
     private readonly Func<string, MidiImportPreview, Task<MidiImportAnswer?>>? _askMidi;
+    private bool _opening;
 
     /// <param name="dialogs">Asks which files to open and where to export.</param>
     /// <param name="owner">The window the dialogs belong to.</param>
@@ -63,14 +64,26 @@ public sealed class MainWindowFile
     /// and <paramref name="inNewTab"/> is not set.</summary>
     public async Task Open(bool inNewTab = false)
     {
-        var chosen = _dialogs.OpenFiles(new FileDialogOptions
+        // Key repeat can arrive while the picker is still resolving its start folder.
+        if (_opening) return;
+        _opening = true;
+        try
         {
-            Key = TabForge.Services.DialogKeys.ProjectOpen, Title = "Open TabForge or .gp file",
-            Filter = "Supported scores|*.tforge;*.gp3;*.gp4;*.gp5;*.gpx;*.gp;*.musicxml;*.mxl;*.xml;*.mid;*.midi|TabForge project (*.tforge)|*.tforge|GP files (*.gp3;*.gp4;*.gp5;*.gpx;*.gp)|*.gp3;*.gp4;*.gp5;*.gpx;*.gp|MusicXML (*.musicxml;*.mxl;*.xml)|*.musicxml;*.mxl;*.xml|MIDI (*.mid;*.midi)|*.mid;*.midi",
-            Multiselect = true,
-        }, _owner);
-        if (chosen is null) return;
-        foreach (var path in chosen) await OpenPath(path, !inNewTab && _tabs.OpenReplacesActive);
+            var chosen = await _dialogs.OpenFilesAsync(new FileDialogOptions
+            {
+                Key = TabForge.Services.DialogKeys.ProjectOpen, Title = "Open TabForge or .gp file",
+                Filter = "Supported scores|*.tforge;*.gp3;*.gp4;*.gp5;*.gpx;*.gp;*.musicxml;*.mxl;*.xml;*.mid;*.midi|TabForge project (*.tforge)|*.tforge|GP files (*.gp3;*.gp4;*.gp5;*.gpx;*.gp)|*.gp3;*.gp4;*.gp5;*.gpx;*.gp|MusicXML (*.musicxml;*.mxl;*.xml)|*.musicxml;*.mxl;*.xml|MIDI (*.mid;*.midi)|*.mid;*.midi",
+                Multiselect = true,
+            }, _owner);
+            if (chosen is null) return;
+            foreach (var path in chosen) await OpenPath(path, !inNewTab && _tabs.OpenReplacesActive);
+        }
+        catch (Exception ex)
+        {
+            // Menu/key commands do not await this task; picker failures must be reported here too.
+            _report.Error("Could not open files: " + ex.Message);
+        }
+        finally { _opening = false; }
     }
 
     /// <summary>Opens one file in a new tab, or in place of the shown tab when <paramref name="replaceActive"/> is set; false when it could not be

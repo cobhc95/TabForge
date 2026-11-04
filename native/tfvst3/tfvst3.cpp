@@ -227,6 +227,9 @@ public:
 // Module cache: one loaded Module per path while any instance (or list call) uses it
 //------------------------------------------------------------------------------------------------
 std::mutex gModuleMutex;
+// Intentional process-lifetime retain: see shutdown() below. Heap-allocated so its destructor never releases the module
+// during DLL_PROCESS_DETACH (FreeLibrary from DllMain is illegal and can deadlock).
+std::vector<VST3::Hosting::Module::Ptr>* gRetainedModules = nullptr;
 std::map<std::string, std::weak_ptr<VST3::Hosting::Module>> gModules;
 
 VST3::Hosting::Module::Ptr loadModule (const std::string& path, std::string& error)
@@ -525,7 +528,16 @@ struct tfv3_plugin
 		controller = nullptr;
 		component = nullptr;
 		host = nullptr;
-		module = nullptr; // last: unloads the DLL when no other instance uses it
+		// Never unload a plug-in DLL. VST2 has always kept its module loaded for the same reason: a DLL's
+		// DLL_THREAD_DETACH / DllMain can block while the plug-in's own threads run. Dexed 1.1.0 (JUCE 8) is one such
+		// plug-in: releasing its module blocks forever in the matrix process. The reference is intentionally leaked for the
+		// life of the process (a one-shot matrix host and the engine both exit with the plug-in loaded).
+		if (module)
+		{
+			if (gRetainedModules == nullptr) gRetainedModules = new std::vector<VST3::Hosting::Module::Ptr> ();
+			gRetainedModules->push_back (module);
+		}
+		module = nullptr;
 	}
 };
 

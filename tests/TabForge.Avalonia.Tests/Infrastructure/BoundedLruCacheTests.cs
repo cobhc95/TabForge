@@ -45,4 +45,22 @@ public class BoundedLruCacheTests
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => new BoundedLruCache<string, int>(0));
     }
+
+    [Fact]
+    public void WeightBudgetEvictsLruAndBypassesOversizedValues()
+    {
+        var cache = new BoundedLruCache<string, int>(10, 8, static (_, value) => value);
+        cache.Add("a", 3);
+        cache.Add("b", 3);
+        Assert.True(cache.TryGet("a", out _));
+        cache.Add("c", 4);
+        Assert.False(cache.TryGet("b", out _));
+        Assert.Equal(7, cache.Weight);
+        cache.Add("huge", 9);
+        Assert.Equal(7, cache.Weight);
+        Assert.False(cache.TryGet("huge", out _));
+        cache.Add("a", 1);
+        Assert.Equal(5, cache.Weight);
+        Assert.Equal(2, cache.Count);
+    }
 }

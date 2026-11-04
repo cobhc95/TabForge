@@ -1,0 +1,231 @@
+name: wine-matrix
+# Stage 10: the 50-plug-in matrix under Wine on a clean Linux runner.
+# The real manifest is the private file tools/plugin-matrix/manifest.private.json on wine-bridge only.
+# It is never merged to main, never packaged and never published in public docs. Shards keep each job
+# inside CI limits; the download cache is keyed by the manifest hash; only results, logs and screenshots
+# are uploaded.
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Entries to run (0 = all; use 10 for the first gate)'
+        required: false
+        default: '0'
+        type: string
+      shards:
+        description: 'Parallel shards (use 2 for the first 10)'
+        required: false
+        default: '6'
+        type: string
+      ids:
+        description: 'Optional comma-separated entry ids'
+        required: false
+        default: ''
+        type: string
+      timeout_minutes:
+        description: 'Per-plug-in timeout in minutes'
+        required: false
+        default: '5'
+        type: string
+concurrency:
+  group: wine-matrix
+  cancel-in-progress: false
+permissions:
+  contents: read
+env:
+  DOTNET_NOLOGO: '1'
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget-packages
+  APPIMAGE_EXTRACT_AND_RUN: '1'
+  WINE_TARBALL: https://github.com/Kron4ek/Wine-Builds/releases/download/9.21/wine-9.21-amd64-wow64.tar.xz
+  WINE_TARBALL_SHA256: 020f8886750ff658d92ea39e696d2a57d3e8f056f00d8dfe45b65cddee5d6fa5
+  APPIMAGETOOL_URL: https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
+  APPIMAGETOOL_SHA256: ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0
+  SOUNDFONT_URL: https://github.com/mrbumpy409/GeneralUser-GS/raw/main/GeneralUser-GS.sf2
+  SOUNDFONT_SHA256: 9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      sha: ${{ steps.manifest.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate the private test manifest (wine-bridge only)
+        id: manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          MANIFEST=tools/plugin-matrix/manifest.private.json
+          test -f "$MANIFEST" || { echo "::error::missing $MANIFEST (this workflow runs on wine-bridge only)"; exit 1; }
+          python3 tools/plugin-matrix/run.py --manifest "$MANIFEST" --validate
+          echo "sha=$(sha256sum "$MANIFEST" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+      - name: Plan shards
+        id: plan
+        shell: bash
+        env:
+          LIMIT: ${{ inputs.limit }}
+          SHARDS: ${{ inputs.shards }}
+          IDS: ${{ inputs.ids }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, math, os
+          m = json.load(open("tools/plugin-matrix/manifest.private.json", encoding="utf-8"))
+          n = len(m["plugins"])
+          ids = [x for x in os.environ.get("IDS", "").split(",") if x.strip()]
+          limit = int(os.environ.get("LIMIT", "0") or "0")
+          total = len(ids) if ids else (min(limit, n) if limit > 0 else n)
+          shards = max(1, min(int(os.environ.get("SHARDS", "1") or "1"), total))
+          print("matrix=" + json.dumps({"include": [{"index": i, "count": shards} for i in range(shards)]}))
+          print(f"count={total}")
+          PY
+  build-package:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.403'
+      - name: Drop any preinstalled copy of the patched AlphaTab package
+        run: rm -rf "$HOME/.nuget/packages/tabforge.alphatab"
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake git python3 curl unzip xz-utils binutils patchelf \
+            mingw-w64 libasound2-dev libmp3lame0 libmpg123-0 libfreetype6 libfontconfig1 libgl1 \
+            libx11-6 libxext6 libxcursor1 libxrandr2
+      - name: Fetch the pinned Wine tree, SoundFont and AppImage tool
+        run: |
+          mkdir -p staging
+          curl -fsSL -o staging/wine.tar.xz "$WINE_TARBALL"
+          echo "$WINE_TARBALL_SHA256  staging/wine.tar.xz" | sha256sum -c -
+          mkdir staging/wine && tar -xf staging/wine.tar.xz -C staging/wine --strip-components=1
+          chmod +x staging/wine/bin/wine staging/wine/bin/wineserver staging/wine/bin/wine64
+          curl -fsSL -o staging/appimagetool "$APPIMAGETOOL_URL"
+          echo "$APPIMAGETOOL_SHA256  staging/appimagetool" | sha256sum -c -
+          chmod +x staging/appimagetool
+          curl -fsSL -o staging/GeneralUser-GS.sf2 "$SOUNDFONT_URL"
+          echo "$SOUNDFONT_SHA256  staging/GeneralUser-GS.sf2" | sha256sum -c -
+          cp src/TabForge.Avalonia/licenses/GeneralUser-GS_LICENSE.txt staging/GeneralUser-GS-LICENSE.txt
+      - name: Build the Linux package (tar.xz with the pinned Wine and helpers)
+        env:
+          TABFORGE_SOUNDFONT: ${{ github.workspace }}/staging/GeneralUser-GS.sf2
+          TABFORGE_SOUNDFONT_LICENSE: ${{ github.workspace }}/staging/GeneralUser-GS-LICENSE.txt
+        run: |
+          tools/package-linux.sh \
+            --out "$GITHUB_WORKSPACE/package" \
+            --wine "$GITHUB_WORKSPACE/staging/wine" \
+            --helpers "$GITHUB_WORKSPACE/src/TabForge.AudioEngine/native" \
+            --appimagetool "$GITHUB_WORKSPACE/staging/appimagetool"
+          stat -c '%n %s bytes' package/linux/*.tar.xz package/linux/*.AppImage | tee package/linux/SIZES.txt
+      - name: Upload the package (no plug-ins)
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-matrix-package
+          path: |
+            package/linux/*.tar.xz
+            package/linux/SIZES.txt
+          if-no-files-found: error
+  run:
+    needs: [prepare, build-package]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the display and runtime libraries (no system Wine)
+        run: |
+          command -v wine && { echo "Wine is installed on the clean runner"; exit 1; } || true
+          command -v wine64 && { echo "wine64 is installed on the clean runner"; exit 1; } || true
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            xvfb xauth x11-utils openbox wmctrl xdotool imagemagick xz-utils \
+            libfontconfig1 libfreetype6 libgl1 libasound2t64 libx11-6 libxext6 libxcursor1 libxrandr2 libxi6 \
+            libxfixes3 libxrender1 libxcb1 libice6 libsm6 libpulse0 libegl1
+      - uses: actions/download-artifact@v4
+        with:
+          name: wine-matrix-package
+          path: artifact
+      - name: Extract the package to a random path
+        run: |
+          ID="$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+          mkdir -p "$RUNNER_TEMP/pkg-$ID"
+          tar -xJf artifact/*.tar.xz -C "$RUNNER_TEMP/pkg-$ID"
+          echo "APP_TAR=$RUNNER_TEMP/pkg-$ID/TabForge.AppDir" >> "$GITHUB_ENV"
+      - name: Restore the plug-in download cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/matrix-cache
+          key: matrix-${{ needs.prepare.outputs.sha }}-${{ matrix.index }}
+          restore-keys: |
+            matrix-${{ needs.prepare.outputs.sha }}-
+            matrix-
+      - name: Validate the private test manifest (wine-bridge only)
+        run: |
+          test -f tools/plugin-matrix/manifest.private.json
+          python3 tools/plugin-matrix/run.py --manifest tools/plugin-matrix/manifest.private.json --validate
+      - name: Run shard ${{ matrix.index }}/${{ matrix.count }}
+        shell: bash
+        env:
+          LIMIT: ${{ inputs.limit }}
+          IDS: ${{ inputs.ids }}
+          TIMEOUT_MINUTES: ${{ inputs.timeout_minutes || '5' }}
+        run: |
+          ARGS=(--manifest tools/plugin-matrix/manifest.private.json --platform linux-wine --app "$APP_TAR/AppRun"
+                --shard "${{ matrix.index }}/${{ matrix.count }}" --out "$RUNNER_TEMP/results"
+                --cache "$RUNNER_TEMP/matrix-cache" --timeout "$((TIMEOUT_MINUTES * 60))")
+          if [ -n "${IDS:-}" ]; then ARGS+=(--ids "$IDS"); fi
+          if [ -n "${LIMIT:-}" ] && [ "$LIMIT" != "0" ]; then ARGS+=(--limit "$LIMIT"); fi
+          python3 tools/plugin-matrix/run.py "${ARGS[@]}"
+      - name: Upload shard results (no plug-ins, no cache)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: matrix-shard-${{ matrix.index }}
+          path: ${{ runner.temp }}/results/**
+          if-no-files-found: warn
+  summary:
+    needs: [prepare, run]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: matrix-shard-*
+          path: ${{ runner.temp }}/results
+          merge-multiple: true
+      - name: Summarise and cluster failures
+        run: |
+          python3 tools/plugin-matrix/run.py --summarize "$RUNNER_TEMP/results" | tee "$RUNNER_TEMP/summary.txt"
+          python3 - <<'PY'
+          import json, os, sys
+          path = os.path.join(os.environ["RUNNER_TEMP"], "results", "summary.json")
+          s = json.load(open(path, encoding="utf-8"))
+          overall = s.get("overall", {})
+          crashes = overall.get("crash", 0) + overall.get("error", 0)
+          timeouts = overall.get("timeout", 0)
+          print(f"crashes/errors={crashes} timeouts={timeouts} total={s.get('total', 0)}")
+          if crashes:
+              print("::error::The matrix recorded an app/engine crash or infrastructure error; see summary.json")
+              sys.exit(1)
+          PY
+      - name: Upload summary, clusters and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-matrix-summary
+          path: |
+            ${{ runner.temp }}/results/summary.json
+            ${{ runner.temp }}/results/summary.md
+            ${{ runner.temp }}/results/clusters.json
+            ${{ runner.temp }}/summary.txt
+          if-no-files-found: warn

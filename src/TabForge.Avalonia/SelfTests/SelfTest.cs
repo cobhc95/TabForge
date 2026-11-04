@@ -85,6 +85,7 @@ public static partial class SelfTest
         Guard(TestHeadlessDeviceReconfigure);
         Guard(TestSharedRingProducers);
         Guard(TestEngineExitCleanupOnUi);
+        Guard(TestPluginLoadUnloadLoop);
         Guard(TestClipChurnWhileStreaming);
         Guard(TestAudioTrackAddDuringPlayback);
         Guard(TestDiskStreamerIdle);
@@ -114,6 +115,7 @@ public static partial class SelfTest
         Guard(TestPluginRightsNotice);
         Section("Release set: import and malformed input");
         GuardGroup("fuzz", TestMalformedInputFuzz);
+        GuardGroup("fuzz", TestEngineFrameFuzz);
         GuardGroup("gp-fixtures", TestSyntheticGuitarProFixture);
         GuardGroup("synthetic-fixtures", TestSyntheticFixtures);
         Guard(TestGp5OwnFilesImport);
@@ -163,7 +165,7 @@ public static partial class SelfTest
         ["TestRequiredGroupGate"] = "hygiene", ["TestOnlyOption"] = "hygiene", ["TestRunnerTimingAndShardOptions"] = "hygiene", ["TestDebuggingDocInSync"] = "hygiene",
         ["TestDocImagesAreReferenced"] = "hygiene", ["TestLooseSoundTouchAndLicenseTexts"] = "hygiene", ["TestNoMojibakeInSources"] = "hygiene",
         ["TestChildProcessGuardPort"] = "architecture", ["TestEveryTestHasAnArea"] = "architecture", ["TestArchitectureFileLineBudget"] = "architecture",
-        ["TestHeadlessDeviceReconfigure"] = "engine", ["TestSharedRingProducers"] = "engine", ["TestEngineExitCleanupOnUi"] = "engine", ["TestClipChurnWhileStreaming"] = "engine",
+        ["TestHeadlessDeviceReconfigure"] = "engine", ["TestSharedRingProducers"] = "engine", ["TestEngineExitCleanupOnUi"] = "engine", ["TestPluginLoadUnloadLoop"] = "engine", ["TestClipChurnWhileStreaming"] = "engine",
         ["TestAudioTrackAddDuringPlayback"] = "engine", ["TestDiskStreamerIdle"] = "engine", ["TestEngineOwnerTransports"] = "engine", ["TestEngineOwnerIdLifecycle"] = "engine",
         ["TestEngineMessagesRoundTrip"] = "engine", ["TestEngineMessagesGolden"] = "engine", ["TestClapRealPlugin"] = "engine",
         ["TestPresetFolderStoreNoOverwrite"] = "persistence", ["TestNumberedSiblingCeiling"] = "persistence", ["TestSaveClaimAtomic"] = "persistence", ["TestAutosaveCopies"] = "persistence",
@@ -171,7 +173,7 @@ public static partial class SelfTest
         ["TestScoreClipRejectsUntrustedInput"] = "persistence", ["TestClipboardCopyPasteBytes"] = "persistence",
         ["TestSettingsChangeDuringSaveStaysPending"] = "settings", ["TestSettingsBadWorkspaceKeepsOtherSettings"] = "settings",
         ["TestRenderOutputFolderRefused"] = "core", ["TestPluginRightsNotice"] = "core",
-        ["TestMalformedInputFuzz"] = "fuzz", ["TestSyntheticGuitarProFixture"] = "guitarpro", ["TestSyntheticFixtures"] = "synthetic", ["TestGp5OwnFilesImport"] = "guitarpro",
+        ["TestMalformedInputFuzz"] = "fuzz", ["TestEngineFrameFuzz"] = "fuzz", ["TestSyntheticGuitarProFixture"] = "guitarpro", ["TestSyntheticFixtures"] = "synthetic", ["TestGp5OwnFilesImport"] = "guitarpro",
         ["TestGpifPitchCurves"] = "guitarpro",
         ["TestGpRoundTripCounts"] = "guitarpro", ["TestLegacyGpExport"] = "guitarpro", ["TestGuitarProImportWorker"] = "guitarpro", ["TestImportPlausibility"] = "guitarpro",
         ["TestPlaybackOrderSpec"] = "playback", ["TestNoHangingNotes"] = "playback", ["TestMixPointsSurviveSeek"] = "playback", ["TestArticulationKeyswitches"] = "playback",

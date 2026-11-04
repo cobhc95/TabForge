@@ -92,4 +92,33 @@ public class FollowSettingsTests
         Assert.True(gate.Allow(240));
         Assert.False(gate.Allow(10));   // at most one step per 100 ms at 10 fps
     }
+
+    [Theory]
+    [InlineData(60)]
+    [InlineData(120)]
+    [InlineData(144)]
+    [InlineData(240)]
+    [InlineData(360)]
+    public void FollowGateDoesNotDropDisplayFramesAtTheDefaultSetting(int refreshHz)
+    {
+        var now = 0.0;
+        var gate = new FollowFrameGate(() => now);
+        for (var frame = 0; frame < refreshHz; frame++)
+        {
+            now = frame * 1000.0 / refreshHz;
+            Assert.True(gate.Allow(240));
+        }
+    }
+
+    [Fact]
+    public void FollowGateToleratesDisplayTimestampJitterAtTheSelectedRate()
+    {
+        var now = 0.0;
+        var gate = new FollowFrameGate(() => now);
+        Assert.True(gate.Allow(60));
+        now = 16.5;
+        Assert.True(gate.Allow(60));
+        now = 20;
+        Assert.False(gate.Allow(60));
+    }
 }

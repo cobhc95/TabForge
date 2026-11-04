@@ -1,0 +1,537 @@
+name: wine-stage17
+# Stage 17: installs, distros and round trips. The build job makes the real Linux package
+# (tar.xz + AppImage) with the pinned Wine on Ubuntu 22.04 (the glibc floor). The distro gate
+# runs the packaged tar.xz in five distro containers (Ubuntu 22.04, Ubuntu 24.04, Fedora, Arch,
+# Debian 12): headless start, --wine-smoke, the Approve-all flow, virtual audio (PulseAudio null
+# sink plus JACK dummy, --audio-probe through the real output path) and a headless Wayland
+# compositor with XWayland running one proven editor case. A Windows job saves a reference
+# project with bridged plug-in state; the Linux round-trip job opens it, verifies the state,
+# saves it back and reloads it, and a missing plug-in stays readable. An older settings file
+# and an older prefix marker upgrade without losing the prefix. A sixth container (Debian 11,
+# glibc 2.31) proves the floor: the package needs glibc 2.34 or newer and must refuse readably
+# below it. A separate job confirms the AppImage matches the tar.xz.
+# Containers do not prove a full desktop: no real GPU, audio hardware or desktop session.
+# Test-only: downloads go to the runner, fixtures are never committed or uploaded as product.
+# Every bash step runs with -e -o pipefail: never pipe a command into `head` (or another early
+# reader such as `grep -q`): the writer gets SIGPIPE and the step exits 141. Use `sed -n '1p'`
+# or `awk` reading all input instead. Same rule inside command substitutions.
+on:
+  workflow_dispatch:
+  # Temporary registration trigger (Stages 14/15/16 did the same): a workflow that only exists
+  # on wine-bridge is not dispatchable until GitHub has seen it on a push.
+  push:
+    branches: [wine-bridge]
+    paths:
+      - '.github/workflows/wine-stage17.yml'
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: '1'
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget-packages
+  APPIMAGE_EXTRACT_AND_RUN: '1'
+  WINE_TARBALL: https://github.com/Kron4ek/Wine-Builds/releases/download/9.21/wine-9.21-amd64-wow64.tar.xz
+  WINE_TARBALL_SHA256: 020f8886750ff658d92ea39e696d2a57d3e8f056f00d8dfe45b65cddee5d6fa5
+  APPIMAGETOOL_URL: https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
+  APPIMAGETOOL_SHA256: ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0
+  SOUNDFONT_URL: https://github.com/mrbumpy409/GeneralUser-GS/raw/main/GeneralUser-GS.sf2
+  SOUNDFONT_SHA256: 9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe
+  DEXED_ZIP_URL: https://github.com/asb2m10/dexed/releases/download/v0.9.3/dexed-0.9.3-win.zip
+  DEXED_ZIP_SHA256: b365512bb3eb6ddb2f58db7ae5ca8707fa6ea7029e08cea5165bc8a26a25b38b
+
+jobs:
+  build-package:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.403'
+      - name: Drop any preinstalled copy of the patched AlphaTab package
+        run: rm -rf "$HOME/.nuget/packages/tabforge.alphatab"
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake git python3 curl unzip xz-utils binutils patchelf \
+            mingw-w64 libasound2-dev libmp3lame0 libmpg123-0 libfuse2 \
+            libfreetype6 libfontconfig1 libgl1 libx11-6 libxext6 libxcursor1 libxrandr2
+      - name: Fetch the pinned Wine tree, SoundFont, AppImage tool and Dexed fixtures
+        run: |
+          mkdir -p staging/testkit
+          curl -fsSL --retry 3 --retry-all-errors --retry-delay 5 -o staging/wine.tar.xz "$WINE_TARBALL"
+          echo "$WINE_TARBALL_SHA256  staging/wine.tar.xz" | sha256sum -c -
+          mkdir staging/wine && tar -xf staging/wine.tar.xz -C staging/wine --strip-components=1
+          chmod +x staging/wine/bin/wine staging/wine/bin/wineserver staging/wine/bin/wine64
+          test -f staging/wine/lib/wine/x86_64-unix/ntdll.so
+          if [ -n "$(find staging/wine \( -iname '*mono*' -o -iname '*gecko*' \) -print -quit)" ]; then
+            echo "the pinned Wine tree contains wine-mono or wine-gecko"; exit 1
+          fi
+          curl -fsSL --retry 3 --retry-all-errors --retry-delay 5 -o staging/appimagetool "$APPIMAGETOOL_URL"
+          echo "$APPIMAGETOOL_SHA256  staging/appimagetool" | sha256sum -c -
+          chmod +x staging/appimagetool
+          curl -fsSL --retry 3 --retry-all-errors --retry-delay 5 -o staging/GeneralUser-GS.sf2 "$SOUNDFONT_URL"
+          echo "$SOUNDFONT_SHA256  staging/GeneralUser-GS.sf2" | sha256sum -c -
+          test "$(stat -c %s staging/GeneralUser-GS.sf2)" = "32319396"
+          cp src/TabForge.Avalonia/licenses/GeneralUser-GS_LICENSE.txt staging/GeneralUser-GS-LICENSE.txt
+          i686-w64-mingw32-g++ -std=c++17 -O2 -shared -static-libgcc -static-libstdc++ \
+            -DUNICODE -D_UNICODE -DNOMINMAX -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -Wl,--no-insert-timestamp \
+            native/tfvst32/test/passthrough32.cpp -o staging/testkit/passthrough32.dll -luser32 -lgdi32
+          x86_64-w64-mingw32-g++ -std=c++17 -O2 -shared -static-libgcc -static-libstdc++ \
+            -DUNICODE -D_UNICODE -DNOMINMAX -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -Wl,--no-insert-timestamp \
+            native/tfvst32/test/passthrough32.cpp -o staging/testkit/passthrough64.dll -luser32 -lgdi32
+          curl -fsSL --retry 3 --retry-all-errors --retry-delay 5 -o staging/dexed.zip "$DEXED_ZIP_URL"
+          echo "$DEXED_ZIP_SHA256  staging/dexed.zip" | sha256sum -c -
+          unzip -p staging/dexed.zip dexed-0.9.3/x64/Dexed.dll > staging/testkit/Dexed64.dll
+          unzip -p staging/dexed.zip dexed-0.9.3/win32/Dexed.dll > staging/testkit/Dexed32.dll
+          echo "b73184588577b54fe18fb0429dd6d4a554460958286e0d66fc2a395e1e9b9d91  staging/testkit/Dexed32.dll" | sha256sum -c -
+          echo "e13e1c887b633af707985ca7b2cc956fb5e9c9913b5b452ddaee6c1796ce7780  staging/testkit/Dexed64.dll" | sha256sum -c -
+          i686-w64-mingw32-objdump -p staging/testkit/passthrough32.dll | grep VSTPluginMain >/dev/null
+          x86_64-w64-mingw32-objdump -p staging/testkit/passthrough64.dll | grep VSTPluginMain >/dev/null
+          file staging/testkit/*.dll
+      - name: Build the Linux package (tar.xz + AppImage)
+        env:
+          TABFORGE_SOUNDFONT: ${{ github.workspace }}/staging/GeneralUser-GS.sf2
+          TABFORGE_SOUNDFONT_LICENSE: ${{ github.workspace }}/staging/GeneralUser-GS-LICENSE.txt
+        run: |
+          tools/package-linux.sh \
+            --out "$GITHUB_WORKSPACE/package" \
+            --wine "$GITHUB_WORKSPACE/staging/wine" \
+            --helpers "$GITHUB_WORKSPACE/src/TabForge.AudioEngine/native" \
+            --appimagetool "$GITHUB_WORKSPACE/staging/appimagetool"
+          stat -c '%n %s bytes' package/linux/*.tar.xz package/linux/*.AppImage | tee package/linux/SIZES.txt
+          test -f package/linux/MIN_GLIBC.txt
+          echo "minimum glibc required:"; cat package/linux/MIN_GLIBC.txt
+      - name: Confirm the AppImage matches the tar.xz in the build job
+        run: |
+          cd package/linux
+          mkdir -p appimage-check && ./TabForge-*.AppImage --appimage-extract >/dev/null
+          test -d squashfs-root || { echo "AppImage did not extract"; exit 1; }
+          diff -r -x '*.desktop' -x '.DirIcon' -x 'AppRun' squashfs-root/usr TabForge.AppDir/usr > appimage-diff.txt || true
+          if [ -s appimage-diff.txt ]; then echo "AppImage usr/ differs from the tar AppDir:"; cat appimage-diff.txt; exit 1; fi
+          echo "AppImage usr/ matches the tar AppDir"
+          rm -rf squashfs-root appimage-diff.txt
+      - name: Upload the package and test-only fixtures
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-stage17-package
+          path: |
+            package/linux/*.tar.xz
+            package/linux/*.AppImage
+            package/linux/MIN_GLIBC.txt
+            package/linux/SIZES.txt
+          if-no-files-found: error
+      - name: Upload the fixtures (never shipped, never committed)
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-stage17-testkit
+          path: staging/testkit/*
+          if-no-files-found: error
+
+  windows-roundtrip:
+    runs-on: windows-2022
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.403'
+      - name: Build the x86 and x64 helpers and test plug-ins
+        shell: pwsh
+        run: |
+          cmake -S native/tfvst32 -B build/win32 -G "Visual Studio 17 2022" -A Win32 -DTFVST32_BUILD_TEST=ON
+          cmake --build build/win32 --config Release --parallel
+          cmake -S native/tfvst32 -B build/win64 -G "Visual Studio 17 2022" -A x64 -DTFVST32_BUILD_TEST=ON
+          cmake --build build/win64 --config Release --parallel
+          Copy-Item src/TabForge.AudioEngine/native/tfvst3.dll build/win64/Release/tfvst3.dll -Force
+          Copy-Item src/TabForge.AudioEngine/native/tfvst3-x86.dll build/win32/Release/tfvst3-x86.dll -Force
+      - name: Stage 17 round-trip and upgrade tests, writing the Windows reference project
+        shell: pwsh
+        env:
+          TABFORGE_TFVST32_EXE: ${{ github.workspace }}\build\win32\Release\tfvst32.exe
+          TABFORGE_TFVST64_EXE: ${{ github.workspace }}\build\win64\Release\tfvst64.exe
+          TABFORGE_TFVST32_TEST_DLL: ${{ github.workspace }}\build\win32\Release\passthrough32.dll
+          TABFORGE_TFVST64_TEST_DLL: ${{ github.workspace }}\build\win64\Release\passthrough64.dll
+          TABFORGE_STAGE17_REF: ${{ github.workspace }}\stage17-ref\reference.tforge
+        run: >
+          dotnet test tests/TabForge.Avalonia.Tests/TabForge.Avalonia.Tests.csproj -c Release -p:RestoreLockedMode=false
+          --filter "FullyQualifiedName~Stage17"
+          --logger "console;verbosity=detailed"
+          --logger "trx;LogFileName=stage17-windows.trx"
+          --results-directory "${{ github.workspace }}\stage17-results"
+      - name: Upload the Windows reference project and results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-stage17-reference
+          path: |
+            stage17-results/**
+            stage17-ref/**
+          if-no-files-found: warn
+
+  linux-roundtrip:
+    needs: [build-package, windows-roundtrip]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      TABFORGE_WINE: ${{ github.workspace }}/wine/bin/wine
+      TABFORGE_TFVST32_EXE: ${{ github.workspace }}/src/TabForge.AudioEngine/native/tfvst32.exe
+      TABFORGE_TFVST64_EXE: ${{ github.workspace }}/src/TabForge.AudioEngine/native/tfvst64.exe
+      TABFORGE_TFVST32_TEST_DLL: ${{ github.workspace }}/native/tfvst32/test-bin-linux/passthrough32.dll
+      TABFORGE_TFVST64_TEST_DLL: ${{ github.workspace }}/native/tfvst32/test-bin-linux/passthrough64.dll
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.403'
+      - name: Install cross compilers and display libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb mingw-w64 unzip libfreetype6 libfontconfig1
+      - name: Fetch the pinned Wine tree and build the test DLLs
+        run: |
+          curl -fsSL --retry 3 --retry-all-errors --retry-delay 5 -o wine.tar.xz "$WINE_TARBALL"
+          echo "$WINE_TARBALL_SHA256  wine.tar.xz" | sha256sum -c -
+          mkdir wine && tar -xf wine.tar.xz -C wine --strip-components=1
+          chmod +x wine/bin/wine wine/bin/wineserver
+          mkdir -p native/tfvst32/test-bin-linux
+          i686-w64-mingw32-g++ -std=c++17 -O2 -shared -static-libgcc -static-libstdc++ \
+            -DUNICODE -D_UNICODE -DNOMINMAX -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS \
+            -Wl,--no-insert-timestamp native/tfvst32/test/passthrough32.cpp \
+            -o native/tfvst32/test-bin-linux/passthrough32.dll -luser32 -lgdi32
+          x86_64-w64-mingw32-g++ -std=c++17 -O2 -shared -static-libgcc -static-libstdc++ \
+            -DUNICODE -D_UNICODE -DNOMINMAX -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS \
+            -Wl,--no-insert-timestamp native/tfvst32/test/passthrough32.cpp \
+            -o native/tfvst32/test-bin-linux/passthrough64.dll -luser32 -lgdi32
+      - uses: actions/download-artifact@v4
+        with:
+          name: wine-stage17-reference
+          path: reference
+      - name: Stage 17 round-trip and upgrade tests under Wine, opening the Windows reference
+        env:
+          TABFORGE_STAGE17_REF_IN: ${{ github.workspace }}/reference/stage17-ref/reference.tforge
+          TABFORGE_STAGE17_BACK: ${{ github.workspace }}/stage17-back/reference-back.tforge
+        run: |
+          mkdir -p stage17-back
+          xvfb-run -a dotnet test tests/TabForge.Avalonia.Tests/TabForge.Avalonia.Tests.csproj -c Release \
+            -p:RestoreLockedMode=false \
+            --filter "FullyQualifiedName~Stage17" \
+            --logger "console;verbosity=detailed" \
+            --logger "trx;LogFileName=stage17-wine.trx" \
+            --results-directory "${{ github.workspace }}/stage17-results"
+      - name: Upload the round-trip evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-stage17-roundtrip
+          path: |
+            stage17-results/**
+            stage17-back/**
+          if-no-files-found: warn
+
+  distro-gate:
+    needs: build-package
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: ubuntu-22.04, image: 'ubuntu:22.04' }
+          - { name: ubuntu-24.04, image: 'ubuntu:24.04' }
+          - { name: fedora-41, image: 'fedora:41' }
+          - { name: arch, image: 'archlinux:latest' }
+          - { name: debian-12, image: 'debian:12' }
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.image }}
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install the distro tools, display, sound and Wayland packages
+        run: |
+          set -e
+          if command -v apt-get >/dev/null; then
+            export DEBIAN_FRONTEND=noninteractive
+            apt-get update
+            # Ubuntu 24.04 renamed libasound2 to libasound2t64 (time_t transition); 22.04 and Debian 12 keep the old name.
+            ASOUND=libasound2
+            [ "${{ matrix.name }}" = "ubuntu-24.04" ] && ASOUND=libasound2t64
+            apt-get install -y --no-install-recommends git curl ca-certificates tar xz-utils \
+              xvfb xauth x11-utils imagemagick xdotool wmctrl openbox \
+              pulseaudio jackd2 weston xwayland python3 \
+              libfontconfig1 libfreetype6 libgl1 "$ASOUND" libpulse0 libegl1 \
+              libx11-6 libxext6 libxcursor1 libxrandr2 libxi6 libxfixes3 libxrender1 \
+              libxcb1 libice6 libsm6 libxcomposite1 libxdamage1 libxinerama1 \
+              libxxf86vm1 libxkbcommon0 libwayland-client0
+          elif command -v dnf >/dev/null; then
+            dnf install -y git curl ca-certificates tar xz \
+              xorg-x11-server-Xvfb xorg-x11-xauth xwininfo ImageMagick xdotool wmctrl openbox \
+              pulseaudio jack-audio-connection-kit weston xorg-x11-server-Xwayland python3 \
+              fontconfig freetype mesa-libGL alsa-lib pulseaudio-libs libX11 libXext \
+              libXcursor libXrandr libXi libXfixes libXrender libxcb libICE libSM \
+              libXcomposite libXdamage libXinerama libXxf86vm libxkbcommon
+          elif command -v pacman >/dev/null; then
+            pacman -Syu --noconfirm git curl ca-certificates tar xz \
+              xorg-server-xvfb xorg-xauth xorg-xwininfo imagemagick xdotool wmctrl openbox \
+              pulseaudio jack2 weston xorg-xwayland python \
+              fontconfig freetype2 mesa alsa-lib libpulse libglvnd \
+              libx11 libxext libxcursor libxrandr libxi libxfixes libxrender \
+              libxcb libice libsm libxcomposite libxdamage libxinerama libxxf86vm libxkbcommon
+          else
+            echo "no supported package manager in ${{ matrix.image }}"; exit 1
+          fi
+          echo "--- glibc:"; ldd --version | sed -n '1p'
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: wine-stage17-package
+          path: artifact
+      - uses: actions/download-artifact@v4
+        with:
+          name: wine-stage17-testkit
+          path: testkit
+      - name: Check the glibc floor and extract the tar.xz to a random path
+        run: |
+          set -e
+          echo "package minimum glibc:"; cat artifact/MIN_GLIBC.txt
+          host_glibc="$(ldd --version 2>&1 | awk 'NR == 1 { v = $NF } END { print v }')"
+          need_glibc="$(head -n 1 artifact/MIN_GLIBC.txt | tr -d '[:space:]')"
+          echo "host glibc=$host_glibc need>=$need_glibc"
+          [ "$(printf '%s\n%s\n' "$need_glibc" "$host_glibc" | sort -V | sed -n '1p')" = "$need_glibc" ] \
+            || { echo "host glibc $host_glibc is below the package floor $need_glibc"; exit 1; }
+          stat -c '%n %s bytes' artifact/*.tar.xz artifact/*.AppImage | tee sizes.txt
+          ID="$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+          mkdir -p "$RUNNER_TEMP/pkg-$ID" "$RUNNER_TEMP/home"
+          tar -xJf artifact/*.tar.xz -C "$RUNNER_TEMP/pkg-$ID"
+          mv "$RUNNER_TEMP/pkg-$ID/TabForge.AppDir" "$RUNNER_TEMP/moved-$ID"
+          echo "APP_TAR=$RUNNER_TEMP/moved-$ID" >> "$GITHUB_ENV"
+          echo "HOME_TAR=$RUNNER_TEMP/home" >> "$GITHUB_ENV"
+          test -x "$RUNNER_TEMP/moved-$ID/usr/bin/wine/bin/wine"
+          test -f "$RUNNER_TEMP/moved-$ID/usr/bin/tfvst32.exe"
+          test -f "$RUNNER_TEMP/moved-$ID/usr/bin/tfvst64.exe"
+      - name: Start the app headless and run its self-test
+        run: |
+          set -e -o pipefail
+          export TABFORGE_INTERNAL=1
+          xvfb-run -a env HOME="$HOME_TAR" PATH=/usr/bin:/bin LANG=C.UTF-8 \
+            "$APP_TAR/AppRun" --selftest "$RUNNER_TEMP/selftest.log" 2>&1 | tail -5
+          grep -q 'TabForge self-test' "$RUNNER_TEMP/selftest.log"
+          grep -q ', 0 failed' "$RUNNER_TEMP/selftest.log"
+          echo "self-test passed"
+          timeout 25 xvfb-run -a env HOME="$HOME_TAR" PATH=/usr/bin:/bin LANG=C.UTF-8 \
+            "$APP_TAR/AppRun" >/dev/null 2>&1 &
+          APP_PID=$!
+          sleep 18
+          if kill -0 "$APP_PID" 2>/dev/null; then echo "plain start still running after 18 s"; kill "$APP_PID"; else echo "plain start exited early"; exit 1; fi
+          wait "$APP_PID" 2>/dev/null || true
+      - name: Virtual audio through the real output path
+        run: |
+          set -e -o pipefail
+          export TABFORGE_INTERNAL=1
+          export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-$RUNNER_TEMP/pulse}"
+          mkdir -p "$XDG_RUNTIME_DIR"
+          chmod 700 "$XDG_RUNTIME_DIR"
+          (pulseaudio --start --exit-idle-time=-1 --log-target=stderr >"$RUNNER_TEMP/pulse.log" 2>&1 || \
+           pulseaudio --system --disallow-exit --log-target=stderr >"$RUNNER_TEMP/pulse.log" 2>&1) || \
+            { echo "pulseaudio did not start:"; cat "$RUNNER_TEMP/pulse.log"; exit 1; }
+          sleep 2
+          pactl info | tee "$RUNNER_TEMP/pactl-info.txt"
+          pactl load-module module-null-sink sink_name=stage17 || true
+          pactl set-default-sink stage17 || true
+          pactl list sinks short | tee "$RUNNER_TEMP/pactl-sinks.txt"
+          (jackd -d dummy -r 48000 -p 512 >"$RUNNER_TEMP/jack.log" 2>&1 & echo $! > "$RUNNER_TEMP/jack.pid")
+          sleep 2
+          kill -0 "$(cat "$RUNNER_TEMP/jack.pid")" 2>/dev/null || { echo "JACK dummy did not stay up:"; cat "$RUNNER_TEMP/jack.log"; exit 1; }
+          echo "JACK dummy is up (pid $(cat "$RUNNER_TEMP/jack.pid"))"
+          xvfb-run -a env HOME="$HOME_TAR" XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" \
+            PATH=/usr/bin:/bin LANG=C.UTF-8 PULSE_SINK=stage17 TABFORGE_INTERNAL=1 \
+            "$APP_TAR/AppRun" --audio-probe 5 2>&1 | tee "$RUNNER_TEMP/audio-probe.txt"
+          grep -q '^audio-probe ok' "$RUNNER_TEMP/audio-probe.txt"
+          grep -Eq '^audio-probe backend=(PulseAudio|PipeWire|ALSA|JACK)' "$RUNNER_TEMP/audio-probe.txt"
+          echo "real output path proven: $(grep '^audio-probe backend=' "$RUNNER_TEMP/audio-probe.txt")"
+      - name: Load plug-ins through the packaged bridge
+        run: |
+          set -e -o pipefail
+          export TABFORGE_INTERNAL=1
+          export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-$RUNNER_TEMP/pulse}"
+          xvfb-run -a env HOME="$HOME_TAR" XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" \
+            PATH=/usr/bin:/bin LANG=C.UTF-8 TABFORGE_INTERNAL=1 \
+            "$APP_TAR/AppRun" --wine-smoke "$PWD/testkit/passthrough32.dll" 0 512 12 \
+            2>&1 | tee "$RUNNER_TEMP/smoke32.txt"
+          grep -q '^wine-smoke ok' "$RUNNER_TEMP/smoke32.txt"
+          grep -q 'helper=tfvst32.exe' "$RUNNER_TEMP/smoke32.txt"
+          xvfb-run -a env HOME="$HOME_TAR" XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" \
+            PATH=/usr/bin:/bin LANG=C.UTF-8 TABFORGE_INTERNAL=1 \
+            "$APP_TAR/AppRun" --wine-smoke "$PWD/testkit/Dexed64.dll" 1 1024 24 \
+            2>&1 | tee "$RUNNER_TEMP/smoke-dexed64.txt"
+          grep -q '^wine-smoke ok' "$RUNNER_TEMP/smoke-dexed64.txt"
+          grep -q 'helper=tfvst64.exe' "$RUNNER_TEMP/smoke-dexed64.txt"
+          test -f "$HOME_TAR/.local/share/TabForge/wine/prefix/.tabforge-wine"
+          test ! -f "$HOME_TAR/.local/share/TabForge/wine/prefix/.tabforge-failed"
+      - name: Approve flow through the packaged app, plus the upgrade seed
+        run: |
+          set -e -o pipefail
+          export TABFORGE_INTERNAL=1
+          export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-$RUNNER_TEMP/pulse}"
+          # Stale shm proof: the sweep looks in tabforge-shm-<euid> under XDG_RUNTIME_DIR
+          # (root in containers, so -0); plant an old block there and require it gone after.
+          SHM_DIR="$XDG_RUNTIME_DIR/tabforge-shm-0"
+          mkdir -p "$SHM_DIR"
+          STALE="$SHM_DIR/tf-wine-stale-test.shm"
+          echo stale > "$STALE"
+          touch -d "5 hours ago" "$STALE"
+          mkdir -p "$RUNNER_TEMP/approve"
+          xvfb-run -a env HOME="$HOME_TAR" XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" \
+            PATH=/usr/bin:/bin LANG=C.UTF-8 TABFORGE_INTERNAL=1 \
+            "$APP_TAR/AppRun" --wine-approve "$RUNNER_TEMP/approve" \
+            "$PWD/testkit/passthrough32.dll" "$PWD/testkit/Dexed32.dll" "$PWD/testkit/Dexed64.dll" \
+            2>&1 | tee "$RUNNER_TEMP/approve-console.txt"
+          grep -q '^wine-approve ok' "$RUNNER_TEMP/approve-console.txt"
+          grep -q 'swept 1 stale' "$RUNNER_TEMP/approve-console.txt"
+          test ! -e "$STALE"
+          for f in passthrough32.dll Dexed32.dll Dexed64.dll; do
+            grep -q "path=.*$f.*identified=True" "$RUNNER_TEMP/approve/wine-approve.log"
+          done
+          if [ "${{ matrix.name }}" = "ubuntu-24.04" ]; then
+            echo "--- upgrade seed: an older prefix marker (the settings shape is proven by the managed Stage17 tests) ---"
+            mkdir -p "$HOME_TAR/.config/TabForge" "$HOME_TAR/.local/share/TabForge/wine/prefix/drive_c"
+            printf '{"LeftHanded":true}' > "$HOME_TAR/.config/TabForge/settings.json"
+            printf 'wineVersion=wine-9.0-old\narch=win64\ncrashDialog=off\n' > "$HOME_TAR/.local/share/TabForge/wine/prefix/.tabforge-wine"
+            echo "seeded marker:"; cat "$HOME_TAR/.local/share/TabForge/wine/prefix/.tabforge-wine"
+            xvfb-run -a env HOME="$HOME_TAR" XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" \
+              PATH=/usr/bin:/bin LANG=C.UTF-8 TABFORGE_INTERNAL=1 \
+              "$APP_TAR/AppRun" --wine-smoke "$PWD/testkit/passthrough32.dll" 0 256 4 \
+              2>&1 | tee "$RUNNER_TEMP/upgrade-smoke.txt"
+            grep -q '^wine-smoke ok' "$RUNNER_TEMP/upgrade-smoke.txt"
+            echo "upgraded marker:"; cat "$HOME_TAR/.local/share/TabForge/wine/prefix/.tabforge-wine"
+            grep -q '^wineVersion=wine-9.21' "$HOME_TAR/.local/share/TabForge/wine/prefix/.tabforge-wine"
+            test ! -f "$HOME_TAR/.local/share/TabForge/wine/prefix/.tabforge-failed"
+          fi
+      - name: Wayland editor under a headless compositor with XWayland
+        run: |
+          set -e -o pipefail
+          export TABFORGE_INTERNAL=1
+          export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-$RUNNER_TEMP/pulse}"
+          mkdir -p "$RUNNER_TEMP/weston" "$RUNNER_TEMP/wayland-home"
+          chmod 700 "$RUNNER_TEMP/weston"
+          export XDG_RUNTIME_DIR="$RUNNER_TEMP/weston"
+          weston --backend=headless --socket=stage17 --xwayland >"$RUNNER_TEMP/weston.log" 2>&1 &
+          WESTON_PID=$!
+          ls /tmp/.X11-unix/ 2>/dev/null | sort > "$RUNNER_TEMP/x11-before.txt" || true
+          for _ in $(seq 1 50); do
+            [ -S "$XDG_RUNTIME_DIR/stage17" ] && break
+            sleep 0.2
+          done
+          [ -S "$XDG_RUNTIME_DIR/stage17" ] || { echo "weston socket missing:"; cat "$RUNNER_TEMP/weston.log"; exit 1; }
+          sleep 2
+          export WAYLAND_DISPLAY=stage17
+          XDISPLAY=""
+          for _ in $(seq 1 25); do
+            XDISPLAY="$(ls /tmp/.X11-unix/ 2>/dev/null | sort | comm -23 - "$RUNNER_TEMP/x11-before.txt" | sed 's/^X/:/' | sed -n '1p')"
+            [ -n "$XDISPLAY" ] && break
+            sleep 0.4
+          done
+          [ -n "$XDISPLAY" ] || { echo "no XWayland socket appeared:"; cat "$RUNNER_TEMP/weston.log"; exit 1; }
+          export DISPLAY="$XDISPLAY"
+          xwininfo -root >"$RUNNER_TEMP/xwayland-root.txt" 2>&1 || { echo "no XWayland display:"; cat "$RUNNER_TEMP/weston.log"; exit 1; }
+          echo "XWayland is up on $DISPLAY under weston"
+          mkdir -p "$RUNNER_TEMP/wayland-editor"
+          TABFORGE_USE_EXISTING_DISPLAY=1 TABFORGE_EDITOR_HOME="$RUNNER_TEMP/wayland-home" \
+            TABFORGE_EDITOR_CASES="dexed32-vst2" \
+            bash tools/test-wine-editors.sh --app "$APP_TAR" --fixtures "$PWD/testkit" --out "$RUNNER_TEMP/wayland-editor"
+          find "$RUNNER_TEMP/wayland-editor" -name '*.png' -printf '%p %s bytes\n' | sort | tee "$RUNNER_TEMP/wayland-shots.txt"
+          kill "$WESTON_PID" 2>/dev/null || true
+          wait "$WESTON_PID" 2>/dev/null || true
+      - name: Collect the distro evidence
+        if: always()
+        run: |
+          set +e
+          mkdir -p evidence
+          cp "$RUNNER_TEMP"/*.txt evidence/ 2>/dev/null || true
+          cp "$RUNNER_TEMP"/*.log evidence/ 2>/dev/null || true
+          cp sizes.txt evidence/ 2>/dev/null || true
+          cp artifact/MIN_GLIBC.txt evidence/ 2>/dev/null || true
+          cp "$HOME_TAR/.local/share/TabForge/wine/prefix/.tabforge-wine" evidence/marker.txt 2>/dev/null || true
+          cp "$HOME_TAR/.config/TabForge/settings.json" evidence/settings-seed.json 2>/dev/null || true
+          { echo "image: ${{ matrix.image }}"; echo "glibc: $(ldd --version | sed -n '1p')"; echo "need: $(cat artifact/MIN_GLIBC.txt 2>/dev/null)"; } > evidence/host.txt
+          ls evidence/
+      - name: Upload the distro evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-stage17-distro-${{ matrix.name }}
+          path: |
+            evidence/**
+          if-no-files-found: warn
+
+  glibc-floor:
+    needs: build-package
+    runs-on: ubuntu-latest
+    container:
+      image: 'debian:11'
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install the minimum tools on the old distro
+        run: |
+          set -e
+          export DEBIAN_FRONTEND=noninteractive
+          # Debian 11 bullseye is EOL (Aug 2026): bullseye-security 404s, main pool is intact.
+          # Drop the security lines so the install uses the still-present main pool.
+          sed -i '/bullseye-security/d' /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null || true
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates tar xz-utils || apt-get install -y --no-install-recommends tar xz-utils || true
+          echo "--- old host glibc:"; ldd --version | sed -n '1p'
+      - uses: actions/download-artifact@v4
+        with:
+          name: wine-stage17-package
+          path: artifact
+      - name: Prove the package refuses readably below glibc 2.34
+        run: |
+          set -e
+          echo "package minimum glibc:"; cat artifact/MIN_GLIBC.txt
+          mkdir -p /tmp/pkg && tar -xJf artifact/*.tar.xz -C /tmp/pkg
+          /tmp/pkg/TabForge.AppDir/AppRun --selftest /tmp/selftest-floor.log 2>&1 | tee /tmp/floor.log || true
+          cat /tmp/floor.log
+          grep -Ei 'GLIBC|version|not found|cannot open|no version information' /tmp/floor.log /tmp/selftest-floor.log 2>/dev/null \
+            || grep -Ei 'error|failed' /tmp/floor.log
+          echo "glibc floor refusal recorded honestly: the 22.04-built package does not run on glibc 2.31"
+
+  appimage-match:
+    needs: build-package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Install the extractor
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xz-utils
+      - uses: actions/download-artifact@v4
+        with:
+          name: wine-stage17-package
+          path: artifact
+      - name: Confirm the AppImage matches the tar.xz
+        run: |
+          set -e
+          cd artifact
+          tar -xJf TabForge-*.tar.xz
+          chmod +x TabForge-*.AppImage
+          mkdir -p squash && ./TabForge-*.AppImage --appimage-extract >/dev/null
+          diff -r -x '*.desktop' -x '.DirIcon' -x 'AppRun' squashfs-root/usr TabForge.AppDir/usr
+          echo "AppImage usr/ matches the tar AppDir"
+          squashfs-root/usr/bin/wine/bin/wine --version | tee wine-version-appimage.txt
+          TabForge.AppDir/usr/bin/wine/bin/wine --version | tee wine-version-tar.txt
+          diff wine-version-appimage.txt wine-version-tar.txt
+          (cd squashfs-root && find usr/bin -maxdepth 1 -name 'tfvst*.exe' -o -maxdepth 1 -name 'tfvst*.dll' | sort | xargs sha256sum) | tee helpers-appimage.txt
+          (cd TabForge.AppDir && find usr/bin -maxdepth 1 -name 'tfvst*.exe' -o -maxdepth 1 -name 'tfvst*.dll' | sort | xargs sha256sum) | tee helpers-tar.txt
+          diff helpers-appimage.txt helpers-tar.txt
+          echo "helpers match"
+          stat -c '%n %s bytes' ./*.tar.xz ./*.AppImage
+          cat SIZES.txt
+          cat MIN_GLIBC.txt

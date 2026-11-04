@@ -17,6 +17,7 @@ public static class SettingsValidator
         settings.Appearance.MutedTrackDimPercent = Math.Clamp(settings.Appearance.MutedTrackDimPercent, 0, 100);
         NormalizePlugins(settings);
         NormalizeRememberedFolders(settings);
+        NormalizeTuningUserPresets(settings);
         NormalizeTimeline(settings);
         NormalizeWindow(settings, defaults);
 
@@ -46,6 +47,30 @@ public static class SettingsValidator
         settings.RememberedFolders = (settings.RememberedFolders ?? new())
             .Where(p => p.Key is { Length: > 0 and <= 64 } && p.Value is { Length: > 0 and <= InputLimits.MaxPathLength } && Path.IsPathFullyQualified(p.Value))
             .Take(DialogFolders.MaxKeys).ToDictionary(p => p.Key, p => p.Value);
+
+    // The person's tuning presets: a bad row is dropped, a name the app ships is refused, repeats keep the first, the list is capped.
+    private static void NormalizeTuningUserPresets(AppSettings settings)
+    {
+        settings.TuningUserPresets ??= new();
+        var builtIn = new HashSet<string>(TuningPresets.Catalog.Select(p => p.Preset.Name), StringComparer.OrdinalIgnoreCase);
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var kept = new List<TuningUserPresetEntry>();
+        foreach (var entry in settings.TuningUserPresets)
+        {
+            if (entry is null) continue;
+            var name = (entry.Name ?? "").Trim();
+            if (TabForge.Presenters.PresetRules.Error(name) is not null) continue;
+            var tuning = entry.HighToLow;
+            if (tuning is null) continue;
+            if (tuning.Count is < TabForge.Presenters.TrackPropertiesPresenter.FewestStrings or > TabForge.Presenters.TrackPropertiesPresenter.MostStrings) continue;
+            if (tuning.Any(m => m is < TabForge.Presenters.TrackPropertiesPresenter.LowestNote or > TabForge.Presenters.TrackPropertiesPresenter.HighestNote)) continue;
+            if (builtIn.Contains(name)) continue;
+            if (!seen.Add(name)) continue;
+            kept.Add(new TuningUserPresetEntry { Name = name, HighToLow = tuning.ToList() });
+            if (kept.Count >= TabForge.Presenters.TuningUserRules.MaxPresets) break;
+        }
+        settings.TuningUserPresets = kept;
+    }
 
     private static void NormalizePlugins(AppSettings settings)
     {
@@ -78,10 +103,22 @@ public static class SettingsValidator
             .Distinct(StringComparer.OrdinalIgnoreCase).Take(PluginSettings.MaxRecentImpulseFiles).ToList();
         static List<KnownPlugin> CleanList(List<KnownPlugin>? list) => (list ?? new())
             .Where(k => k is not null && k.Path is { Length: > 0 and <= InputLimits.MaxPathLength } && (k.Name ?? "").Length <= 256 && (k.Vendor ?? "").Length <= 256)
-            .Select(k => { k.Name ??= ""; k.Vendor ??= ""; k.Format = TabForge.Plugins.PluginFormats.IsKnown(k.Format) ? k.Format : ""; k.Role = k.Role is "Instrument" or "Effect" ? k.Role : ""; k.ClassId = TabForge.Plugins.Vst3ClassId.Normalize(k.ClassId); return k; })
+            .Select(k =>
+            {
+                k.Name ??= ""; k.Vendor ??= "";
+                k.Format = TabForge.Plugins.PluginFormats.Normalize(k.Format);   // the old "32-bit (not supported)" label becomes the bridged label
+                k.Format = TabForge.Plugins.PluginFormats.IsKnown(k.Format) ? k.Format : "";
+                k.Role = k.Role is "Instrument" or "Effect" ? k.Role : ""; k.ClassId = TabForge.Plugins.Vst3ClassId.Normalize(k.ClassId);
+                return k;
+            })
             .Take(InputLimits.MaxVstPlugins).ToList();
         plugins.ScanCache = CleanList(plugins.ScanCache);
         plugins.Probed = CleanList(plugins.Probed);
+        // The last scan is a different shape (already-named rows), but carries the same old 32-bit label: normalise it too.
+        plugins.LastScan = (plugins.LastScan ?? Array.Empty<TabForge.Plugins.VstPluginInfo>())
+            .Where(p => p is not null && p.Path is { Length: > 0 and <= InputLimits.MaxPathLength })
+            .Select(p => p with { Format = TabForge.Plugins.PluginFormats.Normalize(p.Format) })
+            .Take(InputLimits.MaxVstPlugins).ToList();
         // Trust grants fail closed: an approval that is not a full path, or whose path cannot be normalised, is dropped. Approvals are uncapped;
         // one without a fingerprint record is not trusted (PluginTrust asks for approval again).
         plugins.ApprovedPluginPaths = (plugins.ApprovedPluginPaths ?? new()).Where(f => f is { Length: > 0 and <= InputLimits.MaxPathLength } && IsFullPath(f))
@@ -91,6 +128,8 @@ public static class SettingsValidator
             .Select(a => new MediaApproval { Project = a.Project ?? "", Folder = a.Folder }).Take(512).ToList();
         plugins.Quarantined = (plugins.Quarantined ?? new()).Where(f => f is { Length: > 0 and <= InputLimits.MaxPathLength })
             .Distinct(StringComparer.OrdinalIgnoreCase).Take(1024).ToList();
+        plugins.CrashProne = (plugins.CrashProne ?? new()).Where(f => f is { Length: > 0 and <= InputLimits.MaxPathLength })
+            .Distinct(StringComparer.OrdinalIgnoreCase).Take(1024).ToList();
         plugins.TunerOffTracks = (plugins.TunerOffTracks ?? new()).Distinct().Take(1024).ToList();
         plugins.AutoChains = (plugins.AutoChains ?? new()).Where(chain => chain is not null).ToList();
         foreach (var chain in plugins.AutoChains) chain.Plugins = CleanChainSlots(chain.Plugins);
@@ -99,7 +138,12 @@ public static class SettingsValidator
 
         // Saved chains: empty entries are dropped and a plug-in format is "", VST2 or VST3 (an unknown one reads as "", as in the known-plug-in list).
         static List<TabForge.Plugins.PluginSlot> CleanChainSlots(List<TabForge.Plugins.PluginSlot>? slots) => (slots ?? new()).Where(slot => slot is not null)
-            .Select(slot => { slot.Format = TabForge.Plugins.PluginFormats.IsKnown(slot.Format) ? slot.Format : ""; return slot; }).ToList();
+            .Select(slot =>
+            {
+                slot.Format = TabForge.Plugins.PluginFormats.Normalize(slot.Format);   // projects saved with the old 32-bit label keep loading as bridged
+                slot.Format = TabForge.Plugins.PluginFormats.IsKnown(slot.Format) ? slot.Format : "";
+                return slot;
+            }).ToList();
     }
 
     private static void NormalizeTimeline(AppSettings settings)
@@ -180,7 +224,7 @@ public static class SettingsValidator
         if (!double.IsFinite(value.KeyboardPaneHeight) || value.KeyboardPaneHeight < 0 || value.KeyboardPaneHeight > 4000)
             value.KeyboardPaneHeight = 0;
 
-        value.UiScale = InputLimits.ClampFinite(value.UiScale, 0.8, 1.5, defaults.UiScale);
+        value.UiScale = InputLimits.ClampFinite(value.UiScale, TabForge.Platform.Theme.UiDensity.MinScale, TabForge.Platform.Theme.UiDensity.MaxScale, defaults.UiScale);
         value.AnimationSpeed = InputLimits.ClampFinite(value.AnimationSpeed, 0.25, 2, defaults.AnimationSpeed);
         value.FontSize = InputLimits.ClampFinite(value.FontSize, 8, 24, defaults.FontSize);
         value.ScoreTextSize = InputLimits.ClampFinite(value.ScoreTextSize, 8, 24, defaults.ScoreTextSize);
@@ -239,6 +283,12 @@ public static class SettingsValidator
         value.DefaultDuration = value.DefaultDuration is 1 or 2 or 4 or 8 or 16 or 32 or 64 ? value.DefaultDuration : 4;
         value.ScoreWheelScrollPixels = Math.Clamp(value.ScoreWheelScrollPixels, 12, 96);
         value.FretboardFrets = value.FretboardFrets is 12 or 24 ? value.FretboardFrets : 24;
+        var look = FretboardStyles.Normalize(new FretboardStyles.Look(value.FretboardWood, value.FretboardBinding, value.FretboardInlayShape,
+            value.FretboardInlayMaterial, value.FretboardCapoLook, value.FretboardStringLook));
+        (value.FretboardWood, value.FretboardBinding, value.FretboardInlayShape, value.FretboardInlayMaterial, value.FretboardCapoLook, value.FretboardStringLook) =
+            (look.Wood, look.Binding, look.InlayShape, look.InlayMaterial, look.CapoLook, look.StringLook);
+        value.FretboardVibration = FretboardStyles.Pick(FretboardStyles.VibrationLevels, value.FretboardVibration, "Mild");
+        value.FretboardVibrationSpeed = FretboardStyles.Pick(FretboardStyles.VibrationSpeeds, value.FretboardVibrationSpeed, "Normal");
         value.InstrumentView = InstrumentViews.All.FirstOrDefault(v => string.Equals(v, value.InstrumentView, StringComparison.OrdinalIgnoreCase)) ?? InstrumentViews.MatchInstrument;
         if (!InstrumentViews.KeyboardSizes.Contains(value.KeyboardKeys)) value.KeyboardKeys = 88;
         value.ScaleHighlightStyle = ScaleHighlightStyles.Normalize(value.ScaleHighlightStyle);
@@ -251,6 +301,8 @@ public static class SettingsValidator
         value.FretNumberSize = FretNumberSizes.All.FirstOrDefault(v => string.Equals(v, value.FretNumberSize, StringComparison.OrdinalIgnoreCase)) ?? FretNumberSizes.Large;
         value.FretStringSpacing = FretStringSpacings.All.FirstOrDefault(v => string.Equals(v, value.FretStringSpacing, StringComparison.OrdinalIgnoreCase)) ?? FretStringSpacings.Natural;
         value.FretMarkerBrightness =FretMarkerLevels.All.FirstOrDefault(v => string.Equals(v, value.FretMarkerBrightness, StringComparison.OrdinalIgnoreCase)) ?? FretMarkerLevels.Original;
+        value.FretboardBrightness = FretboardStyles.ClampBrightness(value.FretboardBrightness);
+        value.FretboardNoteBrightness = FretboardStyles.ClampBrightness(value.FretboardNoteBrightness);
         value.KeyboardKeyColours = KeyboardKeyStyles.All.FirstOrDefault(v => string.Equals(v, value.KeyboardKeyColours, StringComparison.OrdinalIgnoreCase)) ?? KeyboardKeyStyles.MatchTheme;
         value.PreviewHorizon = Math.Clamp(value.PreviewHorizon, 1, 10);
         value.ScaleHighlight = SafeText(value.ScaleHighlight, 64, null);

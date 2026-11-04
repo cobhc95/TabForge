@@ -26,6 +26,7 @@ public static partial class TrackSetup
     {
         if (track.IsAudio) return;
         track.Capo = 0;
+        track.PartialCapos = null;
         if (toDrums)
         {
             track.Kind = TrackKind.Drums;

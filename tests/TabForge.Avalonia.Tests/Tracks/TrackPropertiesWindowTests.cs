@@ -1,15 +1,19 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.LogicalTree;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Platform.Controls;
 using TabForge.Avalonia.Views;
+using TabForge.Documents;
 using TabForge.Models;
 using TabForge.Platform.Theme;
 using TabForge.Presenters;
@@ -43,38 +47,56 @@ public class TrackPropertiesWindowTests
         var window = Open(track);
 
         Assert.Equal(TrackPropertiesPresenter.Title(track.Name, adding: false), window.Title);
-        Assert.Equal((800d, 640d, 420d, SizeToContent.Height), (window.Width, window.MinWidth, window.MinHeight, window.SizeToContent));
+        Assert.Equal((800d, 640d, 0d, SizeToContent.Height), (window.Width, window.MinWidth, window.MinHeight, window.SizeToContent));
         // Order: details (name, played by, colour, notes), instrument (program, bank MSB/LSB, channel), tuning (frets, capo).
-        var fields = window.GetLogicalDescendants().OfType<TextBox>().Select(b => (b.Name, AutomationProperties.GetName(b))).ToList();
+        var fields = window.GetLogicalDescendants().OfType<TextBox>().Where(b => b.Name?.StartsWith("NoteBox") != true).Select(b => (b.Name, AutomationProperties.GetName(b))).ToList();
         Assert.Equal(new (string?, string?)[]
         {
             ("NameBox", "Track name"), ("PerformerBox", "Played by"), ("NotesBox", "Notes"),
-            ("ProgramBox", "MIDI program"), ("BankMsbBox", "Bank MSB (-1 is off)"), ("BankLsbBox", "Bank LSB (-1 is off)"), ("ChannelBox", "Channel"), ("FretsBox", "Frets"), ("CapoBox", "Capo"),
+            ("ProgramBox", "MIDI program"), ("BankMsbBox", "Bank MSB (-1 is off)"), ("BankLsbBox", "Bank LSB (-1 is off)"), ("ChannelBox", "Channel"), ("FretsBox", "Frets"),
         }, fields);
-        var tools = Buttons(window).Where(b => b is not CheckBox && b is not ColourButton && b.Name is not null && !b.Name.StartsWith("String") && b.Name != "InstrumentChooserButton").Select(b => (b.Name, (string)b.Content!)).ToList();
+        var tools = Buttons(window).Where(b => b is not CheckBox && b is not ToggleButton && b is not ColourButton && b.Name is not null && !b.Name.StartsWith("String") && b.Name != "InstrumentChooserButton" && b.Content is string).Select(b => (b.Name, (string)b.Content!)).ToList();
         Assert.Equal(new (string?, string)[]
         {
-            ("CancelButton", "Cancel"), ("OkButton", "OK"), ("EditCustomMapButton", "Edit custom map…"), ("FxChainButton", "Effects & instruments (FX)…"),
-            ("AllDownButton", "All −1"), ("AllUpButton", "All +1"), ("AddLowStringButton", "+ Low string"), ("RemoveLowStringButton", "− Low string"),
+            ("CancelButton", "Cancel"), ("OkButton", "OK"), ("FxChainButton", "Effects & instruments (FX)…"), ("EditCustomMapButton", "Edit custom map…"),
+            ("TuningPresetButton", "Standard E ▾"), ("AllDownButton", "All −1"), ("AllUpButton", "All +1"), ("AddStringButton", "+ Add string"),
+            ("RemoveSelectedCapoButton", "Remove selected"), ("RemoveAllCaposButton", "Remove all capos"),
         }, tools);
         var ok = Named<Button>(window, "OkButton");
         var cancel = Named<Button>(window, "CancelButton");
         Assert.Equal((true, false, 92d), (ok.IsDefault, ok.IsCancel, ok.Width));
         Assert.Equal((false, true, 92d), (cancel.IsDefault, cancel.IsCancel, cancel.Width));
-        Assert.Equal($"{track.StringTunings.Count} strings", Named<TextBlock>(window, "StringsLabel").Text);
+        Assert.Equal(track.StringTunings.Count - TrackPropertiesPresenter.FewestStrings, Named<ComboBox>(window, "StringCountBox").SelectedIndex);
         window.Close();
     }
 
-    // The cover is a 190 DIP picture with the instrument name below it (outside the picture); the drum and preset boxes take the widths.
+    // The instrument cover is gone from the left column (Details moved up); the drum and preset boxes take the widths.
     [AvaloniaFact]
-    public void CoverCaptionAndBoxSizesMatchWpf()
+    public void NoCoverAndBoxSizesMatchWpf()
     {
         var window = Open(DemoTrack());
 
-        var cover = Named<Border>(window, "InstrumentCover");
-        Assert.Equal(190d, cover.Height);
-        Assert.DoesNotContain(cover.GetLogicalDescendants(), d => d is TextBlock { Name: "InstrumentCaption" });
-        Assert.Equal((200d, 220d), (Named<ComboBox>(window, "DrumMapBox").Width, Named<ComboBox>(window, "TuningPresetBox").MinWidth));
+        Assert.DoesNotContain(window.GetLogicalDescendants().OfType<Control>(), c => c.Name == "InstrumentCover");
+        Assert.Equal((200d, 116d), (Named<ComboBox>(window, "DrumMapBox").Width, Named<Button>(window, "TuningPresetButton").MinWidth));
+        window.Close();
+    }
+
+    // Each MIDI label sits above its box (a label row, then the box row), so the text never runs into the next cell.
+    [AvaloniaFact]
+    public void MidiLabelsSitAboveTheirBoxes()
+    {
+        var window = Open(DemoTrack());
+        Dispatcher.UIThread.RunJobs();
+
+        var card = Named<Border>(window, "MidiCard");
+        foreach (var (label, box) in new[] { ("Program", "ProgramBox"), ("Bank MSB", "BankMsbBox"), ("Bank LSB", "BankLsbBox"), ("Channel", "ChannelBox") })
+        {
+            var caption = card.GetLogicalDescendants().OfType<TextBlock>().Single(t => t.Text == label);
+            var input = Named<TextBox>(window, box);
+            var captionBottom = caption.TranslatePoint(new Point(0, caption.Bounds.Height), window)!.Value.Y;
+            var inputTop = input.TranslatePoint(new Point(0, 0), window)!.Value.Y;
+            Assert.True(captionBottom <= inputTop, $"{label} label overlaps {box}");
+        }
         window.Close();
     }
 
@@ -94,7 +116,6 @@ public class TrackPropertiesWindowTests
     [InlineData("BankLsbBox", "-2")]
     [InlineData("ChannelBox", "16")]
     [InlineData("FretsBox", "11")]
-    [InlineData("CapoBox", "13")]
     [InlineData("ProgramBox", "abc")]
     public void OutOfRangeOkShowsThePresenterMessageAndStaysOpen(string field, string typed)
     {
@@ -105,7 +126,7 @@ public class TrackPropertiesWindowTests
         DialogTestKit.Click(Named<Button>(window, "OkButton"));
         Dispatcher.UIThread.RunJobs();
 
-        var expected = TrackPropertiesPresenter.FieldError(Text(window, "ProgramBox"), Text(window, "BankMsbBox"), Text(window, "BankLsbBox"), Text(window, "ChannelBox"), Text(window, "FretsBox"), Text(window, "CapoBox"), track.IsDrumTrack);
+        var expected = TrackPropertiesPresenter.FieldError(Text(window, "ProgramBox"), Text(window, "BankMsbBox"), Text(window, "BankLsbBox"), Text(window, "ChannelBox"), Text(window, "FretsBox"), track.Capo.ToString(), track.IsDrumTrack);
         Assert.NotNull(expected);
         Assert.Equal(expected, Named<TextBlock>(window, "ErrorText").Text);
         Assert.True(window.IsVisible);
@@ -131,30 +152,6 @@ public class TrackPropertiesWindowTests
     }
 
     [AvaloniaFact]
-    public void LowStringButtonsStopAtNineAndThreeStrings()
-    {
-        var window = Open(DemoTrack());
-        var expected = DemoTrack().StringTunings.ToList();
-        for (var i = 0; i < 5; i++)
-        {
-            DialogTestKit.Click(Named<Button>(window, "AddLowStringButton"));
-            TrackPropertiesPresenter.WithLowString(expected);
-        }
-        Assert.Equal(TrackPropertiesPresenter.MostStrings, expected.Count);
-        Assert.Equal("9 strings", Named<TextBlock>(window, "StringsLabel").Text);
-        Assert.Equal(TabForge.Services.MusicTheoryService.NoteName(expected[^1]), Named<TextBlock>(window, "NoteLabel8").Text);
-        for (var i = 0; i < 8; i++)
-        {
-            DialogTestKit.Click(Named<Button>(window, "RemoveLowStringButton"));
-            TrackPropertiesPresenter.WithoutLowString(expected);
-        }
-        Assert.Equal(TrackPropertiesPresenter.FewestStrings, expected.Count);
-        Assert.Equal("3 strings", Named<TextBlock>(window, "StringsLabel").Text);
-        Assert.Equal(3, window.GetLogicalDescendants().OfType<TextBlock>().Count(t => t.Name?.StartsWith("NoteLabel") == true));
-        Discard(window);
-    }
-
-    [AvaloniaFact]
     public void ValidOkWritesTheTrackAndCloses()
     {
         var track = DemoTrack();
@@ -166,7 +163,8 @@ public class TrackPropertiesWindowTests
         Named<TextBox>(window, "BankLsbBox").Text = "5";
         Named<TextBox>(window, "ChannelBox").Text = "2";
         Named<TextBox>(window, "FretsBox").Text = "22";
-        Named<TextBox>(window, "CapoBox").Text = "2";
+        CapoUp(window);
+        CapoUp(window);
         DialogTestKit.Click(Named<Button>(window, "StringUp0"));
         DialogTestKit.Click(Named<Button>(window, "OkButton"));
         Dispatcher.UIThread.RunJobs();
@@ -175,22 +173,6 @@ public class TrackPropertiesWindowTests
         Assert.False(window.IsVisible);
         Assert.Equal((31, 2, 5, 2, 22, 2), (track.MidiProgram, track.MidiBankMsb, track.MidiBankLsb, track.MidiChannel, track.NumberOfFrets, track.Capo));
         Assert.Equal(expectedTunings, track.StringTunings);
-    }
-
-    [AvaloniaFact]
-    public void PickingDropDFillsTheLowStringAndOkWritesIt()
-    {
-        var track = DemoTrack();
-        var window = Open(track);
-        var presets = Named<ComboBox>(window, "TuningPresetBox");
-        presets.SelectedItem = "Drop D";
-
-        Assert.Equal("D2", Named<TextBlock>(window, "NoteLabel5").Text);
-        DialogTestKit.Click(Named<Button>(window, "OkButton"));
-        Dispatcher.UIThread.RunJobs();
-
-        Assert.True(window.Applied);
-        Assert.Equal(new[] { 64, 59, 55, 50, 45, 38 }, track.StringTunings);
     }
 
     [AvaloniaFact]
@@ -212,6 +194,109 @@ public class TrackPropertiesWindowTests
         Assert.Equal((0, 3, retuned.PitchOf(0, 3)), (note.StringIndex, note.Fret, note.MidiValue));
         Assert.Equal("#123456", retuned.ColorHex);
         Assert.Equal(1, doc.Undo.UndoCount);
+    }
+
+    [AvaloniaFact]
+    public void RetuningBeforeRemovingUsesTheFinalTuningAndOkDoesNotAskAgain()
+    {
+        var track = GuitarWithLowNotes();   // A2 and B2 on the low E
+        var doc = new ScorePreviewEditor.PreviewDocument(new SongProject { Tracks = new List<TrackModel> { track } });
+        var window = new TrackPropertiesWindow(track, doc);
+        window.Show();
+        TuningRemovalImpact? removal = null;
+        var askedAtCommit = false;
+        window.ConfirmNoteMove = impact => { removal = impact; return System.Threading.Tasks.Task.FromResult(true); };
+        window.ConfirmUndisclosedPitchChange = _ => { askedAtCommit = true; return System.Threading.Tasks.Task.FromResult(true); };
+
+        DialogTestKit.Click(Named<Button>(window, "StringUp4"));
+        DialogTestKit.Click(Named<Button>(window, "StringUp4"));   // A2 string becomes B2
+        RemoveLowString(window);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.NotNull(removal);
+        Assert.Equal((2, 1), (removal!.Total, removal.Unplayable));   // A2 no longer fits, B2 still does
+        Assert.Same(track.Measures[0].Cells[0].Notes[0], Assert.Single(removal.UnplayableNotes));
+
+        DialogTestKit.Click(Named<Button>(window, "OkButton"));
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.False(askedAtCommit);   // the removal warning already used the final tuning
+        Assert.True(window.Applied);
+        Assert.Equal(1, doc.Undo.UndoCount);
+        Assert.Equal(new[] { 64, 59, 55, 50, 47 }, doc.Project.Tracks[0].StringTunings);
+        Assert.Equal((4, 0, 47), (track.Measures[0].Cells[0].Notes[0].StringIndex, track.Measures[0].Cells[0].Notes[0].Fret, track.Measures[0].Cells[0].Notes[0].MidiValue));
+        Assert.Equal((4, 0, 47), (track.Measures[0].Cells[1].Notes[0].StringIndex, track.Measures[0].Cells[1].Notes[0].Fret, track.Measures[0].Cells[1].Notes[0].MidiValue));
+    }
+
+    [AvaloniaFact]
+    public void CancellingTheRemovalWarningKeepsTheRetunedDraftAndTheSong()
+    {
+        var track = GuitarWithLowNotes();
+        var doc = new ScorePreviewEditor.PreviewDocument(new SongProject { Tracks = new List<TrackModel> { track } });
+        var window = new TrackPropertiesWindow(track, doc);
+        window.Show();
+        window.ConfirmNoteMove = _ => System.Threading.Tasks.Task.FromResult(false);
+
+        DialogTestKit.Click(Named<Button>(window, "StringUp4"));
+        DialogTestKit.Click(Named<Button>(window, "StringUp4"));   // keep this retune when the removal is refused
+        RemoveLowString(window);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(window.IsVisible);
+        Assert.False(window.Applied);
+        Assert.Equal(3, Named<ComboBox>(window, "StringCountBox").SelectedIndex);   // still the six strings
+        Assert.Equal("B2", Named<TextBox>(window, "NoteBox4").Text);
+        Assert.Equal(new[] { 64, 59, 55, 50, 45, 40 }, track.StringTunings);
+        Assert.Equal((5, 5, 45), (track.Measures[0].Cells[0].Notes[0].StringIndex, track.Measures[0].Cells[0].Notes[0].Fret, track.Measures[0].Cells[0].Notes[0].MidiValue));
+        Assert.Equal(0, doc.Undo.UndoCount);
+        Discard(window);
+    }
+
+    [AvaloniaFact]
+    public void RemovingThenRetuningWarnsBeforeOkAndCancelKeepsDraftAndSong()
+    {
+        var track = GuitarWithLowNotes();
+        var doc = new ScorePreviewEditor.PreviewDocument(new SongProject { Tracks = new List<TrackModel> { track } });
+        var window = new TrackPropertiesWindow(track, doc);
+        window.Show();
+        TuningRemovalImpact? removal = null;
+        TuningRemovalImpact? commit = null;
+        window.ConfirmNoteMove = impact => { removal = impact; return System.Threading.Tasks.Task.FromResult(true); };
+        window.ConfirmUndisclosedPitchChange = impact => { commit = impact; return System.Threading.Tasks.Task.FromResult(false); };
+
+        RemoveLowString(window);
+        DialogTestKit.Click(Named<Button>(window, "StringUp4"));
+        DialogTestKit.Click(Named<Button>(window, "StringUp4"));   // A2 string becomes B2, after the removal was accepted
+        Dispatcher.UIThread.RunJobs();
+        Assert.NotNull(removal);
+        Assert.Equal((2, 0), (removal!.Total, removal.Unplayable));   // the removal question could not know about this retune
+
+        DialogTestKit.Click(Named<Button>(window, "OkButton"));
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.NotNull(commit);
+        Assert.Equal((2, 1), (commit!.Total, commit.Unplayable));
+        Assert.Same(track.Measures[0].Cells[0].Notes[0], Assert.Single(commit.UnplayableNotes));   // A2 is the newly unplayable note
+        Assert.True(window.IsVisible);
+        Assert.False(window.Applied);
+        Assert.Equal(0, doc.Undo.UndoCount);
+        Assert.Equal(new[] { 64, 59, 55, 50, 45, 40 }, track.StringTunings);
+        Assert.Equal((5, 5, 45), (track.Measures[0].Cells[0].Notes[0].StringIndex, track.Measures[0].Cells[0].Notes[0].Fret, track.Measures[0].Cells[0].Notes[0].MidiValue));
+        Assert.Equal(2, Named<ComboBox>(window, "StringCountBox").SelectedIndex);   // the five-string draft survives No
+        Assert.Equal("B2", Named<TextBox>(window, "NoteBox4").Text);
+
+        window.ConfirmUndisclosedPitchChange = _ => System.Threading.Tasks.Task.FromResult(true);
+        DialogTestKit.Click(Named<Button>(window, "OkButton"));
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(window.Applied);
+        Assert.False(window.IsVisible);
+        Assert.Equal(1, doc.Undo.UndoCount);
+        Assert.Equal(new[] { 64, 59, 55, 50, 47 }, doc.Project.Tracks[0].StringTunings);
+        Assert.Equal((4, 0, 47), (track.Measures[0].Cells[0].Notes[0].StringIndex, track.Measures[0].Cells[0].Notes[0].Fret, track.Measures[0].Cells[0].Notes[0].MidiValue));
+        Assert.Equal((4, 0, 47), (track.Measures[0].Cells[1].Notes[0].StringIndex, track.Measures[0].Cells[1].Notes[0].Fret, track.Measures[0].Cells[1].Notes[0].MidiValue));
+        Assert.NotNull(DocumentEdits.Undo(doc));
+        Assert.Equal(new[] { 64, 59, 55, 50, 45, 40 }, doc.Project.Tracks[0].StringTunings);
     }
 
     [AvaloniaFact]
@@ -370,20 +455,27 @@ public class TrackPropertiesWindowTests
         Assert.Equal(rows, Named<StackPanel>(window, "StringRows").Children.Count);
     }
 
-    [AvaloniaFact]
-    public void DoubleClickedChipTakesATypedNoteOnEnter()
+
+    private static TrackModel GuitarWithLowNotes()
     {
-        var window = Open(DemoTrack());
-        window.TypeNote(Named<Border>(window, "NoteChip0"), 0);
-        var entry = Named<TextBox>(window, "NoteEntry0");
-        entry.Text = "D2";
-        entry.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter });
-        Assert.Equal("D2", Named<TextBlock>(window, "NoteLabel0").Text);
-        Assert.IsType<global::Avalonia.Media.LinearGradientBrush>(Named<global::Avalonia.Controls.Shapes.Rectangle>(window, "StringLine0").Fill);
+        var track = new TrackModel
+        {
+            Name = "Tuning test", Kind = TrackKind.Guitar, NumberOfFrets = 24,
+            StringTunings = new List<int> { 64, 59, 55, 50, 45, 40 },
+        };
+        var measure = new MeasureModel();
+        track.Measures.Add(measure);
+        measure.Cells[0].Notes.Add(new TabNote { StringIndex = 5, Fret = 5, MidiValue = track.PitchOf(5, 5) });   // A2
+        measure.Cells[1].Notes.Add(new TabNote { StringIndex = 5, Fret = 7, MidiValue = track.PitchOf(5, 7) });   // B2
+        return track;
     }
 
     private static T Named<T>(Window window, string name) where T : Control =>
         window.GetLogicalDescendants().OfType<T>().Single(c => c.Name == name);
+
+    // Removal goes through the string-count box; capo placement goes through the board.
+    private static void RemoveLowString(Window window) { var box = Named<ComboBox>(window, "StringCountBox"); box.SelectedIndex -= 1; }
+    private static void CapoUp(Window window) { var card = (TrackPropertiesWindow)window; CapoPlacementTests.ClickFret(card, card.WorkingEffectiveCapo(0) + 1); }
 
     private static List<Button> Buttons(Window window) => window.GetLogicalDescendants().OfType<Button>().ToList();
 }

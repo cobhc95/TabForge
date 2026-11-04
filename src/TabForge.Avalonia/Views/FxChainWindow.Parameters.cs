@@ -1,3 +1,4 @@
+using System;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using TabForge.Avalonia.Views.Fx;
@@ -16,6 +17,7 @@ public sealed partial class FxChainWindow
     private const string ParametersTip = "Sliders for the parameters this plug-in lists, instead of its own window. Changes can be undone in the panel.";
     private readonly FxParameterPane _parameters;
     private readonly Button _parametersButton = Btn("Parameters", ParametersTip, "ParametersButton");
+    private readonly Button _editorButton = Btn("Editor", "Opens this bridged Windows plug-in's own window (Wine).", "EditorButton");
     private readonly BuiltinEditorHost _builtinEditor = new();
     private bool _parametersDown;
     private bool _fallbackOff;
@@ -35,6 +37,7 @@ public sealed partial class FxChainWindow
             else { _parametersDown = !_parametersDown; _fallbackOff = false; }
             ShowSelected();
         };
+        _editorButton.Click += (_, _) => { if (Selected is { } slot) { _editors.Float(slot); ShowSelected(); } };
         _editors.EditorFailed += slot => { if (FxGenericControls.Supports(slot) && ReferenceEquals(slot, Selected)) _ui.Post(ShowSelected, TabForge.Platform.UiPriority.ApplicationIdle); };
     }
 
@@ -52,12 +55,19 @@ public sealed partial class FxChainWindow
     {
         var supported = FxGenericControls.Supports(slot);
         var builtin = BuiltinEditors.IsBuiltin(slot);
-        _parametersButton.IsVisible = supported && (!builtin || BuiltinEditors.HasWindow(slot));
+        var noEditor = !builtin && _editors.KnownNoEditor(slot);   // the panel is its only view: no button to switch
+        // Bridged Windows plug-ins under Wine open their editor in a helper-owned top-level window; on Linux the
+        // docked editor area does not exist, so give the row its own Editor button instead of a dead dock attempt.
+        _editorButton.IsVisible = OperatingSystem.IsLinux() && slot is not null &&
+            (slot.Format.Equals(PluginFormats.Bridged32, StringComparison.OrdinalIgnoreCase) ||
+             slot.Format.Equals(PluginFormats.Bridged64, StringComparison.OrdinalIgnoreCase));
+        _editorButton.IsEnabled = _editorButton.IsVisible && _host.Engine?.IsRunning == true;
+        _parametersButton.IsVisible = supported && !noEditor && (!builtin || BuiltinEditors.HasWindow(slot));
         _parametersButton.Content = builtin ? "Open editor" : "Parameters";
         ToolTip.SetTip(_parametersButton, builtin ? "Pops this effect's editor out into its own window." : ParametersTip);
         if (viaButton && !builtin) _parametersButton[!Button.BackgroundProperty] = new DynamicResourceExtension("AccentBrush");
         else _parametersButton.ClearValue(Button.BackgroundProperty);
-        var show = slot is not null && (viaButton || FxGenericControls.ShouldShow(supported, _editors.ModeOf(slot), false, _editors.HasFailed(slot) && !_fallbackOff));
+        var show = slot is not null && (viaButton || FxGenericControls.ShouldShow(supported, _editors.ModeOf(slot), false, _editors.HasFailed(slot) && (!_fallbackOff || noEditor)));
         var embed = !show && slot is not null && BuiltinEditors.HasWindow(slot);   // a built-in's editor takes the editor area
         _area.IsVisible = !show && !embed;
         _parameters.Panel.IsVisible = show;

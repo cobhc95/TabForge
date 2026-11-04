@@ -38,9 +38,6 @@ public sealed class AvaloniaPlaybackSessions : IDisposable
         _createEngine = createEngine;
     }
 
-    /// <summary>The playhead frame-rate cap (the Follow setting, read live each frame); 0 or 240 and up draws at the screen rate.</summary>
-    public Func<int> FrameRateCap { get; set; } = () => 0;
-
     /// <summary>The window whose refresh drives the playhead frames; null (no window yet) falls back to the frame timer.</summary>
     public Func<global::Avalonia.Controls.TopLevel?> FrameWindow { get; set; } = () => null;
 
@@ -88,7 +85,7 @@ public sealed class AvaloniaPlaybackSessions : IDisposable
         if (Engine is { } engine) engine.IsOwnerPlaying ??= owner => owner is SongDocument song && Existing(song) is { IsPlaying: true };
         if (!_sessions.TryGetValue(document, out var session))
         {
-            session = new AvaloniaPlaybackSession(_createEngine(), _ui, () => document.Project, new AnimationFrameSource(_ui, () => FrameWindow(), () => FrameRateCap()));
+            session = new AvaloniaPlaybackSession(_createEngine(), _ui, () => document.Project, new AnimationFrameSource(_ui, () => FrameWindow()));
             session.SetMetronome(_metronomeOn);
             session.SetCountIn(_countInOn);
             if (_clickAudio is not null) session.ApplyClickOptions(_clickAudio);
@@ -184,6 +181,18 @@ public sealed class AvaloniaPlaybackSessions : IDisposable
         if (_createEngine is null) return Task.CompletedTask;
         _testNoteEngine ??= _createEngine();
         return _testNoteEngine.PreviewNoteAsync(deviceId, channel, program, note, lengthMs);
+    }
+
+    /// <summary>Cuts one preview note the test engine still holds (a string ring switched off or closed early): one note-off
+    /// on the same output, nothing else. Never creates a session and never panics; a song playing the same pitch keeps playing.</summary>
+    public void SilencePreview(SongDocument song, int deviceId, int channel, int pitch)
+    {
+        var note = Math.Clamp(pitch, 0, 127);
+        var status = 0x80 | (channel & 0x0F);
+        // The ring went out through the test engine (PlayTestNoteAsync), so its cut goes there too; without one yet,
+        // the song's session reaches the same shared output. No For: a silent window must not start an engine.
+        if (_testNoteEngine is not null) _testNoteEngine.SendLive(deviceId, status, note, 0);
+        else if (Existing(song) is { } session) session.Engine.SendLive(deviceId, status, note, 0);
     }
 
     /// <summary>Panic: note-offs, sustain off and all-notes-off on every session's output (also while stopped); each runs on its engine's output thread.</summary>

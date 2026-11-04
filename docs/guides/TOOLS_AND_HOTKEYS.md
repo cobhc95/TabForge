@@ -474,7 +474,7 @@ Presets are stored as *differences* from the defaults (`HotkeyPresets` in `Servi
 
 
 ## Add track
-- **Insert > Track > Tab track…** (and the Add track lane under the last track) opens the Add track window: the same window as Track properties (instrument catalogue via *Change…*, MIDI program/channel, mixer, tuning, frets, capo, name, colour, notes) plus **Position**: last (default), first, after the selected track, or as track number N. *Add track* adds it; Cancel adds nothing. Insert > Track > Bass / Drums / Keys still add a default track instantly.
+- **Insert > Track > Tab track…** (and the Add track lane under the last track) opens the Add track window: the same window as Track properties (instrument catalogue via *Change…*, MIDI program/channel, mixer, tuning, frets, capo card, name, colour, notes). It adds at the end of the song; Cancel adds nothing. Insert > Track > Bass / Drums / Keys still add a default track instantly at the end.
 - In Sections, **Add at cursor…** shows the starting bar before adding a marker. Click a section or select it and press Enter to navigate. Edit opens its displayed colour; with similar-section matching enabled, a colour change applies to that name group.
 
 ## Instrument panel and scale finder
@@ -487,6 +487,7 @@ Presets are stored as *differences* from the defaults (`HotkeyPresets` in `Servi
 - Right-click > *Appearance* (saved for every song and window; also Settings > Fretboard & Keyboard): *Key colours* on the keyboard (match the theme: grey in dark, white in light; or always grey / white); *Scale highlight style* (Dots, Rings, Cell tint, Note names or Degrees) and *Scale highlight colour* swatches with opacity; on the fretboard, *Fret marker colour* and *Fret marker brightness* for the position dots (default: slightly brighter than before; *Original* restores the old look).
 - Songs double-clicked in Explorer open as a new tab in the running TabForge (Settings > Files & Backups > *Open songs from Explorer in*: a new tab, the default, or a new window).
 - Note > Shift pitch down on an open string moves the note to the same pitch on the next lower free string.
+- **Fretboard look**: wood that follows the theme (dark rosewood, light birdseye maple; tiled, never stretched), binding rails, inlay dots, fret wires at true 12-TET places; a sounding string vibrates for its note's length. **Drag a drawn capo** to another fret: one undo step on release (not yet tried in the running app).
 
 ## Mixer and FX chains
 - **Mixer** button (fader icon, beside the tuning fork) or the *Mixer* hotkey: one strip per track, grouped **by instrument** (Guitars, Basses, Keys — piano, organ, synth —, Drums, Other), **compact** (Guitars, Basses, Drums, all other instruments) or **no groups**. The group strip in front of each group sets level (%), pan and pitch (semitones) for all its tracks, with group mute / solo. Right-click a track strip to move it to another group. Changes are live and undoable, and saved with the song.
@@ -499,6 +500,7 @@ Presets are stored as *differences* from the defaults (`HotkeyPresets` in `Servi
 
 ## Mix Table
 - F10: Mix Table for the selected beat (instrument, volume, pan, chorus, reverb, phaser, tremolo, tempo; transition; all tracks). Red dot above the beat in the score and in the timeline lane. Imported from .gp5 automations.
+- **Automation lanes** (headless-tested only, not yet tried in the running app): a strip under every open track row plus Master, toggled at the left of the row number. The item picker chooses the item (volume, pan, effects and instrument steps on a track; tempo and bus levels on Master), with ghost lines for the other items. Click adds a point; points and slopes drag; Alt+click deletes; one undo step per drag. Faders follow the live value at the playhead and never edit. Imported .gp5 mix-table changes arrive as lanes.
 
 ## Context menus from the keyboard
 - **Shift+F10** or the **Menu** key opens the right-click menu of the part that has the focus, with the first item focused (arrow keys move, Enter chooses, Esc closes). A control gesture, not in Shortcuts.
