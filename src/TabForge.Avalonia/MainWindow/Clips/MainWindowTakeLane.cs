@@ -30,7 +30,7 @@ public static class MainWindowTakeLane
     private const long MaxMidiBytes = 16L * 1024 * 1024;
 
     /// <summary>The window's dialogs: confirm (text, caption), ask for text (title, label, initial; null on Cancel) and pick one file to import (null on Cancel).</summary>
-    public sealed record Prompts(Func<string, string, Task<bool>> Confirm, Func<string, string, string, Task<string?>> AskText, Func<string?> PickFile);
+    public sealed record Prompts(Func<string, string, Task<bool>> Confirm, Func<string, string, string, Task<string?>> AskText, Func<Task<string?>> PickFile);
 
     /// <param name="importAudio">Lands audio files on a track from a song time through the drop's own import.</param>
     public static void Register(MainWindowCommands commands, MainWindowTabs songs, MainWindowDocumentPanes panes, ContextMenuHost menus, Action<string> status,
@@ -114,7 +114,7 @@ public static class MainWindowTakeLane
     {
         if (Clicked(document, menus) is not { } hit) return;
         var (track, lane, sec) = hit;
-        if (prompts.PickFile() is not { } path) return;
+        if (await prompts.PickFile() is not { } path) return;
         if (!FileTypes.IsMidi(Path.GetExtension(path))) { importAudio(new[] { path }, track, sec); return; }
         var name = Path.GetFileName(path);
         AudioClip? clip;

@@ -142,7 +142,7 @@ public sealed class MainWindowMediaCollect
         var missing = await Task.Run(() => MediaRelink.FindMissing(files, document.Media));
         var full = MediaStoredPaths.Resolve(storedFile, document.Media.BaseDirectory);
         if (missing.FirstOrDefault(m => string.Equals(m.FullPath, full, StringComparison.OrdinalIgnoreCase)) is not { } item) { _report("That audio file is not missing"); return; }
-        if (_dialogs.OpenFile(MediaRelinkWindow.LocateOptions(item), _owner) is not { } picked) return;
+        if (await _dialogs.OpenFileAsync(MediaRelinkWindow.LocateOptions(item), _owner) is not { } picked) return;
         var fixes = MediaRelink.SiblingsOf(picked, missing.Where(m => !ReferenceEquals(m, item)));
         fixes[item.FullPath] = picked;
         ApplyFixes(document, fixes, missing.Count);

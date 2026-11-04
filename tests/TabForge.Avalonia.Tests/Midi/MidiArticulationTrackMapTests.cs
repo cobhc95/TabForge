@@ -143,7 +143,7 @@ public sealed class MidiArticulationTrackMapTests : IDisposable
         var path = Path.Combine(_folder, "picked.mid");
         var settings = new MidiExportSettings { UseArticulationMap = true };
         var window = new MidiExportWindow(song, settings, hasSelection: false, snip: null, selection: null,
-            saveFile: (_, _) => path, quietSave: () => { }, report: _ => { }, openArticulations: _ => { });
+            saveFile: (_, _) => System.Threading.Tasks.Task.FromResult<string?>(path), quietSave: () => { }, report: _ => { }, openArticulations: _ => { });
         window.Show();
         DialogTestKit.RunQueuedUiWork();
         window.UpdateLayout();

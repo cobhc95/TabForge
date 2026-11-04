@@ -230,9 +230,9 @@ TabForge can write video through an `ffmpeg` program that is already on the comp
 "FFmpeg (found at ...)", shown only when an ffmpeg is found). TabForge starts it as a separate process and pipes raw frames and sound to it;
 it links no FFmpeg code.
 
-The **0.8.7 experimental Linux release packages include a separate BtbN `linux64-lgpl` FFmpeg build**; Windows uses an external encoder when selected.
-The Linux release workflow pins the dated archive URL and SHA-256 and passes it to `package-linux.sh --ffmpeg <folder>`.
-`ThirdParty/ffmpeg/LICENSE.txt`, `ThirdParty/ffmpeg/README.txt` and `ThirdParty/ffmpeg/BUILD_PROVENANCE.txt` ship beside the program; the written offer below applies.
+The **standard release packages do not contain FFmpeg**. The Linux packager can include a separate BtbN `linux64-lgpl` build with
+`package-linux.sh --ffmpeg <folder>`; when it does, `ThirdParty/ffmpeg/LICENSE.txt` and `ThirdParty/ffmpeg/README.txt` ship beside the program and the
+written offer below applies.
 
 - Project: https://ffmpeg.org/ . Licence: LGPL-2.1-or-later, or GPL-2.0-or-later for builds with libx264; which one applies is a property of the
   ffmpeg you install, not of TabForge. TabForge itself stays MIT because it only runs the program.

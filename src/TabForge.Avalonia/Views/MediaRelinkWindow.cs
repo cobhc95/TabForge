@@ -113,18 +113,18 @@ public sealed class MediaRelinkWindow : Window
         return grid;
     }
 
-    private void Browse()
+    private async void Browse()
     {
-        var picked = _dialogs.PickFolder(new FileDialogOptions { Key = TabForge.Services.DialogKeys.MediaSearchFolder, Title = "Search this folder (and below) for the missing audio" }, this);
+        var picked = await _dialogs.PickFolderAsync(new FileDialogOptions { Key = TabForge.Services.DialogKeys.MediaSearchFolder, Title = "Search this folder (and below) for the missing audio" }, this);
         if (picked is null) return;
         _folder.Text = picked;
         _ = SearchAsync(picked);
     }
 
     // One file located by hand: it is fixed, and so is every other missing file found beside it.
-    private void Locate(MissingMedia item)
+    private async void Locate(MissingMedia item)
     {
-        var picked = _dialogs.OpenFile(LocateOptions(item), this);
+        var picked = await _dialogs.OpenFileAsync(LocateOptions(item), this);
         if (picked is null) return;
         Fix(item.FullPath, picked, Tick + " located" + Dot + (Path.GetDirectoryName(picked) ?? picked));
         foreach (var (path, found) in MediaRelink.SiblingsOf(picked, _missing.Where(m => !string.Equals(m.FullPath, item.FullPath, StringComparison.OrdinalIgnoreCase) && !_fixes.ContainsKey(m.FullPath))))

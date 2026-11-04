@@ -175,10 +175,10 @@ public sealed partial class IrLoaderEditor : UserControl
         return string.IsNullOrEmpty(file) ? null : System.IO.Path.GetDirectoryName(file);
     }
 
-    private Task<string?> PickWav(TopLevel top, string? folder) => Task.FromResult(new AvaloniaFileDialogs(_host.DialogFolders).OpenFile(new TabForge.Platform.FileDialogOptions
+    private async Task<string?> PickWav(TopLevel top, string? folder) => await new AvaloniaFileDialogs(_host.DialogFolders).OpenFileAsync(new TabForge.Platform.FileDialogOptions
     {
         Key = TabForge.Services.DialogKeys.IrBrowse, Title = "Choose an impulse response", Filter = "WAV impulse responses (*.wav)|*.wav", InitialDirectory = folder,
-    }, top));
+    }, top);
 
     private static Grid SliderRow(string label, Slider slider, TextBlock value, string tip)
     {

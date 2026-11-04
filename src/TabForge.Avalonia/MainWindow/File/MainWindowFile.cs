@@ -165,7 +165,7 @@ public sealed class MainWindowFile
     /// </summary>
     private async Task ExportTo(TabForge.Models.SongProject project, FileDialogOptions options, string failurePrefix, Action<TabForge.Models.SongProject, string> write)
     {
-        var path = _dialogs.SaveFile(options, _owner);
+        var path = await _dialogs.SaveFileAsync(options, _owner);
         if (path is null) return;
         try
         {

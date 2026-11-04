@@ -75,6 +75,32 @@ public class TrackPropertiesStringRingerTests
     }
 
     [AvaloniaFact]
+    public void AStringShowsAHandLightsUnderThePointerAndGlowsWhenStruck()
+    {
+        var (window, _) = Open();
+        var hit = window.GetLogicalDescendants().OfType<Panel>().Single(c => c.Name == "StringHit1");
+        var hover = window.GetLogicalDescendants().OfType<Border>().Single(c => c.Name == "StringHover1");
+        var glow = window.GetLogicalDescendants().OfType<Border>().Single(c => c.Name == "StringGlow1");
+
+        Assert.NotNull(hit.Cursor);   // the pointing hand: set on the hit area only, so the speaker and note box keep their own
+        Assert.False(hover.IsVisible);
+        Assert.Equal(0, glow.Opacity);
+
+        var pointer = new Pointer(Pointer.GetNextFreeId(), PointerType.Mouse, true);
+        hit.RaiseEvent(new PointerEventArgs(InputElement.PointerEnteredEvent, hit, pointer, hit, new Point(2, 2),
+            0, new PointerPointProperties(RawInputModifiers.None, PointerUpdateKind.Other), KeyModifiers.None));
+        Assert.True(hover.IsVisible);
+        hit.RaiseEvent(new PointerEventArgs(InputElement.PointerExitedEvent, hit, pointer, hit, new Point(2, 2),
+            0, new PointerPointProperties(RawInputModifiers.None, PointerUpdateKind.Other), KeyModifiers.None));
+        Assert.False(hover.IsVisible);
+
+        PressString(window, 1);
+        Assert.True(glow.Opacity > 0.5, "the string lights up the moment it is struck");
+        window.Close();
+        Assert.Equal(0, glow.Opacity);
+    }
+
+    [AvaloniaFact]
     public void ClickingAStringRingsItsSoundingPitch()
     {
         var (window, ringer) = Open();

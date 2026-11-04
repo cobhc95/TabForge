@@ -274,20 +274,20 @@ public sealed partial class MainWindow
         MainWindowTakeLane.Register(commands, songs, panes, compose.ContextMenus, showStatus, new MainWindowTakeLane.Prompts(
             async (text, caption) => await AvaloniaMessageBox.Show(new AvaloniaDialogHost(), this, text, caption, MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxAnswer.No) == MessageBoxAnswer.Yes,
             (title, label, initial) => new TextPromptWindow(title, label, initial).ShowDialog<string?>(this),
-            () => new AvaloniaFileDialogs(settings?.DialogFolders).OpenFile(new TabForge.Platform.FileDialogOptions { Key = TabForge.Services.DialogKeys.AudioImport, Title = "Import audio or MIDI file",
+            () => new AvaloniaFileDialogs(settings?.DialogFolders).OpenFileAsync(new TabForge.Platform.FileDialogOptions { Key = TabForge.Services.DialogKeys.AudioImport, Title = "Import audio or MIDI file",
                 Filter = "Audio and MIDI files|*.wav;*.mp3;*.aif;*.aiff;*.flac;*.ogg;*.m4a;*.wma;*.mid;*.midi|Audio files|*.wav;*.mp3;*.aif;*.aiff;*.flac;*.ogg;*.m4a;*.wma|MIDI files|*.mid;*.midi" }, this)),
             compose.EditorPane, audioDrop.ImportOnTrack);
         // Insert menu: the commands that are new (bars after / several / at the end, Lyrics, audio and MIDI files and an empty MIDI clip at the cursor).
         MainWindowInsertMenu.Register(commands, songs, panes, scorePreview,
             new MainWindowInsertMenu.Prompts(
                 bars => DialogLauncher.Ask<InsertBarsWindow, InsertBarsAnswer?>(this, () => new InsertBarsWindow(bars)),
-                midi => new AvaloniaFileDialogs(settings?.DialogFolders).OpenFile(new TabForge.Platform.FileDialogOptions { Key = midi ? TabForge.Services.DialogKeys.MidiInsert : TabForge.Services.DialogKeys.AudioInsert, Title = midi ? "Insert MIDI file" : "Insert audio file",
+                midi => new AvaloniaFileDialogs(settings?.DialogFolders).OpenFileAsync(new TabForge.Platform.FileDialogOptions { Key = midi ? TabForge.Services.DialogKeys.MidiInsert : TabForge.Services.DialogKeys.AudioInsert, Title = midi ? "Insert MIDI file" : "Insert audio file",
                     Filter = midi ? "MIDI files|*.mid;*.midi" : "Audio files|*.wav;*.mp3;*.aif;*.aiff;*.flac;*.ogg;*.m4a;*.wma" }, this)),
             showStatus, () => MainWindowInsertMenu.ShowLyrics(this, compose.Dock), audioDrop.InsertAtAsync);
         commands.Add("File.ExportMidi", () => { new MidiExportWindow(songs.Active.Project, settings?.Settings.MidiExport ?? new TabForge.Rendering.MidiExportSettings(),
             hasSelection: scorePreview.Editor.HasSelection, snip: songs.Active.Selection.Snapshot(),
             selection: scorePreview.Editor.HasSelection ? scorePreview.Editor.SelectionCellRange : null,
-            saveFile: (options, window) => dialogs.SaveFile(options, window),
+            saveFile: (options, window) => dialogs.SaveFileAsync(options, window),
             quietSave: () => settings?.SaveSettingsQuietly(), report: showStatus,
             openArticulations: track => shared.FxWindows.OpenArticulations(track)).ShowDialog(this); });
         commands.Add("File.ExportGuitarPro", () => _ = saving.ExportGuitarPro(songs.Active, async (report, name) => { var choice = GpExportChoice.Cancel; await new GpExportPreflightWindow(report, GpExportKind.Export, name, c => choice = c).ShowDialog(this); return choice; }));

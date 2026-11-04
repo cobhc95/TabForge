@@ -28,6 +28,9 @@ public sealed class AvaloniaFileDialogs : IFileDialogs
 
     public string? OpenFile(FileDialogOptions options, object? owner) => OpenFiles(options with { Multiselect = false }, owner)?.FirstOrDefault();
 
+    /// <summary>The one-file open dialog awaited, never through a nested dispatcher frame. Must be called on the UI thread.</summary>
+    public async Task<string?> OpenFileAsync(FileDialogOptions options, object? owner) => (await OpenFilesAsync(options with { Multiselect = false }, owner))?.FirstOrDefault();
+
     public string[]? OpenFiles(FileDialogOptions options, object? owner) => Wait(() => OpenFilesAsync(options, owner));
 
     /// <summary>The open dialog awaited, never through a nested dispatcher frame: the File > Open command (a menu or key handler on the UI thread) returns to the
@@ -42,14 +45,14 @@ public sealed class AvaloniaFileDialogs : IFileDialogs
         return paths;
     }
 
-    public string? SaveFile(FileDialogOptions options, object? owner)
+    public string? SaveFile(FileDialogOptions options, object? owner) => Wait(() => SaveFileAsync(options, owner));
+
+    /// <summary>The save dialog awaited, never through a nested dispatcher frame (see <see cref="OpenFilesAsync"/>). Must be called on the UI thread.</summary>
+    public async Task<string?> SaveFileAsync(FileDialogOptions options, object? owner)
     {
         var storage = StorageOf(owner);
-        var file = Wait(async () =>
-        {
-            var start = await ResolveStartFolder(_folders, options.Key, options.InitialDirectory);
-            return await storage.SaveFilePickerAsync(SaveOptions(options, await StorageFolder(storage, start)));
-        });
+        var start = await ResolveStartFolder(_folders, options.Key, options.InitialDirectory);
+        var file = await storage.SaveFilePickerAsync(SaveOptions(options, await StorageFolder(storage, start)));
         var saved = file is null ? null : CheckedFiles(new[] { file.TryGetLocalPath() })?[0];
         if (saved is not null) _folders?.Remember(options.Key, saved, isFolder: false);
         return saved;
@@ -57,14 +60,17 @@ public sealed class AvaloniaFileDialogs : IFileDialogs
 
     public string? PickFolder(FileDialogOptions options, object? owner) => PickFolders(options with { Multiselect = false }, owner)?.FirstOrDefault();
 
-    public string[]? PickFolders(FileDialogOptions options, object? owner)
+    /// <summary>The one-folder dialog awaited, never through a nested dispatcher frame. Must be called on the UI thread.</summary>
+    public async Task<string?> PickFolderAsync(FileDialogOptions options, object? owner) => (await PickFoldersAsync(options with { Multiselect = false }, owner))?.FirstOrDefault();
+
+    public string[]? PickFolders(FileDialogOptions options, object? owner) => Wait(() => PickFoldersAsync(options, owner));
+
+    /// <summary>The folder dialog awaited, never through a nested dispatcher frame (see <see cref="OpenFilesAsync"/>). Must be called on the UI thread.</summary>
+    public async Task<string[]?> PickFoldersAsync(FileDialogOptions options, object? owner)
     {
         var storage = StorageOf(owner);
-        var folders = Wait(async () =>
-        {
-            var start = await ResolveStartFolder(_folders, options.Key, options.InitialDirectory);
-            return await storage.OpenFolderPickerAsync(FolderOptions(options, await StorageFolder(storage, start)));
-        });
+        var start = await ResolveStartFolder(_folders, options.Key, options.InitialDirectory);
+        var folders = await storage.OpenFolderPickerAsync(FolderOptions(options, await StorageFolder(storage, start)));
         var paths = LocalPaths(folders.Select(folder => folder.TryGetLocalPath()))?.Select(path => FilePathPolicy.OutputDirectory(path, "chosen folder")).ToArray();
         if (paths is { Length: > 0 }) _folders?.Remember(options.Key, paths[0], isFolder: true);
         return paths;

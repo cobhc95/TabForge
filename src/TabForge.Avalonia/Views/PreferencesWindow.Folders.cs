@@ -44,7 +44,7 @@ public sealed partial class PreferencesWindow
             Commit();
         }
 
-        add.Click += (_, _) => AddAll(PickFolders(row.Title));
+        add.Click += async (_, _) => AddAll(await PickFolders(row.Title));
         remove.Click += (_, _) => RemoveSelected();
         list.SelectionChanged += (_, _) => remove.IsEnabled = list.SelectedItem is not null;
         list.KeyDown += (_, e) => { if (e.Key == Key.Delete) { RemoveSelected(); e.Handled = true; } };
@@ -67,8 +67,8 @@ public sealed partial class PreferencesWindow
     }
 
     /// <summary>The folders the user picks in the system folder dialog (the seam <see cref="PreferencesRowActions.PickFolders"/> replaces it); null when cancelled.</summary>
-    private string[]? PickFolders(string title) =>
+    private async System.Threading.Tasks.Task<string[]?> PickFolders(string title) =>
         _actions?.PickFolders is { } pick ? pick(this)
-            : _dialogs.PickFolders(new TabForge.Platform.FileDialogOptions { Key = TabForge.Services.DialogKeys.SettingsFolder, Title = "Add folders: " + title, Multiselect = true }, this);
+            : await _dialogs.PickFoldersAsync(new TabForge.Platform.FileDialogOptions { Key = TabForge.Services.DialogKeys.SettingsFolder, Title = "Add folders: " + title, Multiselect = true }, this);
 }
 #pragma warning restore CS0618

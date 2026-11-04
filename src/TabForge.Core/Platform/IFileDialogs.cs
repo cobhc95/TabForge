@@ -12,6 +12,8 @@ public interface IFileDialogs
 {
     /// <summary>Shows an open dialog for one file; returns its path, or null when cancelled. <paramref name="owner"/> is the host window, or null.</summary>
     string? OpenFile(FileDialogOptions options, object? owner);
+    /// <summary>The same dialog as <see cref="OpenFile"/> without holding the calling thread (see <see cref="OpenFilesAsync"/>); the default runs the synchronous call.</summary>
+    Task<string?> OpenFileAsync(FileDialogOptions options, object? owner) => Task.FromResult(OpenFile(options, owner));
     /// <summary>Shows an open dialog for files (the options set multi-select); returns the paths, or null when cancelled.</summary>
     string[]? OpenFiles(FileDialogOptions options, object? owner);
     /// <summary>The same dialog as <see cref="OpenFiles"/> without holding the calling thread: an adapter awaits its picker instead of running a nested message loop.
@@ -19,10 +21,16 @@ public interface IFileDialogs
     Task<string[]?> OpenFilesAsync(FileDialogOptions options, object? owner) => Task.FromResult(OpenFiles(options, owner));
     /// <summary>Shows a save dialog; returns the path, or null when cancelled.</summary>
     string? SaveFile(FileDialogOptions options, object? owner);
+    /// <summary>The same dialog as <see cref="SaveFile"/> without holding the calling thread (see <see cref="OpenFilesAsync"/>); the default runs the synchronous call.</summary>
+    Task<string?> SaveFileAsync(FileDialogOptions options, object? owner) => Task.FromResult(SaveFile(options, owner));
     /// <summary>Shows a folder dialog for one folder; returns its path, or null when cancelled.</summary>
     string? PickFolder(FileDialogOptions options, object? owner);
+    /// <summary>The same dialog as <see cref="PickFolder"/> without holding the calling thread (see <see cref="OpenFilesAsync"/>); the default runs the synchronous call.</summary>
+    Task<string?> PickFolderAsync(FileDialogOptions options, object? owner) => Task.FromResult(PickFolder(options, owner));
     /// <summary>Shows a folder dialog for folders (the options set multi-select); returns the paths, or null when cancelled.</summary>
     string[]? PickFolders(FileDialogOptions options, object? owner);
+    /// <summary>The same dialog as <see cref="PickFolders"/> without holding the calling thread (see <see cref="OpenFilesAsync"/>); the default runs the synchronous call.</summary>
+    Task<string[]?> PickFoldersAsync(FileDialogOptions options, object? owner) => Task.FromResult(PickFolders(options, owner));
 }
 
 /// <summary>
@@ -44,3 +52,4 @@ public sealed record FileDialogOptions
     /// <summary>The dialog's stable key (<see cref="TabForge.Services.DialogKeys"/>): it starts in the folder that key last used and saves the folder of its pick. Null: no memory.</summary>
     public string? Key { get; init; }
 }
+

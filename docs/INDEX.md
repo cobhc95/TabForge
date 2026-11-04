@@ -9,6 +9,7 @@ Onboarding path: README → ARCHITECTURE → AREA-MAP → COMMANDS. This table i
 | [COMMANDS](guides/COMMANDS.md) | 330 main-window command ids, registrants |
 | [TOOLS_AND_HOTKEYS](guides/TOOLS_AND_HOTKEYS.md) | Palette tools, hotkeys, bindings |
 | [TESTING](guides/TESTING.md) | Test tiers, TEST-BOX, run procedure |
+| [RELEASING](guides/RELEASING.md) | One-command release |
 | [DEBUGGING](guides/DEBUGGING.md) | Debug flows, Batch-2 notes |
 | [DEBUG_SYMPTOMS](guides/DEBUG_SYMPTOMS.md) | Symptom → doc pointer table |
 | [ARCHITECTURE_SIMPLIFY](architecture/ARCHITECTURE_SIMPLIFY.md), [ARCHITECTURE_TIDY](architecture/ARCHITECTURE_TIDY.md) | Simplification proposals, tidy checklist |

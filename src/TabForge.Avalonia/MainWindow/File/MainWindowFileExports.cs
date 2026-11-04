@@ -114,7 +114,7 @@ public sealed class MainWindowFileExports
         Func<RenderPlan, IProgress<TabForge.Audio.Contracts.RenderProgressInfo>, System.Threading.CancellationToken, System.Threading.Tasks.Task<TabForge.Audio.Contracts.RenderResult>>? run =
             Runner is { Engine: not null } runner ? (plan, progress, cancel) => Announce("Render", plan.MasterFile ?? plan.Stems.Values.FirstOrDefault(), () => runner.Run(song, plan, _renderSettings, window ?? owner, progress, cancel), r => r.Files.Count > 0 ? r.Files[0].Path : null) : null;
         window = new RenderWindow(project, _renderSettings, hasSelection: _hasSelection(), openVideoExport: () => ShowVideo(song, owner),
-            pickFolder: start => _dialogs.PickFolder(new FileDialogOptions { Key = TabForge.Services.DialogKeys.RenderFolder, Title = "Choose the render folder", InitialDirectory = start }, owner),
+            pickFolder: start => _dialogs.PickFolderAsync(new FileDialogOptions { Key = TabForge.Services.DialogKeys.RenderFolder, Title = "Choose the render folder", InitialDirectory = start }, owner),
             run: run, mp3Available: run is null || RenderJob.Mp3Available(), selection: _hasSelection() ? Selection() : null, loop: song.Selection.LoopSnapshot(), snip: song.Selection.Snapshot());
         window.ShowDialog(owner);
     }
@@ -131,7 +131,7 @@ public sealed class MainWindowFileExports
         Func<VideoExportPlan, IProgress<VideoExportProgress>, System.Threading.CancellationToken, System.Threading.Tasks.Task<VideoExportResult>>? run =
             Exporter is { Engine: not null } exporter ? (plan, progress, cancel) => Announce("Video export", plan.Path, () => exporter.Run(song, plan, window ?? owner, progress, cancel), _ => null) : null;
         window = new VideoExportWindow(song.Project, _videoSettings, hasSelection: _hasSelection(), run: run,
-            saveFile: options => _dialogs.SaveFile(options, window ?? owner), selection: _hasSelection() ? Selection() : null, notation: Notation());
+            saveFile: options => _dialogs.SaveFileAsync(options, window ?? owner), selection: _hasSelection() ? Selection() : null, notation: Notation());
         window.ShowDialog(owner);
     }
 }

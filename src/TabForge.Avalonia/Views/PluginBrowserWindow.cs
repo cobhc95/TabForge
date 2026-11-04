@@ -204,9 +204,9 @@ public sealed class PluginBrowserWindow : Window
         var scanStandard = AddButton("Scan the standard VST folders", "Plugins.ScanStandard",
             "Turns on Settings > Audio & Plug-ins > Also scan the standard VST folders, then scans: " + string.Join(", ", VstScannerService.StandardFolderLabels) + ", and the common folders list (Edit list…).",
             () => { _session.EnableStandardFolders(); _scanStandard.IsVisible = false; _ = Scan(null); });
-        AddButton("Add folder…", "Plugins.AddFolder", "Add one or more folders that hold plug-ins; they are kept in Settings > Audio & Plug-ins.", () =>
+        AddButton("Add folder…", "Plugins.AddFolder", "Add one or more folders that hold plug-ins; they are kept in Settings > Audio & Plug-ins.", async () =>
         {
-            var chosen = _files.PickFolders(new TabForge.Platform.FileDialogOptions { Key = TabForge.Services.DialogKeys.PluginFolder, Title = "Add plug-in folders", Multiselect = true }, this);
+            var chosen = await _files.PickFoldersAsync(new TabForge.Platform.FileDialogOptions { Key = TabForge.Services.DialogKeys.PluginFolder, Title = "Add plug-in folders", Multiselect = true }, this);
             if (chosen is null) return;
             _session.AddFolders(chosen);
             _ = Scan(null);
@@ -227,9 +227,9 @@ public sealed class PluginBrowserWindow : Window
         return scanStandard;
     }
 
-    private void BrowseForFile()
+    private async void BrowseForFile()
     {
-        var path = _files.OpenFile(new TabForge.Platform.FileDialogOptions { Key = TabForge.Services.DialogKeys.PluginFile, Title = "Choose a plug-in", Filter = PluginBrowserSession.PluginFileFilter }, this);
+        var path = await _files.OpenFileAsync(new TabForge.Platform.FileDialogOptions { Key = TabForge.Services.DialogKeys.PluginFile, Title = "Choose a plug-in", Filter = PluginBrowserSession.PluginFileFilter }, this);
         if (path is null) return;
         if (PluginBrowserSession.FromFile(path, out var problem) is not { } info) { _status.Text = problem ?? ""; return; }
         Chosen = info;

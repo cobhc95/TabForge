@@ -102,7 +102,12 @@ public sealed class PluginTrust
         return RemoteRoots.GetOrAdd(root, r =>
         {
             try { return new DriveInfo(r).DriveType is not DriveType.Fixed; }
-            catch (Exception) { return true; } // Not logged: drive type probe, cached per root: remote is the safe default
+            catch (Exception ex)
+            {
+                // Cached per root, so one line per drive: remote (needs approval) is the safe default.
+                TabForge.Services.Trace.Error(TabForge.Services.Trace.Engine, $"plug-in trust: drive type of {r} could not be read, treated as remote: {ex.Message}");
+                return true;
+            }
         });
     }
 

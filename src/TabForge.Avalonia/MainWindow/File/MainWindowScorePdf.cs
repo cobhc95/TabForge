@@ -1,5 +1,6 @@
 using TabForge.Avalonia.Views;
 using System;
+using System.Threading.Tasks;
 using System.IO;
 using Avalonia.Controls;
 using TabForge.Audio.Contracts;
@@ -26,12 +27,12 @@ public static class MainWindowScorePdf
     /// <param name="report">Shows the outcome or the failure on the status line.</param>
     public static void Register(MainWindowCommands commands, ScorePreviewView score, MainWindowTabs tabs, IFileDialogs dialogs, Window owner,
         MainWindowSettings? settings, Action<string> report) =>
-        commands.Add(CommandId, () => Export(score, tabs, dialogs, owner, settings, report));
+        commands.Add(CommandId, () => _ = Export(score, tabs, dialogs, owner, settings, report));
 
-    private static void Export(ScorePreviewView score, MainWindowTabs tabs, IFileDialogs dialogs, Window owner, MainWindowSettings? settings, Action<string> report)
+    private static async Task Export(ScorePreviewView score, MainWindowTabs tabs, IFileDialogs dialogs, Window owner, MainWindowSettings? settings, Action<string> report)
     {
         var document = tabs.Active;
-        var path = dialogs.SaveFile(new FileDialogOptions
+        var path = await dialogs.SaveFileAsync(new FileDialogOptions
         {
             Key = TabForge.Services.DialogKeys.ExportPdf, Title = "Export PDF", Filter = "PDF (*.pdf)|*.pdf", DefaultExt = ".pdf", AddExtension = true,
             FileName = SafeFileNames.SafeFileName(document.Project.Title, "Untitled"),

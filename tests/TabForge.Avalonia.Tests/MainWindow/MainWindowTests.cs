@@ -4,6 +4,7 @@ using Avalonia.Headless.XUnit;
 using Xunit;
 
 [assembly: AvaloniaTestApplication(typeof(TabForge.Avalonia.Tests.TestAppBuilder))]
+// Keep the default (a new app per test): PerAssembly was tried and broke about 270 tests (no frame rendered, PlatformNotSupported), so the suite relies on it. Speed comes from tools/test-watchdog.ps1 (parallel processes).
 
 namespace TabForge.Avalonia.Tests;
 
@@ -12,7 +13,8 @@ public static class TestAppBuilder
 {
     // Spacing is Comfortable (factor 1.0) for the tests: the layout numbers are written for it; Compact is the product default and a test that needs it sets it explicitly.
     public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<App>().UseSkia().UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
-        .AfterSetup(_ => TabForge.Avalonia.UiDensityResources.Publish(global::Avalonia.Application.Current!.Resources, new TabForge.Services.AppearanceSettings { Density = "Comfortable" }));
+        .AfterSetup(_ => TabForge.Avalonia.UiDensityResources.Publish(global::Avalonia.Application.Current!.Resources, new TabForge.Services.AppearanceSettings { Density = "Comfortable" }))
+        .AfterSetup(_ => { TestRunProbe.CountSetup(); TestRunProbe.Watch(); TestWindowJanitorAttribute.Watch(); });
 }
 
 /// <summary>Owns: the preview window check. Tests: the window opens headless with the preview title.</summary>

@@ -59,7 +59,7 @@ public sealed class RenderWindow : Window
     private readonly TextBlock _hint = ToolWindowParts.Small(""), _status = ToolWindowParts.Status("StatusText");
     private readonly Button _render = new() { Content = "Render", Padding = new Thickness(18, 4, 18, 4) };
     private readonly Button _cancel = new() { Name = "Cancel", Content = CloseLabel, Padding = new Thickness(14, 4, 14, 4) };
-    private readonly Func<string, string?>? _pickFolder;
+    private readonly Func<string, Task<string?>>? _pickFolder;
     private readonly Func<RenderPlan, IProgress<RenderProgressInfo>, CancellationToken, Task<RenderResult>>? _run;
     private readonly bool _mp3Ok;
     private readonly (int StartBar, int StartCell, int EndBar, int EndCell)? _selection;   // the score's note selection when the dialog opened
@@ -77,7 +77,7 @@ public sealed class RenderWindow : Window
     /// <param name="run">Renders the plan with progress and cancel (AvaloniaRenderRunner); null in the preview, where Render reports that it needs the full app.</param>
     /// <param name="selection">The score selection (bars and cells) the selection choices render; null without one.</param>
     /// <param name="mp3Available">Whether the MP3 encoder is there (RenderJob.Mp3Available); the MP3 formats are disabled without it.</param>
-    public RenderWindow(SongProject project, RenderSettings settings, bool hasSelection, Action? openVideoExport, Func<string, string?>? pickFolder = null,
+    public RenderWindow(SongProject project, RenderSettings settings, bool hasSelection, Action? openVideoExport, Func<string, Task<string?>>? pickFolder = null,
         Func<RenderPlan, IProgress<RenderProgressInfo>, CancellationToken, Task<RenderResult>>? run = null, bool mp3Available = true,
         (int StartBar, int StartCell, int EndBar, int EndCell)? selection = null, LoopRegionSnapshot? loop = null, SelectionSnapshot? snip = null)
     {
@@ -161,7 +161,7 @@ public sealed class RenderWindow : Window
     private Border BuildOutputGroup()
     {
         var browse = new Button { Name = "Browse", Content = "Browse…", Padding = new Thickness(10, 2, 10, 2) };
-        browse.Click += (_, _) => BrowsePressed();
+        browse.Click += async (_, _) => await BrowsePressed();
         ToolWindowParts.NotAvailable(browse, _pickFolder is null);
         var output = new StackPanel();
         output.Children.Add(ToolWindowParts.Row(_dir, browse));
@@ -223,10 +223,10 @@ public sealed class RenderWindow : Window
     }
 
     /// <summary>Puts the picked folder in the output box; a cancel leaves it as it was.</summary>
-    public void BrowsePressed()
+    public async Task BrowsePressed()
     {
         if (_pickFolder is null) { _status.Text = ToolWindowParts.NeedsFullApp("Choosing a folder"); return; }
-        if (_pickFolder(_dir.Text ?? "") is { Length: > 0 } folder) _dir.Text = folder;
+        if (await _pickFolder(_dir.Text ?? "") is { Length: > 0 } folder) _dir.Text = folder;
     }
 
     /// <summary>The output folder box's text.</summary>

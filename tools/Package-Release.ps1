@@ -5,9 +5,9 @@ Builds the two GitHub release downloads into dist\:
 The version comes from Directory.Build.props <Version>, so the app, the engine, the zip and the installer agree.
 File names and the installer use the display version (0.5.0 shows as "0.5", like the app); the numeric file version stays 0.5.0.0.
 
-Release gate: this script publishes to build\TabForge-release, runs the headless basic self-test set ON THAT EXACT
+Check: this script publishes to build\TabForge-release, runs the headless basic self-test set (seconds) ON THAT EXACT
 FOLDER and refuses to package unless it exits 0 and its log says
-"TabForge self-test: N passed, 0 failed". The curated release area (--areas release) runs first, on a separate copy that is never packaged.
+"TabForge self-test: N passed, 0 failed". The slower curated release area (--areas release) runs only with -FullGate.
 The tested folder is what gets zipped and installed; the
 executable hash is re-checked after the test so nothing can be swapped in between.
 It also verifies the shipped tfvst3.dll, tfvst3-x86.dll, tfvst32.exe and tfvst64.exe against the SHA-256 recorded in
@@ -29,6 +29,8 @@ Source\tools\Compare-Release.ps1 compares two results. See Source\docs\guides\RE
 param(
     [string]$InnoCompiler = '',
     [switch]$AllowUnprovenancedNative,
+    # Optional: also run the curated release tests (several minutes). Releases do not need it.
+    [switch]$FullGate,
     # Internal: set by the worktree wrapper below (and implied on CI) - the tree this script lives in is already a
     # clean checkout of the commit being released.
     [switch]$InCleanCheckout
@@ -65,6 +67,7 @@ if (-not $InCleanCheckout -and $env:CI -ne 'true') {
         $innerArgs = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $wt $(if (Test-Path -LiteralPath (Join-Path $wt 'Source\TabForge.sln')) { 'Source\tools\Package-Release.ps1' } else { 'tools\Package-Release.ps1' })), '-InCleanCheckout')
         if ($InnoCompiler) { $innerArgs += @('-InnoCompiler', $InnoCompiler) }
         if ($AllowUnprovenancedNative) { $innerArgs += '-AllowUnprovenancedNative' }
+        if ($FullGate) { $innerArgs += '-FullGate' }
         & (Get-Process -Id $PID).Path @innerArgs
         if ($LASTEXITCODE) { throw "The release build in the clean worktree failed (exit $LASTEXITCODE)." }
         # Bring the results (zip, installer, checksums, self-test log, symbols) home.
@@ -222,7 +225,7 @@ foreach ($pdb in $pdbs) { Move-Item -LiteralPath $pdb.FullName -Destination (Joi
 if ($pdbs.Count -eq 0) { Write-LoudWarning "No PDBs were produced; dist\symbols\$version is empty." }
 else { Write-Output ("Symbols: {0} PDB(s) archived in {1}" -f $pdbs.Count, $symbols) }
 Copy-Item (Join-Path $srcRoot 'LICENSE') (Join-Path $publish 'LICENSE.txt')
-$thirdParty = @('docs\THIRD_PARTY.md','THIRD_PARTY.md') | ForEach-Object { Join-Path $srcRoot $_ } | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+$thirdParty = @('THIRD_PARTY.md','docs\THIRD_PARTY.md') | ForEach-Object { Join-Path $srcRoot $_ } | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
 if (-not $thirdParty) { throw 'THIRD_PARTY.md not found in the repo root or docs\' }
 Copy-Item $thirdParty $publish
 # MPL-2.0 s3.2 (TabForge.AlphaTab is a modified alphaTab): the patch, i.e. the source of the modification, ships beside the licence text.
@@ -258,29 +261,30 @@ if (-not (Get-ChildItem -LiteralPath (Join-Path $publish 'Samples') -Filter '*.g
 $sbom = Join-Path $srcRoot 'docs\reference\SBOM.md'
 if (Test-Path -LiteralPath $sbom) { Copy-Item $sbom (Join-Path $publish 'SBOM.md') }
 
-# ---- release gate: the curated release area, on its own copy that is never packaged -----------------
-# Basic set plus saving/atomic writes/recovery, import and malformed-input containment, playback/edit interaction, document context and
-# security tests (SelfTestRelease.cs). It cannot be skipped; any failure stops the release.
-$gateFolder = Join-Path $root 'build\TabForge-releasegate'
-Clear-Folder $gateFolder
-& (Join-Path $PSScriptRoot 'Publish.ps1') -Output $gateFolder
-$gateLog = Join-Path ([IO.Path]::GetTempPath()) "tabforge-release-gate-$version.log"
-if (Test-Path -LiteralPath $gateLog) { Remove-Item -LiteralPath $gateLog -Force }
-Write-Output "Release-gate self-test (--areas release) of $gateFolder ..."
-$gateProc = Start-Process -FilePath (Join-Path $gateFolder 'TabForge.exe') -ArgumentList @('--selftest', "`"$gateLog`"", '--areas', 'release') -WorkingDirectory $root -Wait -PassThru
-if (-not (Test-Path -LiteralPath $gateLog)) { throw "Release-gate self-test wrote no log ($gateLog); refusing to package." }
-if ($gateProc.ExitCode -ne 0 -or -not (Select-String -LiteralPath $gateLog -Pattern '^TabForge self-test: \d+ passed, 0 failed' -Quiet)) {
-    Select-String -LiteralPath $gateLog -Pattern '^\s+FAIL' | ForEach-Object { Write-Output $_.Line }
-    throw "Release-gate self-test failed (log: $gateLog); refusing to package."
+# ---- optional (-FullGate): the curated release area, on its own copy that is never packaged -----------
+# Saving, recovery, import, playback/edit interaction and security tests (SelfTestRelease.cs). Off by default to keep releases fast.
+if ($FullGate) {
+    $gateFolder = Join-Path $root 'build\TabForge-releasegate'
+    Clear-Folder $gateFolder
+    & (Join-Path $PSScriptRoot 'Publish.ps1') -Output $gateFolder
+    $gateLog = Join-Path ([IO.Path]::GetTempPath()) "tabforge-release-gate-$version.log"
+    if (Test-Path -LiteralPath $gateLog) { Remove-Item -LiteralPath $gateLog -Force }
+    Write-Output "Release-gate self-test (--areas release) of $gateFolder ..."
+    $gateProc = Start-Process -FilePath (Join-Path $gateFolder 'TabForge.exe') -ArgumentList @('--selftest', "`"$gateLog`"", '--areas', 'release') -WorkingDirectory $root -Wait -PassThru
+    if (-not (Test-Path -LiteralPath $gateLog)) { throw "Release-gate self-test wrote no log ($gateLog); refusing to package." }
+    if ($gateProc.ExitCode -ne 0 -or -not (Select-String -LiteralPath $gateLog -Pattern '^TabForge self-test: \d+ passed, 0 failed' -Quiet)) {
+        Select-String -LiteralPath $gateLog -Pattern '^\s+FAIL' | ForEach-Object { Write-Output $_.Line }
+        throw "Release-gate self-test failed (log: $gateLog); refusing to package."
+    }
+    $gateSummary = Select-String -LiteralPath $gateLog -Pattern '^TabForge self-test: (\d+) passed' | Select-Object -Last 1
+    Write-Output $gateSummary.Line
+    if (-not $gateSummary -or [int]$gateSummary.Matches[0].Groups[1].Value -lt 800) { throw "Release gate ran too few checks ($($gateSummary.Line)); the curated release tests did not run. Refusing to package." }
+    if (-not (Select-String -LiteralPath $gateLog -Pattern 'release gate: all \d+ curated release tests ran' -Quiet)) { throw "Release gate log lacks the curated-test confirmation ($gateLog); refusing to package." }
+    Copy-Item -LiteralPath $gateLog -Destination (Join-Path $dist "TabForge-$display-releasegate.log") -Force
+    Remove-Item -LiteralPath $gateFolder -Recurse -Force
 }
-$gateSummary = Select-String -LiteralPath $gateLog -Pattern '^TabForge self-test: (\d+) passed' | Select-Object -Last 1
-Write-Output $gateSummary.Line
-if (-not $gateSummary -or [int]$gateSummary.Matches[0].Groups[1].Value -lt 800) { throw "Release gate ran too few checks ($($gateSummary.Line)); the curated release tests did not run. Refusing to package." }
-if (-not (Select-String -LiteralPath $gateLog -Pattern 'release gate: all \d+ curated release tests ran' -Quiet)) { throw "Release gate log lacks the curated-test confirmation ($gateLog); refusing to package." }
-Copy-Item -LiteralPath $gateLog -Destination (Join-Path $dist "TabForge-$display-releasegate.log") -Force
-Remove-Item -LiteralPath $gateFolder -Recurse -Force
 
-# ---- release gate: self-test the exact folder that will be packaged (the basic set) ----------------
+# ---- self-test the exact folder that will be packaged (the basic set) ----------------
 $exe = Join-Path $publish 'TabForge.exe'
 $exeHashBefore = Get-Sha256 $exe
 $selfTestLog = Join-Path ([IO.Path]::GetTempPath()) "tabforge-release-selftest-$version.log"

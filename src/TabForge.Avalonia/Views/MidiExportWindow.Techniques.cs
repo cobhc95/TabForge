@@ -170,7 +170,7 @@ public sealed partial class MidiExportWindow
     /// <summary>Reads a preset file off the UI thread, keeps it with the user's presets and picks it for this track.</summary>
     private async Task OpenMapFromFileAsync(TechniqueRow row)
     {
-        var picked = _mapFiles.OpenFile(new TabForge.Platform.FileDialogOptions
+        var picked = await _mapFiles.OpenFileAsync(new TabForge.Platform.FileDialogOptions
         {
             Key = DialogKeys.ArticulationsImport, Title = "Open an articulation preset",
             Filter = "Articulation preset (*.json)|*.json",

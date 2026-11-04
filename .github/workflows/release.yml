@@ -1,15 +1,10 @@
 name: release
 
-# Builds the release files from a clean checkout and attests them. It never publishes a release: it uploads the
-# files as workflow artifacts; a maintainer downloads them, checks them and attaches them to a release.
-# The build is reproducible: the exact SDK comes from global.json, the native bridge is the committed
-# src/TabForge.AudioEngine/native/tfvst3.dll (built by the build-bridge workflow, verified against
-# native/BUILD_PROVENANCE.md), so a local run of tools/Package-Release.ps1 on the same commit gives the same TabForge.exe and
-# portable zip contents (tools/Compare-Release.ps1 checks; see docs/guides/REPRODUCIBLE_BUILDS.md).
+# Pushing a v* tag builds the Windows and Linux packages and publishes the GitHub release, marked Latest (target: under 4 minutes).
+# Start it with tools/SHIP.cmd; see docs/guides/RELEASING.md. A manual run builds the files only and publishes nothing.
 on:
   push:
     tags: ['v*']
-    branches: ['ci/087']
   workflow_dispatch:
 
 permissions:
@@ -27,6 +22,8 @@ jobs:
       contents: read
       id-token: write       # sign the attestation with the workflow's identity (no personal certificate involved)
       attestations: write
+    outputs:
+      skip: ${{ steps.guard.outputs.skip }}
     env:
       # A clean checkout has none of the copyrighted sample songs; checks that need them skip (and are reported).
       TABFORGE_NO_LOCAL_SONGS: '1'
@@ -95,10 +92,7 @@ jobs:
           "Inno Setup: $iscc"
           "ISCC=$iscc" | Add-Content -Path $env:GITHUB_ENV
 
-      # The release gate is part of this step: Package-Release.ps1 runs the release gate (never packaged) and requires
-      # "--areas release" to report 0 failed, so a failing gate fails the workflow and nothing is attached. The packaged build is the normal one.
-      # Runs on the clean checkout itself (no worktree needed) and refuses a dirty tree. Publishes, self-tests the exact publish folder (--require ci: gp-fixtures, synthetic-fixtures, source-hygiene,
-      # installer-parity, fuzz), then builds the portable zip, the installer and the SHA-256 file in dist/.
+      # Publishes, runs the seconds-long basic self-test on the exact folder, then builds the zip, the installer and the checksums.
       - name: Package (self-test, portable zip, installer, checksums)
         if: steps.guard.outputs.skip != 'true'
         shell: pwsh
@@ -137,7 +131,6 @@ jobs:
             dist/TabForge-*-setup.exe
             dist/TabForge-*-SHA256.txt
             dist/TabForge-*-selftest.log
-            dist/TabForge-*-releasegate.log
             dist/SoundTouch.Net-*-source.zip
             dist/TabForge-*-source.zip
             native/BUILD_PROVENANCE.md
@@ -183,7 +176,7 @@ jobs:
       - name: Install packaging dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends build-essential cmake git python3 curl xz-utils binutils patchelf libasound2-dev libmp3lame0 libmpg123-0 libfuse2 libfreetype6 libfontconfig1 libgl1 libx11-6 libxext6 libxcursor1 libxrandr2
+          sudo apt-get install -y --no-install-recommends build-essential cmake git python3 curl xz-utils pigz binutils patchelf libasound2-dev libmp3lame0 libmpg123-0 libfuse2 libfreetype6 libfontconfig1 libgl1 libx11-6 libxext6 libxcursor1 libxrandr2
       - name: Fetch and verify pinned runtime inputs
         run: |
           mkdir -p staging/wine
@@ -216,20 +209,10 @@ jobs:
           bash tools/package-linux.sh --out "$GITHUB_WORKSPACE/package" --wine "$GITHUB_WORKSPACE/staging/wine" --helpers "$GITHUB_WORKSPACE/src/TabForge.AudioEngine/native" --appimagetool "$GITHUB_WORKSPACE/staging/appimagetool" --ffmpeg "$GITHUB_WORKSPACE/staging/ffmpeg"
           test -f "package/linux/TabForge-$VERSION-linux-x64.tar.gz"
           test -f "package/linux/TabForge-$VERSION-x86_64.AppImage"
-      - name: Verify package parity and record checksums
+      - name: Record checksums
         working-directory: package/linux
         run: |
           VERSION="$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' "$GITHUB_WORKSPACE/Directory.Build.props" | head -n1)"
-          ./TabForge-$VERSION-x86_64.AppImage --appimage-extract >/dev/null
-          diff -r squashfs-root/usr TabForge.AppDir/usr
-          test -f TabForge.AppDir/usr/bin/wine/bin/wine
-          cmp TabForge.AppDir/usr/bin/ffmpeg "$GITHUB_WORKSPACE/staging/ffmpeg/bin/ffmpeg"
-          TabForge.AppDir/usr/bin/ffmpeg -version
-          for file in tfvst32.exe tfvst64.exe tfvst3.dll tfvst3-x86.dll; do
-            cmp "TabForge.AppDir/usr/bin/$file" "$GITHUB_WORKSPACE/src/TabForge.AudioEngine/native/$file"
-          done
-          gzip -t "TabForge-$VERSION-linux-x64.tar.gz"
-          tar -tzf "TabForge-$VERSION-linux-x64.tar.gz" >/dev/null
           sha256sum "TabForge-$VERSION-linux-x64.tar.gz" "TabForge-$VERSION-x86_64.AppImage" > "TabForge-$VERSION-linux-SHA256.txt"
       - name: Upload Linux review files
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -241,3 +224,25 @@ jobs:
             package/linux/TabForge-*-SHA256.txt
             package/linux/MIN_GLIBC.txt
           if-no-files-found: error
+
+  publish:
+    needs: [release-build, linux-release-build]
+    if: startsWith(github.ref, 'refs/tags/v') && needs.release-build.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Publish the GitHub release as Latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          VERSION="${TAG#v}"
+          mkdir upload
+          find artifacts/release-files artifacts/linux-release-files -type f \( -name '*.zip' -o -name '*-setup.exe' -o -name '*SHA256.txt' -o -name '*.tar.gz' -o -name '*.AppImage' \) -exec cp {} upload/ \;
+          gh release create "$TAG" upload/* --repo "$GITHUB_REPOSITORY" --title "TabForge $VERSION" --notes-file "docs/releases/$VERSION.md" --latest

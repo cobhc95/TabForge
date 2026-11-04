@@ -124,7 +124,7 @@ the Linux packaging script next to `SBOM.md`.
 | GeneralUser GS SoundFont | v2.0.3, SHA-256 `9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe` | free-use licence, text in `licenses/GeneralUser-GS_LICENSE.txt` and beside the file |
 | LAME (libmp3lame.so.0) | the Ubuntu 22.04 system build, version in `SBOM-package.txt` | LGPL-2.0; separate replaceable library; source offer in `THIRD_PARTY.md` |
 | mpg123 (libmpg123.so.0) | the Ubuntu 22.04 system build, version in `SBOM-package.txt` | LGPL-2.1-or-later; separate replaceable library; source offer in `THIRD_PARTY.md` |
-| FFmpeg | bundled in the 0.8.7 experimental Linux release; version and hash in `SBOM-package.txt`, pinned input in `ThirdParty/ffmpeg/BUILD_PROVENANCE.txt` | LGPL build; separate replaceable program |
+| FFmpeg (optional) | only when the packager passes `--ffmpeg`; version and hash in `SBOM-package.txt` | LGPL build; separate program; not in the standard release package |
 
 VST3 SDK submodule commits (base, pluginterfaces, public.sdk):
 

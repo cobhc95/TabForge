@@ -1,4 +1,4 @@
-# TabForge 0.8.3
+# TabForge 0.8.75
 
 **A keyboard-driven tablature and notation editor for Windows. Opens GP files (.gp3, .gp4, .gp5, .gpx, .gp) and saves .gp and its own .tforge projects.** Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard / keyboard, an arrangement timeline, audio and MIDI recording, a mixer, VST plug-ins and offline audio and video rendering.
 
@@ -9,17 +9,17 @@
 ## Download
 
 > [!TIP]
-> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.8.3/TabForge-0.8.3-setup.exe)** · no administrator rights needed
+> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.8.75/TabForge-0.8.75-setup.exe)** · no administrator rights needed
 >
-> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.8.3/TabForge-0.8.3-win-x64-portable.zip)** · extract and run `TabForge.exe`
+> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.8.75/TabForge-0.8.75-win-x64-portable.zip)** · extract and run `TabForge.exe`
 >
-> **[SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.8.3/TabForge-0.8.3-SHA256.txt)** · to verify both files
+> **[SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.8.75/TabForge-0.8.75-SHA256.txt)** · to verify the Windows files
 
 Windows 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify your download](#verify-your-download). Older versions: [Releases](https://github.com/cobhc95/TabForge/releases).
 
 ### Linux packages (beta, not verified on real hardware)
 
-The primary Linux download is the AppImage (`TabForge-<version>-x86_64.AppImage`); the tar.xz archive (`TabForge-<version>-linux-x64.tar.xz`) stays only as a beta fallback until the AppImage is proven on real hardware. The Windows installer/portable ZIP above remains the shipped Windows package.
+The primary Linux download is the AppImage ([`TabForge-0.8.75-x86_64.AppImage`](https://github.com/cobhc95/TabForge/releases/download/v0.8.75/TabForge-0.8.75-x86_64.AppImage)); the gzip archive ([`TabForge-0.8.75-linux-x64.tar.gz`](https://github.com/cobhc95/TabForge/releases/download/v0.8.75/TabForge-0.8.75-linux-x64.tar.gz)) is the fallback. Both include pinned Wine and FFmpeg; Linux remains experimental and has not been verified on real hardware.
 
 Run it: `chmod +x TabForge-*-x86_64.AppImage`, then `./TabForge-*-x86_64.AppImage`. When FUSE 2 is missing, run with `--appimage-extract-and-run`. On Ubuntu 22.04 and newer you may need `libfuse2` / `libfuse2t64`. The AppImage runs on the glibc it was built on or newer: it is built on the oldest supported distro (Ubuntu 22.04); read `MIN_GLIBC.txt` beside the download for the real minimum number. The host must provide the X11/ALSA/fontconfig/GL libraries listed under "Requires on the host" in the `tools/package-linux.sh` header; Windows plug-ins run through the bundled Wine. Honestly unproven: the Wine build, the distro checks and real-hardware tests are unproven, and size and startup time are not yet measured. No Linux run or proof comes from this machine: no Linux machine or WSL exists here.
 
@@ -692,7 +692,7 @@ Every command can be found in the menus, the command palette and the shortcut se
 #### Tracks and Mixer
 - **Add** Guitar, Bass, Drums, Keys or any instrument (Track menu, the Add track lane or Ctrl+T), delete, move up/down, **Track properties** (F6), instrument picker, tuning editor, drum notation presets, **Global tuning**, next/previous track, multitrack (F3) and global (F8) views. The Add track window is the same window; it adds at the end of the song.
 - **Capos**: full capo (Off to fret 12) plus up to 4 partial capos per track, each covering the ticked strings; the score shows a capo line and the track row a badge. Partial capos live only in .tforge songs (not written to .gp, .gp5 or MusicXML exports, not read from .gp or .gp5 imports). Not yet tried in the running app.
-- **Track list**: arm, mute, solo, level, pan, FX button (red "!" if a plug-in was switched off), collapsible **groups**, *Show tracks in groups* (right-click empty space or from the Mixer), *Auto-resize track list to fit*, Alt+Up/Down to reorder.
+- **Track list**: arm, mute, solo, level, pan, automation-lane toggles, FX button (red "!" if a plug-in was switched off), collapsible **groups**, *Show tracks in groups* (right-click empty space or from the Mixer), *Auto-resize track list to fit*, Alt+Up/Down to reorder.
 
 - **Mixer**: instrument, compact or ungrouped views; Master row at the top with **MON** monitoring FX (live only, never rendered); **drag and drop** tracks or whole groups (the track list reorders in step, one undo step per drop, animated); group rows set level, pan and pitch for all tracks; Master row with FX, pan and volume; smooth sliders on one fine scale; **Alt+Up / Alt+Down** moves the selected track or group.
 

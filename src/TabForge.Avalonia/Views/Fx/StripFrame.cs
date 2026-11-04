@@ -61,15 +61,26 @@ internal sealed class FlexWrapPanel : WrapPanel
     private readonly LiveCentsBar? _flex;
     public FlexWrapPanel(LiveCentsBar? flex) => _flex = flex;
 
+    // Device-pixel rounding of the groups at a fractional UI scale can add up to a pixel or two; without this margin the last group wraps by that much.
+    private const double FitSlack = 2;
+    private const int FitPasses = 4;
+
     protected override Size MeasureOverride(Size availableSize)
     {
         if (_flex is not null && !double.IsInfinity(availableSize.Width))
         {
-            _flex.Fit = ChromeMetrics.LiveStripCentsScaleWidth;
-            var total = 0.0;
-            foreach (var child in Children) { child.Measure(Size.Infinity); total += child.DesiredSize.Width; }
-            total += ItemSpacing * Math.Max(0, Children.Count - 1);
-            _flex.Fit = ChromeMetrics.LiveStripCentsScaleWidth - Math.Max(0, total - availableSize.Width);
+            // The groups' widths depend on the scale's Fit, and a changed Fit only reaches them when they are measured again: measure, move Fit by the spare
+            // (negative: the deficit), and measure again until it settles, so the wrap decision below sees the widths the scale really has (grows back when the strip widens).
+            var fit = ChromeMetrics.LiveStripCentsScaleWidth;
+            for (var pass = 0; pass < FitPasses; pass++)
+            {
+                _flex.Fit = fit;
+                var total = ItemSpacing * Math.Max(0, Children.Count - 1);
+                foreach (var child in Children) { child.Measure(Size.Infinity); total += child.DesiredSize.Width; }
+                var next = Math.Clamp(_flex.Fit + (availableSize.Width - FitSlack - total), ChromeMetrics.LiveStripCentsScaleMinWidth, ChromeMetrics.LiveStripCentsScaleWidth);
+                if (Math.Abs(next - _flex.Fit) < 0.25) break;
+                fit = next;
+            }
         }
         return base.MeasureOverride(availableSize);
     }

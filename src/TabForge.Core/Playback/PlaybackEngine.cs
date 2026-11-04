@@ -388,7 +388,7 @@ public sealed partial class PlaybackEngine : IDisposable
         StopDiagnostics();
         // Shutdown is best effort: a failing device must not stop the rest of the cleanup.
         try { EnqueueOutputOperation(_output.Dispose).GetAwaiter().GetResult(); }
-        catch { } // swallow: playback path, no logging on this path
+        catch (Exception ex) { TabForge.Services.Trace.Error(TabForge.Services.Trace.Engine, "playback: output device dispose failed: " + ex.Message); }
         _timer.Set(false);
     }
 }

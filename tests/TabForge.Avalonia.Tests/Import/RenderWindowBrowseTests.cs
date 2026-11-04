@@ -12,20 +12,20 @@ namespace TabForge.Avalonia.Tests;
 public sealed class RenderWindowBrowseTests
 {
     [AvaloniaFact]
-    public void BrowsePutsThePickedFolderInTheOutputBox()
+    public async System.Threading.Tasks.Task BrowsePutsThePickedFolderInTheOutputBox()
     {
         string? asked = null;
-        var window = new RenderWindow(FullDemoSongFactory.Create(), new RenderSettings { Directory = "Start" }, false, null, start => { asked = start; return "Picked"; });
-        window.BrowsePressed();
+        var window = new RenderWindow(FullDemoSongFactory.Create(), new RenderSettings { Directory = "Start" }, false, null, start => { asked = start; return System.Threading.Tasks.Task.FromResult<string?>("Picked"); });
+        await window.BrowsePressed();
         Assert.Equal("Start", asked);
         Assert.Equal("Picked", window.OutputFolder);
     }
 
     [AvaloniaFact]
-    public void BrowseCancelledLeavesTheOutputFolder()
+    public async System.Threading.Tasks.Task BrowseCancelledLeavesTheOutputFolder()
     {
-        var window = new RenderWindow(FullDemoSongFactory.Create(), new RenderSettings { Directory = "Start" }, false, null, _ => null);
-        window.BrowsePressed();
+        var window = new RenderWindow(FullDemoSongFactory.Create(), new RenderSettings { Directory = "Start" }, false, null, _ => System.Threading.Tasks.Task.FromResult<string?>(null));
+        await window.BrowsePressed();
         Assert.Equal("Start", window.OutputFolder);
     }
 }

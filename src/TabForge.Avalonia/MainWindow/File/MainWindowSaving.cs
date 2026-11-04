@@ -91,21 +91,21 @@ public sealed class MainWindowSaving
     public Task<bool> SaveAs(SongDocument document) => _flow.RunClaimedAsync(hold => SaveAsHeld(document, hold), _report);
 
     // The claim is taken before the file dialog, so a close or an exit-save waits for the whole sequence, the dialog included.
-    private Task<bool> SaveAsHeld(SongDocument document, DocumentController.SaveHold hold)
+    private async Task<bool> SaveAsHeld(SongDocument document, DocumentController.SaveHold hold)
     {
         const string gpFilter = ".gp file (*.gp) - keeps every TabForge feature|*.gp";
         const string tforgeFilter = "TabForge project (*.tforge)|*.tforge";
         var gpDefault = !string.Equals(_defaultSaveFormat(), "tforge", StringComparison.OrdinalIgnoreCase);
         var legacyFilters = string.Join("|", LegacyGpFormats.All.Select(LegacyGpFormats.DialogFilter));   // copies for older programs, last in the list
-        var path = _dialogs.SaveFile(new FileDialogOptions
+        var path = await _dialogs.SaveFileAsync(new FileDialogOptions
         {
             Key = TabForge.Services.DialogKeys.ProjectSave, Title = "Save song", Filter = (gpDefault ? $"{gpFilter}|{tforgeFilter}" : $"{tforgeFilter}|{gpFilter}") + "|" + legacyFilters,
             DefaultExt = gpDefault ? ".gp" : ".tforge", AddExtension = true,
             FileName = SafeFileNames.SafeFileName(Path.GetFileNameWithoutExtension(document.LabelPath) is { Length: > 0 } name ? name : document.Project.Title, "Untitled"),
         }, _owner);
-        if (path is null) return Task.FromResult(false);
+        if (path is null) return false;
         // An older-format file is a copy: the song stays on its own file and unsaved, so this save is not a save of the song (false).
-        return LegacyGpFormats.TryFromPath(path, out var legacy) ? ExportLegacyCopyOnly(document, path, legacy, hold) : SaveTo(document, path, hold);
+        return LegacyGpFormats.TryFromPath(path, out var legacy) ? await ExportLegacyCopyOnly(document, path, legacy, hold) : await SaveTo(document, path, hold);
     }
 
     private async Task<bool> ExportLegacyCopyOnly(SongDocument document, string path, LegacyGpFormat format, DocumentController.SaveHold hold)
@@ -121,14 +121,14 @@ public sealed class MainWindowSaving
     public Task<bool> ExportLegacyCopy(SongDocument document, LegacyGpFormat format) =>
         _flow.RunClaimedAsync(hold => ExportLegacyCommand(document, format, hold), _report);
 
-    private Task<bool> ExportLegacyCommand(SongDocument document, LegacyGpFormat format, DocumentController.SaveHold hold)
+    private async Task<bool> ExportLegacyCommand(SongDocument document, LegacyGpFormat format, DocumentController.SaveHold hold)
     {
-        var path = _dialogs.SaveFile(new FileDialogOptions
+        var path = await _dialogs.SaveFileAsync(new FileDialogOptions
         {
             Key = TabForge.Services.DialogKeys.ExportGpLegacy, Title = $"Export {LegacyGpFormats.Label(format)}", Filter = LegacyGpFormats.DialogFilter(format), DefaultExt = LegacyGpFormats.Extension(format), AddExtension = true,
             FileName = SafeFileNames.SafeFileName(Path.GetFileNameWithoutExtension(document.LabelPath) is { Length: > 0 } name ? name : document.Project.Title, "Untitled"),
         }, _owner);
-        return path is null ? Task.FromResult(false) : ExportLegacyHeld(document, path, format, hold);
+        return path is null ? false : await ExportLegacyHeld(document, path, format, hold);
     }
 
     private async Task<bool> ExportLegacyHeld(SongDocument document, string path, LegacyGpFormat format, DocumentController.SaveHold hold)
@@ -157,7 +157,7 @@ public sealed class MainWindowSaving
 
     private async Task<bool> ExportGuitarProHeld(SongDocument document, Func<GpPreflightReport, string, Task<GpExportChoice>> askPreflight, DocumentController.SaveHold hold)
     {
-        var path = _dialogs.SaveFile(new FileDialogOptions
+        var path = await _dialogs.SaveFileAsync(new FileDialogOptions
         {
             Key = TabForge.Services.DialogKeys.ExportGp, Title = "Export compatible .gp file", Filter = ".gp file (*.gp)|*.gp", DefaultExt = ".gp", AddExtension = true,
             FileName = SafeFileNames.SafeFileName(Path.GetFileNameWithoutExtension(document.LabelPath) is { Length: > 0 } name ? name : document.Project.Title, "Untitled"),

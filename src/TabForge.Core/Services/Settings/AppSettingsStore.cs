@@ -124,6 +124,20 @@ public sealed class AppSettingsStore : IDisposable
             Services.Trace.Error(Services.Trace.Ui, "settings: load: " + ex.Message);
             Settings = new AppSettings();
             LoadFailed = true;
+            KeepUnreadableFile();
+        }
+    }
+
+    // The next save overwrites settings.json with the defaults: keep the unreadable file beside it so the user's preferences can be recovered by hand.
+    private void KeepUnreadableFile()
+    {
+        try
+        {
+            if (File.Exists(FilePath)) File.Copy(FilePath, FilePath + ".corrupt-" + DateTime.Now.ToString("yyyyMMdd-HHmmss"), overwrite: false);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Services.Trace.Error(Services.Trace.Ui, "settings: could not keep the unreadable file: " + ex.Message);
         }
     }
 

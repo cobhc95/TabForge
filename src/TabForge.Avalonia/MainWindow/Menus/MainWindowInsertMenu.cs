@@ -32,7 +32,7 @@ public static class MainWindowInsertMenu
     };
 
     /// <summary>The window questions: the Insert several bars dialog (given the song bar count; null on Cancel) and the file picker (true: a MIDI file, false: an audio file; null on Cancel).</summary>
-    public sealed record Prompts(Func<int, Task<InsertBarsAnswer?>> AskBars, Func<bool, string?> PickFile);
+    public sealed record Prompts(Func<int, Task<InsertBarsAnswer?>> AskBars, Func<bool, Task<string?>> PickFile);
 
     private const string NoTrackText = "Add a track first";
 
@@ -74,7 +74,7 @@ public static class MainWindowInsertMenu
     private static async Task InsertFileAsync(MainWindowTabs songs, ScorePreviewView score, Prompts prompts, bool midi,
         Func<IEnumerable<string>, TrackModel?, double, Task> importFiles, Action<TrackModel?> landed)
     {
-        if (prompts.PickFile(midi) is not { } path) return;
+        if (await prompts.PickFile(midi) is not { } path) return;
         var song = songs.Active;
         var tracksBefore = song.Project.Tracks.Count;
         await importFiles(new[] { path }, SelectedAudioTrack(song), CursorSeconds(song, score));

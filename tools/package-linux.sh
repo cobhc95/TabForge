@@ -11,9 +11,9 @@
 # SoundFont: TABFORGE_SOUNDFONT=<GeneralUser-GS.sf2 path> and TABFORGE_SOUNDFONT_LICENSE=<its licence text>; both ship in usr/bin/SoundFonts. libtfportable.so and libtfvst3.so are built with cmake here (or --tfportable / --tfvst3 <folder>).
 # appimagetool: https://github.com/AppImage/appimagetool/releases (MIT). It builds the PRIMARY package: without it
 #   only the AppDir and the fallback tar.gz are made and the primary deliverable is missing (see the loud warning below).
-#   The AppImage uses squashfs xz compression (--comp xz) when that appimagetool build supports it, else its default.
+#   The AppImage uses fast squashfs zstd compression (--comp zstd) when that appimagetool build supports it, else its default.
 #
-# Build machine needs: dotnet SDK, cmake, a C/C++ toolchain, git (cmake fetches the pinned Steinberg VST3 SDK, miniaudio and RtMidi), libasound2-dev, binutils (objdump, strip), xz-utils (xz -9e -T0), python3.
+# Build machine needs: dotnet SDK, cmake, a C/C++ toolchain, git (cmake fetches the pinned Steinberg VST3 SDK, miniaudio and RtMidi), libasound2-dev, binutils (objdump, strip), pigz (optional, faster), python3.
 #   Offline VST3 SDK: TABFORGE_VST3SDK=<checkout root> (passed as -DVST3SDK_DIR).
 #
 # The package (usr/bin of the AppDir, inside the tar.gz and the AppImage) contains:
@@ -158,6 +158,10 @@ APPDIR="$OUT/TabForge.AppDir"
 rm -rf "$APPDIR"
 mkdir -p "$APPDIR/usr/bin/SoundFonts" "$APPDIR/usr/share/icons/hicolor/256x256/apps" "$APPDIR/usr/share/applications"
 cp -R "$PUBLISH/." "$APPDIR/usr/bin/"
+# Symbols are archived beside the package, never shipped (as Package-Release.ps1 does on Windows): crash logs can still be symbolicated, the download is smaller.
+SYMBOLS="$OUT/symbols/$VERSION"
+rm -rf "$SYMBOLS"; mkdir -p "$SYMBOLS"
+find "$APPDIR/usr/bin" -name '*.pdb' -type f -exec mv -f {} "$SYMBOLS/" \;
 cp "$SOUNDFONT" "$APPDIR/usr/bin/SoundFonts/GeneralUser-GS.sf2"
 cp "$SOUNDFONT_LICENSE" "$APPDIR/usr/bin/SoundFonts/GeneralUser-GS-LICENSE.txt"
 if [ -n "$TFPORTABLE_DIR" ] && [ -f "$TFPORTABLE_DIR/libtfportable.so" ]; then
@@ -417,17 +421,18 @@ if [ -n "$private_hits" ]; then
 fi
 echo "$GLIBC_MAX" > "$OUT/MIN_GLIBC.txt"
 
-# 4. The packages. Use maximum gzip compression for the portable fallback archive.
-( cd "$OUT" && tar -cf - TabForge.AppDir | gzip -9 > "TabForge-$VERSION-$RID.tar.gz" )
+# 4. The packages. Fast compression on every core: release time matters more than a slightly smaller download.
+GZIP_TOOL="$(command -v pigz || command -v gzip)"
+( cd "$OUT" && tar -cf - TabForge.AppDir | "$GZIP_TOOL" -6 > "TabForge-$VERSION-$RID.tar.gz" )
 if [ -n "$APPIMAGETOOL" ] && [ -x "$APPIMAGETOOL" ]; then
   APPIMAGE="$OUT/TabForge-$VERSION-x86_64.AppImage"
   APPIMAGE_DONE=""
   if "$APPIMAGETOOL" --help 2>&1 | grep -q -- '--comp'; then
-    echo "AppImage squashfs compression: trying xz (the strongest this tool may support)"
-    if ARCH=x86_64 "$APPIMAGETOOL" --comp xz "$APPDIR" "$APPIMAGE" >"$OUT/appimage-xz.log" 2>&1; then
+    echo "AppImage squashfs compression: trying zstd (fast)"
+    if ARCH=x86_64 "$APPIMAGETOOL" --comp zstd "$APPDIR" "$APPIMAGE" >"$OUT/appimage-zstd.log" 2>&1; then
       APPIMAGE_DONE=1
     else
-      echo "appimagetool refused xz; falling back to its default compression"
+      echo "appimagetool refused zstd; falling back to its default compression"
       rm -f "$APPIMAGE"
     fi
   fi

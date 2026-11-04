@@ -23,6 +23,8 @@ namespace TabForge.Avalonia.Views;
 internal sealed class TrackStringRow : Grid
 {
     private const string SpeakerShape = "M2,6 L5,6 L9,3 L9,13 L5,10 L2,10 Z M11,5 Q14,8 11,11";
+    private const double HoverLightOpacity = 0.14, GlowPeak = 0.9, GlowHeight = 8, GlowBlur = 6, RestOpacity = 0.92;
+    private readonly Border _hoverLight, _glow;
     private readonly TranslateTransform _shake = new();
     private readonly ToggleButton _speaker;
     private readonly Func<int, string, bool> _typed;
@@ -46,10 +48,17 @@ internal sealed class TrackStringRow : Grid
         _speaker = Speaker(index);
         _speaker.IsCheckedChanged += (_, _) => { if (!_syncing) loop(index); };
         Line = new Rectangle { Name = $"StringLine{index}", VerticalAlignment = VerticalAlignment.Center, RenderTransform = _shake };
+        _hoverLight = new Border { Name = $"StringHover{index}", IsVisible = false, IsHitTestVisible = false, Opacity = HoverLightOpacity, CornerRadius = new CornerRadius(3),
+            [!Border.BackgroundProperty] = new DynamicResourceExtension("AccentBrush") };
+        _glow = new Border { Name = $"StringGlow{index}", Opacity = 0, IsHitTestVisible = false, VerticalAlignment = VerticalAlignment.Center, CornerRadius = new CornerRadius(GlowHeight / 2),
+            Height = GlowHeight, Effect = new BlurEffect { Radius = GlowBlur }, [!Border.BackgroundProperty] = new DynamicResourceExtension("AccentBrush") };
         var hit = new Panel { Name = $"StringHit{index}", Background = AvaloniaPalette.TransparentBrush,
-            Margin = new Thickness(0, 0, 8, 0), ClipToBounds = true, Children = { Line } };
+            Margin = new Thickness(0, 0, 8, 0), ClipToBounds = true, Cursor = new Cursor(StandardCursorType.Hand), Children = { _hoverLight, _glow, Line } };   // the hand says: clickable
         ToolTip.SetTip(hit, "Click to hear this string");
+        hit.PointerEntered += (_, _) => SetHover(true);
+        hit.PointerExited += (_, _) => SetHover(false);
         hit.PointerPressed += (_, e) => { if (e.GetCurrentPoint(hit).Properties.IsLeftButtonPressed) ring(index); };
+        Line.Opacity = RestOpacity;
         NoteBox = NoteEntry(index);
         Add(_speaker, 0);
         Add(number, 1);
@@ -87,6 +96,16 @@ internal sealed class TrackStringRow : Grid
 
     /// <summary>Moves the drawn string sideways for the ring's vibrate (0 = at rest).</summary>
     public void Vibrate(double offset) => _shake.Y = offset;
+
+    /// <summary>The strike light behind the string: 1 at the moment it is struck, fading to 0 as the ring dies away.</summary>
+    public void Glow(double strength) => _glow.Opacity = Math.Clamp(strength, 0, 1) * GlowPeak;
+
+    /// <summary>The string under the pointer: a soft light behind it and the line at full strength, so it reads as clickable.</summary>
+    private void SetHover(bool on)
+    {
+        _hoverLight.IsVisible = on;
+        Line.Opacity = on ? 1 : RestOpacity;
+    }
 
     private void ShowNote() => NoteBox.Text = MusicTheoryService.NoteName(_midi);
 

@@ -233,7 +233,7 @@ internal sealed partial class EngineSession
                 _volumeDevice = null;
             }
         }
-        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException) { }
+        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException) { Log.Write($"volume follow: releasing the old device failed: {ex.Message}"); }
         _endpointGain = 1f; _sessionGain = 1f; _following = false;
         if (Mix is not null) Mix.MasterGain = 1f;
         if (!on || Mix is null) return;
@@ -303,7 +303,7 @@ internal sealed partial class EngineSession
                 Log.Write($"following TabForge's Volume Mixer slider: gain {gain:0.000} (total {_endpointGain * _sessionGain:0.000})");
             }
         }
-        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException or ArgumentException) { }
+        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException or ArgumentException) { Log.Write($"volume follow: reading TabForge's session volume failed: {ex.Message}"); }
     }
 #else
     public void RefreshSessionVolume() { }

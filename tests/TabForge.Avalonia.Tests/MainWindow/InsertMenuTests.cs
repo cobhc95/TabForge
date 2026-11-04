@@ -61,7 +61,7 @@ public sealed class InsertMenuTests : IDisposable
             MainWindowTrackMenu.Register(Commands, Tabs, owner, new ContextMenuHost(), Status.Add, null, track => Landed(track));
             var drop = MainWindowAudioDrop.Register(Panes, Tabs, Status.Add);
             MainWindowInsertMenu.Register(Commands, Tabs, Panes, Score,
-                new MainWindowInsertMenu.Prompts(_ => Task.FromResult(NextBars), _ => NextFile),
+                new MainWindowInsertMenu.Prompts(_ => Task.FromResult(NextBars), _ => Task.FromResult(NextFile)),
                 Status.Add, () => LyricsShown++, (files, track, sec) => LastImport = drop.InsertAtAsync(files, track, sec));
         }
 

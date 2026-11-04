@@ -65,10 +65,13 @@ public sealed class FxChainFiles
         Directory.CreateDirectory(PluginLibrary.ChainsFolder);
         var reaper = Path.Combine(TabForge.Platform.AppFolders.Current.ReaperResources, "FXChains");
         var useReaper = Directory.Exists(reaper) && !Directory.EnumerateFiles(PluginLibrary.ChainsFolder, "*" + ChainFileApply.FileExtension).Any();
-        var file = _dialogs().Files.OpenFile(new FileDialogOptions
+        // Awaited, not the synchronous OpenFile: that runs a nested dispatcher frame inside this menu/hotkey handler, which froze the app.
+        var picked = await _dialogs().Files.OpenFilesAsync(new FileDialogOptions
         {
             Key = TabForge.Services.DialogKeys.FxChainLoad, Title = LoadCaption, Filter = LoadFilter, InitialDirectory = useReaper ? reaper : PluginLibrary.ChainsFolder,
+            Multiselect = false,
         }, _owner);
+        var file = picked?.FirstOrDefault();
         if (file is not null) await LoadFile(file, replace, preferred: replace ? FxPresetLoadMode.Replace : FxPresetLoadMode.Add);
     }
 
@@ -142,7 +145,7 @@ public sealed class FxChainFiles
     {
         if (_host.Engine is { } engine) await engine.CollectStatesAsync(new[] { _track }, StateCollectMs);
         Directory.CreateDirectory(PluginLibrary.ChainsFolder);
-        var chosen = _dialogs().Files.SaveFile(new FileDialogOptions
+        var chosen = await _dialogs().Files.SaveFileAsync(new FileDialogOptions
         {
             Key = TabForge.Services.DialogKeys.FxChainSave, Title = SaveCaption, Filter = ChainFilter, DefaultExt = ChainFileApply.FileExtension,
             InitialDirectory = PluginLibrary.ChainsFolder, FileName = _track.Name,

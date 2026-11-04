@@ -108,7 +108,7 @@ public sealed class BarInsertTests
             Commands = new MainWindowCommands(owner, () => { });
             void Landed() => MainWindowInsertRefresh.Landed(panes, Score, Tabs.Active);
             MainWindowEdit.Register(Commands, Score, owner, Menus, () => false, _ => { }, afterInsert: Landed);
-            MainWindowInsertMenu.Register(Commands, Tabs, panes, Score, new MainWindowInsertMenu.Prompts(_ => Task.FromResult(NextBars), _ => null),
+            MainWindowInsertMenu.Register(Commands, Tabs, panes, Score, new MainWindowInsertMenu.Prompts(_ => Task.FromResult(NextBars), _ => Task.FromResult<string?>(null)),
                 _ => { }, () => { }, (_, _, _) => Task.CompletedTask);
         }
 

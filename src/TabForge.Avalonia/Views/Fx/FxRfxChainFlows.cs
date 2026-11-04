@@ -52,7 +52,7 @@ public sealed class FxRfxChainFlows
             await _dialogs.Ask(_owner, "No plug-in of this chain can be exported.\n\n" + notes, ExportCaption, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return false;
         }
-        var chosen = _dialogs.Files.SaveFile(new FileDialogOptions
+        var chosen = await _dialogs.Files.SaveFileAsync(new FileDialogOptions
         {
             Key = TabForge.Services.DialogKeys.FxChainExportRfx, Title = ExportCaption, Filter = FxChainFiles.ExportFilter, DefaultExt = ".RfxChain", AddExtension = true,
             FileName = SafeFileNames.SafeFileName(track.Name, "FX chain"),

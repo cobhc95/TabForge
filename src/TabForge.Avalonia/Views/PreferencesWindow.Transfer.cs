@@ -21,9 +21,9 @@ public sealed partial class PreferencesWindow
     private const string SettingsFileFilter = "TabForge settings (*.json)|*.json";
 
     /// <summary>Import settings…: picks a settings file and stages it.</summary>
-    private void ImportSettingsFromDialog()
+    private async void ImportSettingsFromDialog()
     {
-        var chosen = _dialogs.OpenFile(new FileDialogOptions { Key = TabForge.Services.DialogKeys.SettingsImport, Title = "Import TabForge settings", Filter = SettingsFileFilter, CheckFileExists = true }, this);
+        var chosen = await _dialogs.OpenFileAsync(new FileDialogOptions { Key = TabForge.Services.DialogKeys.SettingsImport, Title = "Import TabForge settings", Filter = SettingsFileFilter, CheckFileExists = true }, this);
         if (chosen is not null) ImportSettingsFrom(chosen);
     }
 
@@ -49,9 +49,9 @@ public sealed partial class PreferencesWindow
     }
 
     /// <summary>Export settings…: picks a file and writes the working settings to it.</summary>
-    private void ExportSettingsToDialog()
+    private async void ExportSettingsToDialog()
     {
-        var chosen = _dialogs.SaveFile(new FileDialogOptions
+        var chosen = await _dialogs.SaveFileAsync(new FileDialogOptions
         {
             Key = TabForge.Services.DialogKeys.SettingsExport, Title = "Export TabForge settings", Filter = SettingsFileFilter, DefaultExt = ".json", AddExtension = true, FileName = "TabForge-settings.json",
         }, this);

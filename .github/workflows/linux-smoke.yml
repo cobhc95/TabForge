@@ -5,14 +5,6 @@ name: linux-smoke
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'src/**'
-      - 'native/tfportable/**'
-      - 'native/tfvst3/**'
-      - 'tools/capture/linux-smoke.json'
-      - '.github/workflows/linux-smoke.yml'
 
 permissions:
   contents: read

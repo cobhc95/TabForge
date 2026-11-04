@@ -34,7 +34,7 @@ public sealed partial class MidiExportWindow : Window
     private readonly MidiExportSettings _settings;
     private readonly SelectionSnapshot? _snip;
     private readonly (int StartBar, int StartCell, int EndBar, int EndCell)? _selection;
-    private readonly Func<TabForge.Platform.FileDialogOptions, Window, string?>? _saveFile;
+    private readonly Func<TabForge.Platform.FileDialogOptions, Window, Task<string?>>? _saveFile;
     private readonly Action _quietSave;
     private readonly Action<string> _report;
     private readonly Action<TrackModel>? _openArticulations;
@@ -62,7 +62,7 @@ public sealed partial class MidiExportWindow : Window
     /// <param name="openArticulations">Opens the existing Articulations pane for a track (null: the link is unavailable).</param>
     public MidiExportWindow(SongProject project, MidiExportSettings settings, bool hasSelection, SelectionSnapshot? snip,
         (int StartBar, int StartCell, int EndBar, int EndCell)? selection,
-        Func<TabForge.Platform.FileDialogOptions, Window, string?>? saveFile, Action quietSave, Action<string> report,
+        Func<TabForge.Platform.FileDialogOptions, Window, Task<string?>>? saveFile, Action quietSave, Action<string> report,
         Action<TrackModel>? openArticulations = null)
     {
         _project = project; _settings = settings;
@@ -184,7 +184,7 @@ public sealed partial class MidiExportWindow : Window
         if (slice.Tracks.Count == 0) { _status.Text = "Nothing ticked: tick at least one track."; return; }
         if (slice.EndMs <= slice.StartMs + 1e-9) { _status.Text = "The range is empty."; return; }
         if (_saveFile is null) { _status.Text = ToolWindowParts.NeedsFullApp("Exporting MIDI"); return; }
-        var path = _saveFile(new TabForge.Platform.FileDialogOptions
+        var path = await _saveFile(new TabForge.Platform.FileDialogOptions
         {
             Key = DialogKeys.ExportMidi, Title = "Export MIDI", Filter = "MIDI file (*.mid)|*.mid",
             DefaultExt = ".mid", AddExtension = true, FileName = SafeFileNames.SafeFileName(_project.Title, "Untitled"),

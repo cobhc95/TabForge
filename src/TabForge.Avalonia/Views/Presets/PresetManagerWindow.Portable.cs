@@ -43,7 +43,7 @@ public sealed partial class PresetManagerWindow
     {
         if (!_import.IsEnabled || _actions.ExtensionOf(_node) is not { } extension) return;
         var node = _node;
-        var paths = FileDialogs.OpenFiles(new TabForge.Platform.FileDialogOptions
+        var paths = await FileDialogs.OpenFilesAsync(new TabForge.Platform.FileDialogOptions
         {
             Key = TabForge.Services.DialogKeys.PresetsImport, Title = "Import preset", Multiselect = true, Filter = "Preset (*" + extension + ")|*" + extension,
         }, this);
@@ -67,7 +67,7 @@ public sealed partial class PresetManagerWindow
     {
         if (SelectedEntries is not [{ } entry] || _actions.ExtensionOf(entry.Node) is not { } extension) return;
         if (_actions.ExportBytes(entry) is not { } bytes) { Say(NothingToExportText); return; }
-        var path = FileDialogs.SaveFile(new TabForge.Platform.FileDialogOptions
+        var path = await FileDialogs.SaveFileAsync(new TabForge.Platform.FileDialogOptions
         {
             Key = TabForge.Services.DialogKeys.PresetsExport, Title = "Export preset", FileName = entry.Name, DefaultExt = extension.TrimStart('.'), OverwritePrompt = true,
             Filter = "Preset (*" + extension + ")|*" + extension,

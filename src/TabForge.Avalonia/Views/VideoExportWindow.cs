@@ -49,7 +49,7 @@ public sealed class VideoExportWindow : Window
     private readonly Button _export = new() { Content = VideoExportPresenter.ExportButton, Padding = new Thickness(18, 4, 18, 4) };
     private readonly Button _close = new() { Name = "Close", Content = VideoExportPresenter.CloseButton, Padding = new Thickness(14, 4, 14, 4) };
     private readonly Func<VideoExportPlan, IProgress<VideoExportProgress>, CancellationToken, Task<VideoExportResult>>? _run;
-    private readonly Func<FileDialogOptions, string?>? _saveFile;
+    private readonly Func<FileDialogOptions, Task<string?>>? _saveFile;
     private readonly (int StartBar, int StartCell, int EndBar, int EndCell)? _selection;
     private readonly NotationMode _notation;
     private CancellationTokenSource? _cts;   // set while an export runs
@@ -63,7 +63,7 @@ public sealed class VideoExportWindow : Window
     /// <param name="selection">The score selection (bars and cells) the selection range exports; null without one.</param>
     /// <param name="notation">The score's notation, which the video's score follows.</param>
     public VideoExportWindow(SongProject project, VideoSettings settings, bool hasSelection,
-        Func<VideoExportPlan, IProgress<VideoExportProgress>, CancellationToken, Task<VideoExportResult>>? run = null, Func<FileDialogOptions, string?>? saveFile = null,
+        Func<VideoExportPlan, IProgress<VideoExportProgress>, CancellationToken, Task<VideoExportResult>>? run = null, Func<FileDialogOptions, Task<string?>>? saveFile = null,
         (int StartBar, int StartCell, int EndBar, int EndCell)? selection = null, NotationMode notation = NotationMode.TabAndStaff)
     {
         _project = project; _settings = settings; _hasSelection = hasSelection; _run = run; _saveFile = saveFile; _selection = selection; _notation = notation;
@@ -199,7 +199,7 @@ public sealed class VideoExportWindow : Window
         var timeline = RenderSpecBuilder.Compile(_project);
         var (start, end) = RangeOf(timeline, choices);
         if (VideoExportPresenter.EmptyRangeProblemFor(start, end) is { } empty) { _status.Text = empty; return; }
-        var chosen = _saveFile(new FileDialogOptions
+        var chosen = await _saveFile(new FileDialogOptions
         {
             Key = TabForge.Services.DialogKeys.ExportVideo, Title = VideoExportPresenter.SaveDialogTitle, Filter = VideoExportPresenter.SaveDialogFilter, DefaultExt = VideoExportPresenter.DefaultExtension,
             AddExtension = true, OverwritePrompt = true, FileName = VideoExportPresenter.SuggestedFileName(_project.Title),

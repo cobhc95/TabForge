@@ -418,7 +418,10 @@ public sealed partial class RemotePlugin : IPluginInstance
                 if (!control.Receive(type, r)) _threads.Log.Write($"isolated plug-in: dropped a late or unknown reply ({type}): {Path}");
             }
         }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or EndOfStreamException or ObjectDisposedException) { }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or EndOfStreamException or ObjectDisposedException)
+        {
+            _threads.Log.Write($"isolated plug-in: reader stopped ({ex.GetType().Name}: {ex.Message}): {Path}");   // the cause, before Die reports only that the connection closed
+        }
         if (ReferenceEquals(pipe, _pipe)) Die("its connection closed", ExitCodeIfExited(_process));
     }
 

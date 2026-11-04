@@ -122,6 +122,7 @@ public sealed partial class TrackPropertiesWindow
     {
         StopVibrating();
         _vibratingRow = index;
+        _rows[index].Glow(1);
         _vibrateStart = Stopwatch.GetTimestamp();
         if (_frameQueued) return;
         _frameQueued = true;
@@ -135,13 +136,14 @@ public sealed partial class TrackPropertiesWindow
         var elapsed = Stopwatch.GetElapsedTime(_vibrateStart).TotalMilliseconds;
         if (elapsed >= StringVibration.RingMs) { StopVibrating(); return; }
         _rows[_vibratingRow].Vibrate(StringVibration.Offset(elapsed));
+        _rows[_vibratingRow].Glow(1 - elapsed / StringVibration.RingMs);   // the strike light fades as the string rings out
         _frameQueued = true;
         RequestAnimationFrame(_onFrame ??= OnVibrateFrame);
     }
 
     private void StopVibrating()
     {
-        if (_vibratingRow >= 0 && _vibratingRow < _rows.Count) _rows[_vibratingRow].Vibrate(0);
+        if (_vibratingRow >= 0 && _vibratingRow < _rows.Count) { _rows[_vibratingRow].Vibrate(0); _rows[_vibratingRow].Glow(0); }
         _vibratingRow = -1;
     }
 

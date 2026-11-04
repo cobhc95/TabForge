@@ -32,7 +32,7 @@ public static partial class SelfTest
         "Source/nuget.config", "Source/docs/README.md", "Source/docs/CHANGELOG.md",
         // documents the export must ship (add them to Export-Public.ps1 when they are added here)
         "Source/docs/SECURITY.md", "Source/docs/architecture/ARCHITECTURE.md", "Source/docs/guides/TOOLS_AND_HOTKEYS.md", "Source/docs/reference/SBOM.md", "Source/docs/guides/TESTING.md", "Source/docs/guides/DEBUGGING.md", "Source/docs/guides/DEBUG_SYMPTOMS.md", "Source/docs/reference/COMPATIBILITY.md",
-        "Source/docs/guides/REPRODUCIBLE_BUILDS.md", "Source/docs/media/screenshots/", "Source/docs/media/animations/", "Source/docs/tutorial/",
+        "Source/docs/guides/REPRODUCIBLE_BUILDS.md", "Source/docs/guides/RELEASING.md", "Source/tools/SHIP.cmd", "Source/tools/Ship-Release.ps1", "Source/docs/media/screenshots/", "Source/docs/media/animations/", "Source/docs/tutorial/",
         "Source/src/", "Source/tests/", "samples/", "Source/vendor/alphatab/",
         ".github/workflows/windows-ci.yml", ".github/workflows/release.yml", ".github/workflows/build-bridge.yml", ".github/workflows/fuzz-weekly.yml",
         "Source/tools/Compare-Release.ps1", "Source/tools/Build-AlphaTab.ps1", "Source/tools/Compare-NativeBridge.ps1", "Source/tools/Package-Release.ps1", "Source/tools/Publish.ps1", "Source/tools/Write-Sbom.ps1", "Source/tools/run-test.ps1",

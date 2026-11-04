@@ -36,7 +36,7 @@ public sealed class VideoExportCancelTests
         var (request, wav, path) = VideoExportFinishTests.Request(fake, Frames);
         var window = new VideoExportWindow(DemoSongFactory.Create(), new VideoSettings(), hasSelection: false,
             run: async (_, progress, cancel) => { await VideoExportFlow.EncodeAsync(request, wav, path, Frames, progress, cancel); return new VideoExportResult(Frames, 1, 1); },
-            saveFile: _ => Path.Combine(Path.GetTempPath(), "tf-cancel-unused.mp4"));
+            saveFile: _ => Task.FromResult<string?>(Path.Combine(Path.GetTempPath(), "tf-cancel-unused.mp4")));
         try
         {
             window.Show();

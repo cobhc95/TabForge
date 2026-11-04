@@ -45,7 +45,7 @@ public sealed partial class ArticulationsPane
     {
         if (ReadTable() is not { } map) return;
         var current = _presets.SelectedEntry?.Name ?? "Articulations";
-        var path = _dialogs().Files.SaveFile(new TabForge.Platform.FileDialogOptions
+        var path = await _dialogs().Files.SaveFileAsync(new TabForge.Platform.FileDialogOptions
         {
             Key = TabForge.Services.DialogKeys.ArticulationsExport, Title = "Export articulation preset", FileName = current, DefaultExt = "json", Filter = JsonFilter, OverwritePrompt = true,
         }, _owner);
@@ -55,7 +55,7 @@ public sealed partial class ArticulationsPane
 
     private async Task ImportAsync()
     {
-        var picked = _dialogs().Files.OpenFile(new TabForge.Platform.FileDialogOptions { Key = TabForge.Services.DialogKeys.ArticulationsImport, Title = "Import articulation preset", Filter = JsonFilter }, _owner);
+        var picked = await _dialogs().Files.OpenFileAsync(new TabForge.Platform.FileDialogOptions { Key = TabForge.Services.DialogKeys.ArticulationsImport, Title = "Import articulation preset", Filter = JsonFilter }, _owner);
         if (picked is null) return;
         var preset = await Task.Run(() => ArticulationPresets.ReadFile(picked));
         if (preset is null || preset.ToMap().IsEmpty && preset.Rules.Count > 0) { await _dialogs().Tell(_owner, "That file is not an articulation preset this version can read.", Caption); return; }

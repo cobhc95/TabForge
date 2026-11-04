@@ -7,7 +7,7 @@ TabForge has one headless test suite, built into the executable. It needs no aud
 > - Every build: the basic area. `build\TabForge\TabForge.exe --selftest <log> --areas basic`, then read the "N passed, M failed" line (the exe prints nothing; read the log).
 > - One test (`--only TestX`): `build\TabForge\TabForge.exe --selftest <log> --only TestX`. An unknown name reports \"0 run\".
 > - Register a test: add an `AreaOf` entry and a `Guard` call in `Source/src/TabForge.Avalonia/SelfTests/SelfTest.cs`. '
-> - Before a release: `--areas release`. The full suite (`--require ci,document-context`) runs weekly and at manager checkpoints only.
+> - A release runs the basic set only (see `Source/docs/guides/RELEASING.md`). `--areas release` is optional. The full suite (`--require ci,document-context`) runs weekly and at manager checkpoints only.
 <!-- TEST-BOX-END -->
 
 ## Removed in Batch 2 (canonical note)
@@ -20,9 +20,9 @@ The **basic set** is the architecture and hygiene checks and a few sub-second sm
 
 There is no `essential` area and no `SelfTests/Smoke` folder: window-opening checks live in their own areas (see Areas below) and run with `--areas <area>` (or `--only`), in the release set where listed, and in the full suite.
 
-## Release gate (`--areas release`)
+## Release test set (`--areas release`, optional)
 
-`--areas release` is the curated release set: the basic set plus saving, atomic writes and recovery, import and malformed-input containment, playback and editing interaction, document context, plug-in trust and input limits, and the real two-process Explorer handover plus final-window shutdown check (the list is `ReleaseTestNames` in `Source/src/TabForge.Avalonia/SelfTests/SelfTestRelease.cs`). It runs in about 2 minutes. `Source/tools/Package-Release.ps1` (and so the upstream release workflow, historical: this checkout has no CI config) always publishes a separate copy, runs it with `--areas release` and refuses to package on any failure. The maintainer's local rebuild script has a `release` option that runs the same gate. Push CI stays on the basic set; the full suite runs weekly.
+`--areas release` is the curated release set: the basic set plus saving, atomic writes and recovery, import and malformed-input containment, playback and editing interaction, document context, plug-in trust and input limits, and the real two-process Explorer handover plus final-window shutdown check (the list is `ReleaseTestNames` in `Source/src/TabForge.Avalonia/SelfTests/SelfTestRelease.cs`). It is optional: `Source/tools/Package-Release.ps1 -FullGate` runs it. Normal releases run only the basic set, as `Source/docs/guides/RELEASING.md` describes.
 
 ## Run it
 
@@ -127,4 +127,3 @@ R runs last and alone because the recording tests use real-time audio and failed
 
 Options: `-Lanes L0,P3` (subset; the merged gate is then not enforced), `-DryRun` (lane table, exact commands and coverage check, nothing built or run), `-Quick` (skips R and the monkey), `-MaxParallel n` (default min(4, CPUs/3)), `-Timeout minutes` (default 45 per child). Measured: `-Lanes L0,P3` reported 1174 passed; the serial runner on the same areas (`--areas window-lifetime,basic,settings,notation,midi,leaks,fuzz,tutorial`) reports 1167, which is L0a (888) plus P3 (279); L0b adds the 7 hand-over checks.
 
-CI is unchanged (historical: the upstream windows-ci workflow; this checkout has no CI config): it runs the full suite serially in one step of `build-and-selftest` (20-minute job limit, `FULL_SUITE=true` on schedule and manual dispatch). To use the lanes there, replace the `--require ci` run in that step by a call to the `run-suite` script and raise `timeout-minutes`; the script builds its own copy, so the Build step could then be dropped. The script writes its logs to `$env:TEMP`, so the upload step would need `path: $env:TEMP/tf-suite-*.log`. That change needs a CI run to confirm and is left to the owner.
