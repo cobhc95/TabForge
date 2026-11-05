@@ -21,6 +21,7 @@ public sealed class LiveStripToggle : Control
     /// <summary>Which look: the track list Mute or Solo box, or the accent-lit text switch.</summary>
     public enum Look { Mute, Solo, Lit }
 
+    private const double LitPad = 8;
     private readonly AvaloniaDrawContext _draw = new();
     private readonly Look _look;
     private readonly string _label;
@@ -30,6 +31,13 @@ public sealed class LiveStripToggle : Control
     public LiveStripToggle(Look look, string label, double width, double height)
     {
         _look = look; _label = label;
+        // The lit text switch is as wide as its bold label needs (a fixed width cut the label at some font scales).
+        if (look == Look.Lit)
+        {
+            var probe = new FormattedText(label, System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
+                new Typeface(ChromeMetrics.UiFontFamily, FontStyle.Normal, FontWeight.Bold), ChromeMetrics.LiveStripFontSize, Brushes.Black);
+            width = Math.Max(width, Math.Ceiling(probe.Width) + 2 * LitPad);
+        }
         Width = width; Height = height;
         ActualThemeVariantChanged += (_, _) => InvalidateVisual();
     }

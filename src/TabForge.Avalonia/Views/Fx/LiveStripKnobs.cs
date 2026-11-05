@@ -57,7 +57,7 @@ public sealed class LiveStripKnobs : StackPanel
 
     private MiniSlider Add(string label, int min, int max, int reset, string tip, Action<int> changed)
     {
-        var name = new TextBlock { Text = label, Width = ChromeMetrics.LiveStripSliderLabelWidth, FontSize = ChromeMetrics.LiveStripFontSize, VerticalAlignment = VerticalAlignment.Center, [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted") };
+        var name = new TextBlock { Text = label, FontSize = ChromeMetrics.LiveStripFontSize, VerticalAlignment = VerticalAlignment.Center, [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted") };
         var slider = new MiniSlider(min, max, reset, ChromeMetrics.LiveStripSliderWidth, ChromeMetrics.LiveStripControlHeight) { Name = label + "Slider", VerticalAlignment = VerticalAlignment.Center };
         ToolTip.SetTip(slider, tip);
         ToolTip.SetTip(name, tip);

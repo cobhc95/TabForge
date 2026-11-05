@@ -2,6 +2,11 @@
 
 TabForge is actively developed; please report anything odd on the Issues page.
 
+## 0.9.1
+
+- Live input window: the strip now fits one row at the window's default size (960 x 480) with no clipped control: the Tuner switch is as wide as its label, the Gain, Vol and Pan labels take only their text width, and the cents scale is shorter (it shrinks first when the window narrows).
+- Plug-in editors: a docked plug-in editor larger than its area (for example Superior Drummer 3 in the FX chain window) no longer loses its right and bottom parts with no scroll bars. The plug-in is no longer told a size smaller than the one it asked for, so the bars appear and the editor scrolls.
+
 ## 0.9.0
 
 Stable release with sharper wound strings, a more natural string ring, lighter playback, working ASIO again, and crash and shutdown fixes.
