@@ -1,5 +1,12 @@
 ; TabForge installer (Inno Setup 7). Built by Source\tools\Package-Release.ps1, which passes the version and
 ; the publish folder:  ISCC.exe /DAppVersion=0.8.3 /DFileVersion=0.8.3.0 /DSourceDir=..\..\build\TabForge Source\installer\TabForge.iss
+#ifndef FileNameVersion
+  #ifdef AppVersion
+    #define FileNameVersion AppVersion
+  #else
+    #define FileNameVersion "0.0.0-dev"
+  #endif
+#endif
 #ifndef AppVersion
   #define AppVersion "0.0.0-dev"
 #endif
@@ -39,7 +46,7 @@ SetupIconFile=..\src\TabForge.Avalonia\Assets\TabForge.ico
 UninstallDisplayIcon={app}\TabForge.exe
 LicenseFile=..\LICENSE
 OutputDir=..\..\dist
-OutputBaseFilename=TabForge-{#AppVersion}-win-setup
+OutputBaseFilename=TabForge-{#FileNameVersion}-win-setup
 Compression=lzma2/fast
 SolidCompression=yes
 WizardStyle=modern

@@ -1,9 +1,9 @@
 <#
 Builds the two GitHub release downloads into dist\:
-  TabForge-<display>-win-x64-portable.zip   extract anywhere and run TabForge.exe
-  TabForge-<display>-win-setup.exe              Inno Setup installer (optional file associations)
+  TabForge-<version>-win-x64-portable.zip   extract anywhere and run TabForge.exe
+  TabForge-<version>-win-setup.exe              Inno Setup installer (optional file associations)
 The version comes from Directory.Build.props <Version>, so the app, the engine, the zip and the installer agree.
-File names and the installer use the display version (0.5.0 shows as "0.5", like the app); the numeric file version stays 0.5.0.0.
+The installer shows the display version (0.5.0 shows as "0.5", like the app); file names carry the whole version, so the README links always match; the numeric file version stays 0.5.0.0.
 
 Check: this script publishes to build\TabForge-release, runs the headless basic self-test set (seconds) ON THAT EXACT
 FOLDER and refuses to package unless it exits 0 and its log says
@@ -307,7 +307,7 @@ Write-Output "Self-test passed for the exact build being packaged (TabForge.exe 
 
 # ---- package the tested folder ---------------------------------------------------------------------
 # Portable zip: one top-level folder so extracting never scatters files.
-$zip = Join-Path $dist "TabForge-$display-win-x64-portable.zip"
+$zip = Join-Path $dist "TabForge-$version-win-x64-portable.zip"
 if (Test-Path -LiteralPath $zip) { [IO.File]::Delete($zip) }
 $staging = Join-Path ([IO.Path]::GetTempPath()) "TabForge-$display-portable"
 Clear-Folder $staging
@@ -339,7 +339,7 @@ Write-Output ("Portable: {0} ({1:N1} MB)" -f $zip, ((Get-Item $zip).Length / 1MB
 
 # Installer (built from the same tested folder)
 if (-not (Test-Path -LiteralPath $InnoCompiler)) { throw "Inno Setup compiler not found: $InnoCompiler" }
-& $InnoCompiler "/DAppVersion=$display" "/DFileVersion=$numericVersion" "/DSourceDir=$publish" "/O$dist" /Q (Join-Path $srcRoot 'installer\TabForge.iss')
+& $InnoCompiler "/DAppVersion=$display" "/DFileNameVersion=$version" "/DFileVersion=$numericVersion" "/DSourceDir=$publish" "/O$dist" /Q (Join-Path $srcRoot 'installer\TabForge.iss')
 if ($LASTEXITCODE) { throw 'Inno Setup failed' }
-$setup = Join-Path $dist "TabForge-$display-win-setup.exe"
+$setup = Join-Path $dist "TabForge-$version-win-setup.exe"
 Write-Output ("Installer: {0} ({1:N1} MB)" -f $setup, ((Get-Item $setup).Length / 1MB))
