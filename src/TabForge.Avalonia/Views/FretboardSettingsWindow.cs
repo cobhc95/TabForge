@@ -51,7 +51,7 @@ public sealed partial class FretboardSettingsWindow : Window
     private readonly ScrollViewer _page = new() { HorizontalScrollBarVisibility = global::Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled };
     private readonly ListBox _nav = new() { Width = ChromeMetrics.SettingsRailWidth, BorderThickness = default };
     private readonly Dictionary<int, SettingsNavigationIconView> _navIcons = new();
-    private readonly TextBlock _status = new() { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, FretboardChromeMetrics.FooterGap, 0) };
+    private readonly TextBlock _status = new() { VerticalAlignment = VerticalAlignment.Center };
     private readonly Button _apply = new() { Name = "FretboardSettingsApply", Content = SettingsCatalog.Special(SettingsCatalog.ActionApply).Label, IsEnabled = false };
     private AppSettings _kept;
     private bool _dirty;
@@ -103,11 +103,11 @@ public sealed partial class FretboardSettingsWindow : Window
         ok.Classes.Add(AvaloniaDefaultLooks.AccentLook);
         ok.Click += (_, _) => { Apply(); Close(); };
         ShowStatus();
-        var right = ToolWindowParts.Row(_status, cancel, _apply, ok);
+        var right = ToolWindowParts.Row(_status.WithMargin(0, 0, FretboardChromeMetrics.FooterGap, 0), cancel, _apply, ok);
         DockPanel.SetDock(more, Dock.Left);
         DockPanel.SetDock(right, Dock.Right);
         var footer = new DockPanel { LastChildFill = false, Children = { more, right } }.WithMargin(12, 8, 12, 8);
-        var band = new Border { Child = footer, BorderThickness = new Thickness(0, 1, 0, 0) };
+        var band = new Border { Child = footer, BorderThickness = FretboardChromeMetrics.FooterBandBorder };
         band[!Border.BackgroundProperty] = new global::Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("WindowBrush");
         band[!Border.BorderBrushProperty] = new global::Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("BorderSoftBrush");
         return band;

@@ -127,9 +127,11 @@ public sealed partial class TrackPropertiesWindow
     {
         var glyph = new global::Avalonia.Controls.Shapes.Path
         {
-            Data = global::Avalonia.Media.Geometry.Parse(arrow), Width = 12, Height = 12, Stretch = global::Avalonia.Media.Stretch.None, StrokeThickness = 1.6,
+            Data = global::Avalonia.Media.Geometry.Parse(arrow), Stretch = global::Avalonia.Media.Stretch.None,
             StrokeLineCap = global::Avalonia.Media.PenLineCap.Round, StrokeJoin = global::Avalonia.Media.PenLineJoin.Round, VerticalAlignment = VerticalAlignment.Center,
         };
+        glyph.Width = glyph.Height = global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.TrackTuningArrowSize;
+        glyph.StrokeThickness = global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.TrackTuningArrowStroke;
         glyph[!global::Avalonia.Controls.Shapes.Shape.StrokeProperty] = new global::Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("AccentBrush");
         return new StackPanel
         {

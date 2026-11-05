@@ -30,7 +30,7 @@ public class TrackListSplitterShrinkTests
     private static MainWindow OpenDemoWindow()
     {
         var song = new SongDocument(() => null) { Project = FullDemoSongFactory.Create() };
-        var main = new MainWindow(first: song);
+        var main = new MainWindow(first: song) { Width = 1800, Height = 1400 };   // tall enough for the track list to reach its limit
         main.Show();
         return main;
     }

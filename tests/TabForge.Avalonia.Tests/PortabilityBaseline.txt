@@ -24,3 +24,5 @@ Source/src/TabForge.Core/Score/ScoreText.cs|10
 Source/src/TabForge.Core/Score/StaffNotationDrawing.cs|1
 Source/src/TabForge.Core/Services/Settings/AppearanceSettings.cs|2
 Source/src/TabForge.Core/Services/Files/FilePathPolicy.cs|1
+# Reason: turns a stored binding's Control into the key modifier it names; it is not a choice of platform shortcut.
+Source/src/TabForge.Avalonia/MainWindow/MainWindowKeyboard.cs|1

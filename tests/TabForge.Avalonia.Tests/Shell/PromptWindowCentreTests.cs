@@ -20,6 +20,7 @@ public class PromptWindowCentreTests
     [AvaloniaFact]
     public async Task AddTrackPromptOpensCentredOnItsOwnerWindow()
     {
+        DialogWindowPlacement.ForgetSession();
         var owner = new Window { Width = 800, Height = 600 };
         owner.Show();
         var asked = PromptWindow.AskAsync(owner, PromptTextsPresenter.AddTrack());

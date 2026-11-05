@@ -38,6 +38,7 @@ public sealed partial class ScorePreviewView : Control
     private const double FitWidthFactor = 0;   // the song's ZoomFactor while Fit width is on (SongDocument.ZoomFactor: 0 = fit width)
     // Songs shown at least once, keyed by the song object; weak, so a closed song drops out. UI thread only, no ceiling (one entry per open song).
     private readonly System.Runtime.CompilerServices.ConditionalWeakTable<TabForge.Documents.SongDocument, object> _songsShown = new();
+    internal TabForge.Documents.SongDocument? ShownSong => _shownSong;
     private TabForge.Documents.SongDocument? _shownSong;   // the song last passed to Show; its ZoomFactor is written back when another song is shown
     private bool _fitWidthOn;   // true while the zoom follows the viewport width; the song then keeps FitWidthFactor, not the fitted value
     private bool _zoomedByHand;   // true once the zoom was set by the user (a step, a zoom row, a stored zoom); page mode then keeps it instead of fitting

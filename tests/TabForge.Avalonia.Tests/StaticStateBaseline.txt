@@ -149,3 +149,11 @@ Source/src/TabForge.Core/Services/Tracks/TrackSetup.Convert.cs|1
 Source/src/TabForge.Core/Services/Video/LiveVideoSettings.cs|3
 Source/src/TabForge.Core/Services/Video/VideoEncoderOptions.cs|1
 Source/src/TabForge.Core/Views/EffectEditors/OrnamentEdits.cs|3
+# Reason: fretboard pictures are read-only pixels shared by every panel, so one copy serves them all.
+Source/src/TabForge.Avalonia/Platform/FretboardAssets.cs|1
+# Reason: a Windows event hook is per process and calls a static callback; the list holds one entry per open main window.
+Source/src/TabForge.Avalonia/Shell/Win32/PluginEditorHotkeys.cs|4
+# Reason: an empty set that is never written, shared so a probe allocates nothing.
+Source/src/TabForge.Core/Score/ScoreGeometryProbe.cs|1
+# Reason: a fixed table of command ids, never written after start-up.
+Source/src/TabForge.Core/Services/Hotkeys/NavigationHotkeys.cs|1

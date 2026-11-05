@@ -1,3 +1,6 @@
 # UiResponsivenessGuardTests baseline: rule:path|count. Counts only shrink; new hits fail (fix the code, do not raise).
 # Reason: AvaloniaFileDialogs.Wait pumps a nested dispatcher frame until the picker task is completed, so GetResult() returns at once (never blocks the UI).
-block-wait:Source/src/TabForge.Avalonia/Platform/AvaloniaFileDialogs.cs|1
+# Reason: the second hit reads a lookup task only after checking it has already finished, so it never waits.
+block-wait:Source/src/TabForge.Avalonia/Platform/AvaloniaFileDialogs.cs|2
+# Reason: Main must stay synchronous for [STAThread] (ASIO needs it); these waits run before any window exists, on the thread that then runs the app.
+block-wait:Source/src/TabForge.Avalonia/App/Program.cs|2

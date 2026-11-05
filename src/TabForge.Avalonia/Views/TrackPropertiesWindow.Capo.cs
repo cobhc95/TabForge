@@ -179,7 +179,7 @@ public sealed partial class TrackPropertiesWindow
                 d.Rect(on ? accent : accent.WithOpacity(DialogMetrics.TrackCapoOffOpacity), null, 0, 0, Bounds.Width, Bounds.Height, CornerRadius.TopLeft);
             if (IsKeyboardFocusWithin)
                 d.Rect(null, new UiStroke(accent, DialogMetrics.TrackCapoSelectionThickness), 1, 1, Math.Max(0, Bounds.Width - 2), Math.Max(0, Bounds.Height - 2), CornerRadius.TopLeft);
-            var text = d.Text(Content?.ToString() ?? "", "Segoe UI", FontSize, on ? ThemeColours.InkOn(accent) : ink("TextPrimary"), d.PixelsPerDip);
+            var text = d.Text(Content?.ToString() ?? "", TabForge.Avalonia.Platform.InstrumentPanelView.Font, FontSize, on ? ThemeColours.InkOn(accent) : ink("TextPrimary"), d.PixelsPerDip);
             d.DrawText(text, (Bounds.Width - text.Width) / 2, (Bounds.Height - text.Height) / 2);
         }
     }

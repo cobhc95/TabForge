@@ -58,9 +58,10 @@ public class TrackPropertiesWindowTests
         var tools = Buttons(window).Where(b => b is not CheckBox && b is not ToggleButton && b is not ColourButton && b.Name is not null && !b.Name.StartsWith("String") && b.Name != "InstrumentChooserButton" && b.Content is string).Select(b => (b.Name, (string)b.Content!)).ToList();
         Assert.Equal(new (string?, string)[]
         {
-            ("CancelButton", "Cancel"), ("OkButton", "OK"), ("FxChainButton", "Effects & instruments (FX)…"), ("EditCustomMapButton", "Edit custom map…"),
+            ("FxChainButton", "Effects & instruments (FX)…"), ("EditCustomMapButton", "Edit custom map…"),
             ("TuningPresetButton", "Standard E ▾"), ("AllDownButton", "All −1"), ("AllUpButton", "All +1"),
             ("RemoveSelectedCapoButton", "Remove selected"), ("RemoveAllCaposButton", "Remove all capos"),
+            ("CancelButton", "Cancel"), ("OkButton", "OK"),
         }, tools);
         var ok = Named<Button>(window, "OkButton");
         var cancel = Named<Button>(window, "CancelButton");

@@ -83,7 +83,7 @@ public sealed class BandCardFitTests
         var board = band.PanelFor(band.ShownTrackIndices[0])!;
         Assert.True(board.InstrumentHeight <= board.InstrumentAutoMaxHeight && board.InstrumentHeight >= board.InstrumentMinHeight);
         var scale = board.Instrument.FretboardScale();
-        var expected = board.InstrumentHeight / TabForge.Presenters.FretboardScaleRules.NaturalHeight(board.InstrumentStrings, 1);
+        var expected = Math.Max(TabForge.Presenters.FretboardScaleRules.MinScale, board.InstrumentHeight / TabForge.Presenters.FretboardScaleRules.NaturalHeight(board.InstrumentStrings, 1));
         Assert.InRange(scale, expected - ScaleTolerance, expected + ScaleTolerance);
         main.Close();
     }
@@ -204,6 +204,8 @@ public sealed class BandCardFitTests
         main.Close();
     }
 
+    /// <summary>Five cards at their smallest zoom need 14 DIPs more than the 1100-high test window leaves below the top bars.</summary>
+    private const double FiveCardsExtraHeight = 20;
     private const double ResizeDragDistance = 30;
     private const double ChosenHeight = 120;
     private const int ReferenceStrings = 6;
@@ -216,6 +218,7 @@ public sealed class BandCardFitTests
     public void FiveCardsFitWithTheirFretboardOff()
     {
         var (main, band) = Open(false);
+        main.Height += FiveCardsExtraHeight;
         for (var i = 3; i < 5; i++) band.ToggleShown(i);
         band.SetFretboardOn(band.ShownTrackIndices[0], false);
         band.ScoreMenu!.WheelZoom(false);

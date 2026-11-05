@@ -27,6 +27,7 @@ public sealed partial class PreferencesWindow
     {
         var browse = new Button { Content = "Browse…", Name = "BrowseFolderButton", VerticalAlignment = VerticalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Center, Classes = { AvaloniaFormControlStyles.PrefsFieldClass } };
         AutomationProperties.SetName(browse, "Browse for " + row.Title);
+        AutomationProperties.SetName(field, row.Title);
         browse.Click += async (_, _) =>
         {
             var start = TabForge.Services.Video.LiveVideoChoices.FolderOf(new TabForge.Services.Video.LiveVideoSettings { Folder = field.Text ?? "" });

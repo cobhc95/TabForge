@@ -46,7 +46,7 @@ public sealed class InstrumentPanelStrip : Grid
     private AvaloniaPlaybackSession? _playback;
     private TrackModel? _track;
     // The song whose edits this pane follows (swapped when another song is shown).
-    private SongProject? _timelineProject;
+    private readonly TabForge.Documents.DocumentWatch _timelineWatch = new();
 
     // What ShowPlaybackNotes last showed: a bar-change frame raises PlayheadBarChanged and then PlayheadFrame with the same clock, so the second
     // call would repeat the whole fill for an identical result. Remembering the inputs skips only that exact repeat; Refresh (a cursor/track change),
@@ -156,7 +156,7 @@ public sealed class InstrumentPanelStrip : Grid
     {
         base.OnAttachedToVisualTree(e);
         RebindPlayback();
-        FollowProjectTimeline(_score.Editor.Project);
+        FollowSongTimeline(_score.ShownSong);
         if (_contextMenu is not null) _contextMenu.TrackViewChanged += Refresh;
     }
 
@@ -164,7 +164,7 @@ public sealed class InstrumentPanelStrip : Grid
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
-        FollowProjectTimeline(null);
+        FollowSongTimeline(null);
         if (_contextMenu is not null) _contextMenu.TrackViewChanged -= Refresh;
         UnsubscribePlayback();
         _playback = null;
@@ -289,7 +289,7 @@ public sealed class InstrumentPanelStrip : Grid
     /// An audio track, or no track, shows the placeholder.</summary>
     internal void Refresh()
     {
-        FollowProjectTimeline(_score.Editor.Project);
+        FollowSongTimeline(_score.ShownSong);
         if (_score.Editor.Project is not { Tracks.Count: > 0 }) return;
         var selected = _score.Editor.Track;
         _track = selected is { IsAudio: false } ? selected : null;
@@ -310,15 +310,11 @@ public sealed class InstrumentPanelStrip : Grid
     // A window's OK edits through DocumentEdits.Run, which marks the song's timeline but does not raise the
     // score's CursorChanged; following the mark lets the pane refresh after that committed write, through the
     // same CursorChanged notification every other view already uses. Display-only: the handler edits nothing.
-    private void FollowProjectTimeline(SongProject? project)
+    private void FollowSongTimeline(TabForge.Documents.SongDocument? song)
     {
-        if (ReferenceEquals(project, _timelineProject)) return;
-        if (_timelineProject is not null) _timelineProject.TimelineMarked -= OnSongTimelineMarked;
-        _timelineProject = project;
-        if (project is not null) project.TimelineMarked += OnSongTimelineMarked;
+        _timelineWatch.Marked ??= _ => _score.RaiseCursorChanged();
+        _timelineWatch.Bind(song);
     }
-
-    private void OnSongTimelineMarked(SongProject _) => _score.RaiseCursorChanged();
 
     /// <summary>Under the fretboard's colour legend when the panel has one; otherwise at the top-right, left of the close X (a keyboard or drum panel).</summary>
     private void PlaceScalesButton()

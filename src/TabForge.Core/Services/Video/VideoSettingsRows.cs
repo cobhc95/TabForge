@@ -21,7 +21,7 @@ public static partial class SettingsCatalog
                 LiveVideoChoices.Regions, "The part of the screen the recording shows: the score, the Band view, the whole window, or the score with the instrument below it. What is on screen is what is recorded.",
                 "video record region score band window instrument capture"),
             Text(General, "Video recording", "video.folder", "Save folder", v => video.Folder = v.Trim(), () => video.Folder,
-                "Where the recordings are saved. Empty: the TabForge folder inside your Videos folder.", "video record folder save location path videos"),
+                "Where the recordings are saved. Empty: the TabForge folder inside your Videos folder.", "video record folder save location path videos browse for"),
             Choice(General, "Video encoder (experimental)", "video.encoder", "Encoder (experimental)", v => video.Encoder = VideoEncoderChoices.Normalize(v), () => VideoEncoderChoices.LabelOf(video.Encoder),
                 VideoEncoderChoices.Available(), "Which H.264 encoder writes the MP4. Auto uses a hardware encoder when the PC has one (the default behaviour); Software and Hardware force the choice. A hardware encoder that fails to start falls back to software when exporting. FFmpeg (offered only when an ffmpeg is installed) writes the MP4 through that ffmpeg instead of Windows.",
                 "video encoder hardware software h264 gpu experimental"),

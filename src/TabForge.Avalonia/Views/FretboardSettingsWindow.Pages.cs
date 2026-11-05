@@ -122,7 +122,7 @@ public sealed partial class FretboardSettingsWindow
     private void Slide(global::Avalonia.Controls.Controls rows, string label, string name, int min, int max, int step, Func<EditingSettings, int> get, Action<int> set, string unit = "")
     {
         rows.Add(ScalePopupLayout.SectionLabel(unit.Length > 0 ? $"{label} ({unit})" : label));
-        var slider = new MiniSlider(min, max, get(new EditingSettings()), FretboardChromeMetrics.SettingsSliderWidth, FretboardChromeMetrics.SettingsSliderHeight)
+        var slider = new MiniSlider(min, max, get(new EditingSettings()), global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.FretboardSliderWidth, global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.FretboardSliderHeight)
         {
             Name = name, Step = step, Focusable = true, Value = get(_settings.Editing), HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Left,
         };

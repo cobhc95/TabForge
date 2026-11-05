@@ -69,6 +69,7 @@ public sealed class DialogWindowPlacementTests
     [AvaloniaFact]
     public void FretboardSettingsDefaultsToCentreOwner()
     {
+        DialogWindowPlacement.ForgetSession();
         var window = new FretboardSettingsWindow(new AppSettings(), () => { }, () => { });
         try
         {

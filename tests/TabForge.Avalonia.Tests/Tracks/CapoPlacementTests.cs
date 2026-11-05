@@ -35,8 +35,7 @@ public sealed class CapoPlacementTests
         using var lifetime = new WindowLifetime(window);
         var picker = Named<WrapPanel>(window, "CapoStrings");
         var box = Named<NumericUpDown>(window, "CapoFretBox");
-        Assert.True(picker.IsVisible);
-        Assert.False(picker.IsEnabled);
+        Assert.False(picker.IsVisible);   // From and To belong to a partial capo
         box.Value = 5;
         Assert.Equal(5, Named<TrackPropertiesWindowCapoBoard>(window, "CapoBoard").ShownFret);
         box.Value = 0;
@@ -176,28 +175,22 @@ public sealed class CapoPlacementTests
         var track = new TrackModel { Name = "Capo", StringTunings = new List<int> { 64, 59, 55, 50, 45, 40 }, Measures = TemplateFactory.Measures(1) };
         var window = new TrackPropertiesWindow(track) { Width = 1600 };
         using var lifetime = new WindowLifetime(window);
-        Assert.Equal(DialogMetrics.TrackCapoBoardHeight, Named<TrackPropertiesWindowCapoBoard>(window, "CapoBoard").Height);
+        Assert.Equal(DialogMetrics.TrackCapoCardBoardHeight, Named<TrackPropertiesWindowCapoBoard>(window, "CapoBoard").Height);
         var box = Named<NumericUpDown>(window, "CapoFretBox");
         Assert.False(box.ShowButtonSpinner);
         Assert.Equal(0, box.Minimum);
         Assert.Equal(TrackPropertiesPresenter.MaxCapo, box.Maximum);
-        var row = Assert.IsType<WrapPanel>(box.Parent);
-        Assert.Contains(row.Children.OfType<TextBlock>(), t => t.Text == "CAPO");
-        Assert.Contains(Named<WrapPanel>(window, "CapoChips"), row.Children);
-        Assert.Contains(Named<WrapPanel>(window, "CapoStrings"), row.Children);
+        var row = Assert.IsType<StackPanel>(box.Parent);
+        Assert.Equal(Orientation.Horizontal, row.Orientation);
         var chips = Named<WrapPanel>(window, "CapoChips");
         Assert.Contains(Named<ToggleButton>(window, "CapoPlacementFull"), chips.Children);
         Assert.Contains(Named<ToggleButton>(window, "CapoPlacementPartial"), chips.Children);
-        var hint = window.GetLogicalDescendants().OfType<TextBlock>().Single(t => t.Text == "click board to place");
-        Assert.Equal(Dock.Right, DockPanel.GetDock(hint));
-        Assert.IsType<DockPanel>(hint.Parent);
-        // One line, in order: CAPO, Full/Partial chips, From/To strings, Fret box last (right) before the hint.
+        // One line, in order: the Full/Partial chips, the Fret box, then the From/To strings.
         var from = Named<ComboBox>(window, "CapoStringFrom");
         var to = Named<ComboBox>(window, "CapoStringTo");
-        var chipsPanel = Named<WrapPanel>(window, "CapoChips");
         var stringsPanel = Named<WrapPanel>(window, "CapoStrings");
-        Assert.True(row.Children.IndexOf(chipsPanel) < row.Children.IndexOf(stringsPanel));
-        Assert.True(row.Children.IndexOf(stringsPanel) < row.Children.IndexOf(box));
+        Assert.True(row.Children.IndexOf(chips) < row.Children.IndexOf(box));
+        Assert.True(row.Children.IndexOf(box) < row.Children.IndexOf(stringsPanel));
         Assert.Equal(DialogMetrics.TrackCapoStringBoxWidth, from.Width);
         Assert.Equal(DialogMetrics.TrackCapoStringBoxWidth, to.Width);
     }
@@ -224,7 +217,7 @@ public sealed class CapoPlacementTests
         var at = board.TranslatePoint(new Point(board.FretX(7), board.Bounds.Height / 2), window)!.Value;
         window.MouseMove(at);
         Assert.Equal(new Cursor(StandardCursorType.Hand).ToString(), board.Cursor?.ToString());
-        Assert.Equal("Capo fret 7, drag to move", ToolTip.GetTip(board));
+        Assert.Equal("Partial capo fret 7, drag to move", ToolTip.GetTip(board));
         var commits = new List<int>();
         board.CommitRequested += fret => { commits.Add(fret); return true; };
         Assert.True(board.BeginDrag(new Point(board.FretX(7), board.Bounds.Height / 2)));

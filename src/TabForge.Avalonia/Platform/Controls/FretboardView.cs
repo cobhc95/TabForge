@@ -156,7 +156,7 @@ internal static class FretboardBoardPainter
 internal class FretboardView : Control
 {
     internal static readonly FretboardBoardLimits BoardLimits = new(double.PositiveInfinity, double.PositiveInfinity, double.PositiveInfinity, ClearsLegend: false, RealProportions: true);
-    private const string Font = "Segoe UI";
+    private const string Font = InstrumentPanelView.Font;
     private const double NumberScale = 1.0;
     private const int ShownFrets = 12;
 

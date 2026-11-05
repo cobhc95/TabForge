@@ -414,6 +414,8 @@ internal static class DialogMetrics
         TrackStringStepWidth = 24, TrackStringStepHeight = 20, TrackStringSpeakerIconSize = 14, TrackStringSpeakerStroke = 1;
 
     /// <summary>The track properties window insets: tuning card, capo card, MIDI card and string rows.</summary>
+    /// <summary>The arrow on the All -1 and All +1 buttons, and the Fretboard settings sliders.</summary>
+    public const double TrackTuningArrowSize = 12, TrackTuningArrowStroke = 1.6, FretboardSliderWidth = 280, FretboardSliderHeight = 22;
     public static readonly Thickness TrackTuningButtonPadding = new(6, 1), TrackTuningHeaderPartGap = new(0, 0, TrackTuningHeaderGap, 0),
         TrackTuningControlGap = new(0, 0, 0, 4), TrackTuningColumnGap = new(0, 0, 8, 0), TrackTuningPresetAllCountsGap = new(0, 6, 0, 6),
         TrackTuningPresetNoneInset = new(4, 6), TrackTuningGroupHeaderGap = new(4, 8, 0, 2), TrackMidiBoxPadding = new(4, 1),

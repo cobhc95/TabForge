@@ -13,13 +13,15 @@ internal sealed class DialogWindowPlacement
     private readonly Dictionary<Type, PixelPoint> _positions = new();
     private readonly ConditionalWeakTable<Window, Tracking> _windows = new();
     private sealed class Tracking { internal bool Ready; internal bool Subscribed; }
-    private static bool _registered;
+    private static DialogWindowPlacement? _session;
+
+    /// <summary>Forgets where this session's windows were, as a new session would.</summary>
+    internal static void ForgetSession() => _session?._positions.Clear();
 
     internal static void RegisterWindowHook()
     {
-        if (_registered) return;
-        _registered = true;
-        var session = new DialogWindowPlacement();
+        if (_session is not null) return;
+        var session = _session = new DialogWindowPlacement();
         // This event runs before initial layout and before Avalonia calculates the startup position.
         Window.WindowOpenedEvent.AddClassHandler<Window>((window, _) => session.Prepare(window));
     }

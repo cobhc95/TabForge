@@ -76,6 +76,7 @@ public class PluginBrowserWindowTests
     [AvaloniaFact]
     public void ControlsMatchWpfOrderTitleAndSize()
     {
+        DialogWindowPlacement.ForgetSession();
         var window = Open();
         Assert.Equal(("Add plug-in", 760d, 560d, 520d, 320d, false), (window.Title, window.Width, window.Height, window.MinWidth, window.MinHeight, window.ShowInTaskbar));
         Assert.Equal(WindowStartupLocation.CenterOwner, window.WindowStartupLocation);

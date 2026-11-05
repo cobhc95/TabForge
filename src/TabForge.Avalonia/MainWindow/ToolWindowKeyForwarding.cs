@@ -42,13 +42,13 @@ public sealed class ToolWindowKeyForwarding : IDisposable
         e.Handled = _keyboard.RouteNavigation(e.Key, e.KeyModifiers, window.FocusManager?.GetFocusedElement());
     }
 
-    // A modal dialog keeps its keys. A window with no main window among its owners is served by whichever main window hears it first.
+    // A modal dialog keeps its keys, and so does a window that no main window owns.
     private bool IsToolWindowOfMine(Window window)
     {
         if (window is MainWindow || window.IsDialog || KeepsItsKeys(window.GetType())) return false;
         var root = window;
         while (root.Owner is Window owner) root = owner;
-        return root is not MainWindow || ReferenceEquals(root, _main);
+        return ReferenceEquals(root, _main);
     }
 
     public void Dispose()

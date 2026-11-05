@@ -40,8 +40,9 @@ public class TrackMeterAppWindowTests
         var folder = Path.Combine(Path.GetTempPath(), "tf-meter-window-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(folder);
         var settingsPath = Path.Combine(folder, "settings.json");
-        File.WriteAllText(settingsPath, "{\"Plugins\":{\"Driver\":\"Null\"}}");
+        File.WriteAllText(settingsPath, "{}");
         using var settings = MainWindowSettings.Open(settingsPath);
+        settings.Settings.Plugins.Driver = "Null";   // set after loading: the settings file only accepts the drivers a user can pick, and this PC may have no default output
         var trust = new TabForge.Plugins.PluginTrust();
         using var client = new AudioEngineClient(trust) { EngineExeForTest = Path.Combine(AppContext.BaseDirectory, "TabForge.exe") };
         var routing = new RoutedMidiOutput(new NullMidiOutput(), client);

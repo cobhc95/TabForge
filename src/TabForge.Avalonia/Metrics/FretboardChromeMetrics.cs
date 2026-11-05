@@ -15,8 +15,8 @@ public static class FretboardChromeMetrics
     public const double PanelWidth = 380, PanelMaxHeight = 560, PanelTitleSize = 14;
     /// <summary>The Fretboard settings window: the gap between footer buttons and the small-note label size.</summary>
     public const double FooterGap = 8, PreviewLabelSize = 11, PageTitleSize = 20, PageCardGap = 12;
-    /// <summary>The Fretboard settings window's sliders.</summary>
-    public const double SettingsSliderWidth = 280, SettingsSliderHeight = 22;
+    /// <summary>The Fretboard settings footer band's top edge.</summary>
+    public static Thickness FooterBandBorder => new(0, 1, 0, 0);
     /// <summary>The rail row's columns: the glyph, the label gap, the label.</summary>
     public static ColumnDefinitions NavColumns => new($"{ChromeMetrics.SettingsRailIconSize},{ChromeMetrics.SettingsRailLabelGap},*");
 }
