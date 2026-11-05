@@ -4,7 +4,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ## 0.9.0
 
-Stable release with sharper wound strings, tidier dialogs and crash and shutdown fixes.
+Stable release with sharper wound strings, a more natural string ring, lighter playback, working ASIO again, and crash and shutdown fixes.
 
 - Performance: playback redraws far less. A note change repaints only the playing line of the score, and a ringing string only the strings over a kept picture of the neck, with no change in how either looks.
 - Performance: a song's auto-loaded plug-ins now load when first needed (play, its FX chain, an armed track or an export) instead of on opening it, so a song you only read or edit stays light. Until then its tracks use the built-in sound.
@@ -22,6 +22,7 @@ Stable release with sharper wound strings, tidier dialogs and crash and shutdown
 - The "Plug-in loading slowly" prompt closes with its window, and the IR Loader editor stops checking for updates while hidden and no longer has a Choose button that opened an empty menu; Browse picks the file.
 - Fretboard: wound strings are drawn with fine coils that stay sharp at any size, with a new Bronze finish; a sounding string now shows a soft blur that rings for the note's own length, and the Fretboard settings window now matches main Settings: grey cards, the track list's sliders instead of +/- boxes, and Cancel, Apply and OK.
 - Left-handed fretboard: string 1 now stays on top, matching the tab, instead of the strings being turned upside down, and dragging a capo follows the pointer.
+- Save prompt: the "Save changes" question stays on top of plug-in windows instead of opening behind them. While it is open it also stays above other programs.
 - Monitor FX: the headphones button only lights when a plug-in really plays on the current device, not just when the chain has plug-ins.
 - Track properties: the capo From and To boxes show their whole outline on hover and focus. All -1 and All +1 have arrows, and the string count box replaces the Add string button.
 - Interface: many windows share one set of text sizes and corner radii, and more dialog buttons use the same padding.
