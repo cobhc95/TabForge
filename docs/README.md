@@ -2,7 +2,7 @@
 
 **A keyboard-driven tablature and notation editor for Windows, with experimental Linux packages.** Opens .gp3, .gp4, .gp5, .gpx and .gp files, and saves .gp and its own .tforge projects. Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard or keyboard, a piano roll, an arrangement timeline, audio and MIDI recording, a mixer, built-in effects, VST2, VST3 and CLAP plug-ins (32-bit and 64-bit VST), and offline audio and video rendering.
 
-[![TabForge with a drum plug-in](media/screenshots/github-main.jpg)](media/screenshots/github-main.jpg)
+[![TabForge with a drum plug-in](media/screenshots/0.9.0/github-main.jpg)](media/screenshots/0.9.0/github-main.jpg)
 
 *The plug-in shown is a third-party example (Superior Drummer 3 by Toontrack): not included and not affiliated.*
 
@@ -130,8 +130,8 @@ Type frets with the keyboard; standard notation and tab update together. Click a
 <td width="33%" valign="top"><a href="media/screenshots/tool-palette.png"><img src="media/screenshots/tool-palette.png" alt="Tool palette" height="150"></a><br><b>Tool palette</b><br>Durations, dynamics, effects and bar structure in tabbed pages. Right-click a tool to pin it to the quick strip.</td>
 </tr>
 <tr>
-<td width="33%" valign="top"><a href="media/screenshots/effect-bend.png"><img src="media/screenshots/effect-bend.png" alt="Bend editor" width="215"></a><br><b>Bend editor</b><br>Draw the bend curve on a grid or pick a preset. It plays back as drawn and applies as one undo step.</td>
-<td width="33%" valign="top"><a href="media/screenshots/effect-tremolobar.png"><img src="media/screenshots/effect-tremolobar.png" alt="Tremolo bar editor" width="215"></a><br><b>Tremolo bar editor</b><br>Dips, dives and returns drawn the same way, with presets and your own saved shapes.</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/effect-bend.png"><img src="media/screenshots/0.9.0/effect-bend.png" alt="Bend editor" width="215"></a><br><b>Bend editor</b><br>Draw the curve on a grid or pick a type such as Bend, Release or Prebend, and save your own presets. It plays back as drawn and applies as one undo step.</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/effect-tremolobar.png"><img src="media/screenshots/0.9.0/effect-tremolobar.png" alt="Tremolo bar editor" width="215"></a><br><b>Tremolo bar editor</b><br>Dips, dives and returns drawn the same way, with presets and your own saved shapes.</td>
 <td width="33%" valign="top"><a href="media/screenshots/effect-trill.png"><img src="media/screenshots/effect-trill.png" alt="Trill editor" width="215"></a><br><b>Trill editor</b><br>Sets the trill fret and its speed: 16th, 32nd or 64th.</td>
 </tr>
 <tr>
@@ -190,7 +190,7 @@ Strings in the track's own tuning. The sounding note glows, the next notes are o
 </tr>
 <tr>
 <td width="50%" valign="top"><a href="media/screenshots/0.9.0/partial-capo.png"><img src="media/screenshots/0.9.0/partial-capo.png" alt="Track properties with a partial capo on strings 2 to 4" width="400"></a><br><b>Capos and tuning</b><br>A full capo plus up to four partial capos, added and dragged on the fretboard or in Track properties (F6). Notes, playback and score labels follow. Tune 3 to 10 strings, with All -1 and All +1 and your own saved tunings.</td>
-<td width="50%" valign="top"><a href="media/screenshots/scale-finder.png"><img src="media/screenshots/scale-finder.png" alt="Scale finder" width="400"></a><br><b>Scale finder</b><br>Detects the scale of the section, song or selection with Auto or a manual pick, shared with the status bar, and shows it on the fretboard.</td>
+<td width="50%" valign="top"><a href="media/screenshots/0.9.0/scale-panel.png"><img src="media/screenshots/0.9.0/scale-panel.png" alt="The scale panel" width="400"></a><br><b>Scale panel</b><br>Detects the scale of the section, song or selection with Auto or a manual pick, shared with the status bar, and shows it on the fretboard.</td>
 </tr>
 </table>
 
@@ -204,12 +204,12 @@ Strings in the track's own tuning. The sounding note glows, the next notes are o
 
 <table>
 <tr>
-<td width="33%" valign="top"><a href="media/screenshots/instrument-keyboard.png"><img src="media/screenshots/instrument-keyboard.png" alt="Keyboard view" width="215"></a><br><b>Keyboard</b><br>An 88-key keyboard, or 76, 61, 49, 37 or 25 keys, for keyboard tracks.</td>
-<td width="33%" valign="top"><a href="media/screenshots/instrument-drums.png"><img src="media/screenshots/instrument-drums.png" alt="Drum view" width="215"></a><br><b>Drum map</b><br>A percussion map for drum tracks; the pieces light up as they are hit.</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/instrument-keyboard.png"><img src="media/screenshots/0.9.0/instrument-keyboard.png" alt="Keyboard view" width="215"></a><br><b>Keyboard</b><br>An 88-key keyboard, or 76, 61, 49, 37 or 25 keys, for keyboard tracks.</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/instrument-drums.png"><img src="media/screenshots/0.9.0/instrument-drums.png" alt="Drum view" width="215"></a><br><b>Drum map</b><br>A percussion map for drum tracks; the pieces light up as they are hit.</td>
 <td width="33%" valign="top"><a href="media/screenshots/instrument-picker.png"><img src="media/screenshots/instrument-picker.png" alt="Instrument picker" height="150"></a><br><b>Instrument picker</b><br>The full General MIDI set with pictures, categories and search.</td>
 </tr>
 <tr>
-<td width="33%" valign="top"><a href="media/screenshots/track-properties-drums.png"><img src="media/screenshots/track-properties-drums.png" alt="Track properties, drums" height="150"></a><br><b>Drum notation</b><br>Presets plus a custom map: tab line, tab text, staff position and notehead for every drum sound.</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/track-properties-drums.png"><img src="media/screenshots/0.9.0/track-properties-drums.png" alt="Track properties, drums" height="150"></a><br><b>Drum notation</b><br>Presets plus a custom map: tab line, tab text, staff position and notehead for every drum sound.</td>
 </tr>
 </table>
 
@@ -219,7 +219,7 @@ One block per bar and track, with coloured sections across the top. Sections, ba
 
 <table>
 <tr>
-<td width="33%" valign="top"><a href="media/screenshots/arrangement-timeline.png"><img src="media/screenshots/arrangement-timeline.png" alt="Arrangement timeline" width="215"></a><br><b>Timeline</b><br>Every bar of every track at a glance. Click to seek, drag across bars to select.</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/arrangement-timeline.png"><img src="media/screenshots/0.9.0/arrangement-timeline.png" alt="Arrangement timeline" width="215"></a><br><b>Timeline</b><br>Every bar of every track at a glance. Click to seek, drag across bars to select.</td>
 <td width="33%" valign="top"><a href="media/animations/section-move.gif"><img src="media/animations/section-move.gif" alt="Moving a section" width="215"></a><br><b>Sections</b><br>Intro, Verse, Chorus and so on share a colour per type. Drag a section to move it with its bars and clips; Ctrl+drag moves only its marker.</td>
 <td width="33%" valign="top"><a href="media/screenshots/sections-panel.png"><img src="media/screenshots/sections-panel.png" alt="Sections panel" height="150"></a><br><b>Sections panel</b><br>Add, rename, colour, loop and jump to sections. Lyrics is a tab beside it.</td>
 </tr>
@@ -239,12 +239,12 @@ One block per bar and track, with coloured sections across the top. Sections, ba
 <td width="33%" valign="top"><a href="media/screenshots/audio-track-main.png"><img src="media/screenshots/audio-track-main.png" alt="Track list with an audio/MIDI track" width="215"></a><br><b>Track list</b><br>Arm, mute, solo, level, pan and FX on every row, with collapsible groups.</td>
 </tr>
 <tr>
-<td width="33%" valign="top"><a href="media/screenshots/add-track.png"><img src="media/screenshots/add-track.png" alt="Add track" height="150"></a><br><b>Add track</b><br>Instrument and tuning for a new track; it lands at the end of the song (then move it with Alt+Up/Down).</td>
-<td width="33%" valign="top"><a href="media/screenshots/track-row-menu.png"><img src="media/screenshots/track-row-menu.png" alt="Track right-click menu" height="150"></a><br><b>Track menu</b><br>Cut, copy, paste, duplicate, rename and colour whole tracks with their notation, clips, mixer settings and FX chain.</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/add-track.png"><img src="media/screenshots/0.9.0/add-track.png" alt="Add track" height="150"></a><br><b>Add track</b><br>Instrument and tuning for a new track; it lands at the end of the song (then move it with Alt+Up/Down).</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/track-row-menu.png"><img src="media/screenshots/0.9.0/track-row-menu.png" alt="Track right-click menu" height="150"></a><br><b>Track menu</b><br>Cut, copy, paste, duplicate, rename and colour whole tracks with their notation, clips, mixer settings and FX chain.</td>
 <td width="33%" valign="top"><a href="media/screenshots/track-groups-menu.png"><img src="media/screenshots/track-groups-menu.png" alt="Track list groups menu" width="215"></a><br><b>Groups</b><br>Show tracks grouped by instrument family, with a header row for each group.</td>
 </tr>
 <tr>
-<td width="33%" valign="top"><a href="media/screenshots/0.9.0/partial-capo.png"><img src="media/screenshots/0.9.0/partial-capo.png" alt="Track properties" width="215"></a><br><b>Track properties</b><br>Name, instrument, strings, tuning and capo for a track (F6), with up to 4 partial capos and one undo step.</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/track-properties-guitar.png"><img src="media/screenshots/0.9.0/track-properties-guitar.png" alt="Track properties for a seven-string guitar" width="215"></a><br><b>Track properties</b><br>Name, instrument, strings, tuning and capo for a track (F6), with up to 4 partial capos and one undo step.</td>
 <td width="33%" valign="top"><a href="media/screenshots/global-tuning.png"><img src="media/screenshots/global-tuning.png" alt="Global tuning" width="215"></a><br><b>Global tuning</b><br>Shifts every track at once.</td>
 </tr>
 </table>
@@ -286,7 +286,7 @@ Capture song ideas quickly and turn them into notation and tab. It is a sketchpa
 <table>
 <tr>
 <td width="33%" valign="top"><a href="media/screenshots/recording-lanes.png"><img src="media/screenshots/recording-lanes.png" alt="MIDI take lanes" width="215"></a><br><b>Takes in lanes</b><br>Ctrl+R records armed tracks into audio or MIDI clips. Overlapping and loop-recorded takes get their own lanes; click a take to choose it, Ctrl+click to layer.</td>
-<td width="33%" valign="top"><a href="media/screenshots/live-input.png"><img src="media/screenshots/live-input.png" alt="The live input button lit in the track list toolbar" width="215"></a><br><b>Live input</b><br>The microphone button plays an audio input, a MIDI keyboard or both through a live FX chain and the master, with no track and no recording.</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/live-input.png"><img src="media/screenshots/0.9.0/live-input.png" alt="The transport bar and track list, with the live input microphone button at the far left" width="215"></a><br><b>Live input</b><br>The microphone button plays an audio input, a MIDI keyboard or both through a live FX chain and the master, with no track and no recording.</td>
 <td width="33%" valign="top"><a href="media/screenshots/tuner.png"><img src="media/screenshots/tuner.png" alt="Tuner" height="150"></a><br><b>Tuner</b><br>Detects the pitch of the armed input and shows the note, a cents needle and the track's string tunings.</td>
 </tr>
 </table>
@@ -315,7 +315,7 @@ Play along with a metronome and count-in, loop any section, and let the speed tr
 <table>
 <tr>
 <td width="33%" valign="top"><a href="media/screenshots/timeline-playhead-styles.png"><img src="media/screenshots/timeline-playhead-styles.png" alt="Playback marker: line and bar marker" width="215"></a><br><b>Playback marker</b><br>A line or a bar marker on the timeline. In the score, the green line and note glow show only while the song plays.</td>
-<td width="33%" valign="top"><a href="media/screenshots/score-horizontal.png"><img src="media/screenshots/score-horizontal.png" alt="Horizontal score scrolling" width="215"></a><br><b>Score views</b><br>Page or continuous layout, scrolling vertically or horizontally with the whole song on one line. Only bars near the view are drawn.</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/score-horizontal.jpg"><img src="media/screenshots/0.9.0/score-horizontal.jpg" alt="Horizontal score scrolling" width="215"></a><br><b>Score views</b><br>Page or continuous layout, scrolling vertically or horizontally with the whole song on one line. Only bars near the view are drawn.</td>
 <td width="33%" valign="top"><a href="media/screenshots/mix-table.png"><img src="media/screenshots/mix-table.png" alt="Mix table" height="150"></a><br><b>Mix table points (F10)</b><br>Tempo, volume and pan changes written into the song and played back.</td>
 </tr>
 </table>
@@ -329,8 +329,8 @@ Play along with a metronome and count-in, loop any section, and let the speed tr
 <details><summary>More details</summary>
 
 - **Song structure played as written:** repeats (up to x99, several closes, multi-pass endings such as 1.2.3.), D.S. / D.C. / Coda / Fine, and tempo changes that last until the next one, including partway through a bar.
-- **Score follow**: the view keeps the playing bar in sight and stops if you scroll by hand. Right-click the score > *Follow playback*: **Page turn** (default) or **Smooth page turn** (glided at the display refresh rate, idle in between).
-- **Two score views** on the right-click menu: *Score layout* (page / continuous) and *Score scrolling*, **vertical** or **horizontal** (the whole song on one line). Only bars near the view are drawn, so long songs stay light.
+- **Score follow**: the view keeps the playing bar in sight and stops if you scroll by hand. Settings > Playback & Practice chooses whether it follows, and whether it jumps or scrolls smoothly (glided at the display refresh rate, idle in between).
+- **Two score views:** right-click the score > *Page layout* for **page** or **continuous**, scrolling **vertically** or **horizontally** (the whole song on one line). Only bars near the view are drawn, so long songs stay light.
 
 </details>
 
@@ -342,12 +342,12 @@ A short tour of the band view, compact mode and the newer controls. Click a pict
 
 <table>
 <tr>
-<td width="33%" valign="top"><a href="media/screenshots/band-above.png"><img src="media/screenshots/band-above.png" alt="Band view with the fretboard above the tab" width="215"></a><br><b>Band view</b><br>One row per track, each framed in its colour. The fretboard now sits above the tab and only the first track shows one; the others show a line of music each. Fretboard beside the tab is in the BAND VIEW menu.</td>
-<td width="33%" valign="top"><a href="media/screenshots/compact-mode.png"><img src="media/screenshots/compact-mode.png" alt="Compact mode" width="215"></a><br><b>Compact mode</b><br>Hides the track rows and the menu row so the score gets the room. A strip of track capsules switches track, and its menu holds the menus and tools.</td>
-<td width="33%" valign="top"><a href="media/screenshots/live-input.png"><img src="media/screenshots/live-input.png" alt="The live input button lit in the track list toolbar" width="215"></a><br><b>Live input</b><br>The microphone button plays your guitar or a MIDI keyboard through a live FX chain at once: no track, no recording. One for the whole program.</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/band-above.jpg"><img src="media/screenshots/0.9.0/band-above.jpg" alt="Band view with the fretboard above the tab" width="215"></a><br><b>Band view</b><br>One row per track, each framed in its colour. The fretboard now sits above the tab and only the first track shows one; the others show a line of music each. Fretboard beside the tab is in the BAND VIEW menu.</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/compact-mode.jpg"><img src="media/screenshots/0.9.0/compact-mode.jpg" alt="Compact mode" width="215"></a><br><b>Compact mode</b><br>Hides the track rows and the menu row so the score gets the room. A strip of track capsules switches track, and its menu holds the menus and tools.</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/live-input.png"><img src="media/screenshots/0.9.0/live-input.png" alt="The transport bar and track list, with the live input microphone button at the far left" width="215"></a><br><b>Live input</b><br>The microphone button plays your guitar or a MIDI keyboard through a live FX chain at once: no track, no recording. One for the whole program.</td>
 </tr>
 <tr>
-<td width="33%" valign="top"><a href="media/screenshots/master-lane.png"><img src="media/screenshots/master-lane.png" alt="The master track lane above the tracks" width="215"></a><br><b>Master track lane</b><br>An overview above the tracks: one thin line per track, filled where that track plays, with the master FX, volume and pan beside it.</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/master-lane.png"><img src="media/screenshots/0.9.0/master-lane.png" alt="The master track lane above the tracks" width="215"></a><br><b>Master track lane</b><br>An overview above the tracks: one thin line per track, filled where that track plays, with the master FX, volume and pan beside it.</td>
 <td width="33%" valign="top"><a href="media/screenshots/icon-row.png"><img src="media/screenshots/icon-row.png" alt="The grouped icons at the right of the top bar" width="215"></a><br><b>Top bar icons</b><br>Grouped by kind: side panel, fretboard and Keyboard mode, Band view and compact mode, project settings. Drag an icon to reorder; the order is remembered.</td>
 <td width="33%" valign="top"><a href="media/screenshots/zoom-speed.png"><img src="media/screenshots/zoom-speed.png" alt="The View and tempo pane" width="215"></a><br><b>View and tempo</b><br>Zoom, speed, tempo and time / key are one row of four buttons in the side panel: click for presets, right-click to fine-tune.</td>
 </tr>
@@ -359,9 +359,9 @@ Every track gets its own row: an instrument view and a scrolling tab lane, each 
 
 <table>
 <tr>
-<td width="33%" valign="top"><a href="media/screenshots/band-above.png"><img src="media/screenshots/band-above.png" alt="Band view, fretboard above the tab" width="215"></a><br><b>Fretboard above the tab</b><br>The default: the tab uses the full row width. Only the first track shows its fretboard; the others start with a thin name strip.</td>
-<td width="33%" valign="top"><a href="media/screenshots/band-beside.png"><img src="media/screenshots/band-beside.png" alt="Band view, fretboard beside the tab" width="215"></a><br><b>Fretboard beside the tab</b><br>For wide screens: the instrument sits in a column to the left of the tab. Chosen from the BAND VIEW drop-down.</td>
-<td width="33%" valign="top"><a href="media/screenshots/band-view-playing.png"><img src="media/screenshots/band-view-playing.png" alt="Band view while playing" width="215"></a><br><b>During playback</b><br>Every row keeps its playing line of music in view, also when rows have different heights.</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/band-above.jpg"><img src="media/screenshots/0.9.0/band-above.jpg" alt="Band view, fretboard above the tab" width="215"></a><br><b>Fretboard above the tab</b><br>The default: the tab uses the full row width. Only the first track shows its fretboard; the others start with a thin name strip.</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/band-beside.jpg"><img src="media/screenshots/0.9.0/band-beside.jpg" alt="Band view, fretboard beside the tab" width="215"></a><br><b>Fretboard beside the tab</b><br>For wide screens: the instrument sits in a column to the left of the tab. Chosen from the BAND VIEW drop-down.</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/band-view-playing.jpg"><img src="media/screenshots/0.9.0/band-view-playing.jpg" alt="Band view while playing" width="215"></a><br><b>During playback</b><br>Every row keeps its playing line of music in view, also when rows have different heights.</td>
 </tr>
 </table>
 
@@ -375,8 +375,8 @@ Practise a part by playing it along with a MIDI keyboard. Turn it on from the to
 
 <table>
 <tr>
-<td width="33%" valign="top"><a href="media/screenshots/keyboard-mode.png"><img src="media/screenshots/keyboard-mode.png" alt="Keyboard mode with falling notes" width="215"></a><br><b>Falling notes</b><br>Any track as notes falling onto a piano keyboard in time with playback, in hand colours with note names and finger numbers.</td>
-<td width="33%" valign="top"><a href="media/screenshots/keyboard-mode-wait.png"><img src="media/screenshots/keyboard-mode-wait.png" alt="Wait for me" width="215"></a><br><b>Wait for me</b><br>Ctrl+Alt+W holds the song at each chord until its notes are pressed, in any order. Skip (Ctrl+Alt+Q) moves on.</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/keyboard-mode.jpg"><img src="media/screenshots/0.9.0/keyboard-mode.jpg" alt="Keyboard mode with falling notes" width="215"></a><br><b>Falling notes</b><br>Any track as notes falling onto a piano keyboard in time with playback, in hand colours with note names and finger numbers.</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/keyboard-mode-wait.jpg"><img src="media/screenshots/0.9.0/keyboard-mode-wait.jpg" alt="Wait for me" width="215"></a><br><b>Wait for me</b><br>Ctrl+Alt+W holds the song at each chord until its notes are pressed, in any order. Skip (Ctrl+Alt+Q) moves on.</td>
 <td width="33%" valign="top"><a href="media/screenshots/keyboard-mode-popout.png"><img src="media/screenshots/keyboard-mode-popout.png" alt="Keyboard mode in its own window" width="215"></a><br><b>Pop out</b><br>Ctrl+Alt+O shows the falling notes in their own window; F11 makes it full screen.</td>
 </tr>
 </table>
@@ -404,21 +404,21 @@ Every track has level, pan, mute, solo, a level meter and an FX chain, with six 
 <tr>
 <td width="33%" valign="top"><a href="media/screenshots/mixer-group-rules.png"><img src="media/screenshots/mixer-group-rules.png" alt="Mixer group rules" height="150"></a><br><b>Group rules</b><br>Rules decide which tracks fall into which group, for one song or all songs.</td>
 <td width="33%" valign="top"><a href="media/screenshots/mixer-colour-menu.png"><img src="media/screenshots/mixer-colour-menu.png" alt="Mixer colour chip menu" height="150"></a><br><b>Track colours</b><br>A track's colour chip opens its colour palette.</td>
-<td width="33%" valign="top"><a href="media/screenshots/fx-chain.png"><img src="media/screenshots/fx-chain.png" alt="Track FX chain" width="215"></a><br><b>FX chains</b><br>One instrument, then effects in series, each with bypass, wet/dry and its own window. Group plug-ins in containers; chains save and load as files, including .RfxChain files for other hosts.</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/fx-chain.png"><img src="media/screenshots/0.9.0/fx-chain.png" alt="Track FX chain" width="215"></a><br><b>FX chains</b><br>One instrument, then effects in series, each with bypass, wet/dry and its own window. Group plug-ins in containers; chains save and load as files, including .RfxChain files for other hosts.</td>
 </tr>
 <tr>
-<td width="33%" valign="top"><a href="media/screenshots/plugin-wiring.png"><img src="media/screenshots/plugin-wiring.png" alt="Audio and MIDI pin routing" height="150"></a><br><b>Wiring</b><br>Audio channels, MIDI source and channel filter, sidechain, and MIDI forwarding to another track.</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/plugin-wiring.png"><img src="media/screenshots/0.9.0/plugin-wiring.png" alt="Audio and MIDI pin routing" height="150"></a><br><b>Wiring</b><br>Audio channels, MIDI source and channel filter, sidechain, and MIDI forwarding to another track.</td>
 <td width="33%" valign="top"><a href="media/screenshots/fx-allow-again.png"><img src="media/screenshots/fx-allow-again.png" alt="Allow again" width="215"></a><br><b>Plug-in approval</b><br>Plug-ins under Program Files load without asking by default; others need your approval. A plug-in that crashes or freezes is named and switched off until you allow it again.</td>
 <td width="33%" valign="top"><a href="media/screenshots/prefs-audio.png"><img src="media/screenshots/prefs-audio.png" alt="Preferences, audio" height="150"></a><br><b>Audio output</b><br>On Windows: WASAPI (shared or exclusive), ASIO or DirectSound. On Linux: ALSA, PulseAudio, PipeWire or JACK. With device, sample rate and buffer size.</td>
 </tr>
 <tr>
-<td width="33%" valign="top"><a href="media/screenshots/midi-processing-overview.png"><img src="media/screenshots/midi-processing-overview.png" alt="MIDI processing chain" width="215"></a><br><b>MIDI processing</b><br>Processors run top to bottom before the plug-in, on the song, live keys and tracks routed to it.</td>
-<td width="33%" valign="top"><a href="media/screenshots/midi-processing.png"><img src="media/screenshots/midi-processing.png" alt="MIDI processor chain" width="215"></a><br><b>Processor chain</b><br>Transpose, humanise, arpeggiator, step sequencer and more. Each can be bypassed, reordered by dragging and limited to some notes.</td>
-<td width="33%" valign="top"><a href="media/screenshots/midi-processing-search.png"><img src="media/screenshots/midi-processing-search.png" alt="Searching processors and parameters" width="215"></a><br><b>Search every parameter</b><br>One box finds processors and single parameters; Enter adds the processor or jumps to the parameter.</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/midi-processing-overview.png"><img src="media/screenshots/0.9.0/midi-processing-overview.png" alt="MIDI processing chain" width="215"></a><br><b>MIDI processing</b><br>Processors run top to bottom before the plug-in, on the song, live keys and tracks routed to it.</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/midi-processing.png"><img src="media/screenshots/0.9.0/midi-processing.png" alt="MIDI processor chain" width="215"></a><br><b>Processor chain</b><br>Transpose, humanise, arpeggiator, step sequencer and more. Each can be bypassed, reordered by dragging and limited to some notes.</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/midi-processing-search.png"><img src="media/screenshots/0.9.0/midi-processing-search.png" alt="Searching processors and parameters" width="215"></a><br><b>Search every parameter</b><br>One box finds processors and single parameters; Enter adds the processor or jumps to the parameter.</td>
 </tr>
 <tr>
-<td width="33%" valign="top"><a href="media/screenshots/midi-processing-velocity.png"><img src="media/screenshots/midi-processing-velocity.png" alt="Velocity processor" width="215"></a><br><b>Velocity</b><br>Scale and offset, a fixed value, a compressor mode and variation accents.</td>
-<td width="33%" valign="top"><a href="media/screenshots/midi-routing.png"><img src="media/screenshots/midi-routing.png" alt="MIDI routed into an instrument plug-in" width="215"></a><br><b>MIDI routing</b><br>MIDI from another track or a live keyboard routed into an instrument plug-in.</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/midi-processing-velocity.png"><img src="media/screenshots/0.9.0/midi-processing-velocity.png" alt="Velocity processor" width="215"></a><br><b>Velocity</b><br>Scale and offset, a fixed value, a compressor mode and variation accents.</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/midi-routing.png"><img src="media/screenshots/0.9.0/midi-routing.png" alt="MIDI routed into an instrument plug-in" width="215"></a><br><b>MIDI routing</b><br>MIDI from another track or a live keyboard routed into an instrument plug-in.</td>
 </tr>
 </table>
 
@@ -531,8 +531,8 @@ A `.gp` saved by TabForge follows the `.gp` file format **and** carries the comp
 
 <table>
 <tr>
-<td width="33%" valign="top"><a href="media/screenshots/main-window.png"><img src="media/screenshots/main-window.png" alt="Main window" width="215"></a><br><b>Dockable panes</b><br>Drag any pane by its tab to dock, tab, split or float it. Layouts are remembered; Compose, Practice and Mix are on Ctrl+1/2/3.</td>
-<td width="33%" valign="top"><a href="media/screenshots/main-window-light.png"><img src="media/screenshots/main-window-light.png" alt="Light theme" width="215"></a><br><b>Themes</b><br>Dark, Light and System, with every colour adjustable. One click sets interface, accent, icons and score page together.</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/main-window.jpg"><img src="media/screenshots/0.9.0/main-window.jpg" alt="Main window" width="215"></a><br><b>Dockable panes</b><br>Drag any pane by its tab to dock, tab, split or float it. Layouts are remembered; Compose, Practice and Mix are on Ctrl+1/2/3.</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/main-window-light.jpg"><img src="media/screenshots/0.9.0/main-window-light.jpg" alt="Light theme" width="215"></a><br><b>Themes</b><br>Dark, Light and System, with every colour adjustable. One click sets interface, accent, icons and score page together.</td>
 <td width="33%" valign="top"><a href="media/screenshots/command-palette.png"><img src="media/screenshots/command-palette.png" alt="Command palette" height="150"></a><br><b>Command palette</b><br>Ctrl+Shift+A searches every command by name, shows its key and runs it with Enter.</td>
 </tr>
 <tr>
@@ -575,16 +575,17 @@ A `.gp` saved by TabForge follows the `.gp` file format **and** carries the comp
 
 <table>
 <tr>
-<td align="center" valign="top"><a href="media/screenshots/menu-file.png"><img src="media/screenshots/menu-file.png" alt="File" height="140"></a><br>File</td>
+<td align="center" valign="top"><a href="media/screenshots/0.9.0/menu-file.png"><img src="media/screenshots/0.9.0/menu-file.png" alt="File" height="140"></a><br>File</td>
 <td align="center" valign="top"><a href="media/screenshots/menu-edit.png"><img src="media/screenshots/menu-edit.png" alt="Edit" height="140"></a><br>Edit</td>
 <td align="center" valign="top"><a href="media/screenshots/menu-bar.png"><img src="media/screenshots/menu-bar.png" alt="Bar" height="140"></a><br>Bar</td>
 <td align="center" valign="top"><a href="media/screenshots/menu-track.png"><img src="media/screenshots/menu-track.png" alt="Track" width="92"></a><br>Track</td>
 <td align="center" valign="top"><a href="media/screenshots/menu-note.png"><img src="media/screenshots/menu-note.png" alt="Note" height="140"></a><br>Note</td>
-<td align="center" valign="top"><a href="media/screenshots/menu-effects.png"><img src="media/screenshots/menu-effects.png" alt="Effects" height="140"></a><br>Effects</td>
+<td align="center" valign="top"><a href="media/screenshots/0.9.0/menu-effects.png"><img src="media/screenshots/0.9.0/menu-effects.png" alt="Effects" height="140"></a><br>Effects</td>
 </tr>
 <tr>
-<td align="center" valign="top"><a href="media/screenshots/menu-tools.png"><img src="media/screenshots/menu-tools.png" alt="Tools" height="140"></a><br>Tools</td>
-<td align="center" valign="top"><a href="media/screenshots/menu-view.png"><img src="media/screenshots/menu-view.png" alt="View" height="140"></a><br>View</td>
+<td align="center" valign="top"><a href="media/screenshots/0.9.0/menu-insert.png"><img src="media/screenshots/0.9.0/menu-insert.png" alt="Insert" height="140"></a><br>Insert</td>
+<td align="center" valign="top"><a href="media/screenshots/0.9.0/menu-tools.png"><img src="media/screenshots/0.9.0/menu-tools.png" alt="Tools" height="140"></a><br>Tools</td>
+<td align="center" valign="top"><a href="media/screenshots/0.9.0/menu-view.png"><img src="media/screenshots/0.9.0/menu-view.png" alt="View" height="140"></a><br>View</td>
 <td align="center" valign="top"><a href="media/screenshots/menu-options.png"><img src="media/screenshots/menu-options.png" alt="Options" width="92"></a><br>Options</td>
 <td align="center" valign="top"><a href="media/screenshots/menu-help.png"><img src="media/screenshots/menu-help.png" alt="Help" width="92"></a><br>Help</td>
 </tr>
@@ -596,7 +597,7 @@ An **Insert** menu gathers everything you can add, Effects are grouped into subm
 
 - **Layout**: score in the middle (standard notation + TAB, or either alone), fretboard on top, arrangement timeline and track list at the bottom, tool palette and sections on the right.
 - **Drag any panel by its tab**; the landing place is highlighted in blue. Drop on the middle of a panel to add a tab there, near an edge to split, or outside the window to float it (drag back to re-dock). Resize splits by dragging; hide panels from the View menu; **Reset all panels to original positions** (View menu) restores everything.
-- **Themes**: one click sets interface, accent, icons, transport buttons and score page together (the light theme is a soft grey with a wood-coloured fretboard). Score paper, notation, staff lines, playback colours and fonts can still be changed (Settings > Appearance & colours).
+- **Themes**: one click sets interface, accent, icons, transport buttons and score page together (the light theme is a soft grey). Score paper, notation, staff lines, playback colours and fonts can still be changed (Settings > Appearance & colours).
 - A "Classic" shortcut preset is included; every command shows its shortcut, and every shortcut can be changed.
 - **Themes**: dark, light and system presets or fully custom colours; interface scale applies live; score fonts per text area.
 - **Help > About** shows the version, the independent-project notice and a **Licences** button.
@@ -622,7 +623,6 @@ An **Insert** menu gathers everything you can add, Effects are grouped into subm
 <tr>
 <td width="33%" valign="top"><a href="media/screenshots/new-from-template.png"><img src="media/screenshots/new-from-template.png" alt="New from template" width="215"></a><br><b>Templates</b><br>File > <i>New from template</i> (built-in and your own) and <i>Save as template</i>.</td>
 <td width="33%" valign="top"><a href="media/screenshots/autosave.png"><img src="media/screenshots/autosave.png" alt="Autosave setting" height="150"></a><br><b>Autosave and recovery</b><br>Unsaved songs are copied to the Recovery folder every 1 to 30 minutes and offered back after a crash.</td>
-<td width="33%" valign="top"><a href="media/screenshots/update-available.png"><img src="media/screenshots/update-available.png" alt="Update available" width="215"></a><br><b>Update check</b><br>An optional daily check that only reads the latest version number. TabForge never downloads or installs anything itself.</td>
 </tr>
 </table>
 
@@ -788,8 +788,8 @@ Every command can be found in the menus, the command palette and the shortcut se
 #### Menus, panels and windows in detail
 
 **Score / tab editor right-click menu**
-- Show standard notation, pitch up / down a semitone, move to the string above / below, delete note, zoom in / out / fit width and zoom percentages, *Score options*.
-- *Score layout* (page / continuous), *Score scrolling* (vertical / horizontal), *Follow playback* (page turn / smooth page turn), *Score page* (dark / light), *Text & fonts*, *Playback highlight* and *Playback look* (playing beat, playing bar, duration glow, line thickness; Preferences > Appearance), ledger lines (standard, minimal, hidden), hide grid in empty bars, subtle bar glow.
+- Show standard notation, pitch up / down a semitone, move to the string above / below, delete note, zoom in / out / fit width and zoom percentages, *Score settings…*.
+- *Show note length outline*, *Page layout* (page / continuous, vertical / horizontal), *Score settings…* and *Show in piano roll (this track)*. The score page, ledger lines, page turns, playback colours and fonts are in Preferences.
 
 **Fretboard / keyboard right-click menu**
 - *Show this track as* (fretboard, keyboard, drum map or match the instrument), *Scale*, *Find scale…*, *Clear scale* and *Fretboard settings…*. Everything else about the look is in the Fretboard settings window.
