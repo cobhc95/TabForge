@@ -18,7 +18,7 @@ Stable release with sharper wound strings, tidier dialogs and crash and shutdown
 - Fretboard: wound strings are drawn with fine coils that stay sharp at any size, with a new Bronze finish; a sounding string now shows a soft blur that rings for the note's own length, and the Fretboard settings window now matches main Settings: grey cards, the track list's sliders instead of +/- boxes, and Cancel, Apply and OK.
 - Left-handed fretboard: string 1 now stays on top, matching the tab, instead of the strings being turned upside down, and dragging a capo follows the pointer.
 - Monitor FX: the headphones button only lights when a plug-in really plays on the current device, not just when the chain has plug-ins.
-- Track properties: the capo From and To boxes show their whole outline on hover and focus.
+- Track properties: the capo From and To boxes show their whole outline on hover and focus. All -1 and All +1 have arrows, and the string count box replaces the Add string button.
 - Interface: many windows share one set of text sizes and corner radii, and more dialog buttons use the same padding.
 - Removed unused code, settings, documents, tools and artwork. Settings files from earlier versions still load.
 

@@ -17,7 +17,7 @@ using TabForge.Services;
 namespace TabForge.Avalonia.Views;
 
 /// <summary>
-/// The Tuning card: the controls column beside the string rows (string count, preset menu, All -1, All +1, + Add string, Frets) and the keep-frets box below.
+/// The Tuning card: the controls column beside the string rows (string count, preset menu, All -1, All +1, Frets) and the keep-frets box below.
 /// Removing a string is done with the count box. Every string edit goes through the working strings (TrackTuningDraft) and is written on OK as the same one undo step.
 /// Owns: the header controls, the searchable preset flyout (built-ins plus the person's saved tunings, with inline save and rename), the warning before a string with notes is removed and the warning before OK
 ///     when a later retune makes more removed-string notes change pitch; a pending answer is ignored when a later edit or a close won.
@@ -27,7 +27,7 @@ namespace TabForge.Avalonia.Views;
 public sealed partial class TrackPropertiesWindow
 {
     private ComboBox _countBox = null!;
-    private Button _presetButton = null!, _addString = null!;
+    private Button _presetButton = null!;
     private Flyout _presetFlyout = null!;
     private TextBox _presetSearch = null!;
     private CheckBox _presetAllCounts = null!;
@@ -85,7 +85,7 @@ public sealed partial class TrackPropertiesWindow
         }
     }
 
-    // Drum and keys tracks have no tuning. The controls column (count, preset, All -1 / All +1, + Add string, Frets) sits beside the string rows; the keep-frets box is full width below.
+    // Drum and keys tracks have no tuning. The controls column (count, preset, All -1 / All +1, Frets) sits beside the string rows; the keep-frets box is full width below.
     private Border TuningCard()
     {
         _countBox = new ComboBox { Name = "StringCountBox", HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Center };
@@ -95,19 +95,19 @@ public sealed partial class TrackPropertiesWindow
         _presetButton = new Button { Name = "TuningPresetButton", MinWidth = global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.TrackTuningCountBoxWidth, HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Center, Flyout = BuildPresetFlyout(), HorizontalContentAlignment = HorizontalAlignment.Left };
         AutomationProperties.SetName(_presetButton, "Tuning preset");
         ToolTip.SetTip(_presetButton, "Pick a tuning preset; editing a string makes it Custom");
-        _addString = HeaderButton("AddStringButton", "+ Add string", "Add a thicker string a fourth below the lowest", () => EditStructure(Array.Empty<int>(), draft => draft.AddLow()));
-        _addString.HorizontalAlignment = HorizontalAlignment.Stretch;
         var all = new UniformGrid { Columns = 2 };
         foreach (var step in new[] { HeaderButton("AllDownButton", "All −1", "Tune every string down a semitone", () => { _draft.StepAll(-1); ShowAllRows(); }), HeaderButton("AllUpButton", "All +1", "Tune every string up a semitone", () => { _draft.StepAll(1); ShowAllRows(); }) })
         {
             step.HorizontalAlignment = HorizontalAlignment.Stretch;
             step.HorizontalContentAlignment = HorizontalAlignment.Center;
+            var arrow = step.Name == "AllDownButton" ? DownArrow : UpArrow;
+            step.ContentTemplate = new global::Avalonia.Controls.Templates.FuncDataTemplate<object>((text, _) => ArrowContent(arrow, text as string ?? ""));
             global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.WithMargin(step, global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.TrackTuningHeaderPartGap);
             all.Children.Add(step);
         }
         var frets = new StackPanel { Orientation = Orientation.Horizontal, Children = { Label("Frets", 0), _frets } };
-        var controls = new StackPanel { Width = global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.TrackTuningControlsWidth, Children = { _countBox, _presetButton, all, _addString, frets } };
-        foreach (var part in new Control[] { _countBox, _presetButton, all, _addString }) global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.WithMargin(part, global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.TrackTuningControlGap);
+        var controls = new StackPanel { Width = global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.TrackTuningControlsWidth, Children = { _countBox, _presetButton, all, frets } };
+        foreach (var part in new Control[] { _countBox, _presetButton, all }) global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.WithMargin(part, global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.TrackTuningControlGap);
         global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.WithMargin(controls, global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.TrackTuningColumnGap);
         var columns = new DockPanel();
         DockPanel.SetDock(controls, Dock.Left);
@@ -120,6 +120,24 @@ public sealed partial class TrackPropertiesWindow
     }
 
 
+    private const string DownArrow = "M 6,1 L 6,11 M 2,7 L 6,11 L 10,7", UpArrow = "M 6,11 L 6,1 M 2,5 L 6,1 L 10,5";
+
+    /// <summary>A retune button's look: its arrow in the accent colour, then its label. The label stays the button's content.</summary>
+    private static StackPanel ArrowContent(string arrow, string text)
+    {
+        var glyph = new global::Avalonia.Controls.Shapes.Path
+        {
+            Data = global::Avalonia.Media.Geometry.Parse(arrow), Width = 12, Height = 12, Stretch = global::Avalonia.Media.Stretch.None, StrokeThickness = 1.6,
+            StrokeLineCap = global::Avalonia.Media.PenLineCap.Round, StrokeJoin = global::Avalonia.Media.PenLineJoin.Round, VerticalAlignment = VerticalAlignment.Center,
+        };
+        glyph[!global::Avalonia.Controls.Shapes.Shape.StrokeProperty] = new global::Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("AccentBrush");
+        return new StackPanel
+        {
+            Orientation = Orientation.Horizontal, Spacing = 5, IsHitTestVisible = false,
+            Children = { glyph, new TextBlock { Text = text, VerticalAlignment = VerticalAlignment.Center } },
+        };
+    }
+
     private static Button HeaderButton(string name, string text, string tip, Action click)
     {
         var button = new Button { Name = name, Content = text, VerticalAlignment = VerticalAlignment.Center };
@@ -129,14 +147,13 @@ public sealed partial class TrackPropertiesWindow
         return button;
     }
 
-    // The count box, the preset label and the Add string button follow the working strings.
+    // The count box and the preset label follow the working strings.
     private void SyncTuningHeader()
     {
         _syncingHeader = true;
         _countBox.SelectedIndex = _draft.Count - TrackPropertiesPresenter.FewestStrings;
         _syncingHeader = false;
         _presetButton.Content = TuningPresetMenu.Label(_draft.Tunings, IsBass, CurrentUserEntries()) + " ▾";
-        _addString.IsEnabled = _draft.CanAdd;
     }
 
     private void ChangeCount(int count) => EditStructure(_draft.SlotsDroppedBy(count), draft => draft.ResizeTo(count));

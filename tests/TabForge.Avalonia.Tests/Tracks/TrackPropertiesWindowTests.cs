@@ -59,7 +59,7 @@ public class TrackPropertiesWindowTests
         Assert.Equal(new (string?, string)[]
         {
             ("CancelButton", "Cancel"), ("OkButton", "OK"), ("FxChainButton", "Effects & instruments (FX)…"), ("EditCustomMapButton", "Edit custom map…"),
-            ("TuningPresetButton", "Standard E ▾"), ("AllDownButton", "All −1"), ("AllUpButton", "All +1"), ("AddStringButton", "+ Add string"),
+            ("TuningPresetButton", "Standard E ▾"), ("AllDownButton", "All −1"), ("AllUpButton", "All +1"),
             ("RemoveSelectedCapoButton", "Remove selected"), ("RemoveAllCaposButton", "Remove all capos"),
         }, tools);
         var ok = Named<Button>(window, "OkButton");

@@ -132,9 +132,9 @@ public sealed class PartialCapoWindowTests
         try
         {
             Assert.True(window.PartialCapos[0].Strings[5]);
-            // v7 (remapped): + Add string adds a LOW string (there is no add-high), so the flag keeps its slot 5 and the new slot 6 is unticked;
+            // v7 (remapped): adding a string adds a LOW string (there is no add-high), so the flag keeps its slot 5 and the new slot 6 is unticked;
             // the string-count box takes the added string away again.
-            DialogTestKit.Click(Named<Button>(window, "AddStringButton"));
+            Named<ComboBox>(window, "StringCountBox").SelectedItem = "7 strings";
             Dispatcher.UIThread.RunJobs();
             Assert.Equal(7, window.PartialCapos[0].Strings.Count);
             Assert.True(window.PartialCapos[0].Strings[5]);
@@ -158,8 +158,7 @@ public sealed class PartialCapoWindowTests
         try
         {
             // Two low strings, then a working custom partial on the newest string.
-            DialogTestKit.Click(Named<Button>(window, "AddStringButton"));
-            DialogTestKit.Click(Named<Button>(window, "AddStringButton"));
+            Named<ComboBox>(window, "StringCountBox").SelectedItem = "8 strings";
             Dispatcher.UIThread.RunJobs();
             CapoPlacementTests.PlacePartial(window, 3);
             Assert.Equal(8, window.PartialCapos[0].Strings.Count);

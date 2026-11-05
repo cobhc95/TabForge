@@ -62,28 +62,20 @@ public sealed class TrackPropertiesRedesignTests
     }
 
     [AvaloniaFact]
-    public void AddStringAppendsALowerStringSyncsTheCountAndStopsAtTheMost()
+    public void TheCountBoxAddsALowerString()
     {
         var window = Open(Guitar());
         try
         {
             Assert.False(Has(window, "AdvancedTuningButton"));
-            var add = Named<Button>(window, "AddStringButton");
-            DialogTestKit.Click(add);
+            Assert.False(Has(window, "AddStringButton"));
+            Named<ComboBox>(window, "StringCountBox").SelectedItem = "7 strings";
             Dispatcher.UIThread.RunJobs();
 
             Assert.Equal(7, Named<StackPanel>(window, "StringRows").Children.Count);
-            Assert.Equal("7 strings", Named<ComboBox>(window, "StringCountBox").SelectedItem);
             Assert.True(RowNote(window, 6) < RowNote(window, 5));
             Assert.Equal(35, RowNote(window, 6));
             Named<Control>(window, "SpeakerToggle6");   // the new row has the same speaker as the others
-
-            for (var n = 7; n < TrackPropertiesPresenter.MostStrings; n++) DialogTestKit.Click(add);
-            Dispatcher.UIThread.RunJobs();
-            Assert.Equal(TrackPropertiesPresenter.MostStrings, Named<StackPanel>(window, "StringRows").Children.Count);
-            Assert.False(add.IsEnabled);
-            DialogTestKit.Click(add);
-            Assert.Equal(TrackPropertiesPresenter.MostStrings, Named<StackPanel>(window, "StringRows").Children.Count);
         }
         finally { Discard(window); }
     }
@@ -170,7 +162,6 @@ public sealed class TrackPropertiesRedesignTests
         try
         {
             Assert.False(Has(window, "AdvancedTuningButton") || Has(window, "AdvancedTuningRow"));
-            Assert.True(Has(window, "AddStringButton"));
             var mixer = Named<Border>(window, "MixerCard");
             var midi = Named<Border>(window, "MidiCard");
             var name = Named<TextBox>(window, "NameBox");

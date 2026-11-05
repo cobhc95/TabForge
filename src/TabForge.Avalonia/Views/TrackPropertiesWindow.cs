@@ -21,7 +21,7 @@ namespace TabForge.Avalonia.Views;
 
 /// <summary>
 /// Track properties for a MIDI track, the track properties dialog (the v7 layout: left column Details, Mixer; right column Instrument beside MIDI, Tuning, Capo): the details card
-/// (track name, colour and tint), the instrument card (the Change button runs the track row icon's picker, InstrumentPickerFlow, whose pick is kept with no step and committed with everything else on OK; bank select and channel are the MIDI card), the tuning card (strings, string tools, + Add string, keep frets,
+/// (track name, colour and tint), the instrument card (the Change button runs the track row icon's picker, InstrumentPickerFlow, whose pick is kept with no step and committed with everything else on OK; bank select and channel are the MIDI card), the tuning card (strings, string tools, keep frets,
 /// frets and capo) or the drum notation card, and the OK / Cancel footer. OK is one undo step through DocumentEdits.Run when a document is given.
 /// The window edits working copies; OK writes the track only when every typed field is in range, else it shows the field's message and stays open.
 /// Closing with edits pending (Cancel, Esc, the close box) asks the discard question; Yes closes, No returns to editing.
