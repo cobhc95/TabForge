@@ -7,14 +7,14 @@ using TabForge.Services;
 
 namespace TabForge.Avalonia.Platform;
 
-// Owns: decoding the shipped fretboard textures (woods, bindings, inlay materials, capos) once each, by file name, for the panel that owns it,
+// Owns: decoding the shipped fretboard textures (woods, bindings, inlay materials, capos) once each, by file name, shared by every panel,
 //   applying FretboardWoodFinish only to wood, and remembering the texture each part of the current look resolved to,
 //   so a steady frame builds no file names and looks nothing up.
 // Does not own: which texture a look uses (Core FretboardStyles) or the drawing (FretboardArtist).
 // A missing or unreadable file gives null; the artist then falls back to the themed flat colour. Thread: UI thread.
 internal sealed class FretboardAssets
 {
-    private readonly ConcurrentDictionary<string, Lazy<IUiImage?>> _images = new();
+    private static readonly ConcurrentDictionary<string, Lazy<IUiImage?>> _images = new();   // read-only pixels: one copy however many fretboards show them
     private string? _woodName, _bindingName, _inlayName, _capoName;
     private IUiImage? _wood, _binding, _inlay, _capo, _capoShadow;
 

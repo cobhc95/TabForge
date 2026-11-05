@@ -6,6 +6,9 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 Stable release with sharper wound strings, tidier dialogs and crash and shutdown fixes.
 
+- Performance: playback redraws far less. A note change repaints only the playing line of the score, and a ringing string only the strings over a kept picture of the neck, with no change in how either looks.
+- Performance: a song's auto-loaded plug-ins now load when first needed (play, its FX chain, an armed track or an export) instead of on opening it, so a song you only read or edit stays light. Until then its tracks use the built-in sound.
+- Performance: the audio engine wakes about a third as often while idle, memory left over from opening a song is handed back, and fretboards share one copy of their textures.
 - Settings: the video recording Save folder has a Browse button that opens a folder picker at the current folder.
 - Video recording: the fretboard now shows in full. When the recording was smaller than the window, or the display was scaled, it came out as a bare block of wood with no strings, frets, numbers, legend or notes.
 - Tabs: closing the rightmost tab no longer crashes the program when the window is activated during the close, which could happen while a song played in another tab. Closing a tab in the background no longer switches to it first, so the shown song and its playback carry on.

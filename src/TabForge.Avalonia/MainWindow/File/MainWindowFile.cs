@@ -113,6 +113,8 @@ public sealed class MainWindowFile
             else _tabs.Open(song);
             // The tab that appears is the confirmation; only a notice (a damaged file, merged duplicates) is worth a status line, and never the song's name.
             if (opened.Notice is { Length: > 0 } notice) _report((opened.ImportedFromGuitarPro ? "Imported: " : "Opened: ") + notice);
+            // An open leaves far more garbage than song: once it has settled, a background collection (no pause to speak of) hands the memory back.
+            global::Avalonia.Threading.DispatcherTimer.RunOnce(() => GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: false), TimeSpan.FromSeconds(3));
             return true;
         }
         catch (Exception ex)

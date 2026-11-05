@@ -13,7 +13,7 @@ namespace TabForge.Avalonia.Platform;
 // Tests: TabForge.Avalonia.Tests.InstrumentPanelViewTests.
 public sealed partial class InstrumentPanelView
 {
-    /// <summary>This panel decodes its own textures, and only the ones its look uses.</summary>
+    /// <summary>The textures this panel's look uses; the decoded pixels are shared between panels.</summary>
     private readonly FretboardAssets _assets = new();
     private readonly FretboardInlayPlan _inlays = new();
 
