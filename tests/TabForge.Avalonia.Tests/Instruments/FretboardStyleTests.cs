@@ -274,4 +274,18 @@ public class FretboardStyleTests
     [Fact]
     public void TheStringBarelyMoves() =>
         Assert.True(Enumerable.Range(0, 1000).Max(ms => System.Math.Abs(FretboardStringRing.Motion(ms, 3))) <= 3 * FretboardStringRing.MotionShare);
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void StringOneIsOnTopOnEitherHand(bool leftHanded)
+    {
+        var input = new FretboardGeometryRules.Input(6, 24, 24, 1, leftHanded, 0);
+        var content = new UiRect(0, 0, 1100, 200);
+        var layout = FretboardGeometryRules.Compute(input, content);
+        Assert.True(FretboardGeometryRules.StringY(layout, 0) < FretboardGeometryRules.StringY(layout, 5));
+        var point = new UiPoint(FretboardGeometryRules.FretX(layout, 5), FretboardGeometryRules.StringY(layout, 0));
+        Assert.True(FretboardGeometryRules.HitTest(input, content, point, out var s, out _));
+        Assert.Equal(0, s);
+    }
 }

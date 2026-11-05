@@ -173,8 +173,7 @@ public static class FretboardGeometryRules
 
     public static double StringY(in Layout layout, int stringIndex)
     {
-        var i = layout.LeftHanded ? layout.Strings - 1 - stringIndex : stringIndex;
-        return layout.Board.Y + i * layout.StringGap;
+        return layout.Board.Y + stringIndex * layout.StringGap;   // string 1 on top on either hand, as in the tab
     }
 
     /// <summary>The continuous 12-TET distance of a (possibly fractional) fret from the nut, in units of the scale
@@ -278,7 +277,7 @@ public static class FretboardGeometryRules
 
         var row = (int)Math.Round((point.Y - board.Y) / layout.StringGap);
         row = Math.Clamp(row, 0, layout.Strings - 1);
-        stringIndex = layout.LeftHanded ? layout.Strings - 1 - row : row;
+        stringIndex = row;
 
         if (point.X < board.X)
         {
