@@ -6,6 +6,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 - Live input window: the strip now fits one row at the default size (960 x 480) with no clipped control and no dead space: the strip frame hugs its controls instead of stretching, the Tuner switch is as wide as its label, the note and cents cells and the Gain, Vol and Pan labels take only their text width, and the cents scale shrinks first when the window narrows.
 - Plug-in editors: a docked plug-in editor larger than its area (for example Superior Drummer 3 in the FX chain window) no longer loses its right and bottom parts with no scroll bars. The plug-in is no longer told a size smaller than the one it asked for, so the bars appear and the editor scrolls. With the interface size set to anything but 100%, the frame around a docked editor came out too small and cut off the plug-in's right and bottom edges even with room to spare; the whole editor now shows at any interface size.
+- Downloads: the Windows portable zip and installer names carry the whole version (for example `TabForge-0.9.1-win-x64-portable.zip`), so the download links in the README match the files, including for x.y.0 releases.
 
 ## 0.9.0
 
