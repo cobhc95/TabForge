@@ -129,6 +129,8 @@ public sealed partial class TrackPropertiesWindow
             MinHeight = DialogMetrics.TrackCapoFieldHeight, VerticalAlignment = VerticalAlignment.Center,
             BorderThickness = new Thickness(1), CornerRadius = AvaloniaFormControlStyles.ControlCornerRadius };
         box.Classes.Add(AvaloniaFormControlStyles.PrefsFieldClass);
+        // The template's background is at least this wide; on a narrower box its side edges overflow and are clipped, leaving only the top and bottom of the outline.
+        box.Resources["ComboBoxThemeMinWidth"] = 0.0;
         // Keep the whole field's fill steady, with one complete accent outline on hover/focus.
         foreach (var state in new[] { "", ":pointerover", ":focus", ":pressed" })
         {

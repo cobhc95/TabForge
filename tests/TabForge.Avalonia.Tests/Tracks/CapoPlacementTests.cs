@@ -100,6 +100,22 @@ public sealed class CapoPlacementTests
         public void Dispose() => _owner.Close();
     }
 
+    [AvaloniaFact]
+    public void StringBoxBackgroundsFitTheBoxSoTheirOutlineIsWhole()
+    {
+        var track = new TrackModel { Name = "Capo", StringTunings = new List<int> { 64, 59, 55, 50, 45, 40 }, Measures = TemplateFactory.Measures(1) };
+        var window = new TrackPropertiesWindow(track) { Width = 1600 };
+        using var lifetime = new WindowLifetime(window);
+        DialogTestKit.Click(Named<ToggleButton>(window, "CapoPlacementPartial"));
+        Dispatcher.UIThread.RunJobs();
+        foreach (var name in new[] { "CapoStringFrom", "CapoStringTo" })
+        {
+            var box = Named<ComboBox>(window, name);
+            var background = box.GetVisualDescendantsOf<Border>().First(b => b.Name == "Background");
+            Assert.True(background.Bounds.X >= 0 && background.Bounds.Right <= box.Bounds.Width, $"{name}: {background.Bounds} in {box.Bounds.Width}");
+        }
+    }
+
     internal static T Named<T>(Window window, string name) where T : Control =>
         window.GetLogicalDescendants().OfType<T>().Single(c => c.Name == name);
 
