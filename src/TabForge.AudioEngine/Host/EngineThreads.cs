@@ -74,7 +74,13 @@ public sealed class EngineThreads
         _queue.Enqueue(action);
         if (Interlocked.Increment(ref _queued) > HighWaterMark && Interlocked.Exchange(ref _warned, 1) == 0)
             _log.Write($"main-thread queue over {HighWaterMark} items ({Queued} queued): commands are arriving faster than the main thread runs them");
+        _wake.Set();
     }
+
+    private readonly AutoResetEvent _wake = new(false);
+
+    /// <summary>Signalled when work is queued, so the main loop can sleep until then instead of waking on a short timer.</summary>
+    public IntPtr WakeHandle => _wake.SafeWaitHandle.DangerousGetHandle();
 
     /// <summary>Main thread: runs queued work (bounded per call so the message loop stays responsive).</summary>
     public void RunPending(int max = 64)
@@ -87,6 +93,7 @@ public sealed class EngineThreads
             try { action(); }
             catch (Exception ex) { _log.Write($"main-thread task failed: {ex.GetBaseException().Message}"); }
         }
+        if (!_queue.IsEmpty) _wake.Set();   // more than one turn's worth: the next turn must not sleep on it
     }
 }
 

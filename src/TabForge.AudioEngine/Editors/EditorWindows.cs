@@ -339,9 +339,17 @@ public sealed unsafe class EditorWindows : IPluginEditorHost
             Idle();
             if (idle is not null && !idle()) return false;
         }
-        MsgWaitForMultipleObjectsEx(0, IntPtr.Zero, 10, 0x04FF, 0x0004);
+        // With no editor open the loop sleeps until a message, queued work or the next idle turn; an open editor keeps the short wait.
+        var wake = _mainWake;
+        if (wake != IntPtr.Zero && Open.Count == 0) MsgWaitForMultipleObjectsEx(1, (IntPtr)(&wake), (uint)IdleIntervalMs, 0x04FF, 0x0004);
+        else MsgWaitForMultipleObjectsEx(0, IntPtr.Zero, 10, 0x04FF, 0x0004);
         return true;
     }
+
+    private IntPtr _mainWake;
+
+    /// <inheritdoc />
+    public void SetMainWake(IntPtr handle) => _mainWake = handle;
 
     /// <summary>Main thread, ~30 times a second: lets VST2 editors redraw.</summary>
     public void Idle()

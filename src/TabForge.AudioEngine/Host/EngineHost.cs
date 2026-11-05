@@ -76,6 +76,7 @@ public static partial class EngineHost
         var lastLog = lastIdle;
         new Thread(MainThreadWatchdog) { IsBackground = true, Name = "TabForge engine watchdog" }.Start();
         Func<bool> idle = new IdleWork(s, parent).Tick;
+        _session.Editors.SetMainWake(Threads.WakeHandle);
         while (!_exit)
         {
             Volatile.Write(ref _busySince, Stopwatch.GetTimestamp());
@@ -147,6 +148,7 @@ public static partial class EngineHost
                                     $"deadline misses {m.DeadlineMisses}, late calls {m.LateCalls}, allocated {m.AllocatedBytes} B, " +
                                     $"MIDI dropped {m.MidiDropped}, MIDI deferred {m.MidiDeferred}, ring dropped {(_shared is not null ? _shared.DroppedWrites : 0)}, device block {m.BlockFrames} frames");   // the granted size, which can differ from the requested one (WASAPI exclusive)
             }
+            _s.TrimMemoryWhenDue();
             if (_parent.HasExited) { Log.Write("TabForge has exited; the engine ends"); return false; }
             // Watchdog: a plug-in that freezes the audio thread would silence everything. End the engine; the
             // breadcrumb names the plug-in, TabForge switches it off and restarts the engine without it.

@@ -27,6 +27,9 @@ public interface IPluginEditorHost
 
     /// <summary>One turn of the hosting message loop; false once <paramref name="idle"/> says the loop should end.</summary>
     bool PumpOnce(ref long lastIdle, Func<bool>? idle);
+
+    /// <summary>The event that means work is queued for the main loop, so <see cref="PumpOnce"/> may sleep longer until it is signalled. Hosts that ignore it keep their short wait.</summary>
+    void SetMainWake(IntPtr handle) { }
 }
 
 /// <summary>

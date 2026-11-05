@@ -92,6 +92,18 @@ internal sealed partial class EngineSession
         ApplyMidiProcs(slot);
         ApplyGraph();
         SendChainLoaded(slot, chain, specs, blockedChanged, useMidiSynth, synth);
+        MemoryTrimDue = System.Diagnostics.Stopwatch.GetTimestamp() + 3 * System.Diagnostics.Stopwatch.Frequency;
+    }
+
+    /// <summary>When loading settled, the engine hands back what the load left behind; 0: nothing due. Main thread only.</summary>
+    internal long MemoryTrimDue;
+
+    /// <summary>Runs a due background collection: without one, the garbage a song's chains leave stays in the working set, because the engine runs in low-latency GC mode.</summary>
+    internal void TrimMemoryWhenDue()
+    {
+        if (MemoryTrimDue == 0 || System.Diagnostics.Stopwatch.GetTimestamp() < MemoryTrimDue) return;
+        MemoryTrimDue = 0;
+        GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: false);
     }
 
     /// <summary>The plug-ins already running for the slot, by chain id: those of the loaded chain and those parked (bypassed ones kept loaded).</summary>
