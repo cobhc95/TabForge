@@ -73,16 +73,17 @@ internal static class FretboardArtist
     /// <summary>The wood texture at its own aspect: one centred crop when a tile covers the board, else a row of tiles.</summary>
     private static void DrawTiled(IDrawContext d, IUiImage? image, UiRect box)
     {
-        if (FretboardAssets.SizeOf(image) is not { } size || AvaloniaDrawContext.ClipsAreSkipped || box.Width <= 0 || box.Height <= 0) return;
+        if (FretboardAssets.SizeOf(image) is not { } size || box.Width <= 0 || box.Height <= 0) return;
         var tiles = FretboardWoodTiling.TileCount(box.Width, box.Height, size.Width, size.Height);
         if (tiles <= 0) return;
-        d.PushClip(box.X, box.Y, box.Width, box.Height);
+        if (!AvaloniaDrawContext.ClipsAreSkipped) d.PushClip(box.X, box.Y, box.Width, box.Height);
         for (var i = 0; i < tiles; i++)
         {
             var tile = FretboardWoodTiling.TileRect(i, box.X, box.Y, box.Width, box.Height, size.Width, size.Height);
-            d.Image(image!, tile.X, tile.Y, tile.Width, tile.Height);
+            if (AvaloniaDrawContext.ClipsAreSkipped) ((AvaloniaDrawContext)d).ImageInside(image!, tile, box);
+            else d.Image(image!, tile.X, tile.Y, tile.Width, tile.Height);
         }
-        d.Pop();
+        if (!AvaloniaDrawContext.ClipsAreSkipped) d.Pop();
     }
 
     /// <summary>Soft light on the wood: the edges fall into shade and a gentle sheen lies along the middle (stacked translucent bands).</summary>
@@ -110,13 +111,18 @@ internal static class FretboardArtist
     private static void BindingStrip(in FretboardScene s, IUiImage? image, UiRect strip, bool top)
     {
         s.D.Rect(s.Ink("FretboardNutBody"), null, strip.X, strip.Y, strip.Width, strip.Height, 1);
-        if (FretboardAssets.SizeOf(image) is { } size && !AvaloniaDrawContext.ClipsAreSkipped)
+        if (FretboardAssets.SizeOf(image) is { } size)
         {
             // Cover the strip's width at the material's own aspect and show the middle slice of it.
             var drawHeight = strip.Width * size.Height / size.Width;
-            s.D.PushClip(strip.X, strip.Y, strip.Width, strip.Height);
-            s.D.Image(image!, strip.X, strip.Y + (strip.Height - drawHeight) / 2, strip.Width, drawHeight);
-            s.D.Pop();
+            var whole = new UiRect(strip.X, strip.Y + (strip.Height - drawHeight) / 2, strip.Width, drawHeight);
+            if (AvaloniaDrawContext.ClipsAreSkipped) ((AvaloniaDrawContext)s.D).ImageInside(image!, whole, strip);
+            else
+            {
+                s.D.PushClip(strip.X, strip.Y, strip.Width, strip.Height);
+                s.D.Image(image!, whole.X, whole.Y, whole.Width, whole.Height);
+                s.D.Pop();
+            }
         }
         // Bevel: light catches the upper part of the strip, the lower part falls into shade (the outer edge on the bottom strip, the seam with the wood on the top one).
         var light = s.Ink("FretboardBindingLight");

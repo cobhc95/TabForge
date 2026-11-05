@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using TabForge.Avalonia.Platform;
 using TabForge.Platform;
 using TabForge.Services.Video;
 
@@ -18,7 +19,7 @@ namespace TabForge.Avalonia.Video;
 // Keys and ceilings: one content buffer and one scratch buffer, both the size of the window content in device pixels, shrunk so the region is at most the frame size (sized again when
 //   the window resizes); the content buffer is written on the UI thread under _gate, the scratch buffer is used only by Grab.
 // Threads: the constructor, the timer, RenderNow and the first half of Dispose run on the UI thread; Grab runs on the capture thread.
-// Tests: TabForge.Avalonia.Tests.LiveVideoRecordTests (a headless window reads back its own colour, the rate is capped, an untaken frame is not re-rendered).
+// Tests: TabForge.Avalonia.Tests.LiveVideoRecordTests (a headless window reads back its own colour, the rate is capped, an untaken frame is not re-rendered), LiveVideoFretboardTests.
 internal sealed class AvaloniaWindowFrameCapture : IVideoCapture
 {
     private const double DotsPerInch = 96;   // Avalonia's DIP to inch mapping; the bitmap's dpi is this times the render scaling
@@ -83,7 +84,7 @@ internal sealed class AvaloniaWindowFrameCapture : IVideoCapture
         var height = (int)Math.Round(root.Bounds.Height * scaling);
         if (width < 1 || height < 1) return;
         EnsureBitmaps(width, height, scaling);
-        _target!.Render(root);
+        using (AvaloniaDrawContext.WithClipsSkippedScope(scaling != 1)) _target!.Render(root);   // a bitmap at another scale loses what is drawn after a clip (see the flag)
         using (var locked = _readback!.Lock())
         {
             _target.CopyPixels(locked, AlphaFormat.Premul);

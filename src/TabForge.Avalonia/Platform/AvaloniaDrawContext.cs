@@ -123,7 +123,7 @@ public sealed class AvaloniaDrawContext : IDrawContext
     private static readonly AsyncLocal<bool> ClipsSkipped = new();
 
     /// <summary>
-    /// Runs <paramref name="render"/> with every clip push a no-op when <paramref name="skip"/> is true. The capture uses it while it renders a bitmap at a scale
+    /// Runs <paramref name="render"/> with every clip push a no-op when <paramref name="skip"/> is true. The capture and the live video frames use it while they render a bitmap at a scale
     /// other than 1: there Avalonia drops (or mis-scales) the text, paths and images drawn after a clip push, so clip names, waveforms and section titles vanish.
     /// A real window at 150% or 200% draws them correctly (verified headlessly), so the app never sets it. Scoped to this logical flow, not a process switch.
     /// </summary>
@@ -162,6 +162,16 @@ public sealed class AvaloniaDrawContext : IDrawContext
 
     /// <summary>Draws an image scaled to the rectangle.</summary>
     public void Image(IUiImage image, double x, double y, double width, double height) => Dc.DrawImage(((AvaloniaImage)image).Source, new Rect(x, y, width, height));
+
+    /// <summary>Draws the part of an image placed at <paramref name="whole"/> that falls inside <paramref name="box"/>, by cropping its source: what a clip does, for renders where clips are skipped.</summary>
+    internal void ImageInside(IUiImage image, UiRect whole, UiRect box)
+    {
+        var dest = new Rect(whole.X, whole.Y, whole.Width, whole.Height).Intersect(new Rect(box.X, box.Y, box.Width, box.Height));
+        if (dest.Width <= 0 || dest.Height <= 0) return;
+        var source = ((AvaloniaImage)image).Source;
+        double sx = source.Size.Width / whole.Width, sy = source.Size.Height / whole.Height;
+        Dc.DrawImage(source, new Rect((dest.X - whole.X) * sx, (dest.Y - whole.Y) * sy, dest.Width * sx, dest.Height * sy), dest);
+    }
 
     /// <summary>Clips later drawing to the rectangle.</summary>
     public void PushClip(double x, double y, double width, double height) =>

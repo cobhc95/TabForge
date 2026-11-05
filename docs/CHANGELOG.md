@@ -6,6 +6,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 Stable release with sharper wound strings, tidier dialogs and crash and shutdown fixes.
 
+- Video recording: the fretboard now shows in full. When the recording was smaller than the window, or the display was scaled, it came out as a bare block of wood with no strings, frets, numbers, legend or notes.
 - Tabs: closing the rightmost tab no longer crashes the program when the window is activated during the close, which could happen while a song played in another tab. Closing a tab in the background no longer switches to it first, so the shown song and its playback carry on.
 - Plug-in windows: a floating plug-in window now comes back exactly where you left it when you switch to another tab and back. A saved place whose monitor has gone is ignored.
 - Hotkeys: play, stop and other navigation keys now work while the FX chain, a plug-in window or another tool window has the focus, using your own key bindings. Text boxes, plug-in text fields that use a standard text box or a caret, dialogs, Settings and Fretboard settings keep their keys.
