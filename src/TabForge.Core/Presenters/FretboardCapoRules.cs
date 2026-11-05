@@ -58,13 +58,13 @@ public static class FretboardCapoRules
     /// nearest shown fret centre, clamped to 0..24.</summary>
     public static int FretAtX(in FretboardGeometryRules.Layout layout, double x)
     {
-        var unmirrored = layout.LeftHanded ? layout.Board.Right - (x - layout.Board.X) : x;
-        if (unmirrored < layout.Board.X) return MinFret;
+        // FretX is already mirrored on a left-handed board, so the pointer is compared as it is. Past the nut is no capo.
+        if (layout.LeftHanded ? x > layout.Board.Right : x < layout.Board.X) return MinFret;
         var nearest = layout.FirstFret;
         var nearestDistance = double.PositiveInfinity;
         for (var f = layout.FirstFret; f <= layout.LastFret; f++)
         {
-            var distance = Math.Abs(unmirrored - FretboardGeometryRules.FretX(layout, f));
+            var distance = Math.Abs(x - FretboardGeometryRules.FretX(layout, f));
             if (distance >= nearestDistance) continue;
             nearest = f;
             nearestDistance = distance;

@@ -288,4 +288,15 @@ public class FretboardStyleTests
         Assert.True(FretboardGeometryRules.HitTest(input, content, point, out var s, out _));
         Assert.Equal(0, s);
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TheCapoDragFollowsThePointerOnEitherHand(bool leftHanded)
+    {
+        var layout = FretboardGeometryRules.Compute(new FretboardGeometryRules.Input(6, 24, 24, 1, leftHanded, 0), new UiRect(0, 0, 1100, 200));
+        for (var fret = 1; fret <= 24; fret++)
+            Assert.Equal(fret, FretboardCapoRules.FretAtX(layout, FretboardGeometryRules.FretX(layout, fret)));
+        Assert.Equal(0, FretboardCapoRules.FretAtX(layout, leftHanded ? layout.Board.Right + 5 : layout.Board.X - 5));
+    }
 }
