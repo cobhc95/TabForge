@@ -105,8 +105,8 @@ public static class ChromeMetrics
     public const double LiveStripHeight = 28, LiveStripCorner = 6, LiveStripGap = 4, LiveStripGroupGap = 10, LiveStripRowInset = 1, LiveStripInset = 6, LiveStripFontSize = 11;
 
     /// <summary>The live strip's parts: the caption, the two-bar meter, the note name, the cents scale (fixed width), the cents text, the Tuner toggle, the window dropdown (its width is its longest item plus the chrome), a slider label and a mini slider.</summary>
-    public const double LiveStripMeterWidth = 40, LiveStripMeterBar = 4, LiveStripNoteWidth = 32, LiveStripNoteFontSize = 15, LiveStripCentsScaleWidth = 160, LiveStripCentsScaleMinWidth = 100, LiveStripTipMaxWidth = 240,
-        LiveStripCentsTextWidth = 40, LiveStripTunerToggleWidth = 46, LiveStripWindowPad = 4, LiveStripWindowChrome = 44, LiveStripSliderWidth = 54, LiveStripToggleWidth = 23, LiveStripControlHeight = 22;
+    public const double LiveStripMeterWidth = 40, LiveStripMeterBar = 4, LiveStripCellPad = 4, LiveStripNoteFontSize = 15, LiveStripCentsScaleWidth = 160, LiveStripCentsScaleMinWidth = 100, LiveStripTipMaxWidth = 240,
+        LiveStripTunerToggleWidth = 46, LiveStripWindowPad = 4, LiveStripWindowChrome = 44, LiveStripSliderWidth = 54, LiveStripToggleWidth = 23, LiveStripControlHeight = 22;
 
     /// <summary>How often (ms) the strip's cents text may change.</summary>
     public const double LiveStripTextIntervalMs = 250, LiveStripNameMaxWidth = 160;

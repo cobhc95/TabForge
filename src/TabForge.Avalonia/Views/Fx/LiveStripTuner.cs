@@ -19,8 +19,8 @@ namespace TabForge.Avalonia.Views.Fx;
 public sealed class LiveStripTuner : Grid
 {
     public const string SwitchText = "Tuner", OffNote = "--";
-    private readonly TextBlock _note = new() { Name = "TunerNote", FontSize = ChromeMetrics.LiveStripNoteFontSize, FontWeight = FontWeight.SemiBold, Text = OffNote, VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Center, Width = ChromeMetrics.LiveStripNoteWidth };
-    private readonly TextBlock _cents = new() { Name = "TunerCents", VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Right, Width = ChromeMetrics.LiveStripCentsTextWidth, FontSize = ChromeMetrics.LiveStripFontSize };
+    private readonly TextBlock _note = new() { Name = "TunerNote", FontSize = ChromeMetrics.LiveStripNoteFontSize, FontWeight = FontWeight.SemiBold, Text = OffNote, VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Center };
+    private readonly TextBlock _cents = new() { Name = "TunerCents", VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Right, FontSize = ChromeMetrics.LiveStripFontSize };
     private readonly LiveCentsBar _bar = new() { Name = "TunerNeedle", Height = ChromeMetrics.LiveStripControlHeight, VerticalAlignment = VerticalAlignment.Center };
     private readonly LiveStripToggle _switch = new(LiveStripToggle.Look.Lit, SwitchText, ChromeMetrics.LiveStripTunerToggleWidth, ChromeMetrics.LiveStripControlHeight) { Name = "TunerSwitch", VerticalAlignment = VerticalAlignment.Center };
     private readonly ComboBox _window = new() { Name = "TunerWindow", Height = ChromeMetrics.LiveStripControlHeight, MinHeight = ChromeMetrics.LiveStripControlHeight, FontSize = ChromeMetrics.LiveStripFontSize, VerticalAlignment = VerticalAlignment.Center, VerticalContentAlignment = VerticalAlignment.Center };
@@ -36,6 +36,8 @@ public sealed class LiveStripTuner : Grid
         ColumnDefinitions = ColumnDefinitions.Parse("Auto,Auto,Auto");
         ColumnSpacing = ChromeMetrics.LiveStripGap;
         VerticalAlignment = VerticalAlignment.Center;
+        _note.Width = TextWidth("G#4", _note) + ChromeMetrics.LiveStripCellPad;   // cells as wide as the widest text they show, so no empty gap sits between them
+        _cents.Width = TextWidth("-50 ¢", _cents) + ChromeMetrics.LiveStripCellPad;
         _note[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
         _cents[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
         ToolTip.SetTip(_bar, "How far the note is from true, in cents");
@@ -65,6 +67,13 @@ public sealed class LiveStripTuner : Grid
     public string NoteText => _note.Text ?? "";
     public string CentsText => _cents.Text ?? "";
     public double NeedleCents => _bar.Cents;
+
+    private static double TextWidth(string text, TextBlock like)
+    {
+        var probe = new TextBlock { Text = text, FontSize = like.FontSize, FontWeight = like.FontWeight };
+        probe.Measure(Size.Infinity);
+        return Math.Ceiling(probe.DesiredSize.Width);
+    }
 
     private static string NumberOf(string? text) => text?.Replace(" ms", "") ?? "";
 

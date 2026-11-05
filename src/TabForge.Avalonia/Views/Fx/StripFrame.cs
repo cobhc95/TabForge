@@ -24,7 +24,7 @@ public abstract class StripFrame : Border
         this[!BackgroundProperty] = new DynamicResourceExtension("PanelBackground");
         this[!BorderBrushProperty] = new DynamicResourceExtension("BorderSoftBrush");
         ClipToBounds = true;
-        HorizontalAlignment = HorizontalAlignment.Stretch;
+        HorizontalAlignment = HorizontalAlignment.Left;   // the frame hugs its groups: no dead space after the last one in a wide window
     }
 
     /// <summary>Puts these groups in the strip's wrapping panel, in order.</summary>
