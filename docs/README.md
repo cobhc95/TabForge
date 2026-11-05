@@ -1,6 +1,6 @@
 # TabForge 0.9.0
 
-**A keyboard-driven tablature and notation editor for Windows. Opens GP files (.gp3, .gp4, .gp5, .gpx, .gp) and saves .gp and its own .tforge projects.** Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard / keyboard, an arrangement timeline, audio and MIDI recording, a mixer, VST plug-ins and offline audio and video rendering.
+**A keyboard-driven tablature and notation editor for Windows, with experimental Linux packages.** Opens .gp3, .gp4, .gp5, .gpx and .gp files, and saves .gp and its own .tforge projects. Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard or keyboard, a piano roll, an arrangement timeline, audio and MIDI recording, a mixer, built-in effects, VST2, VST3 and CLAP plug-ins (32-bit and 64-bit VST), and offline audio and video rendering.
 
 [![TabForge with a drum plug-in](media/screenshots/github-main.jpg)](media/screenshots/github-main.jpg)
 
@@ -17,9 +17,16 @@ Windows 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify 
 
 ### Linux packages (experimental)
 
-The primary Linux download is the AppImage ([`TabForge-0.9.0-linux-x86_64.AppImage`](https://github.com/cobhc95/TabForge/releases/download/v0.9.0/TabForge-0.9.0-linux-x86_64.AppImage)); the gzip archive ([`TabForge-0.9.0-linux-x64.tar.gz`](https://github.com/cobhc95/TabForge/releases/download/v0.9.0/TabForge-0.9.0-linux-x64.tar.gz)) is the fallback. Both include pinned Wine and FFmpeg; Linux remains experimental and has not been verified on real hardware.
+The main Linux download is the AppImage ([`TabForge-0.9.0-linux-x86_64.AppImage`](https://github.com/cobhc95/TabForge/releases/download/v0.9.0/TabForge-0.9.0-linux-x86_64.AppImage)). The archive ([`TabForge-0.9.0-linux-x64.tar.gz`](https://github.com/cobhc95/TabForge/releases/download/v0.9.0/TabForge-0.9.0-linux-x64.tar.gz)) is the fallback. Both include Wine 9.21 for Windows plug-ins, FFmpeg for video export and a General MIDI SoundFont, so sound works on first run.
 
-Run it: `chmod +x TabForge-*-linux-x86_64.AppImage`, then `./TabForge-*-linux-x86_64.AppImage`. When FUSE 2 is missing, run with `--appimage-extract-and-run`. On Ubuntu 22.04 and newer you may need `libfuse2` / `libfuse2t64`. The AppImage runs on the glibc it was built on or newer: it is built on the oldest supported distro (Ubuntu 22.04); read `MIN_GLIBC.txt` beside the download for the real minimum number. The host must provide the X11/ALSA/fontconfig/GL libraries listed under "Requires on the host" in the `tools/package-linux.sh` header; Windows plug-ins run through the bundled Wine. Honestly unproven: the Wine build, the distro checks and real-hardware tests are unproven, and size and startup time are not yet measured. No Linux run or proof comes from this machine: no Linux machine or WSL exists here.
+```bash
+chmod +x TabForge-*-linux-x86_64.AppImage
+./TabForge-*-linux-x86_64.AppImage
+```
+
+- **If FUSE 2 is missing:** add `--appimage-extract-and-run`, or install `libfuse2` (`libfuse2t64` on Ubuntu 24.04).
+- **What it needs:** 64-bit x86, a glibc as new as Ubuntu 22.04's or newer, and the usual desktop libraries (X11, ALSA, fontconfig, OpenGL). The full list is in the header of `tools/package-linux.sh`.
+- **How far it has been tested:** Linux has run in a Hyper-V Ubuntu virtual machine and on automated test machines, not on real hardware. Checks on other distributions are incomplete, and rendering, microphone input and CLAP plug-ins are not yet confirmed. See [Plug-ins](#plug-ins) for Wine's limits, and please report what you find.
 
 ### See it in action
 
@@ -31,11 +38,21 @@ Run it: `chmod +x TabForge-*-linux-x86_64.AppImage`, then `./TabForge-*-linux-x8
 </tr>
 </table>
 
-**Contents:** [Download](#download) · [What's new in 0.9.0](#whats-new-in-090) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
+**Contents:** [Download](#download) · [What's new in 0.9.0](#whats-new-in-090) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Piano roll](#piano-roll) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Plug-ins](#plug-ins) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
 
 ## What's new in 0.9.0
 
-0.9.0 is a stable release. The fretboard's wound strings now have fine coils that stay sharp at any size, with a new Bronze finish, and a sounding string shows a soft blur that rings for the note's own length. Playback is lighter and ASIO drivers open again. Crash recovery now keeps a song's track inputs, Band layout and audio clip links. It also fixes several shutdown problems and removes a large amount of unused code and files.
+0.9.0 is a stable release.
+
+[![The redesigned fretboard with drawn wound strings](media/screenshots/0.9.0/fretboard.png)](media/screenshots/0.9.0/fretboard.png)
+
+- **Fretboard:** wound strings have fine coils that stay sharp at any size, with a new Bronze finish. A sounding string shows a soft blur that rings for the note's own length. The Fretboard settings window now matches main Settings, and left-handed mode keeps string 1 on top, matching the tab.
+- **Lighter playback:** a note change repaints only the playing line of the score, and a ringing string only the strings. A song's auto-loaded plug-ins load when first needed, and the audio engine wakes about a third as often while idle.
+- **ASIO:** drivers open again. A driver that really cannot be opened now says so in plain words.
+- **Hotkeys:** play, stop and other navigation keys work while the FX chain, a plug-in window or another tool window has the focus.
+- **Plug-in windows:** a floating plug-in window comes back where you left it when you switch tabs and back.
+- **Safer:** crash recovery keeps track inputs, Band layout and audio clip links, closing a tab during playback no longer crashes, and several shutdown problems are fixed.
+- **Video recording:** the fretboard now shows in full.
 
 Full list: the [changelog](CHANGELOG.md#090).
 
@@ -65,7 +82,7 @@ Full list: the [changelog](CHANGELOG.md#088).
 
 <details><summary>Earlier in 0.8: Avalonia, selection and loops, piano roll</summary>
 
-TabForge now runs on Avalonia, the first step toward running on more platforms in the future. It is Windows only today.
+TabForge now runs on Avalonia, the step that later made the Linux packages possible.
 
 - **Selection and loops:** drag a box on the timeline, or drag across the score, to select and set the loop; the ruler loop has handles; *Clear loop* and Esc twice remove it.
 - **Section resize by edges:** drag a section's left or right edge to make it shorter or longer; it never stretches the neighbouring section. Dragging the middle still moves it.
@@ -91,13 +108,16 @@ Each plug-in or container can be set to play only for a chosen driver type (ASIO
 
 ## What sets it apart
 
-- **One window:** tab editing, audio and MIDI recording, a mixer and VST2 / VST3 plug-ins on the tracks of a tab.
+- **One window:** tab editing, a piano roll, audio and MIDI recording, a mixer and plug-ins on the tracks of a tab.
+- **A real-looking fretboard:** layered wood, true fret spacing, drawn wound strings, material inlays, full and partial capos, scale highlights and a left-handed mode.
 - **Band view and Keyboard mode:** every track on its own instrument following playback, or falling notes with play-along scoring and *Wait for me*.
 - **Live input:** one button plays a guitar or MIDI keyboard through an FX chain, with no track and no recording.
 - **Video from the score:** export a self-playing MP4, or record the score with the sound you hear.
-- **MIDI processing before every plug-in:** arpeggiator, step sequencer, humaniser, drum trigger and more.
+- **Effects included, plug-ins welcome:** six built-in effects, plus VST2, VST3 and CLAP. 32-bit VST2 and VST3 plug-ins work too, through a helper process.
+- **MIDI processing before every plug-in:** arpeggiator, step sequencer, humaniser, drum trigger and more, with articulation maps for sample libraries.
 - **Yours to arrange:** remappable shortcuts with a command palette, dockable panes, and songs as tabs that move between windows.
 - **Plug-in safety:** plug-ins outside Program Files load only once approved, and all run outside the editor; one that crashes is switched off.
+- **Windows first, Linux coming:** experimental Linux packages include Wine, so Windows plug-ins can load there too.
 
 ## Writing tab and notation
 
@@ -145,36 +165,53 @@ Type frets with the keyboard; standard notation and tab update together. Click a
 
 A fretboard, keyboard or drum map matches each track, lights up as the song plays, and writes a note when clicked.
 
+### Fretboard
+
+[![The default Rosewood fretboard](media/screenshots/0.9.0/fretboard.png)](media/screenshots/0.9.0/fretboard.png)
+
+Strings in the track's own tuning. The sounding note glows, the next notes are outlined and a line shows where the hand moves. The neck is drawn to real proportions, with true fret spacing, layered wood, shaded binding, material inlays and drawn wound strings that stay sharp at any size.
+
 <table>
 <tr>
-<td width="33%" valign="top"><a href="media/screenshots/fretboard.png"><img src="media/screenshots/fretboard.png" alt="Fretboard" width="215"></a><br><b>Fretboard</b><br>Strings in the track's own tuning. The sounding note glows, the next notes are outlined and a line shows where the hand moves.</td>
-<td width="33%" valign="top"><a href="media/screenshots/instrument-keyboard.png"><img src="media/screenshots/instrument-keyboard.png" alt="Keyboard view" width="215"></a><br><b>Keyboard</b><br>An 88-key keyboard, or 76, 61, 49, 37 or 25 keys, for keyboard tracks.</td>
-<td width="33%" valign="top"><a href="media/screenshots/instrument-drums.png"><img src="media/screenshots/instrument-drums.png" alt="Drum view" width="215"></a><br><b>Drum map</b><br>A percussion map for drum tracks; the pieces light up as they are hit.</td>
+<td width="50%" valign="top"><a href="media/screenshots/0.9.0/fretboard-scale-highlight.png"><img src="media/screenshots/0.9.0/fretboard-scale-highlight.png" alt="A Minor Pentatonic highlighted on the fretboard" width="400"></a><br><b>Scale highlight</b><br>Any scale shown across the neck as Dots, Rings, Cell tint, Note names or Degrees, with your own colours.</td>
+<td width="50%" valign="top"><a href="media/screenshots/0.9.0/fretboard-left-handed.png"><img src="media/screenshots/0.9.0/fretboard-left-handed.png" alt="The left-handed fretboard" width="400"></a><br><b>Left-handed</b><br>The neck is mirrored and string 1 stays on top, matching the tab.</td>
 </tr>
 <tr>
-<td width="33%" valign="top"><a href="media/screenshots/fretboard-marker-size.png"><img src="media/screenshots/fretboard-marker-size.png" alt="The fretboard with note markers at 140%" width="215"></a><br><b>Note marker size</b><br>Circles and numbers scale together from 60% to 160%.</td>
-<td width="33%" valign="top"><a href="media/screenshots/fretboard-2026.png"><img src="media/screenshots/fretboard-2026.png" alt="Fretboard, default look" width="215"></a><br><b>Appearance</b><br>Scale highlight in five styles and swatch colours with opacity; fret-marker colours; left-handed view; note names; 12 or 24 frets.</td>
-<td width="33%" valign="top"><a href="media/screenshots/scale-finder.png"><img src="media/screenshots/scale-finder.png" alt="Scale finder" height="150"></a><br><b>Scale finder</b><br>Detects the scale of the section, song or selection with Auto or a manual pick, shared with the status bar, and shows it on the fretboard.</td>
+<td width="50%" valign="top"><a href="media/screenshots/0.9.0/fretboard-pearl-fins.png"><img src="media/screenshots/0.9.0/fretboard-pearl-fins.png" alt="The Pearl fins look" width="400"></a><br><b>Pearl fins</b><br>Rosewood, white binding and pearl shark fins.</td>
+<td width="50%" valign="top"><a href="media/screenshots/0.9.0/fretboard-ebony-blocks.png"><img src="media/screenshots/0.9.0/fretboard-ebony-blocks.png" alt="The Ebony blocks look" width="400"></a><br><b>Ebony blocks</b><br>Ebony, cream binding and ivory blocks.</td>
 </tr>
 <tr>
-<td width="33%" valign="top"><a href="media/screenshots/instrument-picker.png"><img src="media/screenshots/instrument-picker.png" alt="Instrument picker" height="150"></a><br><b>Instrument picker</b><br>The full General MIDI set with pictures, categories and search.</td>
-<td width="33%" valign="top"><a href="media/screenshots/track-properties-guitar.png"><img src="media/screenshots/track-properties-guitar.png" alt="Track properties, guitar" height="150"></a><br><b>Tuning editor</b><br>Per-string tuning for 3 to 10 strings: click a string to hear it, All -1 / All +1, presets grouped by instrument with search and your own saved tunings. Retuning keeps either the fret numbers or the pitches; removing a string with notes asks first.</td>
-<td width="33%" valign="top"><a href="media/screenshots/track-properties-drums.png"><img src="media/screenshots/track-properties-drums.png" alt="Track properties, drums" height="150"></a><br><b>Drum notation</b><br>Presets plus a custom map: tab line, tab text, staff position and notehead for every drum sound.</td>
+<td width="50%" valign="top"><a href="media/screenshots/0.9.0/fretboard-maple.png"><img src="media/screenshots/0.9.0/fretboard-maple.png" alt="The Maple look" width="400"></a><br><b>Maple</b><br>Birdseye maple with black pearl dots.</td>
+<td width="50%" valign="top"><a href="media/screenshots/0.9.0/fretboard-flame-maple.png"><img src="media/screenshots/0.9.0/fretboard-flame-maple.png" alt="The Flame maple look" width="400"></a><br><b>Flame maple</b><br>Flame maple, black binding and abalone green dots, with a bronze capo.</td>
+</tr>
+<tr>
+<td width="50%" valign="top"><a href="media/screenshots/0.9.0/fretboard-settings-look.png"><img src="media/screenshots/0.9.0/fretboard-settings-look.png" alt="Fretboard settings, Look page" width="400"></a><br><b>Build your own look</b><br>Five presets, or mix any of nine woods, ten bindings, five inlay shapes and ten inlay materials. Open it with <b>Customize</b> under the Scales button, or right-click &gt; <i>Fretboard settings</i>.</td>
+<td width="50%" valign="top"><a href="media/screenshots/0.9.0/fretboard-settings-notes.png"><img src="media/screenshots/0.9.0/fretboard-settings-notes.png" alt="Fretboard settings, Notes and markers page" width="400"></a><br><b>Notes and markers</b><br>Look-ahead notes, a faint trail of previous notes, fret numbers or note names, and the brightness and size of the markers.</td>
+</tr>
+<tr>
+<td width="50%" valign="top"><a href="media/screenshots/0.9.0/partial-capo.png"><img src="media/screenshots/0.9.0/partial-capo.png" alt="Track properties with a partial capo on strings 2 to 4" width="400"></a><br><b>Capos and tuning</b><br>A full capo plus up to four partial capos, added and dragged on the fretboard or in Track properties (F6). Notes, playback and score labels follow. Tune 3 to 10 strings, with All -1 and All +1 and your own saved tunings.</td>
+<td width="50%" valign="top"><a href="media/screenshots/scale-finder.png"><img src="media/screenshots/scale-finder.png" alt="Scale finder" width="400"></a><br><b>Scale finder</b><br>Detects the scale of the section, song or selection with Auto or a manual pick, shared with the status bar, and shows it on the fretboard.</td>
 </tr>
 </table>
 
-<details><summary>More details</summary>
+- **Strings:** Steel, Nickel, Gold, Black or Bronze finish. A sounding string's ring can be Off, Mild, Medium or Strong, at Slow, Normal or Fast speed, and string numbers can be shown beside the nut.
+- **Board:** brightness for the neck and notes on their own, 12 or 24 frets, Compact, Natural or Wide string spacing, and a Black, Bronze or Steel capo. A tall pane centres the board and a narrow one scales the drawing instead of squeezing the frets.
+- **Scale highlight:** emphasise the root, dim the notes outside the scale, or show it only on the frets in view.
+- **Scale finder:** the **Scales** button, right-click > *Find scale…* or Tools > Scale finder. It offers detected scales, scale families, a searchable list of every scale in all 12 keys, and a pick that sticks to the section and track.
+- Chords move as one shape, and hovering previews where a click would write. Right-click to show this track as a fretboard, keyboard or drum map; the default is in Settings > Fretboard & Keyboard.
 
-- Follows playback: the sounding note glows, the next notes are outlined, a line shows where the hand moves next. Chords move as one shape. Hover previews where a click would write.
-- **Note marker size** (60% to 160%) scales circles and numbers together; 12 or 24 frets; alternative preview layouts.
-- **String spacing** (right-click > *Appearance*, also in Settings and bindable): *Compact*, *Natural* (default) or *Wide*. A tall pane centres the board and a narrow pane scales the drawing down instead of squeezing the frets.
-- **Appearance** (saved for every song): scale highlight in five styles (Dots, Rings, Cell tint, Note names, Degrees) with swatch colours and opacity; fret-marker dots in several colours; keyboard keys grey or white.
-- Right-click to show one track or all tracks differently; the default is in Settings > Fretboard.
-- **Scale finder** (the **Scales** button, right-click > *Find scale…* or Tools > Scale finder): a popup with the detected scales (Auto or a manual pick), read-from and listen-to choices, scale families, a pick that sticks to the section and track, a full searchable list under family headers, and the fretboard look. *Scale > Clear selection* removes it.
-- **Number size** (Small, Medium, Large) under right-click > Appearance and in Settings.
-- **Keys sized from their width**: at most 24 px wide and centred, with the keyboard pane's own height.
+### Keyboard, drums and instruments
 
-</details>
+<table>
+<tr>
+<td width="33%" valign="top"><a href="media/screenshots/instrument-keyboard.png"><img src="media/screenshots/instrument-keyboard.png" alt="Keyboard view" width="215"></a><br><b>Keyboard</b><br>An 88-key keyboard, or 76, 61, 49, 37 or 25 keys, for keyboard tracks.</td>
+<td width="33%" valign="top"><a href="media/screenshots/instrument-drums.png"><img src="media/screenshots/instrument-drums.png" alt="Drum view" width="215"></a><br><b>Drum map</b><br>A percussion map for drum tracks; the pieces light up as they are hit.</td>
+<td width="33%" valign="top"><a href="media/screenshots/instrument-picker.png"><img src="media/screenshots/instrument-picker.png" alt="Instrument picker" height="150"></a><br><b>Instrument picker</b><br>The full General MIDI set with pictures, categories and search.</td>
+</tr>
+<tr>
+<td width="33%" valign="top"><a href="media/screenshots/track-properties-drums.png"><img src="media/screenshots/track-properties-drums.png" alt="Track properties, drums" height="150"></a><br><b>Drum notation</b><br>Presets plus a custom map: tab line, tab text, staff position and notehead for every drum sound.</td>
+</tr>
+</table>
 
 ## Arrangement and tracks
 
@@ -207,7 +244,7 @@ One block per bar and track, with coloured sections across the top. Sections, ba
 <td width="33%" valign="top"><a href="media/screenshots/track-groups-menu.png"><img src="media/screenshots/track-groups-menu.png" alt="Track list groups menu" width="215"></a><br><b>Groups</b><br>Show tracks grouped by instrument family, with a header row for each group.</td>
 </tr>
 <tr>
-<td width="33%" valign="top"><a href="media/screenshots/track-properties-bass.png"><img src="media/screenshots/track-properties-bass.png" alt="Track properties, bass" height="150"></a><br><b>Track properties</b><br>Name, instrument, strings, tuning and capo for a track (F6), with up to 4 partial capos and one undo step.</td>
+<td width="33%" valign="top"><a href="media/screenshots/0.9.0/partial-capo.png"><img src="media/screenshots/0.9.0/partial-capo.png" alt="Track properties" width="215"></a><br><b>Track properties</b><br>Name, instrument, strings, tuning and capo for a track (F6), with up to 4 partial capos and one undo step.</td>
 <td width="33%" valign="top"><a href="media/screenshots/global-tuning.png"><img src="media/screenshots/global-tuning.png" alt="Global tuning" width="215"></a><br><b>Global tuning</b><br>Shifts every track at once.</td>
 </tr>
 </table>
@@ -235,7 +272,7 @@ One block per bar and track, with coloured sections across the top. Sections, ba
 
 An **audio/MIDI track** holds audio and MIDI clips and has no notation. Right-click it > *Convert to tab track* keeps every clip. Recording stops at the take's start; waveforms and MIDI notes appear while recording. Click anywhere on a lane to seek to that bar; clicking a take also selects it. Clips can be moved, trimmed, muted, duplicated, or edited through clip properties.
 
-- **Tuning editor**: per-string `−`/`+`, double-click a string to type a note (e.g. `Eb3`), presets for 4-/5-/6-/7-string bass and 6-/7-/8-/9-string guitar, `+ / − Low string` to change the string count. Choose whether retuning keeps the fret numbers or the sounding pitches.
+- **Tuning editor**: per-string `−`/`+`, type a note such as `Eb3` in a string's box, click a string to hear it, and choose 3 to 10 strings from the drop-down. Presets cover guitar, bass, ukulele, banjo, mandolin, violin, viola, cello, double bass, lap steel and dulcimer, with search and your own saved tunings. Choose whether retuning keeps the fret numbers or the sounding pitches; removing a string with notes asks first.
 - **Track menu**: right-click a track row for Cut, Copy, Paste, Duplicate, Delete, Rename, Colour and Properties; whole tracks (notation, clips, mixer settings, FX chain) copy and paste. A focused track row takes Ctrl+C, Ctrl+X, Ctrl+V, Ctrl+D and Delete.
 - **Mixer groups** collapse to one row and follow group rules you set for one song or all songs; a track's colour chip opens its colour palette.
 - **Instrument and tool icons** are original artwork.
@@ -258,6 +295,18 @@ Capture song ideas quickly and turn them into notation and tab. It is a sketchpa
 - **MIDI monitoring:** a MIDI keyboard sounds through the armed track's own instrument and FX, or through the selected track when no armed track takes it (Preferences > MIDI recording > *Monitor MIDI input*). Waveforms and MIDI notes appear while recording.
 - MIDI clips can be written into the track's notation.
 - **Pop protection:** changing the audio device or its settings fades the sound out and back in (on by default).
+
+## Piano roll
+
+MIDI tracks and takes open in a piano roll. Switch any track between Piano and Tab with the pills in the menu bar.
+
+<a href="media/screenshots/piano-roll.png"><img src="media/screenshots/piano-roll.png" alt="The piano roll with the lane picker and outlined notes" width="640"></a>
+
+- **Tools:** Select, draw, erase, split and glue, with box and lasso selection. Right-click a piano key to select every note on that pitch.
+- **Snap and quantize:** grid snap on Alt+S, quantize options and step input.
+- **Scales:** the shared scale panel, *Lock to scale* for drawn and moved notes, and moving notes up or down by half steps or by steps of the scale.
+- **Lanes:** velocity, controllers and pitch bend, from a lane picker under the grid.
+- **Recording:** live MIDI recording goes straight into it, and playback follows along.
 
 ## Playback and practice
 
@@ -344,7 +393,7 @@ Compact mode gives the score the room. It hides the track rows and the menu row,
 
 ## Sound
 
-Every track has level, pan, mute, solo and an FX chain. On Windows, VST2 and VST3 instruments and effects load on any track, with MIDI processing in front of every plug-in. Linux plug-in support through Wine is experimental and not shipped (see below).
+Every track has level, pan, mute, solo, a level meter and an FX chain, with six built-in effects, your own plug-ins and MIDI processing in front of every plug-in. For plug-in formats and Linux, see [Plug-ins](#plug-ins).
 
 <table>
 <tr>
@@ -360,7 +409,7 @@ Every track has level, pan, mute, solo and an FX chain. On Windows, VST2 and VST
 <tr>
 <td width="33%" valign="top"><a href="media/screenshots/plugin-wiring.png"><img src="media/screenshots/plugin-wiring.png" alt="Audio and MIDI pin routing" height="150"></a><br><b>Wiring</b><br>Audio channels, MIDI source and channel filter, sidechain, and MIDI forwarding to another track.</td>
 <td width="33%" valign="top"><a href="media/screenshots/fx-allow-again.png"><img src="media/screenshots/fx-allow-again.png" alt="Allow again" width="215"></a><br><b>Plug-in approval</b><br>Plug-ins under Program Files load without asking by default; others need your approval. A plug-in that crashes or freezes is named and switched off until you allow it again.</td>
-<td width="33%" valign="top"><a href="media/screenshots/prefs-audio.png"><img src="media/screenshots/prefs-audio.png" alt="Preferences, audio" height="150"></a><br><b>Audio output</b><br>WASAPI (shared or exclusive), ASIO or DirectSound, with device, sample rate and buffer size.</td>
+<td width="33%" valign="top"><a href="media/screenshots/prefs-audio.png"><img src="media/screenshots/prefs-audio.png" alt="Preferences, audio" height="150"></a><br><b>Audio output</b><br>On Windows: WASAPI (shared or exclusive), ASIO or DirectSound. On Linux: ALSA, PulseAudio, PipeWire or JACK. With device, sample rate and buffer size.</td>
 </tr>
 <tr>
 <td width="33%" valign="top"><a href="media/screenshots/midi-processing-overview.png"><img src="media/screenshots/midi-processing-overview.png" alt="MIDI processing chain" width="215"></a><br><b>MIDI processing</b><br>Processors run top to bottom before the plug-in, on the song, live keys and tracks routed to it.</td>
@@ -373,22 +422,21 @@ Every track has level, pan, mute, solo and an FX chain. On Windows, VST2 and VST
 </tr>
 </table>
 
-- **Master FX and monitoring FX:** the Master row has an FX chain, pan and volume over the whole mix. A **MON** chain is heard live only and is never rendered or exported.
+- **Built-in effects:** IR Loader (cabinet, room or speaker correction, with no added latency), EQ, Compressor, Limiter, Delay and Noise Gate. They are listed first in the Add plug-in window and work on tracks, group buses, the master and Monitor FX, on Windows and Linux.
+- **Master FX and Monitor FX:** the Master row has an FX chain, pan and volume over the whole mix. The headphones button in the title bar runs a Monitor FX chain, kept for every song, that is heard live only and is never rendered or exported. It lights only when a plug-in really plays on the current device.
+- **Active on:** set a plug-in or container to play only for a chosen driver type and output device.
 - **Fallback sound:** with effects but no VST instrument, the track's General MIDI sound plays through the effects; if a VST instrument stops, the track falls back to it.
-- **CLAP plug-ins (opt-in):** turn on *Also list CLAP plug-ins (new)* in Settings > Audio & Plug-ins to list, load and save .clap plug-ins, with their own editor window or a parameter panel.
-- **Windows plug-ins:** 64-bit VST2 and VST3 plug-ins load natively; 32-bit VST2 and 32-bit VST3 plug-ins appear as *32-bit (bridged)* and load through a small 32-bit helper process beside TabForge.exe; their audio, MIDI input, parameters and editor work as usual, and a crash of the bridged plug-in cannot take down TabForge. The native 64-bit VST2 route is not isolated yet, so a faulty native 64-bit VST2 can still end the audio engine.
-- **Linux plug-ins (experimental, not shipped):** Windows VST2 and VST3 plug-ins (32-bit and 64-bit) load as bridged through bundled Wine helpers when that runtime is present, and refuse readably when it is missing. No real Linux hardware has been tested.
-- **Sound engine:** Windows GM (the default) or the TabForge SoundFont (GeneralUser GS, downloaded once when you ask for it).
-- **Separate process:** plug-ins run in an audio engine process of their own; *Run each plug-in in its own process* isolates every plug-in separately. This is crash isolation, not a security sandbox: load only plug-ins you trust.
+- **Sound engine:** Windows GM (the default on Windows), a SoundFont (GeneralUser GS, FluidR3 GM or MuseScore General, each downloaded once when you ask), or None if every track uses your own instruments.
+- **Articulations:** a loaded instrument's MIDI window can turn note techniques such as palm mute, harmonics and slides into the keyswitches its library expects, with maps you can save.
+- **Meters and Panic:** every track row has a stereo meter, the transport bar has a master meter, and Tools > Panic releases every sounding note.
 - **Saving:** `.gp` with the settings inside, a clean `.gp` plus `.tfaudio`, or `.tforge`.
 
-**Current limits:** sidechain input works with VST2 plug-ins that have four or more inputs; offline rendering does not yet compensate plug-in delay on sidechain and bus routes; a compatible .gp export lists what it cannot keep before you save. Plug-ins run with your Windows permissions (the separate-process option protects TabForge from crashes, not your files). Under Wine (experimental, not shipped): an editor built with JUCE 8 may stay black while audio, state and parameters still work; about 1024 frames is the measured floor with eight bridged plug-ins; a bridged plug-in's own preset menu has ended its helper for an unknown cause (reload the plug-in); startup on common distros and the older-glibc refusal path remain unproven, and no real Linux hardware has been tested.
+**Current limits:** sidechain input works with VST2 plug-ins that have four or more inputs; offline rendering does not yet compensate plug-in delay on sidechain and bus routes; a compatible .gp export lists what it cannot keep before you save.
 
 <details><summary>More details: plug-ins, mixer and the MIDI processors</summary>
 
 - With effects but no VST instrument, the track's own General MIDI sound plays through the effects (rendered from Windows' own sound bank); a *MIDI sound* switch turns it off.
-- **Audio output** device, sample rate and buffer size are in **Settings > Audio & VST**. Plug-in folders are added by browsing (no automatic scan unless you turn it on). Changing the audio device or its settings fades the sound out and back in, so speakers do not pop (Protect speakers from pops when audio settings change, on by default).
-- **Safety**: plug-ins run in a separate audio engine process that starts only when a track uses plug-ins; if one crashes or freezes, TabForge names it, switches it off and carries on. *Run each plug-in in its own process* isolates every plug-in separately (a little more CPU). A 32-bit VST2 plug-in always runs in its own 32-bit helper process; if that helper stops, the plug-in is switched off and TabForge carries on. This is crash isolation only, not a security sandbox: load only plug-ins you trust.
+- **Audio output** device, sample rate and buffer size are in **Settings > Audio & Plug-ins**. Plug-in folders are added by browsing (no automatic scan unless you turn it on). Changing the audio device or its settings fades the sound out and back in, so speakers do not pop (Protect speakers from pops when audio settings change, on by default).
 - **Wiring** selects audio input channels, the MIDI source/channel filter, sidechain input (VST2 with four or more inputs) and MIDI output forwarding to another track.
 - **Serial MIDI chain:** MIDI flows through the plug-in list in order; instruments add their audio, effects process everything before them.
 - **Per-plug-in MIDI processors** run right before their plug-in: note mapping, transposition, velocity, humanisation, delay, CC tools, scale/chord tools, arpeggiator, randomizers, LFOs, step sequencer, audio-to-MIDI drum trigger and loopers. Each has an "Applies to" note filter; whole-list presets (with built-ins) and a search that indexes every parameter; all saved with the song.
@@ -410,6 +458,39 @@ Every track has level, pan, mute, solo and an FX chain. On Windows, VST2 and VST
 
 </details>
 
+## Plug-ins
+
+Add instruments and effects from the Add plug-in window. Plug-in folders are added by browsing, and there is no automatic scan unless you turn it on.
+
+| Plug-in | On Windows | On Linux (experimental) |
+|---|---|---|
+| Built-in effects | Included | Included |
+| VST3, 64-bit | Loads natively | Linux builds load natively; Windows builds through Wine |
+| VST3, 32-bit | Through a helper, shown as *32-bit (bridged)* | Windows builds through Wine |
+| VST2, 64-bit | Loads natively | Windows builds through Wine, shown as *64-bit (bridged)* |
+| VST2, 32-bit | Through a helper, shown as *32-bit (bridged)* | Windows builds through Wine |
+| CLAP (opt-in) | Loads natively | Loads natively, not yet confirmed |
+
+Turn CLAP on with *Also list CLAP plug-ins (new)* in Settings > Audio & Plug-ins.
+
+- **32-bit plug-ins:** they load through a small helper process beside `TabForge.exe`, with audio, MIDI input, parameters, state and their own editor. If one crashes, TabForge writes a short report and switches it off. The rest of your session carries on.
+- **Crash protection:** plug-ins run in an audio engine process that starts only when a track uses them. *Run each plug-in separately* in Settings isolates each one, at a little more CPU and memory. The exception is a faulty native 64-bit VST2 plug-in, which can still end the audio engine.
+- **Approval:** plug-ins under Program Files load without asking by default, and others need your approval. *Approve all* and *Approve selected* show their progress and can be stopped.
+- **Trust:** this is crash protection, not a security sandbox. A plug-in runs with your own permissions and can read and write your files, so load only plug-ins you trust.
+- **No editor?** Every VST2, VST3 and CLAP plug-in also lists its parameters as searchable sliders.
+
+### Windows plug-ins on Linux through Wine
+
+The Linux packages include Wine 9.21 and TabForge's helpers, so Windows VST2 and VST3 plug-ins, 32-bit and 64-bit, can load with nothing else to install. TabForge uses its own private Wine setup and never touches `~/.wine`. The first use takes a moment to prepare it. Windows plug-ins open their editor in a separate floating window, from the **Editor** button in the FX window.
+
+This is experimental. The audio route has been measured on automated test machines, not on real hardware. Known limits:
+
+- An editor built with JUCE 8 may stay black, while audio, state and parameters still work.
+- The lowest measured buffer is about 256 frames with one bridged plug-in and about 1024 with eight.
+- A bridged plug-in's own preset menu has ended its helper, for a cause not yet known. Reload the plug-in if that happens.
+- A plug-in that needs a copy-protection driver may refuse to load. TabForge says why rather than failing silently, and does the same for a missing Wine or a broken Wine setup.
+
+
 ## Export
 
 <table>
@@ -422,16 +503,19 @@ Every track has level, pan, mute, solo and an FX chain. On Windows, VST2 and VST
 
 | Format | Open | Save |
 |---|---|---|
-| `.gp3`, `.gp4`, `.gp5`, `.gpx` | ✔ | |
+| `.gp3`, `.gp4`, `.gp5` | ✔ | export a copy |
+| `.gpx` | ✔ | |
 | `.gp` | ✔ | ✔ (default) |
 | TabForge project (`.tforge`) | ✔ | ✔ |
-| Standard MIDI (`.mid`), ASCII tab (`.txt`), PDF, MusicXML (`.musicxml`) | | export |
+| Standard MIDI (`.mid`) | ✔ | export |
+| ASCII tab (`.txt`), PDF, MusicXML (`.musicxml`) | | export |
 | Audio (WAV, MP3) and video (MP4) | | export |
 
 - **Video layouts**: one track with its fretboard, keyboard or drums; score only; Band view; or score and Band view. Choose the range (whole song, selection, bars or a section), the tracks, and dark or light.
 - **Recording** covers the score, Band view, the whole window, or score with instrument. A red REC time shows in the status bar; stopping saves the file in Videos\TabForge.
 - Score-only export is about twice as fast, and the progress bar shows the phase and time left.
 - **PDF** gives engraved notation and tab as A4 pages; **Print** and **Print preview** are in the File menu.
+- **MIDI:** opening a MIDI file asks whether to make tab and notation tracks or MIDI tracks. File > Export > MIDI picks the tracks and range, plays the song through each track's MIDI processors, and can apply articulation maps.
 
 <details><summary>More details</summary>
 
@@ -452,7 +536,7 @@ A `.gp` saved by TabForge follows the `.gp` file format **and** carries the comp
 <td width="33%" valign="top"><a href="media/screenshots/command-palette.png"><img src="media/screenshots/command-palette.png" alt="Command palette" height="150"></a><br><b>Command palette</b><br>Ctrl+Shift+A searches every command by name, shows its key and runs it with Enter.</td>
 </tr>
 <tr>
-<td width="33%" valign="top"><a href="media/screenshots/settings-hotkeys.png"><img src="media/screenshots/settings-hotkeys.png" alt="Shortcut settings" height="150"></a><br><b>Shortcuts</b><br>Two shortcuts per command, presets for TabForge, Classic and Alternative, and conflict warnings.</td>
+<td width="33%" valign="top"><a href="media/screenshots/settings-hotkeys.png"><img src="media/screenshots/settings-hotkeys.png" alt="Shortcut settings" height="150"></a><br><b>Shortcuts</b><br>Two shortcuts per command, presets for TabForge, Classic and Alternative, and conflict warnings. Navigation keys also work from the FX chain, plug-in windows and other tool windows.</td>
 <td width="33%" valign="top"><a href="media/screenshots/settings-search.png"><img src="media/screenshots/settings-search.png" alt="Settings search" height="150"></a><br><b>Searchable settings</b><br>Every setting can be found by name, with a live preview before you apply.</td>
 <td width="33%" valign="top"><a href="media/screenshots/project-settings.png"><img src="media/screenshots/project-settings.png" alt="Project settings" height="150"></a><br><b>Project settings</b><br>Settings that belong to one song and are saved with it.</td>
 </tr>
@@ -506,7 +590,7 @@ A `.gp` saved by TabForge follows the `.gp` file format **and** carries the comp
 </tr>
 </table>
 
-New in 0.8.3: an **Insert** menu gathers everything you can add. The Sound and Sections menus are gone (playback is on the transport bar, section commands are in Bar), Effects are grouped into submenus and Export is a File submenu.
+An **Insert** menu gathers everything you can add, Effects are grouped into submenus and Export is a File submenu.
 
 <details><summary>More details</summary>
 
@@ -516,7 +600,7 @@ New in 0.8.3: an **Insert** menu gathers everything you can add. The Sound and S
 - A "Classic" shortcut preset is included; every command shows its shortcut, and every shortcut can be changed.
 - **Themes**: dark, light and system presets or fully custom colours; interface scale applies live; score fonts per text area.
 - **Help > About** shows the version, the independent-project notice and a **Licences** button.
-- **Windows integration**: turn "Open .gp and .tforge files with TabForge" on or off.
+- **Windows integration**: turn "Open .gp and .tforge files with TabForge" is on by default for your Windows account; turn it off in Settings > General.
 - Shift+F10 or the Menu key opens the right-click menu in the score, timeline and fretboard.
 
 </details>
@@ -546,8 +630,8 @@ New in 0.8.3: an **Insert** menu gathers everything you can add. The Sound and S
 - **Safe saving:** files are written to a temporary file and swapped in atomically; a `.gp` plus `.tfaudio` pair is restored to its last complete state if a save is interrupted.
 - **Untrusted input:** every file, clipboard paste and settings file is size-checked and validated before use.
 - **Plug-ins** outside Program Files load only after you scan or approve them, and only while the file is the one you approved. Plug-ins installed under Program Files load without asking by default (Preferences > Audio & plug-ins: "Load installed plug-ins without asking").
-- **No telemetry, no auto-updates, no analytics.** The update check is the only network access TabForge starts on its own: one anonymous HTTPS GET, at most once a day, to `https://api.github.com/repos/cobhc95/TabForge/releases`. Switch it off in **Settings > General > Updates**; Help > *Check for updates…* checks now. The optional *Download SoundFont…* button fetches one file only when you click it.
-- **Windows integration** ("Open .gp and .tforge files with TabForge") is opt-in and reversible.
+- **No telemetry, no auto-updates, no analytics.** The update check is the only network access TabForge starts on its own: one anonymous HTTPS GET, at most once a day, to `https://api.github.com/repos/cobhc95/TabForge/releases?per_page=10`. Switch it off in **Settings > General > Updates**; Help > *Check for updates…* checks now. The optional *Download SoundFont…* button fetches one file only when you click it.
+- **Windows integration** ("Open .gp and .tforge files with TabForge") applies to your account only and can be turned off in Settings > General, which removes its entries.
 - **Command line:** `TabForge.exe song.gp5 [more files]` opens files as tabs; `--theme dark|light|system` starts with that theme.
 
 <details><summary>Security and privacy in full</summary>
@@ -577,13 +661,13 @@ TabForge treats every file, clipboard paste and settings file as **untrusted inp
   analytics. The optional update check (on by default; switch at the top of **Settings > General > Updates**,
   and a tick box in the update window itself) is limited to:
   - **one anonymous HTTPS GET, at most once a day**, to a single fixed address —
-    `https://api.github.com/repos/cobhc95/TabForge/releases` — about 8 seconds after start-up, in the background;
+    `https://api.github.com/repos/cobhc95/TabForge/releases?per_page=10` — about 8 seconds after start-up, in the background;
   - **nothing sent** except the User-Agent GitHub requires (`TabForge/<version>`): no account, no cookies, no
     identifiers, no file or song information;
   - **TLS 1.2/1.3 only** with normal Windows certificate validation; **no redirects followed**, no cookies stored,
-    no credentials, no decompression; 10-second timeout; the reply is capped at **256 KB** (headers 64 KB) and
+    no credentials, no decompression; 10-second timeout; the reply is capped at **512 KB** (headers 64 KB) and
     must be JSON;
-  - **only two fields are read** from the reply (`tag_name` and `draft`) and a tag is accepted only if it is a
+  - **only three fields are read** from each release (`tag_name`, `draft` and `prerelease`) and a tag is accepted only if it is a
     plain version such as `v0.1.0-beta.2` (strict pattern, time-limited regex) — no text, links or files from
     GitHub are shown, opened or saved;
   - the **download page is built locally** from that validated version on `github.com/cobhc95/TabForge`, and it
@@ -594,11 +678,11 @@ TabForge treats every file, clipboard paste and settings file as **untrusted inp
   Diagnostics are opt-in, size-capped and never include your music.
 - **Download SoundFont… (optional)**: only when you click it, TabForge fetches the GeneralUser GS SoundFont (about 32 MB) from
   its GitHub project once and checks it against a fixed SHA-256 before using it.
-- **Windows integration is opt-in and reversible**: it writes only TabForge's own per-user entries
+- **Windows integration is per-account and reversible**: it writes only TabForge's own per-user entries
   (`HKCU\Software\Classes\TabForge.*` and TabForge in each extension's *Open with* list), never takes over a
   file type another program already owns, and turning it off (or uninstalling) removes exactly those entries.
 - **Minimal supply chain**: a small, listed set of dependencies (alphaTab, NAudio, MeltySynth, SoundTouch.Net, a native VST3
-  bridge built from the Steinberg VST3 SDK, and the original native 32-bit VST2 helper; see [THIRD_PARTY.md](THIRD_PARTY.md)), pinned with lock files, restored
+  bridge built from the Steinberg VST3 SDK, the original native 32-bit and 64-bit VST2 helpers, and on Linux a pinned Wine and FFmpeg; see [THIRD_PARTY.md](THIRD_PARTY.md)), pinned with lock files, restored
   in locked mode and checked by NuGet's vulnerability audit on every build.
 
 </details>
@@ -607,8 +691,11 @@ TabForge treats every file, clipboard paste and settings file as **untrusted inp
 
 TabForge is built to stay light while you write and play:
 
-- No per-frame work unless something is actually moving: the score, timeline and fretboard redraw only what
+- No per-frame work unless something is actually moving: a note change repaints only the playing line of the score,
+  a ringing string only the strings over a kept picture of the neck, and the timeline and track list redraw only what
   changed; drum-hit glows animate only while they fade.
+- Plug-ins load when first needed, not when a song opens, so a song you only read or edit stays light. The audio
+  engine wakes about a third as often while idle, and memory left over from opening a song is handed back.
 - Precompiled (ReadyToRun) and memory-conserving .NET settings; memory is returned to Windows after loading
   a song; undo history is stored compressed (about 1% of the raw size).
 - Playback runs on its own high-precision thread; the interface only observes it, so a busy UI never
@@ -663,16 +750,17 @@ Every command can be found in the menus, the command palette and the shortcut se
 - Loop settings (loop count, speed trainer that raises the tempo each pass), metronome and count-in settings (volume, click sound, subdivision, accent).
 
 #### Fretboard, keyboard and drums
-- Fretboard, 88-key (or 76/61/49/37/25) keyboard and drum percussion map; left-handed view, note names, 12/24 frets, scale highlight and *Clear selection*, appearance options (circles or rings, colours, fret-marker dots, key colours).
-- **Number size** (Small, Medium, Large) under right-click > Appearance and in Settings; **Lock fretboard size** (off by default, right-click menu and hotkey); the pane scales its drawing when resized; alternative preview layouts.
-
-- **Show / hide the fretboard** (toolbar button and hotkey), *Switch instrument view*, per-track or all-tracks instrument view.
-- **Detailed look**: wood that follows the theme (dark rosewood, light birdseye maple; tiled, never stretched), binding rails, inlay dots, fret wires at true 12-TET places; sounding strings vibrate for their note's length.
-- **Drag the drawn capo** on the fretboard to another fret; the song updates on release as one undo step. Not yet tried in the running app.
+- Fretboard, 88-key (or 76/61/49/37/25) keyboard and drum percussion map, left-handed view, note names, 12/24 frets, scale highlight and *Clear highlight*.
+- **Fretboard settings** (Customize under the Scales button, or right-click): Look, Notes and markers, Layout and size, Strings and capo, and Scale highlight, with Cancel, Apply, OK and a link to more settings in Preferences.
+- **Looks:** presets Rosewood, Pearl fins, Ebony blocks, Maple and Flame maple, or any mix of wood, binding, inlay shape and material; separate neck and note brightness; string and capo finishes.
+- **Number size** (Small, Medium, Large), **Lock fretboard size**, and a pane that scales its drawing when resized.
+- **Show / hide the fretboard** (toolbar button and hotkey), *Switch instrument view*, per-track or all-tracks instrument view; Tab mode and the piano roll remember it separately.
+- **Sounding strings** show a soft blur for their note's length, with level and speed settings.
+- **Drag the drawn capo** on the fretboard to another fret; the song updates on release as one undo step.
 
 #### Tracks and Mixer
 - **Add** Guitar, Bass, Drums, Keys or any instrument (Track menu, the Add track lane or Ctrl+T), delete, move up/down, **Track properties** (F6), instrument picker, tuning editor, drum notation presets, **Global tuning**, next/previous track, multitrack (F3) and global (F8) views. The Add track window is the same window; it adds at the end of the song.
-- **Capos**: full capo (Off to fret 12) plus up to 4 partial capos per track, each covering the ticked strings; the score shows a capo line and the track row a badge. Partial capos live only in .tforge songs (not written to .gp, .gp5 or MusicXML exports, not read from .gp or .gp5 imports). Not yet tried in the running app.
+- **Capos**: full capo (Off to fret 12) plus up to 4 partial capos per track, each covering the ticked strings; the score shows a capo line and the track row a badge. Partial capos live only in .tforge songs (not written to .gp, .gp5 or MusicXML exports, not read from .gp or .gp5 imports).
 - **Track list**: arm, mute, solo, level, pan, automation-lane toggles, FX button (red "!" if a plug-in was switched off), collapsible **groups**, *Show tracks in groups* (right-click empty space or from the Mixer), *Auto-resize track list to fit*, Alt+Up/Down to reorder.
 
 - **Mixer**: instrument, compact or ungrouped views; Master row at the top with **MON** monitoring FX (live only, never rendered); **drag and drop** tracks or whole groups (the track list reorders in step, one undo step per drop, animated); group rows set level, pan and pitch for all tracks; Master row with FX, pan and volume; smooth sliders on one fine scale; **Alt+Up / Alt+Down** moves the selected track or group.
@@ -685,8 +773,8 @@ Every command can be found in the menus, the command palette and the shortcut se
 - **Clip commands** (bindable): delete, deselect, move (coarse and fine), move between lanes, copy, cut, paste, duplicate, mute, properties (F2), **Snap** on/off (Alt+S).
 
 #### Plug-ins and audio engine
-- **VST2 / VST3** instruments and effects on Windows (32-bit VST2/VST3 through a small helper process; native 64-bit VST2 is not isolated yet; Linux Wine bridging is experimental and not shipped), serial chains, wiring window, MIDI processing (many processors, presets, search), **group bus FX** and **master FX** chains, plug-in trust and *Review* prompts, crash isolation with a per-plug-in process option, automatic pitch matching, startup tracks.
-- **Audio output**: WASAPI, ASIO, DirectSound; Windows MIDI latency (a typed delay in ms); every song plays through the audio engine by default (a Settings toggle).
+- **Built-in effects** (IR Loader, EQ, Compressor, Limiter, Delay, Noise Gate); **VST2 / VST3** instruments and effects, with 32-bit plug-ins through a helper process and optional **CLAP** ([details](#plug-ins)); serial chains, wiring window, MIDI processing (many processors, presets, search), **articulation maps**, **group bus FX**, **master FX** and **Monitor FX** chains, plug-in trust and *Review* prompts, crash isolation with a per-plug-in process option, automatic pitch matching, startup tracks.
+- **Audio output**: WASAPI, ASIO, DirectSound (ALSA, PulseAudio, PipeWire or JACK on Linux); Windows MIDI latency (a typed delay in ms); every song plays through the audio engine by default (a Settings toggle).
 
 - **Render window**: range, stems checklist, tail length, file names, WAV / MP3, progress and cancel.
 
@@ -704,7 +792,7 @@ Every command can be found in the menus, the command palette and the shortcut se
 - *Score layout* (page / continuous), *Score scrolling* (vertical / horizontal), *Follow playback* (page turn / smooth page turn), *Score page* (dark / light), *Text & fonts*, *Playback highlight* and *Playback look* (playing beat, playing bar, duration glow, line thickness; Preferences > Appearance), ledger lines (standard, minimal, hidden), hide grid in empty bars, subtle bar glow.
 
 **Fretboard / keyboard right-click menu**
-- *Keyboard size* (88 to 25 keys), *Appearance* (number size, scale highlight style and colour, fret-marker colour and brightness, key colours), *Scale* (select scale, off, find scale, clear selection), *Preview next notes*, *Preview layout* and *Preview length*, *Note names*, *Left-handed*, *Lock fretboard size*, the per-track or all-tracks *Fretboard* choice, and a shortcut to Settings > Fretboard.
+- *Show this track as* (fretboard, keyboard, drum map or match the instrument), *Scale*, *Find scale…*, *Clear scale* and *Fretboard settings…*. Everything else about the look is in the Fretboard settings window.
 
 **Arrangement timeline menus**
 - *Selected area*: copy, cut, paste before, move (click the new position), delete, loop, skip during playback, play all skipped areas again, clear selection (Esc).
@@ -730,10 +818,10 @@ Every command can be found in the menus, the command palette and the shortcut se
 - *Appearance & colours*: theme, UI scale, track colour tint, density, reduce animations and animation speed, accent / selection / hover colours, custom palette, fonts, icon size, score fonts, spacing, ledger and staff opacity, bar numbers, section headings, hover and selection intensity, score paper, ink and line colours, edit cursor colour.
 - *Score & notation*: default display (tab + staff, tab only, staff only), follow mode and its options (horizontal / vertical, look-ahead, trigger, manual-scroll pause, frame rate), the playing-note colour (*Playback highlight* in Appearance), and the duration tint and playback line thickness (Appearance > Playback look).
 - *Playback & sound*: metronome (click and accent notes, volumes, subdivisions), count-in bars, playback speed, note preview, let-ring limit.
-- *Audio & VST*: driver, device, ASIO channels and inputs, play through the engine, GM auto-switch, pitch matching, startup tracks, Windows MIDI latency (a typed delay), follow Windows volume, recording device and offset, sample rate, buffer size, plug-in folders, common folders, remember the list, plug-in window docking, always on top, per-plug-in process.
+- *Audio & Plug-ins*: driver, device, ASIO channels and inputs, play through the engine, GM auto-switch, pitch matching, startup tracks, Windows MIDI latency (a typed delay), follow Windows volume, recording device and offset, sample rate, buffer size, plug-in folders, common folders, remember the list, plug-in window docking, always on top, per-plug-in process.
 - *Editing*: default note value, advance after entering, reverse + / - keys, strict bar length, confirm bar deletion, wheel scroll distance, track volume / pan control style.
 - *Timeline & sections*: same colour for similar sections, brackets, glow intensity, bracket thickness, confirm section deletion, animate section dragging, scrollbar.
-- *Fretboard*: position, frets, left-handed, note names, default instrument view, keyboard size and key colours, marker colour and brightness, number size, preview style (TabForge or alternative layouts), look-ahead notes, scale highlight, update during playback.
+- *Fretboard & Keyboard*: position, frets, left-handed, note names, default instrument view, whether to show the fretboard at startup and in the piano roll, wood, binding, inlays, string and capo finishes, string vibration, keyboard size and key colours, marker colour and brightness, number size, look-ahead notes, scale highlight, update during playback.
 - *Tabs & windows*: window size memory, tab shape, widths, height, title size, close button, double-click / middle-click actions, new-tab position, opening behaviour, drag a tab out or onto another window, mark playing tabs.
 - *Hotkeys* (search, presets, conflict warnings) and *Advanced*; settings import / export, reset page, reset all, live preview with Apply / Cancel.
 
@@ -750,7 +838,7 @@ Every command can be found in the menus, the command palette and the shortcut se
 
 **Lyrics pane**
 - *Lyrics*: its own pane beside Sections; type or paste the song's lyrics, they are stored with the song when you leave the box.
-- *Fretboard options*: **Preview** (preview next notes, note names, left-handed, look-ahead count) and **Scale highlight** are in the fretboard's right-click menu; **Fretboard frets** and the rest are in Preferences > Fretboard.
+- *Fretboard options*: the view and the scale are in the fretboard's right-click menu; everything else is in the Fretboard settings window and Preferences > Fretboard & Keyboard.
 - *Tools menu*: **Chord finder…** (root, type, show, insert name on the cursor beat), **Song stats…** (tracks, bars, notes, sections) and **Scale finder…**.
 - *MIDI / Audio setup* (Options menu): the selected track's MIDI output device, with a test sound. The **Mixer** window (View menu) holds the track mixer.
 
@@ -766,12 +854,12 @@ them. Releases built by the GitHub Actions release workflow from the tagged sour
 (`gh attestation verify <file> --repo cobhc95/TabForge`), so you can verify that a
 download matches that build.
 
-Each release attaches the installer (`TabForge-<version>-win-setup.exe`) and the portable ZIP (`TabForge-<version>-win-x64-portable.zip`). The installer offers a Start menu entry, an optional desktop icon and an optional *"Open .gp and .tforge files with TabForge"* association, for your Windows account only. Songs double-clicked in Explorer open as a new tab in the running TabForge (or a new window; see Settings > General).
+Each release attaches the Windows installer (`TabForge-<version>-win-setup.exe`), the portable ZIP (`TabForge-<version>-win-x64-portable.zip`) and the two Linux packages. The installer offers a Start menu entry, an optional desktop icon and an optional *"Open .gp and .tforge files with TabForge"* association, for your Windows account only. Songs double-clicked in Explorer open as a new tab in the running TabForge (or a new window; see Settings > General).
 
 A `licenses/` folder beside `TabForge.exe` (portable zip and installer) holds the full licence texts of every bundled component. SoundTouch.Net (LGPL-2.1) ships as a separate, replaceable `SoundTouch.Net.dll`; its source is linked in [THIRD_PARTY.md](THIRD_PARTY.md).
 ## Building from source
 
-Requires the .NET 10 SDK (the version in `global.json`) on Windows.
+Requires the .NET 10 SDK (the version in `global.json`).
 
 ```cmd
 dotnet build src\TabForge.Avalonia\TabForge.Avalonia.csproj -c Release
