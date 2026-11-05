@@ -14,7 +14,7 @@ namespace TabForge.Avalonia.Views.Fx;
 //   the plug-in view when the editor is larger than the area, growing the window to the editor size, the BYPASSED stamp over the area, and the
 //   joining of the native editor surface to the frame once the window is shown (DockSurface).
 // Does not own: which state shows (FxEditorPlan), opening and closing editors (FxEditorController), the arithmetic (PluginEditorFitMath), the stamp drawing (FxBypassOverlay).
-// Tests: no dedicated test class.
+// Tests: TabForge.Avalonia.Tests.FxEditorDockTests.
 public sealed class FxEditorArea : Grid
 {
     public const double NoticeMargin = 12, ScrollSmallChange = 40, WheelStep = 60, WheelNotch = 120;
@@ -165,18 +165,24 @@ public sealed class FxEditorArea : Grid
         Fit();
     }
 
-    private double Scale => (this.GetVisualRoot() as TopLevel)?.RenderScaling ?? 1;
+    private double RenderScale => (this.GetVisualRoot() as TopLevel)?.RenderScaling ?? 1;
+
+    /// <summary>The Appearance UI scale on the window's root: the area's own DIPs are that much smaller or larger on screen than the window's.</summary>
+    private double UiScale => this.GetVisualRoot() is Window window ? WindowUiScale.CurrentScale(window) : 1;
+
+    /// <summary>Screen pixels per DIP of this area: the display scale and the UI scale together. The editor is a fixed number of pixels, so a frame sized without the UI scale cut it off.</summary>
+    private double Scale => RenderScale * UiScale;
 
     private void GrowWindow()
     {
         if (this.GetVisualRoot() is not Window window || window.WindowState != WindowState.Normal || Bounds.Width <= 0 || Bounds.Height <= 0) return;
         var screen = window.Screens.ScreenFromWindow(window);
         if (screen is null) return;
-        var scale = Scale;
+        var scale = RenderScale;   // the window and the work area are outside the UI scale
         var area = screen.WorkingArea;
         var work = new PluginEditorFitMath.Rectangle(area.X / scale, area.Y / scale, area.Width / scale, area.Height / scale);
         var now = new PluginEditorFitMath.Rectangle(window.Position.X / scale, window.Position.Y / scale, window.Bounds.Width, window.Bounds.Height);
-        var chrome = (Math.Max(0, now.Width - Bounds.Width), Math.Max(0, now.Height - Bounds.Height));
+        var chrome = (Math.Max(0, now.Width - Bounds.Width * UiScale), Math.Max(0, now.Height - Bounds.Height * UiScale));
         var fit = PluginEditorFitMath.FitWindow(now, chrome, PluginEditorFitMath.ToDip(_editorPixels.W, _editorPixels.H, scale, scale), work);
         if (fit == now) return;
         window.Position = new PixelPoint((int)Math.Round(fit.Left * scale), (int)Math.Round(fit.Top * scale));

@@ -264,7 +264,13 @@ public sealed unsafe class EditorWindows : IPluginEditorHost
         var resized = !DockedAt.TryGetValue(hwnd, out var before) || before.W != now.Item3 || before.H != now.Item4;
         DockedAt[hwnd] = now;
         SetWindowPos(hwnd, IntPtr.Zero, now.Left, now.Top, now.Item3, now.Item4, SWP_NOZORDER | 0x10 /*NOACTIVATE*/ | 0x40 /*SHOWWINDOW*/);
-        if (resized && !Settle.Contains(hwnd)) TellEditorSize(hwnd, now.Item3, now.Item4);
+        // Never tell the plug-in a size smaller than the one it asked for: an area smaller than the editor is scrolled (the host's bars), not squeezed.
+        // A smaller size made the view clip its right and bottom parts, and its answer hid the bars.
+        if (resized && !Settle.Contains(hwnd))
+        {
+            var asked = EditorSizes.TryGetValue(hwnd, out var own) ? own : (W: 0, H: 0);
+            TellEditorSize(hwnd, Math.Max(now.Item3, asked.W), Math.Max(now.Item4, asked.H));
+        }
         // Shown again (host area was hidden): repaint the whole editor, never a blank box until the plug-in's next redraw. Asynchronous: no UPDATENOW inside the first show.
         if (!wasVisible || force) RedrawWindow(hwnd, IntPtr.Zero, IntPtr.Zero, 0x1 | 0x4 | 0x80);   // INVALIDATE | ERASE | ALLCHILDREN
     }
