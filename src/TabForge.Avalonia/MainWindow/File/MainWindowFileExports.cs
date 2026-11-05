@@ -109,6 +109,7 @@ public sealed class MainWindowFileExports
 
     private void ShowRender(SongDocument song, Window owner)
     {
+        song.HoldPluginsUntilNeeded = false;   // a render plays through the song's real plug-ins
         var project = song.Project;
         RenderWindow? window = null;
         Func<RenderPlan, IProgress<TabForge.Audio.Contracts.RenderProgressInfo>, System.Threading.CancellationToken, System.Threading.Tasks.Task<TabForge.Audio.Contracts.RenderResult>>? run =
@@ -127,6 +128,7 @@ public sealed class MainWindowFileExports
 
     private void ShowVideo(SongDocument song, Window owner)
     {
+        song.HoldPluginsUntilNeeded = false;   // a video's sound plays through the song's real plug-ins
         VideoExportWindow? window = null;
         Func<VideoExportPlan, IProgress<VideoExportProgress>, System.Threading.CancellationToken, System.Threading.Tasks.Task<VideoExportResult>>? run =
             Exporter is { Engine: not null } exporter ? (plan, progress, cancel) => Announce("Video export", plan.Path, () => exporter.Run(song, plan, window ?? owner, progress, cancel), _ => null) : null;

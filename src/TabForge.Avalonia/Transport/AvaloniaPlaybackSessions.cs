@@ -59,8 +59,27 @@ public sealed class AvaloniaPlaybackSessions : IDisposable
     public void SyncEngine(SongDocument document, TabForge.Services.PluginSettings plugins)
     {
         if (Engine is null) return;
-        AvaloniaEngineRouting.Apply(document.Project, Existing(document)?.Routing, Engine, plugins, _routing.MasterPercent, document, document.SkippedPlugins);
+        AvaloniaEngineRouting.Apply(document.Project, Existing(document)?.Routing, Engine, plugins, _routing.MasterPercent, document, PluginsSkippedNow(document));
         Existing(document)?.ApplyLiveSolo(document.Project, Engine.LiveInput.Solo);   // the live solo (set by the next sync) gates the MIDI tracks as it does the engine's
+    }
+
+    /// <summary>The song needs its held plug-ins now (its FX chain opened, an export): loads them; nothing when none are held.</summary>
+    public void ReleaseHeldPlugins(SongDocument document, TabForge.Services.PluginSettings plugins)
+    {
+        if (!document.HoldPluginsUntilNeeded) return;
+        document.HoldPluginsUntilNeeded = false;
+        SyncEngine(document, plugins);
+    }
+
+    // While a song holds its default plug-ins they count as skipped; an armed track plays live, so it needs them at once.
+    private static ICollection<string> PluginsSkippedNow(SongDocument document)
+    {
+        if (document.HoldPluginsUntilNeeded && document.Project.Tracks.Any(track => track.RecordArm)) document.HoldPluginsUntilNeeded = false;
+        if (!document.HoldPluginsUntilNeeded) return document.SkippedPlugins;
+        var held = new HashSet<string>(document.SkippedPlugins, StringComparer.OrdinalIgnoreCase);
+        foreach (var track in document.Project.Tracks)
+            foreach (var plugin in track.Rig.Plugins) held.Add(TabForge.Plugins.PluginPath.Normalize(plugin.Path));
+        return held;
     }
 
     /// <summary>
@@ -91,7 +110,11 @@ public sealed class AvaloniaPlaybackSessions : IDisposable
             if (_clickAudio is not null) session.ApplyClickOptions(_clickAudio);
             // The Preferences "Playback speed" is the speed a session starts at (the speed menu changes it per song afterwards).
             if (_clickAudio is { Speed: var startSpeed } && double.IsFinite(startSpeed) && Math.Abs(startSpeed - 1) > 0.001) session.SetSpeed(Math.Clamp(startSpeed, 0.25, 2));
-            session.PlayStarting += () => SyncEngine(document, _routing.Plugins);
+            session.PlayStarting += () =>
+            {
+                document.HoldPluginsUntilNeeded = false;
+                SyncEngine(document, _routing.Plugins);
+            };
             // The engine's song transport follows this document's playhead: its audio clips start, follow
             // jumps and stop with the song. Nothing without an engine; the document that owns the engine now is this session's song.
             session.ReportEnginePosition = (playing, sec, speed) =>

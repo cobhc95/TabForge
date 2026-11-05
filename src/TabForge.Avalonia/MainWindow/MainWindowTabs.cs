@@ -306,7 +306,7 @@ public sealed class MainWindowTabs : IDisposable
         // The score page is per song and session-only: a song joining a window takes the preferences default once (a song moved from
         // another window keeps the paper it already has).
         if (!song.PaperSet) song.ApplyDefaultPaper(DefaultPaperIsDark);
-        FxDefaultChains.Apply(_settings.Plugins, song);
+        if (FxDefaultChains.Apply(_settings.Plugins, song)) song.HoldPluginsUntilNeeded = true;   // heavy default instruments wait until the song needs them
         _songs.Insert(index, song);
         song.DisplayStateChanged += OnDisplayStateChanged;
     }

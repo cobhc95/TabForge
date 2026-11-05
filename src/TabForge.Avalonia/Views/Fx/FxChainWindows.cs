@@ -81,6 +81,7 @@ public sealed class FxChainWindows
     {
         var key = (document, KeyOf(track));
         if (_open.TryGetValue(key, out var existing) && existing.IsVisible) { Tools.Bring(existing); return existing; }
+        _playback?.ReleaseHeldPlugins(document, Plugins);   // the chain window shows and edits the real plug-ins
         var host = new SongFxChainHost(document, _playback, _settings, () => _owner, () => TrackListChanged?.Invoke(), _trust);
         var window = new FxChainWindow(host, track);
         _open[key] = window;

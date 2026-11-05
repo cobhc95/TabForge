@@ -177,6 +177,8 @@ public class SongDocument : IEditableDocument
     /// Unlike quarantine this is not saved and does not affect other songs.
     /// </summary>
     public HashSet<string> SkippedPlugins { get; } = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>The song just took default chains as it opened: its plug-ins load when they are first needed (a play, its FX chain, an arm, an export), not on opening. Not saved.</summary>
+    public bool HoldPluginsUntilNeeded { get; set; }
     /// <summary>Semitone shift applied per string (high to low) by the global tuning tool, relative to how the song was opened.</summary>
     public int[] TuningShift { get; } = new int[6];
 
