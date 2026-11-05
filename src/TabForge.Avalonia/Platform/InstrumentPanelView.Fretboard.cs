@@ -55,9 +55,12 @@ public sealed partial class InstrumentPanelView
         var layout = FretboardLayout();
         var board = layout.Board;
         var scene = new FretboardScene(d, ink, layout, _look.Style, FretInput.Bass, _assets, _inlays, _look.MarkerColourKey, _look.MarkerBrightness);
-        FretboardArtist.DrawBackdrop(scene);
-        FretboardArtist.DrawInlays(scene);
-        FretboardArtist.DrawWires(scene);
+        if (!DrawCachedBoard(d, ink, layout))
+        {
+            FretboardArtist.DrawBackdrop(scene);
+            FretboardArtist.DrawInlays(scene);
+            FretboardArtist.DrawWires(scene);
+        }
         // Fret numbers under the wood: fret 1 and every even fret (every fret when the range is short).
         var woodBottom = FretboardArtist.Wood(layout, scene.Bass).Bottom;
         for (var fret = layout.FirstFret; fret <= layout.LastFret; fret++)

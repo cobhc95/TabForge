@@ -73,6 +73,7 @@ public sealed partial class InstrumentPanelView
         _flashTimer?.Stop();
         _flashTimer = null;   // a later press makes a fresh one
         _flashKey = null;
+        ReleaseBoardBitmap();   // a hidden pane holds no pixels; the next draw makes them again
     }
 
     protected override void OnGotFocus(GotFocusEventArgs e)
