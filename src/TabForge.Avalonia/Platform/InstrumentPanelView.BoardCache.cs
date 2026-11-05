@@ -51,11 +51,11 @@ public sealed partial class InstrumentPanelView
     private void BuildBoardBitmap(Func<string, UiColor> ink, FretboardGeometryRules.Layout layout, double pixels, double scale)
     {
         var size = new PixelSize(Math.Max(1, (int)Math.Round(Bounds.Width * pixels)), Math.Max(1, (int)Math.Round(Bounds.Height * pixels)));
-        var bitmap = new RenderTargetBitmap(size, new Vector(96 * pixels, 96 * pixels));
+        var bitmap = new RenderTargetBitmap(size, new Vector(96, 96));   // 96 with the scale drawn in below: a bitmap at another dpi misplaces images and loses what follows a clip
         using (var context = bitmap.CreateDrawingContext())
         {
             var draw = new AvaloniaDrawContext().Use(context);
-            draw.PushScale(scale, scale);
+            draw.PushScale(scale * pixels, scale * pixels);
             var scene = new FretboardScene(draw, ink, layout, _look.Style, FretInput.Bass, _assets, _inlays, _look.MarkerColourKey, _look.MarkerBrightness);
             FretboardArtist.DrawBackdrop(scene);
             FretboardArtist.DrawInlays(scene);
@@ -64,6 +64,13 @@ public sealed partial class InstrumentPanelView
         }
         _boardBitmap = bitmap;
         _boardImage = new AvaloniaImage(bitmap);
+    }
+
+    /// <summary>The still board's bitmap as the given display scale makes it (tests: headless windows are always at 1).</summary>
+    internal RenderTargetBitmap BoardBitmapAt(double pixels, Func<string, UiColor> ink)
+    {
+        BuildBoardBitmap(ink, FretboardLayout(), pixels, FretboardScale());
+        return _boardBitmap!;
     }
 
     private void ReleaseBoardBitmap()
