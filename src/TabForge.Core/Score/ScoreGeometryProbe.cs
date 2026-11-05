@@ -68,7 +68,50 @@ internal sealed class ScoreGeometryProbe : IScoreLayoutHost, IScoreRenderHost, I
 
     /// <summary>Draws the header and every system that starts before <paramref name="bars"/> straight to <paramref name="d"/>, with no recording.</summary>
     /// <param name="visibleRows">The page rows (top, bottom) the viewer shows; systems outside them are skipped. Null draws every system.</param>
-    internal void DrawPage(IDrawContext d, int bars, bool withPlayhead = true, (double Top, double Bottom)? visibleRows = null)
+    /// <param name="withLitNotes">False draws the page as it stands without the lit notes and the playing-bar band: <see cref="DrawLitSystems"/> draws those in their own layer.</param>
+    internal void DrawPage(IDrawContext d, int bars, bool withPlayhead = true, (double Top, double Bottom)? visibleRows = null, bool withLitNotes = true)
+    {
+        _pageOnly = !withLitNotes;
+        try { DrawPageCore(d, bars, withPlayhead, visibleRows); }
+        finally { _pageOnly = false; }
+    }
+
+    /// <summary>The systems holding the playing bar or a lit note, each redrawn over its own row with the notes lit: all a note change repaints, so the rest of the page stays retained.</summary>
+    internal void DrawLitSystems(IDrawContext d)
+    {
+        if (!Play.Active || _track.IsAudio) return;
+        var layout = _layout.GetLayout(_track);
+        _litSystems.Clear();
+        NoteLitSystem(layout, Play.Measure);
+        foreach (var note in Play.Sounding) NoteLitSystem(layout, note.bar);
+        foreach (var note in Play.Struck) NoteLitSystem(layout, note.bar);
+        if (_litSystems.Count == 0) return;
+        var ink = Appearance.InkColor;
+        var faint = TabForge.Platform.Theme.Palette.Get("ScoreFaintInk", light: Light);
+        ScoreText.NormalInk = ink;
+        var facts = _layout.EnsureScoreFacts(_track, _project);
+        var pageWidth = ContentSize().Width;
+        foreach (var index in _litSystems)
+        {
+            var top = SystemRowTop(index);
+            d.PushClip(0, top, pageWidth, SystemHeight);
+            d.Rect(Appearance.PaperColor, null, 0, top, pageWidth, SystemHeight);
+            _renderer.DrawSystem(d, _track, layout.Systems[index], ink, faint, Appearance.StaffLineColor, Appearance.AccentColor, Appearance.CursorColor,
+                Appearance.PlaybackColor, Appearance.ErrorColor, facts.PalmMutePassages, facts.FadePassages);
+            d.Pop();
+        }
+    }
+
+    private void NoteLitSystem(ScorePageLayout layout, int bar)
+    {
+        if (bar >= 0 && bar < _track.Measures.Count) _litSystems.Add(layout.Measure(bar).SystemIndex);
+    }
+
+    private readonly SortedSet<int> _litSystems = new();
+    private static readonly HashSet<(int bar, int cell, int s)> NoLitNotes = new();
+    private bool _pageOnly;   // while the retained page draws: no lit notes and no band, the cursor stays hidden as in any playback
+
+    private void DrawPageCore(IDrawContext d, int bars, bool withPlayhead, (double Top, double Bottom)? visibleRows)
     {
         var ink = Appearance.InkColor;
         var faint = TabForge.Platform.Theme.Palette.Get("ScoreFaintInk", light: Light);
@@ -249,9 +292,9 @@ internal sealed class ScoreGeometryProbe : IScoreLayoutHost, IScoreRenderHost, I
     public int PlaybackMeasure => Play.Measure;
     public int PlaybackCell => Play.Cell;
     public double PlaybackFraction => Play.Fraction;
-    public HashSet<(int bar, int cell, int s)> SoundingNotes => Play.Sounding;
-    public HashSet<(int bar, int cell, int s)> StruckNotes => Play.Struck;
-    public (UiRect Rect, UiColor Colour)? PlayingBarBand(TrackModel track, ScoreSystemPosition system, ScoreMeasurePosition position) => Play.PlayingBar(this, track, position);
+    public HashSet<(int bar, int cell, int s)> SoundingNotes => _pageOnly ? NoLitNotes : Play.Sounding;
+    public HashSet<(int bar, int cell, int s)> StruckNotes => _pageOnly ? NoLitNotes : Play.Struck;
+    public (UiRect Rect, UiColor Colour)? PlayingBarBand(TrackModel track, ScoreSystemPosition system, ScoreMeasurePosition position) => _pageOnly ? null : Play.PlayingBar(this, track, position);
     public bool InHorizontalBand(ScoreMeasurePosition measure) => true;
 
     public void LayoutChanged() { }

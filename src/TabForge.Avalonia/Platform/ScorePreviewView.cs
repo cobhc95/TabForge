@@ -62,6 +62,8 @@ public sealed partial class ScorePreviewView : Control
         _editor.SelectionChanged += (_, _) => InvalidateVisual();   // a range made elsewhere (the timeline, a command) shows at once
         CursorChanged += KeepCursorInSight;   // a cursor move that leaves the cursor's system mostly out of view scrolls it back in
         ContextMenuBuilder.Attach(this, ContextMenus, ContextRowsAt);
+        _litLayer = new ScoreLitLayer(_probe, _draw, () => Zoom);
+        VisualChildren.Add(_litLayer);
         _overlay = new ScorePlayheadOverlay(_probe, () => Zoom);
         LogicalChildren.Add(_overlay);
         VisualChildren.Add(_overlay);
@@ -327,12 +329,17 @@ public sealed partial class ScorePreviewView : Control
     }
 
     private readonly ScorePlayheadOverlay _overlay;
+    private readonly ScoreLitLayer _litLayer;
 
     /// <summary>The playing-marker layer (line and top dot), so a test can read where it sits.</summary>
     internal ScorePlayheadOverlay PlayheadOverlay => _overlay;
 
+    /// <summary>The layer of lit notes and the playing-bar band: a note change repaints this, not the page.</summary>
+    internal ScoreLitLayer LitLayer => _litLayer;
+
     protected override Size ArrangeOverride(Size finalSize)
     {
+        _litLayer.Arrange(new Rect(finalSize));
         _overlay.Arrange(new Rect(finalSize));
         return finalSize;
     }
@@ -460,7 +467,9 @@ public sealed partial class ScorePreviewView : Control
         // An edit or a width change changed the page size; invalidating inside the render pass throws, so the reflow is queued after it.
         if (_probe.ContentSize() != _measuredPage) QueueReflow(force: true);
         using (context.PushTransform(Matrix.CreateScale(Zoom, Zoom)))
-            _probe.DrawPage(_draw.Use(context), AllBars, withPlayhead: false, visibleRows: DrawnRows());
+            _probe.DrawPage(_draw.Use(context), AllBars, withPlayhead: false, visibleRows: DrawnRows(), withLitNotes: false);
+        // A page redrawn while playing (an edit, a zoom, a theme): its lit systems follow on the next pass, since invalidating inside the render pass throws.
+        if (_probe.Play.Active) global::Avalonia.Threading.Dispatcher.UIThread.Post(_litLayer.InvalidateVisual, global::Avalonia.Threading.DispatcherPriority.Render);
         if (Marquee is { } box) MarqueePainter.Draw(_draw.Use(context), key => AvaloniaPalette.Get(key, ActualThemeVariant == ThemeVariant.Light), box.X, box.Y, box.Width, box.Height);
     }
 

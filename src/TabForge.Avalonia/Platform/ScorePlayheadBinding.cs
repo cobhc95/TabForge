@@ -64,14 +64,16 @@ internal sealed class ScorePlayheadBinding
         {
             if (!play.Active) return;
             play.Clear();
-            _view.InvalidateVisual();
+            _view.InvalidateVisual();   // the cursor shows again
+            _view.LitLayer.InvalidateVisual();
             overlay.Place();
             return;
         }
         var position = _playback!.Playhead;
         var ms = position.ElapsedMs;
         if (!play.Active) _view.ResumeFollow();   // playback starts: a hand scroll no longer holds the follow back
-        var moved = !play.Active || play.Measure != position.Bar || play.Cell != position.Cell || play.NeedsRepaint(_lastPlayMs, ms);
+        var starting = !play.Active;
+        var moved = starting || play.Measure != position.Bar || play.Cell != position.Cell || play.NeedsRepaint(_lastPlayMs, ms);
         _lastPlayMs = ms;
         if (!moved)
         {
@@ -83,7 +85,8 @@ internal sealed class ScorePlayheadBinding
         }
         // The lit notes are the shown track's: the score's own track, not track 0.
         play.Set(transport.Timeline, _view.Probe.TrackIndex, position.Bar, position.Cell, position.BarFraction, ms);
-        _view.InvalidateVisual();
+        if (starting) _view.InvalidateVisual();   // the page hides its cursor once; note changes repaint only the lit layer
+        _view.LitLayer.InvalidateVisual();
         overlay.Place();
         _view.FollowPlayhead();
     }
