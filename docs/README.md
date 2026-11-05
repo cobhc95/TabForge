@@ -182,10 +182,10 @@ Strings in the track's own tuning. The sounding note glows, the next notes are o
 </tr>
 <tr>
 <td width="50%" valign="top"><a href="media/screenshots/0.9.0/fretboard-maple.png"><img src="media/screenshots/0.9.0/fretboard-maple.png" alt="The Maple look" width="400"></a><br><b>Maple</b><br>Birdseye maple with black pearl dots.</td>
-<td width="50%" valign="top"><a href="media/screenshots/0.9.0/fretboard-flame-maple.png"><img src="media/screenshots/0.9.0/fretboard-flame-maple.png" alt="The Flame maple look" width="400"></a><br><b>Flame maple</b><br>Flame maple, black binding and abalone green dots, with a bronze capo.</td>
+<td width="50%" valign="top"><a href="media/screenshots/0.9.0/fretboard-flame-maple.png"><img src="media/screenshots/0.9.0/fretboard-flame-maple.png" alt="The Flame maple look" width="400"></a><br><b>Flame maple</b><br>Flame maple, black binding and abalone green dots.</td>
 </tr>
 <tr>
-<td width="50%" valign="top"><a href="media/screenshots/0.9.0/fretboard-settings-look.png"><img src="media/screenshots/0.9.0/fretboard-settings-look.png" alt="Fretboard settings, Look page" width="400"></a><br><b>Build your own look</b><br>Five presets, or mix any of nine woods, ten bindings, five inlay shapes and ten inlay materials. Open it with <b>Customize</b> under the Scales button, or right-click &gt; <i>Fretboard settings</i>.</td>
+<td width="50%" valign="top"><a href="media/screenshots/0.9.0/fretboard-settings-look.png"><img src="media/screenshots/0.9.0/fretboard-settings-look.png" alt="Fretboard settings, Look page" width="400"></a><br><b>Build your own look</b><br>Five presets, or mix any of nine woods, ten bindings, five inlay shapes and ten inlay materials. Open it with <b>Modify</b> under the Scales button, or right-click &gt; <i>Fretboard settings</i>.</td>
 <td width="50%" valign="top"><a href="media/screenshots/0.9.0/fretboard-settings-notes.png"><img src="media/screenshots/0.9.0/fretboard-settings-notes.png" alt="Fretboard settings, Notes and markers page" width="400"></a><br><b>Notes and markers</b><br>Look-ahead notes, a faint trail of previous notes, fret numbers or note names, and the brightness and size of the markers.</td>
 </tr>
 <tr>
@@ -751,7 +751,7 @@ Every command can be found in the menus, the command palette and the shortcut se
 
 #### Fretboard, keyboard and drums
 - Fretboard, 88-key (or 76/61/49/37/25) keyboard and drum percussion map, left-handed view, note names, 12/24 frets, scale highlight and *Clear highlight*.
-- **Fretboard settings** (Customize under the Scales button, or right-click): Look, Notes and markers, Layout and size, Strings and capo, and Scale highlight, with Cancel, Apply, OK and a link to more settings in Preferences.
+- **Fretboard settings** (Modify under the Scales button, or right-click): Look, Notes and markers, Layout and size, Strings and capo, and Scale highlight, with Cancel, Apply, OK and a link to more settings in Preferences.
 - **Looks:** presets Rosewood, Pearl fins, Ebony blocks, Maple and Flame maple, or any mix of wood, binding, inlay shape and material; separate neck and note brightness; string and capo finishes.
 - **Number size** (Small, Medium, Large), **Lock fretboard size**, and a pane that scales its drawing when resized.
 - **Show / hide the fretboard** (toolbar button and hotkey), *Switch instrument view*, per-track or all-tracks instrument view; Tab mode and the piano roll remember it separately.
