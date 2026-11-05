@@ -36,6 +36,23 @@ public class PreferencesDeadInstructionTests
     private static void Click(Button button) => button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
 
     [AvaloniaFact]
+    public void VideoSaveFolderBrowseFillsTheFieldAsAPendingChange()
+    {
+        var saved = new AppSettings();
+        var window = new PreferencesWindow(new AvaloniaDialogHost(), saved, Actions(pick: _ => new[] { @"C:\Clips" }));
+        window.ShowPage(SettingsCatalog.General);
+        var editor = window.EditorOf("video.folder");
+
+        Click(Find<Button>(editor, "BrowseFolderButton"));
+
+        Assert.Equal(@"C:\Clips", editor.GetLogicalDescendants().OfType<TextBox>().First().Text);
+        Assert.Equal(@"C:\Clips", window.Working.LiveVideo.Folder);
+        Assert.NotEqual(@"C:\Clips", window.Saved.LiveVideo.Folder);
+        window.Apply();
+        Assert.Equal(@"C:\Clips", window.Saved.LiveVideo.Folder);
+    }
+
+    [AvaloniaFact]
     public void PluginFolderListAddsAndRemovesAndKeepsTheStoredSetting()
     {
         var window = new PreferencesWindow(new AvaloniaDialogHost(), new AppSettings(), Actions(pick: _ => new[] { @"C:\Plugs\One", @"C:\Plugs\Two" }));

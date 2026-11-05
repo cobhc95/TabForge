@@ -382,7 +382,7 @@ public sealed partial class PreferencesWindow : Window, IPreferencesChangesHost
             case SettingKind.Text:
                 var field = new TextBox { Text = row.Get()?.ToString(), Width = 220, Classes = { AvaloniaFormControlStyles.PrefsFieldClass } };
                 field.LostFocus += (_, _) => { if (field.Text != row.Get()?.ToString()) Changed(row, field.Text ?? ""); };
-                return field;
+                return row.Key == VideoFolderKey ? FolderFieldWithBrowse(row, field) : field;
             default:
                 return ButtonEditor(row);
         }

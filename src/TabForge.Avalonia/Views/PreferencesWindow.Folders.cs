@@ -14,12 +14,28 @@ using TabForge.Services;
 namespace TabForge.Avalonia.Views;
 
 // Owns: the folder list of the Settings rows (SettingKind.FolderList: Plug-in folders, Common plug-in folders) with Add folder…, Remove and
-//       Reset to defaults. The stored value stays one "; "-joined string per row.
+//       Reset to defaults, and the Browse… button of the video Save folder field. The stored value stays one "; "-joined string per row.
 // Does not own: the rows (SettingsCatalog.Audio) or the folder picker (AvaloniaFileDialogs).
 // Tests: TabForge.Avalonia.Tests.PreferencesFolderListTests.
 public sealed partial class PreferencesWindow
 {
     private const string CommonFoldersKey = "vst.commonfolders";
+    private const string VideoFolderKey = "video.folder";
+
+    /// <summary>A typable folder field with Browse… beside it: the picker starts at the field's folder (empty: the default one) and a pick is an ordinary pending change.</summary>
+    private Control FolderFieldWithBrowse(SettingDescriptor row, TextBox field)
+    {
+        var browse = new Button { Content = "Browse…", Name = "BrowseFolderButton", VerticalAlignment = VerticalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Center, Classes = { AvaloniaFormControlStyles.PrefsFieldClass } };
+        AutomationProperties.SetName(browse, "Browse for " + row.Title);
+        browse.Click += async (_, _) =>
+        {
+            var start = TabForge.Services.Video.LiveVideoChoices.FolderOf(new TabForge.Services.Video.LiveVideoSettings { Folder = field.Text ?? "" });
+            if ((await PickFolders(row.Title, start, multiple: false))?.FirstOrDefault() is not { } chosen) return;
+            field.Text = chosen;
+            Changed(row, chosen);
+        };
+        return new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { field, browse } };
+    }
 
     /// <summary>The folders of a folder-list row as a list with Add folder…, Remove (or the Delete key) and, for the common folders, Reset to defaults. Folders can also be dropped onto it.</summary>
     private Control FolderListEditor(SettingDescriptor row)
@@ -67,8 +83,8 @@ public sealed partial class PreferencesWindow
     }
 
     /// <summary>The folders the user picks in the system folder dialog (the seam <see cref="PreferencesRowActions.PickFolders"/> replaces it); null when cancelled.</summary>
-    private async System.Threading.Tasks.Task<string[]?> PickFolders(string title) =>
+    private async System.Threading.Tasks.Task<string[]?> PickFolders(string title, string? start = null, bool multiple = true) =>
         _actions?.PickFolders is { } pick ? pick(this)
-            : await _dialogs.PickFoldersAsync(new TabForge.Platform.FileDialogOptions { Key = TabForge.Services.DialogKeys.SettingsFolder, Title = "Add folders: " + title, Multiselect = true }, this);
+            : await _dialogs.PickFoldersAsync(new TabForge.Platform.FileDialogOptions { Key = start is null ? TabForge.Services.DialogKeys.SettingsFolder : null, InitialDirectory = start, Title = multiple ? "Add folders: " + title : title, Multiselect = multiple }, this);
 }
 #pragma warning restore CS0618
