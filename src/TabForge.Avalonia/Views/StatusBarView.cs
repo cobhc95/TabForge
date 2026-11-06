@@ -30,9 +30,9 @@ public sealed class StatusBarView : UserControl
     private readonly ContentControl _timelineSlot = new() { Name = "TimelineScrollSlot", VerticalAlignment = VerticalAlignment.Center, HorizontalContentAlignment = HorizontalAlignment.Stretch };
 
     private const double BarHeight = 28;
-    private const double StatusFontSize = 12;
+    private const double StatusFontSize = global::TabForge.Platform.Theme.ChromeMetrics.TextBody;
     private const double ReadoutFontSize = 13.8;
-    private const double AudioDeviceFontSize = 11;
+    private const double AudioDeviceFontSize = global::TabForge.Platform.Theme.ChromeMetrics.TextSmall;
     private const double PositionMaxWidth = 365;
     private const double BarStateMaxWidth = 110;
     private const double MasterMaxWidth = 240;

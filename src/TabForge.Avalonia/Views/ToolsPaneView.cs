@@ -31,7 +31,7 @@ public sealed class ToolsPaneView : Border
     /// <summary>The icon inside a tool button (DIPs).</summary>
     public const double IconSize = 27;
     /// <summary>Group heading size.</summary>
-    private const double HeadingFontSize = 11;
+    private const double HeadingFontSize = ChromeMetrics.TextSmall;
     /// <summary>Corner radius of a tool button's chrome (DIPs).</summary>
     private const double ButtonCornerRadius = 4;
 

@@ -63,7 +63,7 @@ internal static class ScoreText
         Configure(look => look with { FontFamily = string.IsNullOrWhiteSpace(fontFamily) ? ChromeMetrics.UiFontFamily : fontFamily.Trim(), TextSize = Math.Clamp(size, 8, 24), Bold = bold, Italic = italic });
     }
 
-    private const double DynamicFontSize = 13;
+    private const double DynamicFontSize = ChromeMetrics.TextDialog;
 
     /// <summary>Bold italic serif letters, the usual engraving of a dynamic.</summary>
     internal static UiText DynamicText(IDrawContext d, string name, UiColor colour) =>

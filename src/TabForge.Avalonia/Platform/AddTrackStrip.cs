@@ -13,7 +13,7 @@ namespace TabForge.Avalonia.Platform;
 public static class AddTrackStrip
 {
     private const string Font = ChromeMetrics.UiFontFamily;
-    private const double LabelFontSize = 12;
+    private const double LabelFontSize = ChromeMetrics.TextBody;
     private const double GlowOpacity = 0.10;
     /// <summary>A dragged audio file over the strip: an accent wash with a border and the drop words (the add-track drag shade).</summary>
     private const double DropFillOpacity = 0.14;

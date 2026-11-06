@@ -31,7 +31,7 @@ internal sealed class TimelineLiveTakeLayer : Control
     private const double RecLabelMinWidth = 40;
     private const double RecLabelLeft = 5;
     private const double RecLabelTop = 1;
-    private const double RecLabelFontSize = 10;
+    private const double RecLabelFontSize = ChromeMetrics.TextCaption;
     private const string RecLabel = "● REC";
     /// <summary>How many columns the peak envelope draws at most; bounds the work of a very long take in one frame.</summary>
     private const int MaxPeakColumns = 2048;

@@ -48,7 +48,7 @@ public sealed partial class InstrumentPanelView : Control
     /// <summary>The placeholder texts and size: no track selected, and an audio track selected.</summary>
     private const string NoTrackPlaceholderText = "Select a track to see the instrument";
     private const string AudioTrackPlaceholderText = "Audio/MIDI track — no instrument view";
-    private const double NoTrackFontSize = 13;
+    private const double NoTrackFontSize = ChromeMetrics.TextDialog;
     private const double NoTrackLift = 8;
     // The legend column beside the board: now and recent always, plus next and upcoming while previewing (sizes).
     private const double LegendGap = 14;

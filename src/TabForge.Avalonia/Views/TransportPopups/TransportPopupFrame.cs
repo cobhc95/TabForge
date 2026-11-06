@@ -38,7 +38,7 @@ public sealed class TransportPopupFrame
     private const double CheckTopMargin = 6;
     private const double HelperTopMargin = 7;
     /// <summary>The small caps title and helper text size.</summary>
-    public const double SmallFontSize = 11;
+    public const double SmallFontSize = ChromeMetrics.TextSmall;
     private const int PercentMaximum = 100;
     private const double SliderTickFrequency = 10;
     // The drop shadow (SettingsPopupShadow, blur 16, depth 3, opacity 0.52); the panel keeps a margin so the shadow is not clipped.

@@ -31,7 +31,7 @@ internal static partial class TimelineAudioClips
     // The light theme's clips are solid track colour with a dark name; a muted one fades and takes a 1px track-colour border.
     private const double LightClipFillOpacity = 0.9;
     private const double LightMutedClipOpacity = 0.35;
-    private const double NameFontSize = 10;
+    private const double NameFontSize = ChromeMetrics.TextCaption;
     private const double NameInset = 5;
     /// <summary>How far the clip under the pointer is blended towards white (0-1); its own hue stays.</summary>
     public const double HoverClipLightenFraction = 0.25;
@@ -52,8 +52,8 @@ internal static partial class TimelineAudioClips
     /// <summary>A file drag's landing block, in the lane's own track colour.</summary>
     private const double FileDropBlockFillOpacity = 0.38;
     private const double FileDropBlockStrokeWidth = 1.2;
-    private const double FileDropLabelFontSize = 11;
-    private const double FileDropDetailFontSize = 10;
+    private const double FileDropLabelFontSize = ChromeMetrics.TextSmall;
+    private const double FileDropDetailFontSize = ChromeMetrics.TextCaption;
     private const double FileDropTextInset = 6;
     private const double FileDropDetailTop = 3;
     /// <summary>A file drag's new-lane slot: an accent wash with a dashed border.</summary>

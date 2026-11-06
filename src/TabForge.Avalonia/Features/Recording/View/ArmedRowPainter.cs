@@ -37,7 +37,7 @@ public static class ArmedRowPainter
     public const double MeterGap = 8, MeterWidth = 110, MeterHeight = 8;
 
     /// <summary>The label and the timeline hint's text size.</summary>
-    public const double TextSize = 11;
+    public const double TextSize = ChromeMetrics.TextSmall;
 
     /// <summary>The timeline hint's left edge in the lane.</summary>
     public const double HintLeft = 8;

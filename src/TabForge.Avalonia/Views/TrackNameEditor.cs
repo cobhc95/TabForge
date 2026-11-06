@@ -19,7 +19,7 @@ namespace TabForge.Avalonia.Views;
 public sealed class TrackNameEditor
 {
     // Matches the size the header draws track names at.
-    private const double NameFontSize = 13;
+    private const double NameFontSize = global::TabForge.Platform.Theme.ChromeMetrics.TextDialog;
 
     private readonly TimelineView _timeline;
     private readonly TrackHeaderColumn _header;

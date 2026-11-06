@@ -40,7 +40,7 @@ public static class MainWindowHelpMenu
     internal const double DialogMinWidth = 320;
     internal const double DialogMaxWidth = 560;
     internal const double MessageMaxWidth = 500;
-    internal const double MessageFontSize = 13;
+    internal const double MessageFontSize = ChromeMetrics.TextDialog;
     internal const double ButtonMinWidth = 84;
     internal const double ButtonHeight = 28;
     internal const double ButtonGap = 8;

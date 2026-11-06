@@ -35,7 +35,7 @@ public static class AvaloniaMenuTemplates
     // TopLevelSideInset on both sides instead, so its label sits centred in the shade (the gesture and arrow columns hold no space for it).
     private const double TopLevelSideInset = 8;
     // Gesture text (shortcut) column: 11 DIP text, 10 DIP from the right edge.
-    private const double GestureFontSize = 11;
+    private const double GestureFontSize = global::TabForge.Platform.Theme.ChromeMetrics.TextSmall;
     private static readonly Thickness GestureMargin = new(0, 0, 10, 0);
     /// <summary>The gesture text a menu item shows, as the hotkey catalogue writes it ("Ctrl+T, Ctrl+Shift+Insert"); empty shows the InputGesture's text.
     /// Set by the menu builders before the item is added. Key: the item; ceiling: one value per item; read and written on the UI thread only.</summary>
