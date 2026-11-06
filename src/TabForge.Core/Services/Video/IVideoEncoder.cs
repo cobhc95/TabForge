@@ -15,7 +15,8 @@ public sealed class VideoEncoderException : Exception
     public bool HardwareStalled { get; init; }
 }
 
-// Owns: the port every MP4 encoder implements (Media Foundation on Windows, an ffmpeg child process anywhere) and the size, rate and bitrate rules they share.
+// Owns: the port every MP4 encoder implements (Media Foundation on Windows, an ffmpeg child process anywhere), the size, rate and bitrate rules they
+//   share, and their shared frame-queue mechanics (VideoEncoderQueue).
 // Does not own: choosing between them (VideoEncoderFactory) or writing the file (VideoEncoder, FfmpegVideoEncoder).
 // Tests: VideoEncoderPortTests, LiveVideoRecordTests.
 /// <summary>Writes top-down BGRA frames and interleaved float audio to an H.264/AAC MP4. Live mode never blocks the caller: a full queue drops the frame and counts it.</summary>
@@ -76,5 +77,46 @@ public static class VideoEncoderRules
         if (!IsSize(width, height)) throw new VideoEncoderException($"Video size {width}x{height} is not supported (use 1080p or 4K, landscape or portrait).");
         if (fps is not (30 or 60 or 120)) throw new VideoEncoderException($"{fps} frames per second is not supported (use 30, 60 or 120).");
         if (audioFormat is { } a && (a.Channels is < 1 or > 2 || !SupportsSampleRate(a.SampleRate))) throw new VideoEncoderException("The audio must be 44.1 or 48 kHz, mono or stereo.");
+    }
+}
+
+/// <summary>The frame-queue mechanics both encoders share: the room taken per frame (dropped in live mode, waited for offline), the
+/// queue add that fails once the queue is closed, and the error a caller sees.</summary>
+internal static class VideoEncoderQueue
+{
+    /// <summary><paramref name="error"/> as the error a caller sees: itself when it is a <see cref="VideoEncoderException"/>, else wrapped.</summary>
+    public static VideoEncoderException AsEncoderError(Exception error) => error as VideoEncoderException ?? new VideoEncoderException(error.Message, error);
+
+    /// <summary>The encoder's own failure when it has one, else a closed-encoder error.</summary>
+    public static VideoEncoderException Closed(Exception? error) => error is { } e ? AsEncoderError(e) : new VideoEncoderException("The video encoder is closed.");
+
+    /// <summary>Takes one frame's room: live mode never blocks and counts a drop (false); offline mode waits, checking for a failure every 50 ms.</summary>
+    public static bool TakeRoom(SemaphoreSlim room, bool live, ref long dropped, Action throwIfFaulted)
+    {
+        if (live)
+        {
+            if (room.Wait(0)) return true;
+            Interlocked.Increment(ref dropped);
+            return false;
+        }
+        while (!room.Wait(50)) throwIfFaulted();
+        return true;
+    }
+
+    /// <summary>Offline mode: true once a frame slot is free (the caller is not blocked while waiting); false after the timeout. Live mode: always true.</summary>
+    public static async ValueTask<bool> WaitForRoomAsync(SemaphoreSlim room, bool live, TimeSpan timeout, CancellationToken cancel, Action throwIfFaulted)
+    {
+        throwIfFaulted();
+        if (live) return true;
+        if (!await room.WaitAsync(timeout, cancel).ConfigureAwait(false)) { throwIfFaulted(); return false; }
+        room.Release();   // only looked: the one producer takes it in WriteFrame
+        return true;
+    }
+
+    /// <summary>Adds <paramref name="item"/>; false once adding is complete or the queue is disposed (TryAdd throws then rather than returning false).</summary>
+    public static bool TryAdd<T>(System.Collections.Concurrent.BlockingCollection<T> queue, T item)
+    {
+        try { return queue.TryAdd(item); }
+        catch (Exception e) when (e is InvalidOperationException or ObjectDisposedException) { return false; }
     }
 }

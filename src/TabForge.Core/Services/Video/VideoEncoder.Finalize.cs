@@ -52,7 +52,7 @@ public sealed partial class VideoEncoder
     // Any thread: what the worker has written so far (plain reads of counters only the worker writes).
     private string Counts() =>
         $"video samples {Interlocked.Read(ref _videoSamples)} (last at {Interlocked.Read(ref _lastVideoTicks) / 10_000.0:0.#} ms), " +
-        $"audio samples {Interlocked.Read(ref _audioSamples)} (end at {Interlocked.Read(ref _audioEndTicks) / 10_000.0:0.#} ms), queued {QueuedCount()}, paced {Interlocked.Read(ref _pacedMs)} ms, file {FileLength(_path)} B";
+        $"audio samples {Interlocked.Read(ref _audioSamples)} (end at {Interlocked.Read(ref _audioEndTicks) / 10_000.0:0.#} ms), queued {QueuedCount()}, paced {Interlocked.Read(ref _pacedMs)} ms, file {VideoEncoderRules.FileLength(_path)} B";
 
     private int QueuedCount()
     {
@@ -70,7 +70,7 @@ public sealed partial class VideoEncoder
         // Test hook only (SimulateFinalizeHang): the worker waits here until an outside Abort abandons it. Production never waits here.
         if (_options.SimulateFinalizeHang) _abandoned.Wait();
         else writer.FinalizeWriter();
-        Step(clock, FinishSteps[2], $"finalize writer took {clock.ElapsedMilliseconds} ms, file {FileLength(_path)} B");
+        Step(clock, FinishSteps[2], $"finalize writer took {clock.ElapsedMilliseconds} ms, file {VideoEncoderRules.FileLength(_path)} B");
     }
 
     private void Step(Stopwatch clock, string name, string detail) => Note($"finalize step '{name}' at +{clock.ElapsedMilliseconds} ms: {detail}");

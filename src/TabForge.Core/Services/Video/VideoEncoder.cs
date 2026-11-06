@@ -57,21 +57,13 @@ public sealed partial class VideoEncoder : IVideoEncoder
     public long DroppedFrames => Interlocked.Read(ref _dropped);
 
     /// <summary>Changes whenever the worker writes a sample or the output file grows (the sink writer drains its backlog into it while finalising).</summary>
-    public long Heartbeat => Interlocked.Read(ref _beat) * 1_000_003L + FileLength(_path);
-
-    internal static long FileLength(string path) => VideoEncoderRules.FileLength(path);
+    public long Heartbeat => Interlocked.Read(ref _beat) * 1_000_003L + VideoEncoderRules.FileLength(_path);
 
     /// <summary>True when the video encoder in use is a hardware encoder.</summary>
     public bool UsesHardware { get; private set; }
 
     /// <summary>AAC rate: 192 kbps, the top of the Media Foundation AAC encoder's rates (96/128/160/192).</summary>
     private const int AacBytesPerSecond = 24000;
-
-    /// <summary>Video bits per second for a size and frame rate (about 0.1 bit per pixel, capped at 100 Mbit/s).</summary>
-    public static int VideoBitrate(int width, int height, int fps) => VideoEncoderRules.VideoBitrate(width, height, fps);
-
-    /// <summary>True for the sample rates the MP4 audio stream takes (44.1 and 48 kHz).</summary>
-    public static bool SupportsSampleRate(int rate) => VideoEncoderRules.SupportsSampleRate(rate);
 
     /// <summary>Opens the file and starts the encoder thread. Throws <see cref="VideoEncoderException"/> when the size, frame rate or encoder is not usable.</summary>
     public static VideoEncoder Open(string path, int width, int height, int fps, VideoAudioFormat? audioFormat = null, bool live = false, VideoEncoderOptions? options = null)
@@ -82,7 +74,7 @@ public sealed partial class VideoEncoder : IVideoEncoder
         // The worker always signals _ready in its finally (Start throws before this when the thread cannot start), so this
         // cannot wait forever; export and recording flows call Open on a worker, never on the UI thread.
         encoder._ready.Wait();
-        if (encoder._error is { } e) { encoder._worker.Join(); encoder._queue.Dispose(); throw e as VideoEncoderException ?? new VideoEncoderException(e.Message, e); }
+        if (encoder._error is { } e) { encoder._worker.Join(); encoder._queue.Dispose(); throw VideoEncoderQueue.AsEncoderError(e); }
         return encoder;
     }
 
@@ -93,8 +85,7 @@ public sealed partial class VideoEncoder : IVideoEncoder
         if (Interlocked.Exchange(ref _firstWrite, 1) == 0) Note($"write: first frame from {ThreadText()}");
         var size = _width * _height * 4;
         if (bgra.Length != size) throw new ArgumentException("The frame is not exactly width x height x 4 bytes.", nameof(bgra));
-        if (_live) { if (!_room.Wait(0)) { Interlocked.Increment(ref _dropped); return false; } }
-        else while (!_room.Wait(50)) ThrowIfFaulted();
+        if (!VideoEncoderQueue.TakeRoom(_room, _live, ref _dropped, ThrowIfFaulted)) return false;
         var slot = TakeSlot();
         CopyInto(slot, bgra[..size]);
         if (!TryQueue(new Item(slot, timestamp.Ticks, null, size))) { ReturnSlot(slot); _room.Release(); throw ClosedError(); }
@@ -102,14 +93,8 @@ public sealed partial class VideoEncoder : IVideoEncoder
     }
 
     /// <summary>Offline mode: true once a frame slot is free (the caller is not blocked while waiting); false after the timeout.</summary>
-    public async ValueTask<bool> WaitForRoomAsync(TimeSpan timeout, CancellationToken cancel)
-    {
-        ThrowIfFaulted();
-        if (_live) return true;
-        if (!await _room.WaitAsync(timeout, cancel).ConfigureAwait(false)) { ThrowIfFaulted(); return false; }
-        _room.Release();   // only looked: the one producer takes it in WriteFrame
-        return true;
-    }
+    public ValueTask<bool> WaitForRoomAsync(TimeSpan timeout, CancellationToken cancel) =>
+        VideoEncoderQueue.WaitForRoomAsync(_room, _live, timeout, cancel, ThrowIfFaulted);
 
     /// <summary>Queues interleaved float samples (-1..1) in the format given to <see cref="Open"/>. Audio is never dropped.</summary>
     public void WriteAudio(ReadOnlySpan<float> samples)
@@ -121,15 +106,9 @@ public sealed partial class VideoEncoder : IVideoEncoder
         if (!TryQueue(new Item(null, 0, copy, samples.Length))) { ArrayPool<float>.Shared.Return(copy); throw ClosedError(); }
     }
 
-    // TryAdd throws, rather than returning false, once adding is complete or the queue is disposed.
-    private bool TryQueue(Item item)
-    {
-        try { return _queue.TryAdd(item); }
-        catch (Exception e) when (e is InvalidOperationException or ObjectDisposedException) { return false; }
-    }
+    private bool TryQueue(Item item) => VideoEncoderQueue.TryAdd(_queue, item);
 
-    // The encoder's own failure when it has one, else a closed-encoder error.
-    private Exception ClosedError() => _error is { } e ? e as VideoEncoderException ?? new VideoEncoderException(e.Message, e) : new VideoEncoderException("The video encoder is closed.");
+    private Exception ClosedError() => VideoEncoderQueue.Closed(_error);
 
     /// <summary>Writes what is queued, finalises the MP4 and releases the encoder. Throws when encoding failed.</summary>
     public void Finish()
@@ -216,7 +195,7 @@ public sealed partial class VideoEncoder : IVideoEncoder
 
     public void Dispose() => VideoDisposeHelper.TryFinish(Finish);
 
-    private void ThrowIfFaulted() { if (_error is { } e) throw e as VideoEncoderException ?? new VideoEncoderException(e.Message, e); }
+    private void ThrowIfFaulted() { if (_error is { } e) throw VideoEncoderQueue.AsEncoderError(e); }
 
     // The room semaphore has one permit per slot, so a permit taken by WriteFrame always finds a free slot.
     private VideoSlot TakeSlot()

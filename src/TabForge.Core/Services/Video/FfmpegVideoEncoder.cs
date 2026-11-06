@@ -112,8 +112,7 @@ public sealed class FfmpegVideoEncoder : IVideoEncoder
         ThrowIfFaulted();
         var size = _width * _height * 4;
         if (bgra.Length < size) throw new ArgumentException("The frame is smaller than width x height x 4 bytes.", nameof(bgra));
-        if (_live) { if (!_room.Wait(0)) { Interlocked.Increment(ref _dropped); return false; } }
-        else while (!_room.Wait(50)) ThrowIfFaulted();
+        if (!VideoEncoderQueue.TakeRoom(_room, _live, ref _dropped, ThrowIfFaulted)) return false;
         var copy = ArrayPool<byte>.Shared.Rent(size);
         bgra[..size].CopyTo(copy);
         var index = (timestamp.Ticks * _fps + 5_000_000) / 10_000_000;
@@ -122,14 +121,8 @@ public sealed class FfmpegVideoEncoder : IVideoEncoder
     }
 
     /// <summary>Offline mode: true once a frame slot is free (the caller is not blocked while waiting); false after the timeout.</summary>
-    public async ValueTask<bool> WaitForRoomAsync(TimeSpan timeout, CancellationToken cancel)
-    {
-        ThrowIfFaulted();
-        if (_live) return true;
-        if (!await _room.WaitAsync(timeout, cancel).ConfigureAwait(false)) { ThrowIfFaulted(); return false; }
-        _room.Release();   // only looked: the one producer takes it in WriteFrame
-        return true;
-    }
+    public ValueTask<bool> WaitForRoomAsync(TimeSpan timeout, CancellationToken cancel) =>
+        VideoEncoderQueue.WaitForRoomAsync(_room, _live, timeout, cancel, ThrowIfFaulted);
 
     public void WriteAudio(ReadOnlySpan<float> samples)
     {
@@ -140,11 +133,7 @@ public sealed class FfmpegVideoEncoder : IVideoEncoder
         if (!TryQueue(new Item(null, 0, copy, samples.Length))) { ArrayPool<float>.Shared.Return(copy); throw ClosedError(); }
     }
 
-    private bool TryQueue(Item item)
-    {
-        try { return _queue.TryAdd(item); }
-        catch (Exception e) when (e is InvalidOperationException or ObjectDisposedException) { return false; }
-    }
+    private bool TryQueue(Item item) => VideoEncoderQueue.TryAdd(_queue, item);
 
     public void Finish()
     {
@@ -278,6 +267,6 @@ public sealed class FfmpegVideoEncoder : IVideoEncoder
     private string StderrTail() { lock (_stderr) return string.Join(" | ", _stderr); }
     private string TailText() => StderrTail() is { Length: > 0 } t ? ": " + t : "";
     private void Note(string text) { lock (_notes) _notes.Add(text); }
-    private void ThrowIfFaulted() { if (_error is { } e) throw e as VideoEncoderException ?? new VideoEncoderException(e.Message, e); }
-    private Exception ClosedError() => _error is { } e ? e as VideoEncoderException ?? new VideoEncoderException(e.Message, e) : new VideoEncoderException("The video encoder is closed.");
+    private void ThrowIfFaulted() { if (_error is { } e) throw VideoEncoderQueue.AsEncoderError(e); }
+    private Exception ClosedError() => VideoEncoderQueue.Closed(_error);
 }

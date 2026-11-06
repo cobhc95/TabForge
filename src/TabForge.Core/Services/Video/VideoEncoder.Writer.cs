@@ -66,7 +66,7 @@ public sealed partial class VideoEncoder
             Check(Mf.MFCreateSinkWriterFromURL(_path, IntPtr.Zero, attrs, out var writer));
             try
             {
-                var t = Own(temps, VideoType(Mf.H264, VideoBitrate(_width, _height, _fps)));
+                var t = Own(temps, VideoType(Mf.H264, VideoEncoderRules.VideoBitrate(_width, _height, _fps)));
                 writer.AddStream(t, out videoStream);
                 writer.SetInputMediaType(videoStream, Own(temps, VideoType(Mf.Rgb32, 0)), tune ? Own(temps, Tuning()) : null);
                 audioStream = -1;
