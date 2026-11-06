@@ -15,7 +15,7 @@ using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views;
 
-// Owns: one string row of the track properties tuning card: speaker toggle, number, the drawn string (click rings it, then it vibrates), minus, plus and the note box at the far right.
+// Owns: one string row of the track properties tuning card: speaker toggle (lit in the master accent while its repeat is on), number, the drawn string (click rings it, then it vibrates), minus, plus and the note box at the far right.
 // Does not own: the tuning (TrackTuningDraft), the sound (IStringRinger), the frame that moves the vibrate (TrackPropertiesWindow.Strings.cs) or the string list.
 // Tests: TabForge.Avalonia.Tests.TrackPropertiesWindowTests.
 // Threads: UI thread only.
@@ -147,9 +147,34 @@ internal sealed class TrackStringRow : Grid
             HorizontalContentAlignment = HorizontalAlignment.Center, VerticalContentAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center,
         };
         global::TabForge.Avalonia.UiMetrics.WithPadding(toggle, 0, 0);
+        LightWhileOn(toggle, body);
         AutomationProperties.SetName(toggle, $"Repeat string {index + 1}");
         ToolTip.SetTip(toggle, "Ring this string over and over until switched off");
         return toggle;
+    }
+
+    // The speaker's own look: the panel fill with a soft edge at rest, the master accent (AccentBrush, the Appearance accent) with the on-accent icon
+    // while its repeat is on, and the hover and press shades over either; one border template paints it, so no theme style hides the lit fill.
+    private static void LightWhileOn(ToggleButton toggle, Path icon)
+    {
+        toggle.Template = AvaloniaButtonTemplates.SingleBorder("Bd");
+        toggle.BorderThickness = global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.SwatchOutline;
+        toggle.CornerRadius = new CornerRadius(ChromeMetrics.RadiusMedium);
+        IBrush Resource(string key) => toggle.TryFindResource(key, toggle.ActualThemeVariant, out var found) && found is IBrush brush ? brush : AvaloniaPalette.TransparentBrush;
+        IBrush Rest() => Resource(toggle.IsChecked == true ? "AccentBrush" : "Panel2Brush");
+        _ = HoverShade.Wire(toggle, brush => toggle.Background = brush, Rest);
+        void Paint()
+        {
+            var on = toggle.IsChecked == true;
+            toggle.Background = Rest();
+            toggle[!TemplatedControl.BorderBrushProperty] = new DynamicResourceExtension(on ? "AccentBrush" : "BorderSoftBrush");
+            icon[!Shape.FillProperty] = new DynamicResourceExtension(on ? "OnAccentBrush" : "TextPrimary");
+            icon[!Shape.StrokeProperty] = new DynamicResourceExtension(on ? "OnAccentBrush" : "TextPrimary");
+        }
+        toggle.IsCheckedChanged += (_, _) => Paint();
+        toggle.ActualThemeVariantChanged += (_, _) => Paint();
+        toggle.AttachedToVisualTree += (_, _) => Paint();
+        Paint();
     }
 
     private static Button StepButton(string name, string text, string tip, Action click)

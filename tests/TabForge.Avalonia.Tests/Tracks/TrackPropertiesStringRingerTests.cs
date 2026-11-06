@@ -16,7 +16,7 @@ namespace TabForge.Avalonia.Tests;
 
 // Owns: the headless checks of the track-properties string rows with a recording ringer: a click rings the sounding
 //   pitch (tuning plus capo), the speaker toggle rings and silences, switching strings rings the new one, and
-//   closing while looping silences exactly once.
+//   closing while looping silences exactly once, and only the repeating string's speaker is lit in the master accent.
 // Does not own: the window, the rows or the sound (FakeRinger); the engine-backed adapter has its own tests.
 // Tests: this class.
 public class TrackPropertiesStringRingerTests
@@ -164,6 +164,26 @@ public class TrackPropertiesStringRingerTests
         }, toggles);
         window.Close();
         Assert.Equal(1, ringer.Silences);   // closing while looping cuts the owned ring
+    }
+
+    // Only the speaker whose repeat is on shows the master accent (the AccentBrush resource); switching or switching off puts the others back.
+    [AvaloniaFact]
+    public void OnlyTheRepeatingSpeakerIsLitInTheAccent()
+    {
+        var (window, _) = Open();
+        ToggleButton Speaker(int index) => window.GetLogicalDescendants().OfType<ToggleButton>().Single(c => c.Name == $"SpeakerToggle{index}");
+        Assert.True(window.TryFindResource("AccentBrush", window.ActualThemeVariant, out var accent));
+        bool Lit(int index) => ReferenceEquals(Speaker(index).Background, accent);
+        Assert.False(Lit(0));
+
+        FlipSpeaker(window, 0, true);
+        Assert.True(Lit(0));
+        FlipSpeaker(window, 0, false);
+        Assert.False(Lit(0));
+        FlipSpeaker(window, 0, true);
+        FlipSpeaker(window, 2, true);
+        Assert.Equal(new[] { false, false, true, false, false, false }, Enumerable.Range(0, 6).Select(Lit).ToArray());
+        window.Close();
     }
 
     [AvaloniaFact]

@@ -4,6 +4,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ## 0.9.1
 
+- Track properties: a string's speaker button is lit in the accent colour while it repeats that string, and goes back to normal when the repeat stops (switched off, another string's speaker, or the window closes) (untested in app).
 - FX window meter: a track with no audio input now shows the MIDI notes it receives in its Input bar, in its own MIDI colour, lit on each note-on and fading out quickly; tracks with an audio input look as before (untested in app).
 - Fretboard note colours: Fretboard settings > Notes and markers has a Note colours card with the Now, Next and Upcoming colours (the same colour picker as Settings), Reset colours and a Fill or Ring dot style; the fretboard's dots and its legend use them, and a click on a legend dot opens the same picker there. The defaults are the colours from before (untested in app).
 - Drag selection scrolls: while you drag a selection in the score, the timeline lanes or the piano roll and carry the pointer out of the view (in the score, into the timeline below it or the area above it), the view keeps scrolling that way, faster the further out the pointer is, and stops when the pointer comes back or the content ends; the selection keeps following the pointer (untested in app).
