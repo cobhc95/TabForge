@@ -150,9 +150,9 @@ public sealed class CapoPlacementTests
     }
 
     [AvaloniaFact]
-    public void CapsuleActiveHoverAndFocusShareInstrumentAccentToken()
+    public void CapsuleActiveHoverAndFocusShareTheMasterAccent()
     {
-        Assert.Equal("InstrumentAccent", TrackPropertiesWindow.CapoToggle.AccentToken);
+        Assert.Equal("Accent", TrackPropertiesWindow.CapoToggle.AccentToken);   // the Appearance accent, as the rest of the window
         var capsule = new TrackPropertiesWindow.CapoToggle { Content = "Partial" };
         var window = new Window { Content = capsule, Width = 100, Height = 40 };
         using var lifetime = new WindowLifetime(window);
