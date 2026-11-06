@@ -27,7 +27,7 @@ public static class MasterLaneRowPainter
     /// <summary>The master pan range: the track pan slider's -64..63.</summary>
     public static readonly (int Minimum, int Maximum) PanRange = TrackRowCells.SliderRange(TrackRowCells.Cell.Pan);
 
-    private const string Font = "Segoe UI";
+    private const string Font = ChromeMetrics.UiFontFamily;
     private const double NameTextInset = 4;
     private const string FxTooltip = "Master effects: FX opens the chain applied to the whole mix";
     private const string FxPowerTooltip = "Master effects: the power switch bypasses the chain";

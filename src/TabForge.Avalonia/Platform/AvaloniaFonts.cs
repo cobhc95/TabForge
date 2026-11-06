@@ -26,7 +26,7 @@ public static class AvaloniaFonts
     {
         fonts ??= Provider;
         var real = string.Join(", ", logical.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Select(n => Real(n, fonts)));
-        return new FontFamily(real.Length == 0 ? fonts.Map("Segoe UI") : real);
+        return new FontFamily(real.Length == 0 ? fonts.Map(ChromeMetrics.UiFontFamily) : real);
     }
 
     private static string Real(string name, FontProvider fonts)

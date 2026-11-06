@@ -103,7 +103,7 @@ public sealed partial class TimelineView : Control
 
     /// <summary>The x of the right edge of the last bar, i.e. the laid-out width of all bars.</summary>
     public double BarsWidth => _boundaries[^1];
-    internal const string Font = "Segoe UI";
+    internal const string Font = ChromeMetrics.UiFontFamily;
 
     /// <summary>The snap settings a dragged clip snaps with (see <see cref="TimelineClipSnap"/>); null or disabled: no snapping. The arrangement sets it from its transport bar.</summary>
     public SnapSettings? Snap { get; set; }

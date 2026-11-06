@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using TabForge.KeyboardMode;
 using TabForge.Platform;
+using TabForge.Platform.Theme;
 using TabForge.Presenters;
 
 namespace TabForge.Avalonia.Platform;
@@ -17,7 +18,7 @@ namespace TabForge.Avalonia.Platform;
 public static class KeyboardNotesPainter
 {
     public const double MinBarHeight = 10;
-    public const string TextFamily = "Segoe UI";
+    public const string TextFamily = ChromeMetrics.UiFontFamily;
     public const int TextWeight = 600;
     private const double WhiteInset = 1.5, MaxRadius = 7, MinNameHeight = 20, MinNameWidth = 16, MinBarWidth = 3;
 

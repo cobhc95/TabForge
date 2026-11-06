@@ -8,6 +8,7 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using TabForge.Models;
 using TabForge.Platform;
+using TabForge.Platform.Theme;
 using TabForge.Views.EffectEditors;
 
 namespace TabForge.Avalonia.Platform;
@@ -35,7 +36,7 @@ public sealed class CurveEditorView : Control
     private const double LabelSize = 11, LabelWidth = 28, LabelGap = 6, LabelHalfHeight = 7;
     private const double StrongLine = 1, SoftLine = 1, CurveLine = 2.5, SelectedRing = 2, FocusRing = 1;
     private const double DotDash = 2, DotGap = 2, FocusDash = 4, FocusGap = 4;
-    private const string LabelFamily = "Segoe UI";
+    private const string LabelFamily = ChromeMetrics.UiFontFamily;
     private const int MinorColumnsPerMajor = 3;
     private const double HalfStep = 2;
 

@@ -1,6 +1,7 @@
 using System.Linq;
 using TabForge.Models;
 using TabForge.Platform;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Views.Score;
 
@@ -20,7 +21,7 @@ internal static class ScoreText
     private sealed record Look(string FontFamily, double TextSize, bool Bold, bool Italic, AreaStyle[] Areas, UiColor Ink);
     // The starting ink is a placeholder: ScoreGeometryProbe sets the theme's ink before anything is drawn (same value the field had before the snapshot).
     private static readonly UiColor PlaceholderInk = new(255, 255, 255, 255);
-    private static volatile Look _look = new("Segoe UI", 13.5, false, false, Enumerable.Repeat(Plain, 7).ToArray(), PlaceholderInk);
+    private static volatile Look _look = new(ChromeMetrics.UiFontFamily, 13.5, false, false, Enumerable.Repeat(Plain, 7).ToArray(), PlaceholderInk);
 
     /// <summary>The one place the look changes: <paramref name="change"/> builds the new snapshot from the current one and it is swapped in whole; two concurrent changes both land (the loser rebuilds on the winner's snapshot).</summary>
     private static void Configure(Func<Look, Look> change)
@@ -59,7 +60,7 @@ internal static class ScoreText
     /// <param name="fontFamily">A family the caller has checked exists; blank means Segoe UI.</param>
     internal static void ConfigureStyle(string? fontFamily, double size, bool bold, bool italic)
     {
-        Configure(look => look with { FontFamily = string.IsNullOrWhiteSpace(fontFamily) ? "Segoe UI" : fontFamily.Trim(), TextSize = Math.Clamp(size, 8, 24), Bold = bold, Italic = italic });
+        Configure(look => look with { FontFamily = string.IsNullOrWhiteSpace(fontFamily) ? ChromeMetrics.UiFontFamily : fontFamily.Trim(), TextSize = Math.Clamp(size, 8, 24), Bold = bold, Italic = italic });
     }
 
     private const double DynamicFontSize = 13;
@@ -78,17 +79,17 @@ internal static class ScoreText
 
     /// <summary>Laid-out width of score text for layout: the same cached layout the white-ink drawing uses.</summary>
     /// <param name="weight">OpenType weight, 400 normal, 700 bold.</param>
-    internal static double Width(IDrawContext d, ScoreTextArea area, string text, double size, int weight = 400, string font = "Segoe UI") =>
+    internal static double Width(IDrawContext d, ScoreTextArea area, string text, double size, int weight = 400, string font = ChromeMetrics.UiFontFamily) =>
         MakeTextIn(d, area, text, size, MeasureInk, weight, font).Width;
 
     /// <summary>Laid-out width of a dynamic's letters, from the same cache the drawing uses.</summary>
     internal static double DynamicWidth(IDrawContext d, string name) => DynamicText(d, name, MeasureInk).Width;
 
-    internal static UiText MakeText(IDrawContext d, string text, double size, UiColor colour, int? weight = null, string font = "Segoe UI")
+    internal static UiText MakeText(IDrawContext d, string text, double size, UiColor colour, int? weight = null, string font = ChromeMetrics.UiFontFamily)
         => MakeTextIn(d, ScoreTextArea.General, text, size, colour, weight, font);
 
     /// <param name="weight">OpenType weight; null is normal.</param>
-    internal static UiText MakeTextIn(IDrawContext d, ScoreTextArea area, string text, double size, UiColor colour, int? weight = null, string font = "Segoe UI")
+    internal static UiText MakeTextIn(IDrawContext d, ScoreTextArea area, string text, double size, UiColor colour, int? weight = null, string font = ChromeMetrics.UiFontFamily)
     {
         var look = _look;   // read once: the whole call sees one look
         var style = look.Areas[(int)area];
@@ -102,19 +103,19 @@ internal static class ScoreText
             outline: style.Outline, idealLayout: true);
     }
 
-    internal static void DrawIn(ScoreTextArea area, IDrawContext d, string text, double x, double y, double size, UiColor colour, int? weight = null, string font = "Segoe UI")
+    internal static void DrawIn(ScoreTextArea area, IDrawContext d, string text, double x, double y, double size, UiColor colour, int? weight = null, string font = ChromeMetrics.UiFontFamily)
         => d.DrawText(MakeTextIn(d, area, text, size, colour, weight, font), x, y);
 
-    internal static void DrawCenteredIn(ScoreTextArea area, IDrawContext d, string text, double cx, double y, double size, UiColor colour, int? weight = null, string font = "Segoe UI")
+    internal static void DrawCenteredIn(ScoreTextArea area, IDrawContext d, string text, double cx, double y, double size, UiColor colour, int? weight = null, string font = ChromeMetrics.UiFontFamily)
     {
         var t = MakeTextIn(d, area, text, size, colour, weight, font);
         d.DrawText(t, cx - t.Width / 2, y);
     }
 
-    internal static void Draw(IDrawContext d, string text, double x, double y, double size, UiColor colour, int? weight = null, string font = "Segoe UI")
+    internal static void Draw(IDrawContext d, string text, double x, double y, double size, UiColor colour, int? weight = null, string font = ChromeMetrics.UiFontFamily)
         => DrawIn(ScoreTextArea.General, d, text, x, y, size, colour, weight, font);
 
-    internal static void DrawCentered(IDrawContext d, string text, double cx, double y, double size, UiColor colour, int? weight = null, string font = "Segoe UI")
+    internal static void DrawCentered(IDrawContext d, string text, double cx, double y, double size, UiColor colour, int? weight = null, string font = ChromeMetrics.UiFontFamily)
         => DrawCenteredIn(ScoreTextArea.General, d, text, cx, y, size, colour, weight, font);
 
     /// <summary>Draws laid-out text with its top left at (<paramref name="x"/>, <paramref name="y"/>), outline included.</summary>
@@ -144,6 +145,6 @@ internal static class ScoreText
 /// <summary>The score layout's text widths, read from <see cref="ScoreText"/> through a drawing context used only to lay text out.</summary>
 internal sealed class ScoreTextWidths(IDrawContext measure) : IScoreTextWidths
 {
-    public double Width(ScoreTextArea area, string text, double size, int weight = 400, string font = "Segoe UI") => ScoreText.Width(measure, area, text, size, weight, font);
+    public double Width(ScoreTextArea area, string text, double size, int weight = 400, string font = ChromeMetrics.UiFontFamily) => ScoreText.Width(measure, area, text, size, weight, font);
     public double DynamicWidth(string name) => ScoreText.DynamicWidth(measure, name);
 }

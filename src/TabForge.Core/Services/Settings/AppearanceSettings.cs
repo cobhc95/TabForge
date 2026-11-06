@@ -60,10 +60,10 @@ public sealed class AppearanceSettings
     public string LightScoreLinesColour { get; set; } = Palette.Hex("ScoreLightStaffLineDefault", true);
     /// <summary>Which typefaces the interface and score use: "Windows" (Segoe UI / Consolas), "Bundled" (Inter / JetBrains Mono) or empty for the default of this operating system (see FontProvider).</summary>
     public string FontSource { get; set; } = "";
-    public string FontFamily { get; set; } = "Segoe UI";
+    public string FontFamily { get; set; } = ChromeMetrics.UiFontFamily;
     public double FontSize { get; set; } = 12;
     /// <summary>Shared typeface for text rendered on the score page.</summary>
-    public string ScoreFontFamily { get; set; } = "Segoe UI";
+    public string ScoreFontFamily { get; set; } = ChromeMetrics.UiFontFamily;
     /// <summary>Per-area score text overrides keyed by area name (Header, BarInfo, Fret, Technique, Chord, Lyrics, General).</summary>
     public Dictionary<string, ScoreTextAreaStyle> ScoreTextAreas { get; set; } = new();
     /// <summary>Base score text size; does not change page or bar layout.</summary>

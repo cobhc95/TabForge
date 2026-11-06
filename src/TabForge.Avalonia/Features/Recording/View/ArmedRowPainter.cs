@@ -42,7 +42,7 @@ public static class ArmedRowPainter
     /// <summary>The timeline hint's left edge in the lane.</summary>
     public const double HintLeft = 8;
 
-    private const string Font = "Segoe UI";
+    private const string Font = ChromeMetrics.UiFontFamily;
 
     /// <summary>The monitor half's left edge in the track list.</summary>
     public static double MonitorLeft => LabelLeft + LabelWidth + ControlGap;

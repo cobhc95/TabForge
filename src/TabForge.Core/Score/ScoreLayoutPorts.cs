@@ -1,3 +1,5 @@
+using TabForge.Platform.Theme;
+
 namespace TabForge.Views.Score;
 
 // Owns: what the score layout reads from the app: the spacing settings and the laid-out width of score text.
@@ -28,7 +30,7 @@ internal interface IScoreLayoutSettings
 internal interface IScoreTextWidths
 {
     /// <param name="weight">OpenType weight, 400 normal, 700 bold.</param>
-    double Width(ScoreTextArea area, string text, double size, int weight = 400, string font = "Segoe UI");
+    double Width(ScoreTextArea area, string text, double size, int weight = 400, string font = ChromeMetrics.UiFontFamily);
     /// <summary>Width of a dynamic's letters.</summary>
     double DynamicWidth(string name);
 }

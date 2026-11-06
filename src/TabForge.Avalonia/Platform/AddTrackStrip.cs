@@ -1,5 +1,6 @@
 using System;
 using TabForge.Platform;
+using TabForge.Platform.Theme;
 using TabForge.Services;
 
 namespace TabForge.Avalonia.Platform;
@@ -11,7 +12,7 @@ namespace TabForge.Avalonia.Platform;
 // Tests: TabForge.Avalonia.Tests.AddTrackStripTests, TabForge.Avalonia.Tests.TrackListOwnerLayoutTests.
 public static class AddTrackStrip
 {
-    private const string Font = "Segoe UI";
+    private const string Font = ChromeMetrics.UiFontFamily;
     private const double LabelFontSize = 12;
     private const double GlowOpacity = 0.10;
     /// <summary>A dragged audio file over the strip: an accent wash with a border and the drop words (the add-track drag shade).</summary>

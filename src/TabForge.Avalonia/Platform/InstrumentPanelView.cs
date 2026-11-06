@@ -44,7 +44,7 @@ public sealed partial class InstrumentPanelView : Control
     /// the legend), so there is no width or aspect cap; the string gap cap of 44 only sets how far the pane's height grows.
     /// Only this panel uses them.</summary>
     internal static readonly FretboardBoardLimits BoardLimits = new(double.PositiveInfinity, 44, double.PositiveInfinity, ClearsLegend: true, RealProportions: true);
-    internal const string Font = "Segoe UI";
+    internal const string Font = ChromeMetrics.UiFontFamily;
     /// <summary>The placeholder texts and size: no track selected, and an audio track selected.</summary>
     private const string NoTrackPlaceholderText = "Select a track to see the instrument";
     private const string AudioTrackPlaceholderText = "Audio/MIDI track — no instrument view";

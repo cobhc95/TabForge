@@ -93,7 +93,7 @@ public static class ChromeMetrics
     public const double SelectedStripWidth = 4, SelectedStripCorner = 2;
 
     /// <summary>The family of the drawn text of custom-painted controls (track rows, mixer buttons, the timeline and the fretboard).</summary>
-    public const string UiFontFamily = "Segoe UI";
+    public const string UiFontFamily = FontProvider.WindowsSans;
 
     /// <summary>The Mixer's drawn FX buttons: the split FX button's width, the Monitor FX button's width and their shared height.</summary>
     public const double FxSplitButtonWidth = 54, MonitorFxButtonWidth = 56, MixerFxButtonHeight = 22;

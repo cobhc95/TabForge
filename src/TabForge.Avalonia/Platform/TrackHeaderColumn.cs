@@ -35,7 +35,7 @@ public sealed class TrackHeaderColumn : Control
     /// <summary>The name column width the list is laid out with (the timeline holds it, the splitter sets it).</summary>
     public double NameColumnWidth => _timeline.TrackListNameWidth;
     private const double IconSize = 22;
-    private const string Font = "Segoe UI";
+    private const string Font = ChromeMetrics.UiFontFamily;
     private const int SelectedNameWeight = 700, NameWeight = 400;
 
     /// <summary>The row index the master row's cells report in hit tests and requests: no track row.</summary>

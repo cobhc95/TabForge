@@ -108,7 +108,7 @@ public sealed record SvgIcon(UiColor PanelTop, UiColor PanelBottom, UiColor Bord
         foreach (var ancestor in element.Ancestors().Reverse())
             style = ResolveStyle(ancestor, css, style);
         style = ResolveStyle(element, css, style);
-        var family = style.GetValueOrDefault("font-family")?.Split(',')[0].Trim(' ', '\'', '"') ?? "Segoe UI";
+        var family = style.GetValueOrDefault("font-family")?.Split(',')[0].Trim(' ', '\'', '"') ?? ChromeMetrics.UiFontFamily;
         var fontWeight = style.GetValueOrDefault("font-weight");
         var bold = string.Equals(fontWeight, "600", StringComparison.OrdinalIgnoreCase) || string.Equals(fontWeight, "bold", StringComparison.OrdinalIgnoreCase);
         var anchor = style.GetValueOrDefault("text-anchor") switch
