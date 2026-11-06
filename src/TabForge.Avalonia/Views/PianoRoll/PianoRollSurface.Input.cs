@@ -53,6 +53,7 @@ public sealed partial class PianoRollSurface
 
     private void EndGesture()
     {
+        _marqueeEdgeScroll?.Stop();
         _rightBox = false;
         _gesture = Gesture.None;
         _moved = false;

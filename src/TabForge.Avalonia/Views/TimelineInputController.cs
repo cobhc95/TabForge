@@ -298,6 +298,7 @@ public sealed partial class TimelineInputController
                 break;
             case Gesture.Box:
                 UpdateBoxSelect(p);
+                BoxEdgeScroll.Update(p.Y, _view.TrackRowsTop, _view.TrackRowsBottom);
                 break;
             case Gesture.Loop:
                 UpdateLoopDrag(p);

@@ -10,6 +10,7 @@ namespace TabForge.Avalonia.Views;
 
 // Owns: the box drag on the lanes (Explorer style): the marquee from the press to the pointer (TimelineView.Marquee, drawn as an overlay) and the white
 //   selection of exactly the clips it touches, live while dragging; the release hides the marquee and keeps the white. It never makes a time range or loop.
+//   A box dragged above or below the track rows scrolls the rows that way (EdgeAutoScroll); the box's fixed corner moves with them.
 // Does not own: the clip hit geometry (TimelineAudioClips.ClipsIn), the clip move (TimelineClipGestureController) or the loop region (TimelineInputController.Loop).
 // Tests: TabForge.Avalonia.Tests.TimelineBoxSelectionTests.
 public sealed partial class TimelineInputController
@@ -18,11 +19,19 @@ public sealed partial class TimelineInputController
     private readonly List<(int Row, int Index)> _boxShown = new();
     private BarHighlightSnapshot? _boxBefore;
     private bool _boxAdds;   // Ctrl held at the start: the box adds its cells to the highlight
+    private double _boxScrolled;   // how far the rows scrolled during this box (DIPs, positive is down): the press corner moved up by it
+    private Point _boxPointer;
+    private EdgeAutoScroll? _boxEdgeScroll;
+
+    private EdgeAutoScroll BoxEdgeScroll => _boxEdgeScroll ??= new EdgeAutoScroll(
+        dy => { var before = _view.RowScrollOffset; _view.RowScrollOffset = before + dy; return _view.RowScrollOffset - before; },
+        moved => { _boxScrolled += moved; UpdateBoxSelect(_boxPointer); });
 
     // A new box drops the earlier white selection (clips, the grey cells and the score notes), so a box touching nothing leaves nothing white.
     private void BeginBoxSelect(Point pointer, bool add)
     {
         _boxAdds = add;
+        _boxScrolled = 0;
         _boxShown.Clear();
         _view.SelectedClip = null;
         _boxBefore = _highlight.Snapshot();   // the grey block goes now, quietly; the release records the clear and the new block as one undo step
@@ -34,8 +43,10 @@ public sealed partial class TimelineInputController
     // Each pointer move only moves the marquee (a struct) and walks the clips; the selection changes (and allocates) when the touched set does.
     private void UpdateBoxSelect(Point pointer)
     {
-        var box = new Rect(new Point(Math.Min(_pressPoint.X, pointer.X), Math.Min(_pressPoint.Y, pointer.Y)),
-            new Point(Math.Max(_pressPoint.X, pointer.X), Math.Max(_pressPoint.Y, pointer.Y)));
+        _boxPointer = pointer;
+        var anchorY = _pressPoint.Y - _boxScrolled;
+        var box = new Rect(new Point(Math.Min(_pressPoint.X, pointer.X), Math.Min(anchorY, pointer.Y)),
+            new Point(Math.Max(_pressPoint.X, pointer.X), Math.Max(anchorY, pointer.Y)));
         _view.Marquee = box;
         _view.InvalidateVisual();
         _boxNow.Clear();
@@ -56,6 +67,7 @@ public sealed partial class TimelineInputController
     // The release (or a lost capture) hides the marquee; the white stays.
     private void EndBoxSelect(bool commit = false)
     {
+        _boxEdgeScroll?.Stop();
         if (_view.Marquee is not { } box) return;
         if (commit) HighlightBox(box);
         if (_boxBefore is { } before) { DocumentEdits.RecordHighlight(_document, before, "Highlight bars"); _boxBefore = null; }
@@ -72,7 +84,8 @@ public sealed partial class TimelineInputController
             if (!_document.Project.Tracks[row].HasNotation) continue;
             var top = _view.RowTop(row);
             if (top >= box.Bottom || top + _view.NotationHeightOf(row) <= box.Y) continue;
-            if (top >= _view.TrackRowsBottom || top + _view.NotationHeightOf(row) <= _view.TrackRowsTop) continue;   // scrolled out of view
+            // Rows out of view are left out, except those the box scrolled past: the rows area at the press, moved by the scroll since, counts too.
+            if (top >= Math.Max(_view.TrackRowsBottom, _view.TrackRowsBottom - _boxScrolled) || top + _view.NotationHeightOf(row) <= Math.Min(_view.TrackRowsTop, _view.TrackRowsTop - _boxScrolled)) continue;
             if (first < 0) first = row;
             last = row;
         }

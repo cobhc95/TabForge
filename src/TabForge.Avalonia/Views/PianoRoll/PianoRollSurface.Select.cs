@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
 using Avalonia.Input;
+using TabForge.Avalonia.Platform;
 using TabForge.Presenters;
 
 namespace TabForge.Avalonia.Views;
@@ -9,7 +10,7 @@ namespace TabForge.Avalonia.Views;
 // Owns: the piano roll's selection and tool-drag gestures: the Select tool's (Pointer) left-drag box marquee and Alt-drag
 //       freehand lasso (Shift adds, Ctrl toggles), the Split line drag (every crossed note cut at the snap), the Glue
 //       drag (touched notes merged) and the Mute paint (each touched note flipped once). Each commits one undo step on
-//       release; a drag only hit-tests and invalidates.
+//       release; a drag only hit-tests and invalidates. A box dragged above or below the note grid scrolls the grid that way (EdgeAutoScroll).
 // Does not own: starting the gesture (PianoRollSurface.Input) or drawing the overlays (PianoRollSurface.Drawing).
 // Tests: TabForge.Avalonia.Tests.PianoRollSelectTests.
 public sealed partial class PianoRollSurface
@@ -19,6 +20,19 @@ public sealed partial class PianoRollSurface
     private readonly HashSet<int> _glueTouched = new();
     private readonly HashSet<int> _muteTouched = new();
     private List<int> _splitHits = new();
+    private EdgeAutoScroll? _marqueeEdgeScroll;
+
+    // The box's press corner rides with the notes as the grid scrolls under the held pointer.
+    private EdgeAutoScroll MarqueeEdgeScroll => _marqueeEdgeScroll ??= new EdgeAutoScroll(
+        dy =>
+        {
+            var before = ScrollY;
+            ScrollTo(ScrollX, before + dy);
+            var moved = ScrollY - before;
+            if (moved != 0) UserScrolled?.Invoke();
+            return moved;
+        },
+        moved => { _press = new Point(_press.X, _press.Y - moved); InvalidateVisual(); });
 
     private void ClearSelectState()
     {
@@ -51,6 +65,7 @@ public sealed partial class PianoRollSurface
 
     private void DragSelectBox(Point p)
     {
+        if (_gesture == Gesture.Marquee) MarqueeEdgeScroll.Update(p.Y, GridTop, GridBottom);
         if (_gesture != Gesture.Lasso) return;
         if (_lasso.Count == 0 || System.Math.Abs(_lasso[_lasso.Count - 1].X - p.X) + System.Math.Abs(_lasso[_lasso.Count - 1].Y - p.Y) > 2) _lasso.Add(p);
     }

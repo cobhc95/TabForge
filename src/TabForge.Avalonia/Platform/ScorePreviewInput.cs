@@ -1,6 +1,8 @@
 ﻿using System;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.VisualTree;
 using TabForge.Models;
 using TabForge.Views.Score;
 
@@ -9,6 +11,7 @@ namespace TabForge.Avalonia.Platform;
 // Owns: the score view's pointer and key input on the editor surface: a press places the cursor (playback follows it on press), a drag selects
 //   (also when it starts on a note: notes are never moved by the mouse) and shows the marquee from the press to the pointer, a release places the cursor
 //   at the start of a dragged range, hides the marquee and reports the finished selection (the loop link loops it), a pointer without a button sets the hover, and the editor's keys and Escape.
+//   A selection drag that leaves the score above or below (into the timeline under it, say) scrolls the score that way (EdgeAutoScroll).
 // Does not own: the drawing, the zoom and the wheel (ScorePreviewView), the edit rules (ScorePreviewEditor), the key mapping (AvaloniaEditorKeys),
 //   the section heading hit test (ScoreSectionLinks).
 // Tests: TabForge.Avalonia.Tests.ScorePreviewEditorTests, TabForge.Avalonia.Tests.ScoreCursorNoteboxTests.
@@ -34,7 +37,35 @@ internal sealed partial class ScorePreviewInput
     /// <summary>How far (px) a held press may wobble and still be a plain click.</summary>
     private const double ClickSlop = 3;
 
-    internal ScorePreviewInput(ScorePreviewView view) => _view = view;
+    // The held pointer of a selection drag, in view coordinates, and the scroll that runs while it is above or below the score's viewer.
+    private Point _heldAt;
+    private readonly EdgeAutoScroll _edgeScroll;
+
+    internal ScorePreviewInput(ScorePreviewView view)
+    {
+        _view = view;
+        _edgeScroll = new EdgeAutoScroll(ScrollViewerBy, FollowScroll);
+    }
+
+    private ScrollViewer? Viewer => _view.FindAncestorOfType<ScrollViewer>();
+
+    // Scrolls the score's viewer down by dy (up when negative) inside its extent; returns what it moved.
+    private double ScrollViewerBy(double dy)
+    {
+        if (Viewer is not { } viewer) return 0;
+        var moved = EdgeAutoScroll.Clamped(viewer.Offset.Y, dy, viewer.Extent.Height - viewer.Viewport.Height);
+        if (moved != 0) viewer.Offset = new Vector(viewer.Offset.X, viewer.Offset.Y + moved);
+        return moved;
+    }
+
+    // The held pointer stays on the screen while the score moves under it: the selection extends to the point now under it.
+    private void FollowScroll(double moved)
+    {
+        _heldAt = new Point(_heldAt.X, _heldAt.Y + moved);
+        var p = _view.PagePoint(_heldAt);
+        _view.Editor.DragTo(p.X, p.Y);
+        _view.InvalidateVisual();
+    }
 
     /// <summary>A left press: a section heading, or the cursor at the press point (playback follows it on press).</summary>
     internal void Press(PointerPressedEventArgs e)
@@ -70,6 +101,7 @@ internal sealed partial class ScorePreviewInput
     {
         if (e.InitialPressMouseButton == MouseButton.Right && EndRightHold(e)) return;
         _view.Editor.Release();
+        _edgeScroll.Stop();
         _pressAt = null;
         if (_view.Marquee is not null) { _view.Marquee = null; _view.InvalidateVisual(); }
         if (_pressPlacesCursor && !_dragged) _view.RaisePlainClicked();
@@ -96,6 +128,8 @@ internal sealed partial class ScorePreviewInput
         if (_pressAt is { } from)
         {
             var at = e.GetPosition(_view);   // a struct: the marquee costs no allocation per move
+            _heldAt = at;
+            if (Viewer is { } viewer) _edgeScroll.Update(e.GetPosition(viewer).Y, 0, viewer.Viewport.Height);
             _dragged |= Math.Abs(at.X - from.X) > ClickSlop || Math.Abs(at.Y - from.Y) > ClickSlop;
             // disabled 25 Oct: the score uses the old note-selection drag, no marquee box
             // _view.Marquee = new Rect(Math.Min(from.X, at.X), Math.Min(from.Y, at.Y), Math.Abs(at.X - from.X), Math.Abs(at.Y - from.Y));
@@ -107,6 +141,7 @@ internal sealed partial class ScorePreviewInput
     /// <summary>The press ended without a release (capture lost): no marquee.</summary>
     internal void CaptureLost()
     {
+        _edgeScroll.Stop();
         _pressAt = null;
         LoseRightCapture();
         if (_view.Marquee is null) return;

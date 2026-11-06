@@ -4,6 +4,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ## 0.9.1
 
+- Drag selection scrolls: while you drag a selection in the score, the timeline lanes or the piano roll and carry the pointer out of the view (in the score, into the timeline below it or the area above it), the view keeps scrolling that way, faster the further out the pointer is, and stops when the pointer comes back or the content ends; the selection keeps following the pointer (untested in app).
 - Band view: the side panels (Tools, Structure, Rhythm, Layout, Sections, Lyrics) opened from the toolbar now come back in the same column, arrangement and width as in the normal view, instead of a narrow column with its tabs along the right edge (untested in app).
 - Rewind while playing: pressing Rewind (or another jump to the same spot) again while the song is still being prepared for that spot no longer starts the preparation over, and on a song without repeats a rewind after the first one jumps at once instead of preparing the song again, so the playhead no longer holds still between presses (untested in app).
 - Live input window: the strip now fits one row at the default size (960 x 480) with no clipped control and no dead space: the strip frame hugs its controls instead of stretching, the Tuner switch is as wide as its label, the note and cents cells and the Gain, Vol and Pan labels take only their text width, and the cents scale shrinks first when the window narrows.
