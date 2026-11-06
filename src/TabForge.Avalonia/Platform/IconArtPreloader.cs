@@ -103,9 +103,9 @@ public static class IconArtPreloader
     /// <summary>Invalidates the visible icon hosts under <paramref name="window"/> once, so their next render draws the loaded art. Single-shot: no timer.</summary>
     internal static void RefreshIconHosts(Window window)
     {
-        // The four surfaces that draw the preloaded art: each painted nothing before the load, and nothing else repays them until hover.
+        // The three surfaces that draw the preloaded art: each painted nothing before the load, and nothing else repays them until hover.
         foreach (var host in window.GetVisualDescendants().OfType<Control>())
-            if (host is ToolIconView || host is TrackIconPicture || host is TrackHeaderColumn || host is TransportBarView.TransportButton)
+            if (host is ToolIconView || host is TrackHeaderColumn || host is TransportBarView.TransportButton)
                 host.InvalidateVisual();
     }
 }

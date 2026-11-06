@@ -186,17 +186,6 @@ public sealed class MixEngine : ISampleProvider
     /// <summary>Song position: <paramref name="songSec"/> at Stopwatch time <paramref name="stamp"/> (the MIDI time-stamp clock).</summary>
     public void SetPosition(bool playing, double songSec, long stamp, double speed = 1.0) => _song.SetPosition(playing, songSec, stamp, speed);
 
-    /// <summary>The song time now, on the time-stamp clock (what TabForge's scheduler is sending).</summary>
-    public double SongSecNow
-    {
-        get
-        {
-            // Owner 0 unless it is stopped and another song plays: the recording follows the song that is heard.
-            var o = _song;
-            if (!o.Current.Playing) foreach (var other in _owners) if (other.Current.Playing) { o = other; break; }
-            return o.Current.SecAt(Stopwatch.GetTimestamp());
-        }
-    }
 
     /// <summary>The song time of one owner now (a recording aligns to the song that records); owner 0 when the id is out of range.</summary>
     public double SongSecFor(int owner) => _owners[owner >= 0 && owner < _owners.Length ? owner : 0].Current.SecAt(Stopwatch.GetTimestamp());

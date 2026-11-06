@@ -30,13 +30,6 @@ public sealed partial class PlaybackEngine
         return position;
     }
 
-    internal double SchedulerClockMs
-    {
-        get
-        {
-            lock (_gate) return _paused ? _anchorMs : _anchorMs + _clock.Elapsed.TotalMilliseconds * _clockRate;
-        }
-    }
 
     internal static double AudibleStreamMs(double schedulerMs, double latencyWallMs, double clockRate) =>
         PlaybackFrameRules.AudibleStreamMs(schedulerMs, latencyWallMs, clockRate);

@@ -36,7 +36,6 @@ public sealed class NullOutput : IWavePlayer, IResetRequestingOutput
     public int BlockFrames { get; }
     /// <summary>Blocks read from the source so far.</summary>
     public long Blocks => Interlocked.Read(ref _blocks);
-    public bool IsManual => _manual;
 
     public PlaybackState PlaybackState => _state;
     public float Volume { get; set; } = 1f;

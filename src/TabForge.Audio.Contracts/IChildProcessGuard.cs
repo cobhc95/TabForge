@@ -16,11 +16,3 @@ public interface IChildProcessGuard : IDisposable
     /// <summary>Puts <paramref name="process"/> under the guard; false when that was not possible.</summary>
     bool Add(Process process);
 }
-
-/// <summary>The non-Windows stub: no kill-on-close guard exists, so nothing is added and the owners' HasExited polling ends orphans.</summary>
-public sealed class NullChildProcessGuard : IChildProcessGuard
-{
-    public bool IsActive => false;
-    public bool Add(Process process) => false;
-    public void Dispose() { }
-}

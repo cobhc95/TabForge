@@ -170,19 +170,6 @@ public sealed partial class PlaybackEngine : IDisposable
         PanicAsync();
     }
 
-    /// <summary>The loop's start and end in the playing timeline's milliseconds while looping is on; null when it is off or has no usable span (read-only, for views).</summary>
-    public (double StartMs, double EndMs)? ActiveLoopMs
-    {
-        get
-        {
-            var options = _options;
-            var timeline = _timeline;
-            if (options is not { Loop: true } || timeline is null) return null;
-            var (start, end, available) = ComputeLoopBounds(timeline, options);
-            return available ? (start, end) : null;
-        }
-    }
-
     /// <summary>Change the relative speed, preserving the current musical position.</summary>
     public void SetSpeed(SongProject project, double speed)
     {

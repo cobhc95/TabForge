@@ -19,8 +19,6 @@ public sealed class ThemeSettingsBinding : IDisposable
 {
     private const string LightMode = "Light";
     private const string SystemMode = "System";
-    private const double ComfortableMinHeight = 24, CompactMinHeight = 20;
-    private const double ComfortablePaddingY = 3, CompactPaddingY = 1, ControlPaddingX = 5;
 
     private readonly Window _window;
     private readonly LayoutTransformControl _root;

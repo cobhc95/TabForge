@@ -1,6 +1,6 @@
 // Owns: the browser-style tab drag decisions that need no window: the drag threshold, the insertion slot among captured tab
 //       midpoints, the reorder destination and its neighbour slide offsets, the tear-off action for a tab count, the tear-off band
-//       around the strip, the window whose tab strip a drop lands on, and whether a drop is accepted across windows.
+//       around the strip, and the window whose tab strip a drop lands on.
 // Does not own: pointer capture, window moves and the live tear-off (src/TabForge.Avalonia/Shell/DocumentTabDragFlow.cs).
 // Tests: TabForge.Avalonia.Tests.TabDragRulesTests (fake rectangles), TestChromeHitRules, TestBrowserTabShell.
 using System.Collections.Generic;
@@ -18,9 +18,6 @@ public static class TabDragRules
     /// <summary>How far the pointer may leave the tab strip band (above or below it) before the tab tears off, in DIPs. Shared with the
     /// the old shell's tear-off rule, so it keeps the value its own checks use.</summary>
     public const double TearOffTolerance = 22;
-
-    public static bool AcceptsDrop(bool allowCrossWindowMerge, bool isLocalTab) =>
-        allowCrossWindowMerge || isLocalTab;
 
     public static bool CrossedThreshold(double dx, double dy, double threshold = DragThreshold) =>
         !double.IsNaN(dx) && !double.IsNaN(dy) && !double.IsNaN(threshold) && threshold >= 0 &&

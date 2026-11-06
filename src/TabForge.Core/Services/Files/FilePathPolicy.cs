@@ -102,12 +102,6 @@ public static partial class FilePathPolicy
         finally { DeleteQuietly(probe); }
     }
 
-    /// <summary>
-    /// Fallback when Windows (e.g. Controlled Folder Access) blocks a media folder: the ordered
-    /// <see cref="FallbackWritableChain"/> (LocalAppData, then Temp), or null when neither probes writable.
-    /// </summary>
-    public static string? FallbackWritableFolder(string kind) => FallbackWritableChain(kind, null, out _);
-
     /// <summary>True when <paramref name="error"/> looks like disk-full/quota rather than access-denied (Win32 39/112 or full/quota/space wording).</summary>
     public static bool IsDiskFull(Exception error)
     {

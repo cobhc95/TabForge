@@ -12,6 +12,6 @@ Pure window-chrome rules: tab drag decisions and chrome hit regions. No WPF or A
 | File | Owns |
 |---|---|
 | `ChromeHitRules.cs` | `ChromeHit` (regions and the 8 resize edges and corners), `ChromeOs`, `Classify` (caption button, tab action, tab, caption, client), `ClassifyResizeEdge` (border rule, maximised has none), `LeadingInset` (macOS 78, else 0). |
-| `TabDragRules.cs` | `TabTearOffAction`, the drag threshold, `CrossedThreshold`, `InsertionIndex`, `InsertIndex` (screen rectangles), `ReorderDestination`, `ReorderSlideOffsets`, `TearOffAction`, `IsBeyondTearOff`, `ResolveDropTarget`, `AcceptsDrop`. |
+| `TabDragRules.cs` | `TabTearOffAction`, the drag threshold, `CrossedThreshold`, `InsertionIndex`, `InsertIndex` (screen rectangles), `ReorderDestination`, `ReorderSlideOffsets`, `TearOffAction`, `IsBeyondTearOff`, `ResolveDropTarget`. |
 | `NativeHitCodes.cs` | `NativeHitCodes`: the Win32 `WM_NCHITTEST`, `WM_NC*` mouse and `HT*` numbers that the WPF and Avalonia Windows shells both use. Plain values, no P/Invoke. |
 

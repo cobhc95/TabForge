@@ -367,9 +367,8 @@ internal static class DialogMetrics
     public const double ResetAppWidth = 640, ResetAppHeight = 560, ResetAppMinHeight = 420, ResetAppListMaxHeight = 230,
         ResetAppSpacing = 8, ResetAppConfirmWidth = 150;
 
-    /// <summary>The "Reset entire app" dialog: the gap above each step body, before the keep/wiped lists and above the footer.</summary>
-    public static readonly Thickness ResetAppListGap = new(0, 6, 0, 0),
-        ResetAppBackupGap = new(0, 12, 0, 0), ResetAppConfirmGap = new(0, 10, 0, 0);
+    /// <summary>The "Reset entire app" dialog: the gap before the keep/wiped lists and above the footer.</summary>
+    public static readonly Thickness ResetAppBackupGap = new(0, 12, 0, 0), ResetAppConfirmGap = new(0, 10, 0, 0);
 
     /// <summary>The MIDI processing window and its sibling editors (MidiParamEditors, MidiNoteMapRows, MidiPresetBars, Articulations pane/row):
     /// adaptive widths so narrow windows wrap instead of clipping. The two list columns shrink first to their minimums while the editor
