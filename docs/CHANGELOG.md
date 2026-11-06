@@ -4,6 +4,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ## 0.9.1
 
+- Fretboard legend: each of now, next and upcoming is a full-width row you can click (the dot and the label together); it shades with a thin edge under the pointer and opens the colour picker under the row. The Scales and Modify buttons stay below as before (untested in app).
 - Fretboard inlays: the Position inlay colour option is gone; each inlay material now shows its own colour over its grain (pearl white stays white, black pearl dark, abalone blue and green their own hues), and inlays never pick up the green of the playing-note dots. Older settings files load as before (untested in app).
 - Fretboard defaults follow the theme: the dark theme starts on Rosewood at 75% board brightness, the light theme on Maple at 90%; a look or brightness you chose stays when the theme changes, and Reset section on the Look page goes back to the shown theme's defaults (untested in app).
 - Drag selection scroll: while a selection drag is past the edge of the score, the timeline or the piano roll during playback, the view no longer jumps back to the playhead; following resumes when the pointer comes back inside or the drag ends (untested in app).

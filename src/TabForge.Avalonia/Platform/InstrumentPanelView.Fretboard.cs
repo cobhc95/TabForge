@@ -266,16 +266,21 @@ public sealed partial class InstrumentPanelView
     // A legend row's dot: its centre from the row's left and top, and its radius (board units).
     private const double LegendDotX = 6, LegendDotY = 7, LegendDotRadius = 4.5;
 
-    /// <summary>The centre of the legend's dot for <paramref name="role"/>, in panel coordinates: null on the keyboard and drums, and for next and
-    /// upcoming while the legend does not list them (look-ahead off).</summary>
-    public UiPoint? LegendDotAnchor(FretNoteRole role)
+    // A clickable legend row is inset this far from the card's sides (board units), so it stays inside the card.
+    private const double LegendRowInset = 4;
+
+    /// <summary>The legend row (dot and label) for <paramref name="role"/> across the card's width, in panel coordinates: null on the keyboard and
+    /// drums, and for next and upcoming while the legend does not list them (look-ahead off).</summary>
+    public UiRect? LegendRowBounds(FretNoteRole role)
     {
         if (_kind != InstrumentPanelKind.Fretboard) return null;
         var row = role == FretNoteRole.Now ? 0 : _look.PreviewHorizon < 0 ? -1 : role == FretNoteRole.Next ? 1 : 2;
         if (row < 0) return null;
         var board = FretboardLayout().Board;
         var s = FretboardScale();
-        return new UiPoint((board.Right + LegendGap + LegendDotX) * s, (LegendTop(board) + LegendTitleHeight + row * LegendRowHeight + LegendDotY) * s);
+        var left = board.Right + LegendGap - LegendCardPad + LegendRowInset;
+        var top = LegendTop(board) + LegendTitleHeight + row * LegendRowHeight;
+        return new UiRect(left * s, top * s, (LegendCardWidth - 2 * LegendRowInset) * s, LegendRowHeight * s);
     }
 
     /// <summary>Where the Scales button goes on a fretboard: under the legend, in panel coordinates. Null for the keyboard and drums.</summary>
