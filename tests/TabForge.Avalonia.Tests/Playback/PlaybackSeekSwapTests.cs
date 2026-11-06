@@ -65,4 +65,61 @@ public class PlaybackSeekSwapTests
         Assert.True(output.NoteOns >= expected, $"sent {output.NoteOns} note-ons after the swap, the timeline has {expected} in its first {CheckedSpanMs} ms");
         Assert.Equal(0, engine.LateNotesDropped);
     }
+
+    // Rewind pressed again while the first press still compiles: the compile that is running carries on rather than starting over.
+    [Fact]
+    public void ARewindPressedAgainWhileItCompilesKeepsTheRunningCompile()
+    {
+        var song = FullDemoSongFactory.Create();
+        using var engine = StartedAtBar(song, 2);
+        engine.Seek(song, 0, 0);   // bar 1 lies before the compiled start: a rebuild
+        var first = Latest(engine);
+        engine.Seek(song, 0, 0);
+        var second = Latest(engine);
+        engine.Stop();
+
+        Assert.NotNull(first);
+        Assert.Same(first, second);
+    }
+
+    // Rewind pressed again after the first press's rebuilt timeline swapped in (a song without repeats): the rebuilt schedule is reused, nothing compiles again.
+    [Fact]
+    public void ARewindAfterARebuiltSeekReusesTheRebuiltTimeline()
+    {
+        var song = new global::TabForge.Models.SongProject { Tempo = 120 };
+        song.Tracks.Add(new global::TabForge.Models.TrackModel { Name = "Gtr", Measures = TemplateFactory.Measures(40) });
+        using var engine = StartedAtBar(song, 2);
+        var started = engine.Timeline;
+        engine.Seek(song, 0, 0);
+        var wait = Stopwatch.StartNew();
+        while (ReferenceEquals(engine.Timeline, started) && wait.ElapsedMilliseconds < SwapWaitMs) Thread.Sleep(1);
+        var rebuilt = engine.Timeline;
+        Thread.Sleep(100);
+        engine.Seek(song, 0, 0);
+        var queued = Latest(engine);
+        Thread.Sleep(300);
+        var after = engine.Timeline;
+        engine.Stop();
+
+        Assert.NotSame(started, rebuilt);
+        Assert.Null(queued);
+        Assert.Same(rebuilt, after);
+    }
+
+    private static PlaybackEngine StartedAtBar(global::TabForge.Models.SongProject song, int bar)
+    {
+        var engine = new PlaybackEngine(new NoteOnRecorder());
+        engine.Start(song, new PlaybackOptions { StartBar = bar, LoopEndBar = song.Tracks.Max(t => t.Measures.Count) - 1 }, _ => { }, () => { });
+        var wait = Stopwatch.StartNew();
+        while (engine.Timeline is null && wait.ElapsedMilliseconds < SwapWaitMs) Thread.Sleep(1);
+        Thread.Sleep(200);
+        return engine;
+    }
+
+    // The seek rebuild's newest request (null when none is pending).
+    private static object? Latest(PlaybackEngine engine)
+    {
+        var rebuild = typeof(PlaybackEngine).GetField("_seekRebuild", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(engine)!;
+        return rebuild.GetType().GetField("_latest", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(rebuild);
+    }
 }

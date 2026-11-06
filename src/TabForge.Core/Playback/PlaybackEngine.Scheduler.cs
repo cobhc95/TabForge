@@ -67,7 +67,7 @@ public sealed partial class PlaybackEngine : IDisposable, IPlaybackEngine
             var built = request.Timeline!;
             Publish(built, request.Project, request.Snapshot);
             ClearProgramPreviews();   // the rebuilt timeline carries the programs of the song as it is now
-            _scheduleReuse = null;   // the reuse check needs the engine's own song and options; a rebuilt timeline is captured on the next start
+            _scheduleReuse = request.Reuse;   // captured from the rebuild's own song copy and options, so the next seek on this timeline need not compile again
             _resumeSkipThroughMs = double.NaN;
             if (_pendingSeek is { } pending) _pendingSeek = pending with { TargetMs = request.StartMs };
             _anchorMs = request.StartMs;

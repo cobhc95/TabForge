@@ -54,6 +54,9 @@ internal sealed class PlaybackSeekRebuild
         /// <summary>The song ms where playback resumes on <see cref="Timeline"/>. Guarded by the owner's lock.</summary>
         public double StartMs { get; internal set; }
 
+        /// <summary>The reuse check for <see cref="Timeline"/>, built beside the compile so the seeks after this one can reuse the rebuilt schedule. Guarded by the owner's lock.</summary>
+        public PlaybackScheduleReuse? Reuse { get; internal set; }
+
         /// <summary>The exception that stopped the compile; null on success. Guarded by the owner's lock.</summary>
         public Exception? Failure { get; internal set; }
 
@@ -79,17 +82,28 @@ internal sealed class PlaybackSeekRebuild
         return snapshot;
     }
 
-    /// <summary>Queues the rebuild for a seek and returns at once; the compile runs on a thread-pool thread. An older request not yet taken is cancelled.</summary>
+    /// <summary>
+    /// Queues the rebuild for a seek and returns at once; the compile runs on a thread-pool thread. An older request not yet taken is cancelled,
+    /// unless it compiles the same song copy to the same start with the same options (the same seek again, such as Rewind pressed twice): that
+    /// compile carries on, since a fresh one would produce the same timeline later.
+    /// </summary>
     internal void Queue(long id, SongProject project, SongSnapshot snapshot, PlaybackOptions options)
     {
         var request = new Request(id, project, snapshot, options);
         lock (_gate)
         {
+            if (_latest is { } older && SameCompile(older, request)) return;
             _latest?.Cancellation.Cancel();
             _latest = request;
         }
         _ = Task.Run(() => Compile(request));
     }
+
+    private static bool SameCompile(Request older, Request newer) =>
+        !older.Cancellation.IsCancellationRequested && older.Failure is null &&
+        ReferenceEquals(older.Project, newer.Project) && ReferenceEquals(older.Snapshot, newer.Snapshot) &&
+        older.Options.StartBar == newer.Options.StartBar && older.Options.StartCell == newer.Options.StartCell &&
+        older.Options.CompilesSameAs(newer.Options);
 
     /// <summary>Drops the pending request (a stop, or a seek the schedule reuses): its compile is cancelled and its result is ignored.</summary>
     internal void Cancel()
@@ -130,7 +144,7 @@ internal sealed class PlaybackSeekRebuild
             IScoreQuery score = request.Snapshot;
             var timeline = score.Compile(request.Options, out var loopCompileStart, request.Cancellation.Token);
             var startMs = score.LoopEntryMs(timeline, request.Options, loopCompileStart, timeline.PlayFromMs);
-            Publish(request, timeline, startMs, null);
+            Publish(request, timeline, startMs, null, PlaybackScheduleReuse.Capture(request.Project, request.Snapshot, request.Options, timeline));
         }
         catch (OperationCanceledException) when (request.Cancellation.IsCancellationRequested)
         {
@@ -140,16 +154,17 @@ internal sealed class PlaybackSeekRebuild
         {
             // The scheduler waits on this request, so the failure is published: it ends playback and the trace names the cause.
             TabForge.Services.Trace.Error(TabForge.Services.Trace.Playback, "Seek rebuild failed: " + ex.Message);
-            Publish(request, null, 0, ex);
+            Publish(request, null, 0, ex, null);
         }
     }
 
-    private void Publish(Request request, ScoreTimeline? timeline, double startMs, Exception? failure)
+    private void Publish(Request request, ScoreTimeline? timeline, double startMs, Exception? failure, PlaybackScheduleReuse? reuse)
     {
         lock (_gate)
         {
             if (!ReferenceEquals(_latest, request)) return;   // superseded or cancelled: the result is dropped
             request.Timeline = timeline;
+            request.Reuse = reuse;
             request.StartMs = startMs;
             request.Failure = failure;
             request.Finished = true;
