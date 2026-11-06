@@ -225,17 +225,49 @@ internal static class DockLayoutTree
     /// <summary>The built-in layout: instrument above the editor, tool and section palettes at the right, timeline below.</summary>
     internal static DockWorkspaceState CreateDefaultState()
     {
-        var toolHost = Tabs("default-tool-palette", "tools", "structure", "rhythm", "layout");
-        toolHost.SelectedPanel = "tools";
-        var sideHost = Tabs("default-sections-practice", "sections", "lyrics");
-        sideHost.SelectedPanel = "sections";
-        var right = Split("Vertical", 0.44, toolHost, WithViewTempo(sideHost));
         var instrumentAndScore = Split("Vertical", 0.26, Tabs("default-instrument", "instrument"), EditorNode());
-        var upper = Split("Horizontal", 0.79, instrumentAndScore, right);
+        var upper = Split("Horizontal", SideColumnRatio, instrumentAndScore, SideColumn());
         var root = Split("Vertical", 0.74, upper, Tabs("default-timeline", "timeline"));
         root.Second!.SelectedPanel = "timeline";
         var state = new DockWorkspaceState { Root = root };
         return state;
+    }
+
+    /// <summary>The share of the width left of the side column (the side panels take the rest), in every layout.</summary>
+    internal const double SideColumnRatio = 0.79;
+
+    /// <summary>The one arrangement of the side panels, in every layout: the palettes (Tools, Structure, Rhythm, Layout) over Sections and Lyrics,
+    /// over the View and tempo pane.</summary>
+    internal static DockNodeState SideColumn()
+    {
+        var toolHost = Tabs("default-tool-palette", "tools", "structure", "rhythm", "layout");
+        toolHost.SelectedPanel = "tools";
+        var sideHost = Tabs("default-sections-practice", "sections", "lyrics");
+        sideHost.SelectedPanel = "sections";
+        return Split("Vertical", 0.44, toolHost, WithViewTempo(sideHost));
+    }
+
+    /// <summary>
+    /// Puts the whole <see cref="SideColumn"/> back at the right of the panes above the timeline (beside the whole window when the timeline is not
+    /// alone along the bottom), as the default layout has it. False, and nothing changes, when one of the column's hosts is in the layout already.
+    /// </summary>
+    internal static bool PlaceSideColumn(DockWorkspaceState state)
+    {
+        if (state.Root is not { } root) return false;
+        var column = SideColumn();
+        foreach (var host in Hosts(column))
+            if (FindNode(root, host) is not null || state.Floating.Any(f => FindNode(f.Root, host) is not null)) return false;
+        if (root is { Kind: "split", Orientation: "Vertical", First: { } above, Second: { } below } && EnumeratePanels(below).SequenceEqual(new[] { "timeline" }))
+            root.First = Split("Horizontal", SideColumnRatio, above, column);
+        else state.Root = Split("Horizontal", SideColumnRatio, root, column);
+        return true;
+    }
+
+    private static IEnumerable<string> Hosts(DockNodeState node)
+    {
+        if (node.Kind == "tabs") yield return node.HostId;
+        if (node.First is not null) foreach (var id in Hosts(node.First)) yield return id;
+        if (node.Second is not null) foreach (var id in Hosts(node.Second)) yield return id;
     }
 
     /// <summary>A column with <paramref name="above"/> over the View and tempo pane (or <paramref name="id"/>), which takes the part below <paramref name="ratio"/>.</summary>

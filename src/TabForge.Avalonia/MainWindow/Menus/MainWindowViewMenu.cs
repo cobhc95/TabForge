@@ -152,8 +152,9 @@ public static class MainWindowViewMenu
         }
         else
         {
-            // Other panels were opened or closed meanwhile: the hidden ones cannot be placed back exactly, so each returns to its default place.
-            foreach (var id in DockPaneTable.SideIds) dock.SetPanelVisible(id, true);
+            // Other panels were opened or closed meanwhile (or another view's layout is on, such as the Band view): the hidden ones cannot be
+            // placed back exactly, so they come back in the side column every layout shares.
+            dock.ShowSidePanels();
             if (settings is not null)
             {
                 settings.Settings.WorkspaceBeforeSideHide = null;

@@ -211,6 +211,14 @@ public sealed partial class DockWorkspaceController : IDockPaneDragHost, IDispos
         else ClosePanel(id);
     }
 
+    /// <summary>Shows every side panel in the one side column every layout shares; when one is shown already (or the column cannot be placed), each
+    /// hidden one goes back to its default place instead.</summary>
+    public void ShowSidePanels()
+    {
+        if (DockWorkspaceRules.ShowSideColumn(State)) { Changed(); return; }
+        foreach (var id in DockPaneTable.SideIds) SetPanelVisible(id, true);
+    }
+
     /// <summary>Brings a panel into view without moving one that is already shown: a closed panel is put at its default place, and a panel behind another tab of its group becomes that group's shown tab.</summary>
     public void RevealPanel(string id)
     {

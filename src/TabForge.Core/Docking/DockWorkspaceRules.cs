@@ -139,6 +139,18 @@ internal static class DockWorkspaceRules
         return true;
     }
 
+    /// <summary>
+    /// Shows every side panel in the one side column (<see cref="DockLayoutTree.SideColumn"/>) when none of them is in the layout; false, and
+    /// nothing changes, when one is shown already or the column cannot be placed.
+    /// </summary>
+    internal static bool ShowSideColumn(DockWorkspaceState state)
+    {
+        if (DockPaneTable.SideIds.Any(id => IsVisible(state, id))) return false;
+        if (!DockLayoutTree.PlaceSideColumn(state)) return false;
+        foreach (var id in DockPaneTable.SideIds) state.ClosedPanels.Remove(id);
+        return true;
+    }
+
     /// <summary>Moves the panel back to its default host (out of the closed list). The instrument pane's share is remembered first so it keeps its size.</summary>
     internal static List<string> PlaceAtDefault(DockWorkspaceState state, string id, string defaultHost, string defaultAnchor)
     {
