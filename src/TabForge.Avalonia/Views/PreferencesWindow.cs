@@ -392,7 +392,8 @@ public sealed partial class PreferencesWindow : Window, IPreferencesChangesHost
     private Control ColourEditor(SettingDescriptor row)
     {
         var button = new ColourButton(DefaultColourOf(row.Key), Working.Appearance.RecentColours) { Width = global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.ColourSettingWidth, Classes = { AvaloniaFormControlStyles.PrefsFieldClass } };
-        button.Show(row.Get()?.ToString() ?? "");
+        // A fretboard note colour keeps the theme's colour while nothing is stored: the swatch shows that colour of the shown theme.
+        button.Show(FretNoteColours.RoleOfSetting(row.Key) is { } role ? FretNoteColours.Shown(role, row.Get()?.ToString(), IsLightTheme) : row.Get()?.ToString() ?? "");
         AutomationProperties.SetName(button, row.Title);
         button.Previewed += hex => Changed(row, hex);
         button.Picked += hex => Changed(row, hex);
@@ -414,9 +415,12 @@ public sealed partial class PreferencesWindow : Window, IPreferencesChangesHost
         }
     }
 
-    /// <summary>The catalogue default of a colour row, or white when the catalogue has none.</summary>
+    private bool IsLightTheme => ActualThemeVariant == global::Avalonia.Styling.ThemeVariant.Light;
+
+    /// <summary>The catalogue default of a colour row (a fretboard note colour: the shown theme's colour), or white when the catalogue has none.</summary>
     private string DefaultColourOf(string key)
     {
+        if (FretNoteColours.RoleOfSetting(key) is { } role) return FretNoteColours.DefaultHex(role, IsLightTheme);
         lock (DefaultsSync)
         {
             _defaultColours ??= DefaultsByKey().Where(pair => pair.Value.Kind == SettingKind.Colour)

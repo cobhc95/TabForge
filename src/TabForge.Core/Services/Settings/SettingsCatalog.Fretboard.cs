@@ -10,6 +10,7 @@ public static partial class SettingsCatalog
     private static List<SettingDescriptor> FretboardRows(AppSettings s)
     {
         var rows = FretboardDisplayRows(s);
+        rows.AddRange(FretboardNoteColourRows(s));
         rows.AddRange(FretboardSizeRows(s));
         rows.AddRange(ScaleReadoutRows(s));
         return rows;
@@ -117,6 +118,29 @@ public static partial class SettingsCatalog
             Bool(Fretboard, "Playback", "follow.fretboard", "Update the fretboard during playback", v => fv.FollowFretboard = v, () => fv.FollowFretboard,
                 "Update fretboard note positions as playback moves.", "playback live update"),
         };
+    }
+
+    /// <summary>
+    /// The legend's now, next and upcoming colours and the dot style (the Fretboard settings window's Note colours card). A colour row shows
+    /// <see cref="FretNoteColours.ThemeDefault"/> while nothing is stored and writes through FretNoteColours.Set, so a reset or a picked
+    /// default stores empty and the theme keeps choosing the colour.
+    /// </summary>
+    private static List<SettingDescriptor> FretboardNoteColourRows(AppSettings s)
+    {
+        var ed = s.Editing!;
+        var rows = new List<SettingDescriptor>();
+        foreach (var role in FretNoteColours.Roles)
+        {
+            var name = FretNoteColours.Name(role);
+            rows.Add(Colour(Fretboard, "Appearance", FretNoteColours.SettingKey(role), name + " note colour",
+                v => FretNoteColours.Set(ed, role, v), () => FretNoteColours.Get(ed, role) is { Length: > 0 } hex ? hex : FretNoteColours.ThemeDefault,
+                $"The colour of the {name.ToLowerInvariant()} playing-note dots and their row in the legend beside the fretboard. Default follows the theme.",
+                "fretboard legend note colour color dot playing now next upcoming look-ahead green amber blue reset default"));
+        }
+        rows.Add(Choice(Fretboard, "Appearance", "fretboard.dotstyle", "Note dot style", v => ed.FretDotStyle = FretNoteColours.NormalizeStyle(v), () => FretNoteColours.NormalizeStyle(ed.FretDotStyle),
+            FretNoteColours.DotStyles, "Fill draws the playing-note dots solid; Ring draws an outline in the note's colour. The legend shows the same style.",
+            "fretboard legend note dot style fill ring outline hollow solid circle playing now next upcoming"));
+        return rows;
     }
 
     private static List<SettingDescriptor> FretboardSizeRows(AppSettings s)

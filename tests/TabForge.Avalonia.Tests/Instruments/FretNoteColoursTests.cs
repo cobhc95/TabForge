@@ -17,7 +17,7 @@ namespace TabForge.Avalonia.Tests;
 /// Owns: the fretboard note colours: the defaults are the theme colours the dots used before (so nothing changes until a colour is picked), a
 ///   picked default is stored as empty, the dot style falls back to Fill, an older settings file without the keys loads with the defaults, the
 ///   panel look carries a picked colour and the Ring style, and the Fretboard settings card offers the shared colour button for each role,
-///   Reset colours and the dot style.
+///   Reset colours and the dot style, and the Preferences rows reset to the defaults, keep an unchanged colour empty and are found by search.
 /// Does not own: the drawing of the dots (FretboardPlaybackMarkerTests) or the colour popup (ColourButtonTests).
 /// Tests: FretNoteColours, FretboardSettingsBinding.Look, FretboardSettingsWindow's Note colours card.
 /// </summary>
@@ -68,6 +68,28 @@ public class FretNoteColoursTests
         Assert.Equal(new TabForge.Platform.UiColor(255, 0x10, 0x20, 0x30), look.NextColour);
         Assert.Null(look.NowColour);
         Assert.True(look.RingDots);
+    }
+
+    [Fact]
+    public void ThePreferencesRowsResetToTheDefaultsAndLeaveAnUnchangedColourEmpty()
+    {
+        var settings = new AppSettings();
+        settings.Editing.FretNowColour = "#112233";
+        settings.Editing.FretDotStyle = FretNoteColours.Ring;
+        var rows = SettingsCatalog.Build(settings).ToDictionary(r => r.Key);
+        var defaults = SettingsCatalog.Build(new AppSettings()).ToDictionary(r => r.Key);
+        var keys = FretNoteColours.Roles.Select(FretNoteColours.SettingKey).Append("fretboard.dotstyle").ToArray();
+        Assert.All(keys, key => Assert.Equal((SettingsCatalog.Fretboard, "Appearance"), (rows[key].Category, rows[key].Group)));
+        Assert.Equal(FretNoteColours.ThemeDefault, rows[FretNoteColours.SettingKey(FretNoteRole.Next)].Get());
+        foreach (var key in keys) rows[key].Set(defaults[key].Get());   // what Reset page and Reset all do
+        Assert.Equal(("", "", "", FretNoteColours.Fill), (settings.Editing.FretNowColour, settings.Editing.FretNextColour, settings.Editing.FretUpcomingColour, settings.Editing.FretDotStyle));
+        rows[FretNoteColours.SettingKey(FretNoteRole.Upcoming)].Set(FretNoteColours.DefaultHex(FretNoteRole.Upcoming, light: true));   // the picker's Default
+        Assert.Equal("", settings.Editing.FretUpcomingColour);
+        rows[FretNoteColours.SettingKey(FretNoteRole.Upcoming)].Set("#ff0080");
+        Assert.Equal("#FF0080", settings.Editing.FretUpcomingColour);
+        var registry = SettingsCatalog.Registry(rows.Values, settings.Hotkeys);
+        foreach (var (query, key) in new[] { ("now note colour", FretNoteColours.SettingKey(FretNoteRole.Now)), ("legend colour", FretNoteColours.SettingKey(FretNoteRole.Next)), ("dot style", "fretboard.dotstyle"), ("ring", "fretboard.dotstyle") })
+            Assert.True(SettingsCatalog.Matches(registry.Single(e => e.Id == key), query), $"\"{query}\" does not find {key}");
     }
 
     [AvaloniaFact]

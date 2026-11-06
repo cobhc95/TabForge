@@ -6,6 +6,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ### Added
 
+- Settings > Fretboard & Keyboard > Appearance has the Now, Next and Upcoming note colours and the Note dot style, with the same colour picker as Appearance, and search finds them. Reset page and Reset all settings return them to the theme's colours and Fill; a colour you never changed keeps following the theme.
 - Fretboard note colours: Fretboard settings > Notes and markers has a Note colours card for the Now, Next and Upcoming colours, using the same colour picker as Settings, with Reset colours and a Fill or Ring dot style. The fretboard dots and the legend use these colours.
 - Legend: each of Now, Next and Upcoming is a full-width row you can click, not just the dot. The row shades under the pointer, and a click opens the colour picker below it. Scales and Modify stay below as before.
 - Drag selection scrolls the view: when you drag a selection past the edge of the score, the timeline or the piano roll, the view keeps scrolling that way, faster the further out the pointer goes. In the score this includes the timeline below it and the area above it. It stops when the pointer comes back or the content ends, and the selection keeps following the pointer.

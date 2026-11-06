@@ -10,7 +10,7 @@ public enum FretNoteRole { Now, Next, Upcoming }
 
 // Owns: the fretboard note colours' one master table: each role's name, the theme palette keys its default comes from (now green, next amber,
 //   upcoming blue, per theme), the rule that a stored colour is empty while it is the default (so the theme still decides), reading and writing
-//   the three EditingSettings values by role, and the dot styles (Fill, Ring).
+//   the three EditingSettings values by role, each role's Preferences row key, and the dot styles (Fill, Ring).
 // Does not own: the drawing (Avalonia FretboardPlaybackMarkers, InstrumentPanelView), the colour picker (ColourButton) or loading and
 //   validating settings (SettingsValidator).
 // Tests: TabForge.Avalonia.Tests.FretNoteColoursTests.
@@ -24,6 +24,20 @@ public static class FretNoteColours
 
     /// <summary>The role's name as the legend and the settings card show it.</summary>
     public static string Name(FretNoteRole role) => role switch { FretNoteRole.Now => "Now", FretNoteRole.Next => "Next", _ => "Upcoming" };
+
+    /// <summary>The Preferences row key of the role's colour ("fretboard.notecolour.now").</summary>
+    public static string SettingKey(FretNoteRole role) => "fretboard.notecolour." + Name(role).ToLowerInvariant();
+
+    /// <summary>The role whose colour the Preferences row <paramref name="key"/> holds; null for any other row.</summary>
+    public static FretNoteRole? RoleOfSetting(string key)
+    {
+        foreach (var role in Roles)
+            if (string.Equals(key, SettingKey(role), StringComparison.OrdinalIgnoreCase)) return role;
+        return null;
+    }
+
+    /// <summary>What a Preferences row shows for a role that keeps the theme's colour (nothing stored); storing it stores empty again.</summary>
+    public const string ThemeDefault = "Default";
 
     /// <summary>The palette key of the role's default colour in the theme (the light theme's now dot has its own green).</summary>
     public static string PaletteKey(FretNoteRole role, bool light) => role switch
