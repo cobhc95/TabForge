@@ -6,6 +6,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ### Added
 
+- Capo shows a hand pointer on hover on the fretboard, so it is clear it can be dragged.
 - Shortcuts: the piano roll's own keys can be rebound or cleared (Settings > Shortcuts, Note): the five tools (1 to 5), Quantize, Mute, Transpose, Zoom to fit, Legato, Duplicate and Invert selection keep their keys until you change them. A key can now be shared by commands that work in different places, and it is saved and loaded like any other.
 - Shortcuts: Metronome settings, Count-in settings, Loop settings, Loop selected bars, Clear loop, Clear selection and Show / hide master track can be given keys in Settings > Shortcuts.
 - Shortcuts: Fretboard settings (View) can be given a key; it opens the same window as the fretboard's right-click row.
@@ -22,7 +23,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 - Fretboard defaults follow the theme: the dark theme starts on Rosewood at 75% board brightness, and the light theme on Maple at 90%. A look or brightness you chose stays when the theme changes. Reset section on the Look page returns to the shown theme's defaults.
 - Fretboard inlays: the Position inlay colour option is removed. Each inlay material now shows its own colour over its grain, so pearl white stays white and black pearl stays dark. Inlays no longer take on the green of the playing-note dots. Older settings files load as before.
 - Accent colour: the Track properties capo Full and Partial selector, the capo hover and selection on its mini fretboard, focus rings, clip selection and drop previews, the repeat pass picker, the Add track drop ghost, the active section band, the Band view's fretboard toggle and the Sections flash now follow the accent colour chosen in Appearance, instead of a fixed blue.
-- Pointer shape: the hand cursor is gone from the capo, the track string rows and the save prompt's Details link. Only resize cursors change the pointer now.
+- Pointer shape: the hand cursor is gone from the Track properties capo board, the track string rows and the save prompt's Details link. Only resize cursors change the pointer now, apart from the hand over the fretboard's capo.
 - Band view: the side panels (Tools, Structure, Rhythm, Layout, Sections, Lyrics) opened from the toolbar come back in the same column, arrangement and width as in the normal view, instead of a narrow column along the right edge.
 - Live input window: the strip fits one row at the default size (960 x 480) with no clipped control or dead space. The Tuner switch is as wide as its label, and the cents scale shrinks first when the window narrows.
 - Downloads: the Windows portable zip and installer names include the whole version (for example `TabForge-0.9.1-win-x64-portable.zip`), so the README download links match the files.
