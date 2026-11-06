@@ -31,9 +31,23 @@ TabForge is actively developed; please report anything odd on the Issues page.
 - Plug-in editors: a docked plug-in editor larger than its area no longer loses its right and bottom parts with no scroll bars. The plug-in is no longer told a size smaller than the one it asked for, so the bars appear and the editor scrolls. At any interface size other than 100%, the frame around a docked editor now shows the whole editor.
 - Live input strip: fixed the layout so it no longer clips controls at the default window size.
 
-### Known issues
+### Colours and theme
 
-- With ASIO and Follow Windows volume on, the first second after the device opens can be about 16 dB too loud on some interfaces, until TabForge has measured the Windows path offset.
+- Every fretboard colour now comes from the master palette, with dark and light values: wood, binding, nut, frets, strings, the capo and the inlay materials. Fixed colours in the fretboard painting code are gone.
+- Accent: the fixed blue that some highlights used (the capo selector, focus rings, clip and drop previews, the active section band and the Sections flash) is replaced by the master accent, so these follow the colour chosen in Appearance.
+- Note colours, dot style and the fretboard defaults each have one master place, so the settings window, the fretboard and the legend read the same values.
+- The colour button width is one value shared by the Settings and Fretboard settings windows.
+- The unused palette colours InstrumentSilver and FretboardInlayFallback are removed, and so is the stray black brush on the live input strip's Tuner label.
+
+### Code and maintenance
+
+- Dead code removed: unused classes (TrackIconPicture, NullChildProcessGuard), unused members and constants, and unused settings (FretMarkerColour).
+- Dialog spacing: DialogMetrics has one helper each for centring, margins and padding, replacing copies with the same behaviour. Font sizes use the type scale in ChromeMetrics, and the interface font family is one shared constant.
+- Video encoders: the frame-queue mechanics that both encoders repeated now live in one class, and forwarding methods that only passed calls on are removed.
+- Pointer shape: the rule that only resize cursors change the pointer is enforced by a guard test with no exceptions.
+- Test suite: shared test helpers replace copies in 26 test classes, and duplicated checks (such as the panel text contrast check, previously in five classes) run once.
+- Documentation checks: the doc-picture check accepts pictures kept in an earlier release's folder, and the guard and allow-list files are up to date.
+- Start-up path: the Monitor FX chain is sent before the output is configured, so the first sound is processed (see Fixed).
 
 ## 0.9.0
 
