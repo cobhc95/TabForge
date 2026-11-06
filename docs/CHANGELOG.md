@@ -48,17 +48,17 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ### Code and maintenance
 
-- Dead code removed: unused classes (TrackIconPicture, NullChildProcessGuard), unused members and constants, and unused settings (FretMarkerColour).
-- Dialog spacing: DialogMetrics has one helper each for centring, margins and padding, replacing copies with the same behaviour. Font sizes use the type scale in ChromeMetrics, and the interface font family is one shared constant.
-- Video encoders: the frame-queue mechanics that both encoders repeated now live in one class, and forwarding methods that only passed calls on are removed.
-- Pointer shape: the rule that only resize cursors change the pointer is enforced by a guard test; its one exception is the hand over the fretboard's capo.
-- Test suite: shared test helpers replace copies in 26 test classes, and duplicated checks (such as the panel text contrast check, previously in five classes) run once.
-- Documentation checks: the doc-picture check accepts pictures kept in an earlier release's folder, and the guard and allow-list files are up to date.
-- Start-up path: the Monitor FX chain is sent before the output is configured, so the first sound is processed (see Fixed).
-- Piano roll tool keys are kept in a read-only list, and the shortcut catalogue reads the piano roll command ids from one small class in Services (PianoRollKeyIds) instead of depending on the Menus namespace, so no new dependency cycle forms.
-- Architecture checks: the portability baseline is lowered to the files that still use Windows-only calls, the static-state check passes again, and the cycle check passes without extending its baseline.
-- Tests: the capo hover tests and the playback-look search test match the current pointer and settings pages; the capo hand pointer is covered while hovering and dragging.
-- Documentation: 14 screenshots that no page named are removed, so the doc-picture check passes, and the README hero is the boxed third-party plug-in example again.
+- Dead code removed: nothing built TrackIconPicture or NullChildProcessGuard, and nothing read MixEngine.SongSecNow, NullOutput.IsManual, PlaybackEngine.SchedulerClockMs and ActiveLoopMs, FilePathPolicy.FallbackWritableFolder, TabDragRules.AcceptsDrop, DialogMetrics.ResetAppListGap, the five unused size constants of ThemeSettingsBinding or the FretMarkerColour setting. All are deleted, and the drawing baseline is lowered to match. Settings files from earlier versions still load.
+- Duplicate helpers merged: DialogMetrics had two copies each of centring on the owner, margins and border padding; the copies are deleted and their 25 callers use the one that remains. Stray doubled summaries in DialogMetrics, ChromeMetrics and ScalePopupLayout now sit on the member they describe, and UiMetrics no longer claims nothing calls it.
+- One interface font: eight painters, the score text, the appearance defaults, the icon fallback and the font mapper each spelled out "Segoe UI"; they now all read ChromeMetrics.UiFontFamily, with the same value.
+- One type scale: fifteen per-view font-size constants that equalled a step of the scale (10, 11, 12 or 13) now name ChromeMetrics.TextCaption, TextSmall, TextBody or TextDialog. Sizes are unchanged.
+- Video encoders: the frame-queue steps both encoders repeated (taking a frame's room, dropping in live mode or waiting offline, the queue add that fails once closed, the error the caller sees) live once in VideoEncoderQueue, and the forwarding methods that only passed calls on are gone.
+- Pointer shape: the capo, string and Details-link hand cursors are removed, and a guard test enforces that only resize cursors change the pointer. Its one exception is the hand over the fretboard's capo, set in one file.
+- Test suite: 26 test classes that carried word-for-word copies of the window settle or the MIDI variable-length read and write now share one helper (TestUi), and the panel text contrast check that five classes repeated runs once, with the same tokens, ratio and themes.
+- Guards and documentation checks: the live strip label is measured without an unused brush, the doc-picture check accepts pictures kept in an earlier release's folder, the doc allow-list names this release's zip, and 14 screenshots that no page named are removed.
+- Architecture checks pass without raising any baseline: the piano roll tool keys are a read-only list, the shortcut catalogue reads the piano roll command ids from one small class in Services (PianoRollKeyIds) instead of depending on the Menus namespace, so no new dependency cycle forms, and the portability baseline is lowered to the files that still use Windows-only calls.
+- Tests brought up to date: the capo hover tests and the playback-look search test match the current pointer and settings pages, and the capo pointer is covered while hovering and dragging.
+- Start-up path: the Monitor FX chain is sent before the output is configured, so the first sound is processed (see Fixed). The README hero is the boxed third-party plug-in example again.
 
 ## 0.9.0
 
