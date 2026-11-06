@@ -34,7 +34,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 - Start-up crash: the fretboard could fail to draw at start-up because of an inlay colour name mismatch. Fixed.
 - Rewind while playing: pressing Rewind again while the song is still being prepared for that spot no longer starts the preparation over. On a song without repeats, a repeated rewind jumps at once, so the playhead no longer holds still between presses.
 - Drag selection during playback: the view no longer jumps back to the playhead while you drag a selection past the edge. Following resumes when the pointer comes back inside or the drag ends.
-- Plug-in editors: a docked plug-in editor larger than its area no longer loses its right and bottom parts with no scroll bars. The plug-in is no longer told a size smaller than the one it asked for, so the bars appear and the editor scrolls. At any interface size other than 100%, the frame around a docked editor now shows the whole editor.
+- FX window clipping: a plug-in editor docked in the FX window that is larger than its area no longer loses its right and bottom parts with no scroll bars. The plug-in is no longer told a size smaller than the one it asked for, so the bars appear and the editor scrolls. At any interface size other than 100%, the frame around a docked editor now shows the whole editor.
 - Live input strip: fixed the layout so it no longer clips controls at the default window size.
 
 ### Colours and theme
@@ -54,6 +54,10 @@ TabForge is actively developed; please report anything odd on the Issues page.
 - Test suite: shared test helpers replace copies in 26 test classes, and duplicated checks (such as the panel text contrast check, previously in five classes) run once.
 - Documentation checks: the doc-picture check accepts pictures kept in an earlier release's folder, and the guard and allow-list files are up to date.
 - Start-up path: the Monitor FX chain is sent before the output is configured, so the first sound is processed (see Fixed).
+- Piano roll tool keys are kept in a read-only list, and the shortcut catalogue reads the piano roll command ids from one small class in Services (PianoRollKeyIds) instead of depending on the Menus namespace, so no new dependency cycle forms.
+- Architecture checks: the portability baseline is lowered to the files that still use Windows-only calls, the static-state check passes again, and the cycle check passes without extending its baseline.
+- Tests: the capo hover tests and the playback-look search test match the current pointer and settings pages; the capo hand pointer is covered while hovering and dragging.
+- Documentation: 14 screenshots that no page named are removed, so the doc-picture check passes, and the README hero is the boxed third-party plug-in example again.
 
 ## 0.9.0
 
