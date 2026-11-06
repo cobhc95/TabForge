@@ -31,7 +31,8 @@ TabForge is actively developed; please report anything odd on the Issues page.
 ### Fixed
 
 - Start-up loudness: the Monitor FX chain is now sent to the engine before the output is configured, so the first sound never reaches the output without the Monitor FX plug-ins (such as the IR Loader's auto level).
-- Start-up crash: the fretboard could fail to draw at start-up because of an inlay colour name mismatch. Fixed.
+- Start-up crash: the fretboard could fail to draw at start-up because the "Pearl cream" inlay's colour name was built with the wrong capitals. Every inlay material is now checked against the palette in both themes.
+- Fretboard look and colours: a look or board brightness you chose is kept for good, even after switching the theme away and back; the look and the brightness each follow the theme only until you change them. A settings file from before, at 65% or 75%, follows the theme. Reset section on the Look page lets both follow again.
 - Rewind while playing: pressing Rewind again while the song is still being prepared for that spot no longer starts the preparation over. On a song without repeats, a repeated rewind jumps at once, so the playhead no longer holds still between presses.
 - Drag selection during playback: the view no longer jumps back to the playhead while you drag a selection past the edge. Following resumes when the pointer comes back inside or the drag ends.
 - FX window clipping: a plug-in editor docked in the FX window that is larger than its area no longer loses its right and bottom parts with no scroll bars. The plug-in is no longer told a size smaller than the one it asked for, so the bars appear and the editor scrolls. At any interface size other than 100%, the frame around a docked editor now shows the whole editor.
