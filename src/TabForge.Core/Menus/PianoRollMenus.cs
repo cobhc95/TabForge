@@ -1,6 +1,6 @@
 // Owns: the piano roll's right-click menus as data: on a note or the selection (Clear loop inside the loop; cut, copy, paste, delete, duplicate;
 //   quantize; mute; the Transpose and Velocity submenus; select all and select this pitch; Show in score mode) and on empty grid (paste, select
-//   all, quantize all, legato, Show in score mode), the note colour modes, the ruler's rows, and the ids the rows carry.
+//   all, quantize all, legato, Show in score mode), the note colour modes, the ruler's rows, the ids the rows carry and the ids of the key-only commands.
 // Does not own: opening the menu or running the rows (the app's PianoRollView), or the edits (PianoRollPresenter).
 // Tests: TabForge.Avalonia.Tests.PianoRollViewTests.
 
@@ -19,6 +19,10 @@ public static class PianoRollMenus
         Legato = "PianoRoll.Legato", Glue = "PianoRoll.Glue", Randomise = "PianoRoll.Randomise", Humanise = "PianoRoll.Humanise", Colours = "PianoRoll.Colours",
         MovePlayhead = "PianoRoll.MovePlayhead", LoopBar = "PianoRoll.LoopBar", LoopSection = "PianoRoll.LoopSection",
         PlaybackNeedle = "PianoRoll.PlaybackNeedle";
+
+    /// <summary>Piano roll commands that only a key runs (no menu row): the Transpose dialog, zoom to fit and the five tools.</summary>
+    public const string TransposeDialog = "PianoRoll.TransposeDialog", ZoomToFit = "PianoRoll.ZoomToFit", EditTool = "PianoRoll.EditTool", EraseTool = "PianoRoll.EraseTool",
+        SplitTool = "PianoRoll.SplitTool", MuteTool = "PianoRoll.MuteTool", GlueTool = "PianoRoll.GlueTool";
 
     public const string ShowInScore = "Show in score mode (this track)", NeedleSettingKey = "editing.pianoroll.needle";
 

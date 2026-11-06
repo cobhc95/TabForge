@@ -2,14 +2,17 @@ using System;
 using System.Linq;
 using Avalonia;
 using Avalonia.Input;
+using TabForge.Menus;
 using TabForge.Presenters;
 
 namespace TabForge.Avalonia.Views;
 
-// Owns: the piano roll's keys while it has focus: 1-5 pick a tool (Edit, Erase, Split, Mute, Glue); Escape cancels a drag; Ctrl+L legato; in step input Right / Left move the step and Backspace takes it back; Left/Right move the selection by the snap step, Up/Down by a semitone and
-//       Shift+Up/Down by an octave; Shift+Left/Right shorten or lengthen by the snap step; Alt+Left/Right nudge by a 64th note; Delete; Ctrl+C, X,
-//       V (at the playhead), D, A and I (invert); Q quantizes, M mutes, F zooms to fit, T transposes the selection (the By dialog); Esc clears the note selection (a second Esc goes on to the window, which
-//       clears the loop). A key the piano roll does not use goes on to the window (Undo, Redo, Space...). Also the right-press that a menu acts on.
+// Owns: the piano roll's keys while it has focus. Bindable on the Shortcuts page (defaults in brackets): the tools Edit, Erase, Split, Mute and Glue
+//       (1-5), Select tool (V), Split (S), Glue (Ctrl+Shift+G), Snap (Alt+S), Quantize (Q), Mute (M), Transpose dialog (T), Zoom to fit (F), Legato
+//       (Ctrl+L), Duplicate (Ctrl+D) and Invert selection (Ctrl+I). Fixed: Escape cancels a drag; in step input Right / Left move the step and Backspace
+//       takes it back; Left/Right move the selection by the snap step, Up/Down by a semitone and Shift+Up/Down by an octave; Shift+Left/Right shorten or
+//       lengthen by the snap step; Alt+Left/Right nudge by a 64th note; Delete; Ctrl+C, X, V (at the playhead) and A; Esc clears the note selection (a
+//       second Esc goes on to the window, which clears the loop). A key the piano roll does not use goes on to the window (Undo, Redo, Space...). Also the right-press that a menu acts on.
 // Does not own: the edits (PianoRollPresenter) or the quantize options and the menu (PianoRollView).
 // Tests: TabForge.Avalonia.Tests.PianoRollViewTests.
 public sealed partial class PianoRollSurface
@@ -103,8 +106,18 @@ public sealed partial class PianoRollSurface
         if (IsBound("PianoRoll.SelectTool", key, modifiers)) { Presenter.Tool = PianoRollTool.Pointer; ToolChanged?.Invoke(); InvalidateVisual(); return true; }
         if (IsBound("PianoRoll.Split", key, modifiers)) { SplitSelection(); return true; }
         if (IsBound("PianoRoll.Glue", key, modifiers)) { GlueSelection(); return true; }
-        if (!ctrl && !alt && ToolOf(key) is { } tool) { Presenter.Tool = tool; ToolChanged?.Invoke(); InvalidateVisual(); return true; }
+        foreach (var (id, tool) in ToolKeys)
+            if (IsBound(id, key, modifiers)) { Presenter.Tool = tool; ToolChanged?.Invoke(); InvalidateVisual(); return true; }
         if (StepInput && !ctrl && !alt && StepKey(key)) return true;
+        var selected = Presenter.Selected.Count > 0;
+        // The piano roll's own commands, through the Shortcuts page's bindings (the defaults are the keys these always had).
+        if (IsBound(PianoRollMenus.Quantize, key, modifiers)) { QuantizeRequested?.Invoke(); return true; }
+        if (selected && IsBound(PianoRollMenus.Mute, key, modifiers)) { Run(Presenter.ToggleMuteAsync()); return true; }
+        if (selected && IsBound(PianoRollMenus.TransposeDialog, key, modifiers)) { TransposeRequested?.Invoke(); return true; }
+        if (IsBound(PianoRollMenus.ZoomToFit, key, modifiers)) { ZoomToFit(); return true; }
+        if (Presenter.Notes.Count > 0 && IsBound(PianoRollMenus.Legato, key, modifiers)) { Run(Presenter.LegatoAsync()); return true; }
+        if (selected && IsBound(PianoRollMenus.Duplicate, key, modifiers)) { Run(Presenter.DuplicateAsync()); return true; }
+        if (IsBound(PianoRollMenus.InvertSelection, key, modifiers)) { Presenter.InvertSelection(); SelectionChanged?.Invoke(); InvalidateVisual(); return true; }
         var first = Presenter.Selected.Count == 0 ? 0 : Presenter.Selected.Min(i => Presenter.Notes[i].Start);
         switch (key)
         {
@@ -127,18 +140,6 @@ public sealed partial class PianoRollSurface
                 SelectionChanged?.Invoke();
                 InvalidateVisual();
                 return true;
-            case Key.Q when !ctrl && !alt:
-                QuantizeRequested?.Invoke();
-                return true;
-            case Key.M when !ctrl && !alt && Presenter.Selected.Count > 0:
-                Run(Presenter.ToggleMuteAsync());
-                return true;
-            case Key.T when !ctrl && !alt && Presenter.Selected.Count > 0:   // the Transpose prompt (focus-gated, as Q, M and F)
-                TransposeRequested?.Invoke();
-                return true;
-            case Key.F when !ctrl && !alt:
-                ZoomToFit();
-                return true;
         }
         if (!ctrl || alt) return false;
         switch (key)
@@ -148,8 +149,6 @@ public sealed partial class PianoRollSurface
             case Key.V when Presenter.Clipboard.Count > 0: Run(Presenter.PasteAsync(PlayheadBeat() ?? 0)); return true;
             case Key.D when Presenter.Selected.Count > 0: Run(Presenter.DuplicateAsync()); return true;
             case Key.A: Presenter.SelectAll(); SelectionChanged?.Invoke(); InvalidateVisual(); return true;
-            case Key.I: Presenter.InvertSelection(); SelectionChanged?.Invoke(); InvalidateVisual(); return true;
-            case Key.L when Presenter.Notes.Count > 0: Run(Presenter.LegatoAsync()); return true;
         }
         return false;
     }
@@ -157,14 +156,10 @@ public sealed partial class PianoRollSurface
     /// <summary>Raised when a key picked another tool (the toolbar follows).</summary>
     internal Action? ToolChanged { get; set; }
 
-    private static PianoRollTool? ToolOf(Key key) => key switch
+    // Select and Draw merged into the Edit tool (key 1); Select is the Edit tool's enum value.
+    private static readonly (string Id, PianoRollTool Tool)[] ToolKeys =
     {
-        // 26 Oct: Select and Draw merged into the Edit tool (key 1); the keys renumbered.
-        Key.D1 or Key.NumPad1 => PianoRollTool.Select,
-        Key.D2 or Key.NumPad2 => PianoRollTool.Erase,
-        Key.D3 or Key.NumPad3 => PianoRollTool.Split,
-        Key.D4 or Key.NumPad4 => PianoRollTool.Mute,
-        Key.D5 or Key.NumPad5 => PianoRollTool.Glue,
-        _ => null,
+        (PianoRollMenus.EditTool, PianoRollTool.Select), (PianoRollMenus.EraseTool, PianoRollTool.Erase), (PianoRollMenus.SplitTool, PianoRollTool.Split),
+        (PianoRollMenus.MuteTool, PianoRollTool.Mute), (PianoRollMenus.GlueTool, PianoRollTool.Glue),
     };
 }

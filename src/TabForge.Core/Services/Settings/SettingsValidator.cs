@@ -351,8 +351,9 @@ public static class SettingsValidator
         value.DisabledActions ??= new List<string>();
         value.Bindings2 ??= new Dictionary<string, string>();
         value.DisabledActions2 ??= new List<string>();
-        // One gesture is stored once across both slots; slot 1 is read first so it wins.
-        var usedGestures = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // One gesture is stored once per key context across both slots (slot 1 is read first so it wins); commands of different
+        // contexts (clip, track row, piano roll ...) may share it, as the Shortcuts page allows.
+        var usedGestures = new HashSet<(int Context, string Gesture)>();
         value.Bindings = NormalizeBindings(value.Bindings, usedGestures);
         value.Bindings2 = NormalizeBindings(value.Bindings2, usedGestures);
         value.DisabledActions = NormalizeDisabled(value.DisabledActions);
@@ -361,7 +362,7 @@ public static class SettingsValidator
         foreach (var disabled in value.DisabledActions2) value.Bindings2.Remove(disabled);
     }
 
-    private static Dictionary<string, string> NormalizeBindings(Dictionary<string, string> source, HashSet<string> usedGestures)
+    private static Dictionary<string, string> NormalizeBindings(Dictionary<string, string> source, HashSet<(int Context, string Gesture)> usedGestures)
     {
         var bindings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var pair in source.Take(InputLimits.MaxHotkeyBindings))
@@ -370,7 +371,7 @@ public static class SettingsValidator
             if (action is null || !InputLimits.IsSafeText(pair.Value, 64, allowLineBreaks: false) ||
                 !HotkeyCatalog.TryParse(pair.Value, out var key, out var modifiers)) continue;
             var gesture = HotkeyCatalog.Format(key, modifiers);
-            if (!usedGestures.Add(gesture)) continue;
+            if (!usedGestures.Add((HotkeyCatalog.ContextOf(action.Id), gesture.ToUpperInvariant()))) continue;
             bindings[action.Id] = gesture;
         }
         return bindings;
