@@ -271,7 +271,7 @@
     "Source/src/TabForge.Avalonia/Platform/AvaloniaScrollBarStyles.cs": 1,
     "Source/src/TabForge.Avalonia/Platform/BandFretboardGrip.cs": 3,
     "Source/src/TabForge.Avalonia/Platform/Controls/FlatToolButton.cs": 4,
-    "Source/src/TabForge.Avalonia/Platform/FretboardArtist.cs": 2,
+    "Source/src/TabForge.Avalonia/Platform/FretboardArtist.cs": 1,
     "Source/src/TabForge.Avalonia/Platform/FretboardPlaybackMarkers.cs": 1,
     "Source/src/TabForge.Avalonia/Platform/InstrumentPanelView.Fretboard.cs": 1,
     "Source/src/TabForge.Avalonia/Platform/InstrumentPanelView.Layouts.cs": 2,

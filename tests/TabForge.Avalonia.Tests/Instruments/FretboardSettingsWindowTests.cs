@@ -95,7 +95,7 @@ public class FretboardSettingsWindowTests
         settings.Editing.FretboardWood = "Walnut";
         settings.Editing.FretboardVibration = "Strong";
         window.ResetSection(0);
-        Assert.Equal(FretboardStyles.DefaultLook, FretboardStyles.LookOf(settings.Editing));
+        Assert.Equal(FretboardStyles.ThemeDefaults(window.ActualThemeVariant == global::Avalonia.Styling.ThemeVariant.Light).Look, FretboardStyles.LookOf(settings.Editing));   // the shown theme's preset
         Assert.Equal("Strong", settings.Editing.FretboardVibration);
         window.ResetSection(3);
         Assert.Equal("Mild", settings.Editing.FretboardVibration);

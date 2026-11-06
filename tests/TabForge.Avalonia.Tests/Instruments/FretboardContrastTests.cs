@@ -30,7 +30,7 @@ public sealed class FretboardContrastTests
     public void ContrastDefaultsPersistAndInvalidValuesAreClamped()
     {
         var settings = JsonSerializer.Deserialize<AppSettings>("{}")!;
-        Assert.Equal(65, settings.Editing.FretboardBrightness);
+        Assert.Equal(FretboardStyles.DefaultBoardBrightness, settings.Editing.FretboardBrightness);   // the dark theme's default (75%)
         Assert.Equal(100, settings.Editing.FretboardNoteBrightness);
         var rows = SettingsCatalog.Build(settings);
         rows.Single(r => r.Key == "fretboard.brightness").Set(60);
@@ -182,7 +182,7 @@ public sealed class FretboardContrastTests
         Assert.Equal(60, settings.Editing.FretboardBrightness);
         Assert.Equal("Bright", settings.Editing.FretMarkerBrightness);
         window.ResetSection(0);
-        Assert.Equal(FretboardStyles.DefaultBoardBrightness, settings.Editing.FretboardBrightness);   // the window shows the dark theme here
+        Assert.Equal(FretboardStyles.ThemeDefaults(window.ActualThemeVariant == global::Avalonia.Styling.ThemeVariant.Light).Brightness, settings.Editing.FretboardBrightness);   // the shown theme's default
         Assert.Equal(FretMarkerLevels.Original, settings.Editing.FretMarkerBrightness);
         Assert.True(saves >= 5);
     }

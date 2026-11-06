@@ -173,9 +173,7 @@ public sealed partial class FretboardSettingsWindow
         if (section == 0)
         {
             // The Look page goes back to the shown theme's defaults (Rosewood at 75% dark, Maple at 90% light).
-            var (look, brightness) = FretboardStyles.ThemeDefaults(ActualThemeVariant == global::Avalonia.Styling.ThemeVariant.Light);
-            FretboardStyles.Apply(_settings.Editing, look);
-            _settings.Editing.FretboardBrightness = brightness;
+            FretboardStyles.ResetToTheme(_settings.Editing, ActualThemeVariant == global::Avalonia.Styling.ThemeVariant.Light);
         }
         Changed();
     }

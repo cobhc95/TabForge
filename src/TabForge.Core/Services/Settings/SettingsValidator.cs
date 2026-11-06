@@ -303,7 +303,8 @@ public static class SettingsValidator
         value.FretStringSpacing = FretStringSpacings.All.FirstOrDefault(v => string.Equals(v, value.FretStringSpacing, StringComparison.OrdinalIgnoreCase)) ?? FretStringSpacings.Natural;
         value.FretMarkerBrightness =FretMarkerLevels.All.FirstOrDefault(v => string.Equals(v, value.FretMarkerBrightness, StringComparison.OrdinalIgnoreCase)) ?? FretMarkerLevels.Original;
         value.FretboardBrightness = FretboardStyles.ClampBrightness(value.FretboardBrightness);
-        if (value.FretboardDefaultsTheme is not (FretboardStyles.DarkTheme or FretboardStyles.LightTheme)) value.FretboardDefaultsTheme = "";
+        if (value.FretboardDefaultsTheme is not (FretboardStyles.DarkTheme or FretboardStyles.LightTheme or FretboardStyles.Own)) value.FretboardDefaultsTheme = "";
+        if (value.FretboardBrightnessTheme is not (FretboardStyles.DarkTheme or FretboardStyles.LightTheme or FretboardStyles.Own)) value.FretboardBrightnessTheme = "";
         value.FretboardNoteBrightness = FretboardStyles.ClampBrightness(value.FretboardNoteBrightness);
         value.KeyboardKeyColours = KeyboardKeyStyles.All.FirstOrDefault(v => string.Equals(v, value.KeyboardKeyColours, StringComparison.OrdinalIgnoreCase)) ?? KeyboardKeyStyles.MatchTheme;
         value.PreviewHorizon = Math.Clamp(value.PreviewHorizon, 1, 10);

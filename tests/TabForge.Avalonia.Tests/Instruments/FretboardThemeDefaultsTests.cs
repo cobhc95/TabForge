@@ -61,6 +61,21 @@ public class FretboardThemeDefaultsTests
         Assert.Equal(90, lightPick.FretboardBrightness);
     }
 
+    // Palette names are case-sensitive: every material's token must be a real palette entry (a mismatch threw while drawing the board).
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void EveryInlayMaterialsTokenIsAPaletteColour(bool light)
+    {
+        foreach (var material in FretboardStyles.InlayMaterials)
+        {
+            var token = FretboardStyles.InlayToken(material);
+            Assert.Contains(token, TabForge.Platform.Theme.Palette.Names);
+            _ = TabForge.Platform.Theme.Palette.Get(token, light);
+        }
+        Assert.Equal("InlayPearlCream", FretboardStyles.InlayToken("Pearl cream"));
+    }
+
     [Fact]
     public void AnOlderFileWithTheRemovedInlayColourStillLoads()
     {

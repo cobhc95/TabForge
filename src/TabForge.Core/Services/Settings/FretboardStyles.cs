@@ -22,33 +22,53 @@ public static class FretboardStyles
     /// <summary>The default preset of each theme: Rosewood in the dark theme, Maple in the light one.</summary>
     public const string DarkPreset = "Rosewood", LightPreset = "Maple";
 
-    /// <summary>The theme a settings file's fretboard defaults were last resolved for (<see cref="EditingSettings.FretboardDefaultsTheme"/>).</summary>
-    public const string DarkTheme = "Dark", LightTheme = "Light";
+    /// <summary>What a fretboard default follows (EditingSettings.FretboardDefaultsTheme for the look, FretboardBrightnessTheme for the board
+    /// brightness): the theme it was last set for, or Own once the person chose something else (it never follows the theme again).</summary>
+    public const string DarkTheme = "Dark", LightTheme = "Light", Own = "Own";
 
     /// <summary>The fretboard look and board brightness a theme starts with.</summary>
     public static (Look Look, int Brightness) ThemeDefaults(bool light) =>
         (OfPreset(light ? LightPreset : DarkPreset)!, light ? LightBoardBrightness : DefaultBoardBrightness);
 
     /// <summary>
-    /// Moves the fretboard's look and board brightness to the defaults of the theme shown now, each only while it still holds the defaults of the
-    /// theme they were resolved for (a file from before has none: its old default, the Rosewood look at 65%). A look or brightness the person
-    /// chose differs from those and is kept. Records the theme; true when anything changed.
+    /// Moves the fretboard's look and board brightness, each on its own, to the defaults of the theme shown now while it still holds the
+    /// defaults of the theme it was last set for (a file from before has none: the Rosewood look, at 65% or 75%). One that differs was chosen
+    /// by the person: it is marked Own and kept from then on, whatever the theme. True when anything changed.
     /// </summary>
     public static bool FollowTheme(EditingSettings e, bool light)
     {
         var theme = light ? LightTheme : DarkTheme;
-        if (e.FretboardDefaultsTheme == theme) return false;
-        var (fromLook, fromBrightness) = e.FretboardDefaultsTheme switch
-        {
-            LightTheme => ThemeDefaults(true),
-            DarkTheme => ThemeDefaults(false),
-            _ => (OfPreset(DarkPreset)!, LegacyBoardBrightness),
-        };
         var (toLook, toBrightness) = ThemeDefaults(light);
-        if (LookOf(e) == fromLook) Apply(e, toLook);
-        if (e.FretboardBrightness == fromBrightness) e.FretboardBrightness = toBrightness;
-        e.FretboardDefaultsTheme = theme;
-        return true;
+        var changed = false;
+        if (e.FretboardDefaultsTheme != Own && e.FretboardDefaultsTheme != theme)
+        {
+            var fromLook = e.FretboardDefaultsTheme switch { LightTheme => ThemeDefaults(true).Look, _ => ThemeDefaults(false).Look };
+            if (LookOf(e) == fromLook) { Apply(e, toLook); e.FretboardDefaultsTheme = theme; }
+            else e.FretboardDefaultsTheme = Own;
+            changed = true;
+        }
+        if (e.FretboardBrightnessTheme != Own && e.FretboardBrightnessTheme != theme)
+        {
+            var isDefault = e.FretboardBrightnessTheme switch
+            {
+                LightTheme => e.FretboardBrightness == LightBoardBrightness,
+                DarkTheme => e.FretboardBrightness == DefaultBoardBrightness,
+                _ => e.FretboardBrightness is LegacyBoardBrightness or DefaultBoardBrightness,
+            };
+            if (isDefault) { e.FretboardBrightness = toBrightness; e.FretboardBrightnessTheme = theme; }
+            else e.FretboardBrightnessTheme = Own;
+            changed = true;
+        }
+        return changed;
+    }
+
+    /// <summary>Writes the shown theme's look and brightness defaults and lets both follow the theme again (Reset section on the Look page).</summary>
+    public static void ResetToTheme(EditingSettings e, bool light)
+    {
+        var (look, brightness) = ThemeDefaults(light);
+        Apply(e, look);
+        e.FretboardBrightness = brightness;
+        e.FretboardDefaultsTheme = e.FretboardBrightnessTheme = light ? LightTheme : DarkTheme;
     }
     public static int ClampBrightness(int value) => Math.Clamp(value, MinBrightness, MaxBrightness);
 
@@ -72,9 +92,11 @@ public static class FretboardStyles
         "Pearl white", "Pearl cream", "Ivory", "Gold pearl", "Black pearl", "Pink pearl", "Abalone blue", "Abalone green", "Paua", "Black pearloid",
     };
 
-    /// <summary>The palette token of an inlay material's own colour ("Inlay" plus the name without spaces, e.g. InlayPearlWhite): the tint over its
-    /// grain and its flat colour when the texture is missing. An unknown name takes the first material's.</summary>
-    public static string InlayToken(string? material) => "Inlay" + Pick(InlayMaterials, material, InlayMaterials[0]).Replace(" ", "");
+    /// <summary>The palette token of an inlay material's own colour ("Inlay" plus each word of the name capitalised, e.g. "Pearl cream" is
+    /// InlayPearlCream; palette names are case-sensitive): the tint over its grain and its flat colour when the texture is missing. An unknown
+    /// name takes the first material's.</summary>
+    public static string InlayToken(string? material) =>
+        "Inlay" + string.Concat(Pick(InlayMaterials, material, InlayMaterials[0]).Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(word => char.ToUpperInvariant(word[0]) + word[1..]));
 
     /// <summary>How strongly a material's own colour tints its grain (the grain stays visible under it).</summary>
     public const double InlayTintOpacity = 0.45;
