@@ -132,6 +132,29 @@ public class SettingsSearchGuardTests
         Assert.True(missing.Count == 0, "Shortcuts not found by name:\n" + string.Join("\n", missing));
     }
 
+    /// <summary>The Fretboard settings window's settings (switches, sliders, colour buttons and chip rows) are found on the Fretboard & Keyboard page by their own label.</summary>
+    [AvaloniaFact]
+    public void Every_setting_of_the_fretboard_settings_window_is_found_by_its_label()
+    {
+        var settings = new AppSettings();
+        var registry = SettingsCatalog.Registry(SettingsCatalog.Build(settings), settings.Hotkeys).Where(e => e.Kind == SettingsEntryKind.Setting).ToList();
+        var window = new FretboardSettingsWindow(settings, () => { }, () => { });
+        var labels = new List<string>();
+        for (var section = 0; section < FretboardSettingsWindow.SectionCount; section++)
+        {
+            window.Select(section);
+            labels.AddRange(window.GetLogicalDescendants().OfType<Control>()
+                .Where(control => control is CheckBox or ToggleButton or MiniSlider or TabForge.Avalonia.Platform.Controls.ColourButton)
+                .Select(control => AutomationProperties.GetName(control) ?? "")
+                .Select(name => (name.Contains(": ") ? name[..name.IndexOf(": ", StringComparison.Ordinal)] : name).Replace("(", "").Replace(")", "").ToLowerInvariant())
+                .Where(label => label.Length > 0));
+        }
+        var distinct = labels.Distinct().ToList();
+        var missing = distinct.Where(label => !registry.Any(entry => SettingsCatalog.Matches(entry, label, SettingsCatalog.Fretboard))).ToList();
+        Assert.True(distinct.Count >= 30, $"Only {distinct.Count} fretboard settings were walked");
+        Assert.True(missing.Count == 0, "Fretboard settings not found by their label:\n" + string.Join("\n", missing));
+    }
+
     [AvaloniaFact]
     public void Shortcuts_are_found_by_their_current_keys()
     {

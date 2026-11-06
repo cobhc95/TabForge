@@ -6,6 +6,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ### Added
 
+- Settings search finds every Fretboard settings option by its own label: Emphasise the root, Dim notes outside the scale and Only on the frets in view are now on the Fretboard & Keyboard page too, and Frets shown, Next notes shown ahead, the faint trail, Dot and number size and Clear highlight find their rows.
 - Settings > Fretboard & Keyboard > Appearance has the Now, Next and Upcoming note colours and the Note dot style, with the same colour picker as Appearance, and search finds them. Reset page and Reset all settings return them to the theme's colours and Fill; a colour you never changed keeps following the theme.
 - Fretboard note colours: Fretboard settings > Notes and markers has a Note colours card for the Now, Next and Upcoming colours, using the same colour picker as Settings, with Reset colours and a Fill or Ring dot style. The fretboard dots and the legend use these colours.
 - Legend: each of Now, Next and Upcoming is a full-width row you can click, not just the dot. The row shades under the pointer, and a click opens the colour picker below it. Scales and Modify stay below as before.
