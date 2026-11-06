@@ -216,7 +216,7 @@ public sealed class CapoPlacementTests
         Assert.Equal(5, window.WorkingEffectiveCapo(0));
         var at = board.TranslatePoint(new Point(board.FretX(7), board.Bounds.Height / 2), window)!.Value;
         window.MouseMove(at);
-        Assert.Equal(new Cursor(StandardCursorType.Hand).ToString(), board.Cursor?.ToString());
+        Assert.Null(board.Cursor);   // the hover shows the ghost, outline and tooltip; the pointer shape never changes
         Assert.Equal("Partial capo fret 7, drag to move", ToolTip.GetTip(board));
         var commits = new List<int>();
         board.CommitRequested += fret => { commits.Add(fret); return true; };
