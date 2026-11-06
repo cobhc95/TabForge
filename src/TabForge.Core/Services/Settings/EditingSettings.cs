@@ -59,6 +59,9 @@ public sealed class EditingSettings
     public string FretDotStyle { get; set; } = FretNoteColours.Fill;
     /// <summary>Brightness of the entire physical neck (wood, inlays, wires, strings and capo), independent of note markers.</summary>
     public int FretboardBrightness { get; set; } = FretboardStyles.DefaultBoardBrightness;
+    /// <summary>The theme ("Dark" or "Light") the fretboard look and brightness defaults were last resolved for; empty in a file from before
+    /// the defaults followed the theme (FretboardStyles.FollowTheme).</summary>
+    public string FretboardDefaultsTheme { get; set; } = "";
     /// <summary>Brightness of cursor/playback note colours, independent of decorative position inlays and scale highlights.</summary>
     public int FretboardNoteBrightness { get; set; } = FretboardStyles.DefaultNoteBrightness;
     /// <summary>Fretboard string spacing relative to the fret width: "Compact", "Natural" (default) or "Wide" (at most 1.5x natural).</summary>

@@ -15,7 +15,41 @@ public static class FretboardStyles
     public const string None = "None";
     // Brightness is independent of material presets: choosing a wood must not undo a user's contrast adjustment.
     public const int MinBrightness = 40, MaxBrightness = 160, BrightnessStep = 5;
-    public const int DefaultBoardBrightness = 65, DefaultNoteBrightness = 100;
+    /// <summary>The board brightness defaults: the dark theme's (also the settings' own default), the light theme's, and the one files saved before
+    /// the defaults followed the theme (a stored value equal to it was never chosen).</summary>
+    public const int DefaultBoardBrightness = 75, LightBoardBrightness = 90, LegacyBoardBrightness = 65, DefaultNoteBrightness = 100;
+
+    /// <summary>The default preset of each theme: Rosewood in the dark theme, Maple in the light one.</summary>
+    public const string DarkPreset = "Rosewood", LightPreset = "Maple";
+
+    /// <summary>The theme a settings file's fretboard defaults were last resolved for (<see cref="EditingSettings.FretboardDefaultsTheme"/>).</summary>
+    public const string DarkTheme = "Dark", LightTheme = "Light";
+
+    /// <summary>The fretboard look and board brightness a theme starts with.</summary>
+    public static (Look Look, int Brightness) ThemeDefaults(bool light) =>
+        (OfPreset(light ? LightPreset : DarkPreset)!, light ? LightBoardBrightness : DefaultBoardBrightness);
+
+    /// <summary>
+    /// Moves the fretboard's look and board brightness to the defaults of the theme shown now, each only while it still holds the defaults of the
+    /// theme they were resolved for (a file from before has none: its old default, the Rosewood look at 65%). A look or brightness the person
+    /// chose differs from those and is kept. Records the theme; true when anything changed.
+    /// </summary>
+    public static bool FollowTheme(EditingSettings e, bool light)
+    {
+        var theme = light ? LightTheme : DarkTheme;
+        if (e.FretboardDefaultsTheme == theme) return false;
+        var (fromLook, fromBrightness) = e.FretboardDefaultsTheme switch
+        {
+            LightTheme => ThemeDefaults(true),
+            DarkTheme => ThemeDefaults(false),
+            _ => (OfPreset(DarkPreset)!, LegacyBoardBrightness),
+        };
+        var (toLook, toBrightness) = ThemeDefaults(light);
+        if (LookOf(e) == fromLook) Apply(e, toLook);
+        if (e.FretboardBrightness == fromBrightness) e.FretboardBrightness = toBrightness;
+        e.FretboardDefaultsTheme = theme;
+        return true;
+    }
     public static int ClampBrightness(int value) => Math.Clamp(value, MinBrightness, MaxBrightness);
 
     /// <summary>A neutral black/white veil: below 100 darkens, above 100 brightens; zero at the original look.</summary>

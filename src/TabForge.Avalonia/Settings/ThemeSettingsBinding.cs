@@ -47,6 +47,15 @@ public sealed class ThemeSettingsBinding : IDisposable
         panes.ArrangementCreated += ApplyArrangement;
         if (panes.Arrangement is { } shown) ApplyArrangement(shown);
         settings.SettingsChanged += OnSettingsChanged;
+        FollowFretboardTheme();
+    }
+
+    // The fretboard's default look and brightness follow the theme shown (FretboardStyles.FollowTheme keeps a chosen one); a change is saved,
+    // and the save's settings notice redraws the fretboard. Only a theme change does anything.
+    private void FollowFretboardTheme(bool? osLight = null)
+    {
+        var os = osLight ?? _window.PlatformSettings?.GetColorValues().ThemeVariant == PlatformThemeVariant.Light;
+        if (FretboardStyles.FollowTheme(_settings.Settings.Editing, AvaloniaPalette.PaintsLight(_appearance, os))) _settings.SaveSettings();
     }
 
     /// <summary>Stops following the settings and the arrangement panes.</summary>
@@ -109,6 +118,7 @@ public sealed class ThemeSettingsBinding : IDisposable
         ApplyWindow(_window, _root, _appearance);
         UpdateSystemListener();
         if (_panes.Arrangement is { } shown) ApplyArrangement(shown);
+        FollowFretboardTheme();
     }
 
     private void OnWindowOpened(object? sender, EventArgs e) => UpdateSystemListener();
@@ -141,6 +151,7 @@ public sealed class ThemeSettingsBinding : IDisposable
         // Publish rebuilds the System tables from the presets and repaints every open window; the Fluent variant follows the OS itself.
         AvaloniaPalette.Publish(_appearance, force: true);
         _window.InvalidateVisual();
+        FollowFretboardTheme(e.ThemeVariant == PlatformThemeVariant.Light);
     }
 
     private void ApplyArrangement(ArrangementView arrangement)
