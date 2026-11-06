@@ -4,21 +4,36 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ## 0.9.1
 
-- Start-up loudness: the Monitor FX chain is now sent to the engine before the output is configured, so the engine builds it before the first audible block; the first sound no longer reaches the output without the Monitor FX plug-ins (for example the IR Loader's auto level) while they load (untested in app).
-- Fretboard legend: each of now, next and upcoming is a full-width row you can click (the dot and the label together); it shades with a thin edge under the pointer and opens the colour picker under the row. The Scales and Modify buttons stay below as before (untested in app).
-- Fretboard inlays: the Position inlay colour option is gone; each inlay material now shows its own colour over its grain (pearl white stays white, black pearl dark, abalone blue and green their own hues), and inlays never pick up the green of the playing-note dots. Older settings files load as before (untested in app).
-- Fretboard defaults follow the theme: the dark theme starts on Rosewood at 75% board brightness, the light theme on Maple at 90%; a look or brightness you chose stays when the theme changes, and Reset section on the Look page goes back to the shown theme's defaults (untested in app).
-- Drag selection scroll: while a selection drag is past the edge of the score, the timeline or the piano roll during playback, the view no longer jumps back to the playhead; following resumes when the pointer comes back inside or the drag ends (untested in app).
-- Accent colour: the Track properties capo Full / Partial selector, the capo hover, ghost, landing badge and selection on its mini fretboard, the fretboard's focus rings and placement preview, the timeline's clip selection, drop and drag previews, the repeat pass picker, the Add track drop ghost, the active section band, the Band view's fretboard toggle and the Sections flash now follow the accent colour chosen in Appearance instead of a fixed blue (untested in app).
-- Track properties: a string's speaker button is lit in the accent colour while it repeats that string, and goes back to normal when the repeat stops (switched off, another string's speaker, or the window closes) (untested in app).
-- FX window meter: a track with no audio input now shows the MIDI notes it receives in its Input bar, in its own MIDI colour, lit on each note-on and fading out quickly; tracks with an audio input look as before (untested in app).
-- Fretboard note colours: Fretboard settings > Notes and markers has a Note colours card with the Now, Next and Upcoming colours (the same colour picker as Settings), Reset colours and a Fill or Ring dot style; the fretboard's dots and its legend use them, and a click on a legend dot opens the same picker there. The defaults are the colours from before (untested in app).
-- Drag selection scrolls: while you drag a selection in the score, the timeline lanes or the piano roll and carry the pointer out of the view (in the score, into the timeline below it or the area above it), the view keeps scrolling that way, faster the further out the pointer is, and stops when the pointer comes back or the content ends; the selection keeps following the pointer (untested in app).
-- Band view: the side panels (Tools, Structure, Rhythm, Layout, Sections, Lyrics) opened from the toolbar now come back in the same column, arrangement and width as in the normal view, instead of a narrow column with its tabs along the right edge (untested in app).
-- Rewind while playing: pressing Rewind (or another jump to the same spot) again while the song is still being prepared for that spot no longer starts the preparation over, and on a song without repeats a rewind after the first one jumps at once instead of preparing the song again, so the playhead no longer holds still between presses (untested in app).
-- Live input window: the strip now fits one row at the default size (960 x 480) with no clipped control and no dead space: the strip frame hugs its controls instead of stretching, the Tuner switch is as wide as its label, the note and cents cells and the Gain, Vol and Pan labels take only their text width, and the cents scale shrinks first when the window narrows.
-- Plug-in editors: a docked plug-in editor larger than its area (for example Superior Drummer 3 in the FX chain window) no longer loses its right and bottom parts with no scroll bars. The plug-in is no longer told a size smaller than the one it asked for, so the bars appear and the editor scrolls. With the interface size set to anything but 100%, the frame around a docked editor came out too small and cut off the plug-in's right and bottom edges even with room to spare; the whole editor now shows at any interface size.
-- Downloads: the Windows portable zip and installer names carry the whole version (for example `TabForge-0.9.1-win-x64-portable.zip`), so the download links in the README match the files, including for x.y.0 releases.
+### Added
+
+- Fretboard note colours: Fretboard settings > Notes and markers has a Note colours card for the Now, Next and Upcoming colours, using the same colour picker as Settings, with Reset colours and a Fill or Ring dot style. The fretboard dots and the legend use these colours.
+- Legend: each of Now, Next and Upcoming is a full-width row you can click, not just the dot. The row shades under the pointer, and a click opens the colour picker below it. Scales and Modify stay below as before.
+- Drag selection scrolls the view: when you drag a selection past the edge of the score, the timeline or the piano roll, the view keeps scrolling that way, faster the further out the pointer goes. In the score this includes the timeline below it and the area above it. It stops when the pointer comes back or the content ends, and the selection keeps following the pointer.
+- FX window meter: a track without an audio input shows the MIDI notes it receives in its Input bar, in its own colour, lit on each note-on and fading quickly.
+- Track properties: a string's speaker button is lit in the accent colour while it repeats that string, and goes back to normal when the repeat stops.
+
+### Changed
+
+- Fretboard defaults follow the theme: the dark theme starts on Rosewood at 75% board brightness, and the light theme on Maple at 90%. A look or brightness you chose stays when the theme changes. Reset section on the Look page returns to the shown theme's defaults.
+- Fretboard inlays: the Position inlay colour option is removed. Each inlay material now shows its own colour over its grain, so pearl white stays white and black pearl stays dark. Inlays no longer take on the green of the playing-note dots. Older settings files load as before.
+- Accent colour: the Track properties capo Full and Partial selector, the capo hover and selection on its mini fretboard, focus rings, clip selection and drop previews, the repeat pass picker, the Add track drop ghost, the active section band, the Band view's fretboard toggle and the Sections flash now follow the accent colour chosen in Appearance, instead of a fixed blue.
+- Pointer shape: the hand cursor is gone from the capo, the track string rows and the save prompt's Details link. Only resize cursors change the pointer now.
+- Band view: the side panels (Tools, Structure, Rhythm, Layout, Sections, Lyrics) opened from the toolbar come back in the same column, arrangement and width as in the normal view, instead of a narrow column along the right edge.
+- Live input window: the strip fits one row at the default size (960 x 480) with no clipped control or dead space. The Tuner switch is as wide as its label, and the cents scale shrinks first when the window narrows.
+- Downloads: the Windows portable zip and installer names include the whole version (for example `TabForge-0.9.1-win-x64-portable.zip`), so the README download links match the files.
+
+### Fixed
+
+- Start-up loudness: the Monitor FX chain is now sent to the engine before the output is configured, so the first sound never reaches the output without the Monitor FX plug-ins (such as the IR Loader's auto level).
+- Start-up crash: the fretboard could fail to draw at start-up because of an inlay colour name mismatch. Fixed.
+- Rewind while playing: pressing Rewind again while the song is still being prepared for that spot no longer starts the preparation over. On a song without repeats, a repeated rewind jumps at once, so the playhead no longer holds still between presses.
+- Drag selection during playback: the view no longer jumps back to the playhead while you drag a selection past the edge. Following resumes when the pointer comes back inside or the drag ends.
+- Plug-in editors: a docked plug-in editor larger than its area no longer loses its right and bottom parts with no scroll bars. The plug-in is no longer told a size smaller than the one it asked for, so the bars appear and the editor scrolls. At any interface size other than 100%, the frame around a docked editor now shows the whole editor.
+- Live input strip: fixed the layout so it no longer clips controls at the default window size.
+
+### Known issues
+
+- With ASIO and Follow Windows volume on, the first second after the device opens can be about 16 dB too loud on some interfaces, until TabForge has measured the Windows path offset.
 
 ## 0.9.0
 
