@@ -22,6 +22,9 @@ public sealed partial class PianoRollSurface
     private List<int> _splitHits = new();
     private EdgeAutoScroll? _marqueeEdgeScroll;
 
+    /// <summary>True while a box dragged past the note grid holds the playhead follow (EdgeAutoScroll.HoldsFollow).</summary>
+    internal bool MarqueeScrollHoldsFollow => _marqueeEdgeScroll?.HoldsFollow == true;
+
     // The box's press corner rides with the notes as the grid scrolls under the held pointer.
     private EdgeAutoScroll MarqueeEdgeScroll => _marqueeEdgeScroll ??= new EdgeAutoScroll(
         dy =>

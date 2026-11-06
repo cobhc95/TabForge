@@ -1,3 +1,4 @@
+using Avalonia.Headless.XUnit;
 using TabForge.Avalonia.Platform;
 using Xunit;
 
@@ -5,7 +6,8 @@ namespace TabForge.Avalonia.Tests;
 
 /// <summary>
 /// Owns: the drag-select edge scroll's rules: no scroll inside the view (its edges included), a step that grows with the distance the pointer is
-///   past the top or bottom and stops growing at the cap, and the clamp that moves nothing at the content end.
+///   past the top or bottom and stops growing at the cap, the clamp that moves nothing at the content end, and the hold on the playhead
+///   follow: on from the first move past an edge, off when the pointer is back inside or the drag ends.
 /// Does not own: the timer or the views that call it (ScorePreviewInput, TimelineInputController.Box, PianoRollSurface.Select).
 /// Tests: this class.
 /// </summary>
@@ -39,6 +41,24 @@ public class EdgeAutoScrollTests
     {
         Assert.Equal(0, EdgeAutoScroll.Step(500, 0, 0));
         Assert.Equal(0, EdgeAutoScroll.Step(double.NaN, 0, 400));
+    }
+
+    [AvaloniaFact]
+    public void ThePlayheadFollowWaitsOnlyWhileTheDragIsPastAnEdge()
+    {
+        var scroll = new EdgeAutoScroll(_ => 0, _ => { });
+        Assert.False(scroll.HoldsFollow);
+        scroll.Update(200, 0, 400);   // inside: the follow goes on as before
+        Assert.False(scroll.HoldsFollow);
+        scroll.Update(450, 0, 400);   // past the bottom
+        Assert.True(scroll.HoldsFollow);
+        scroll.Update(390, 0, 400);   // back inside
+        Assert.False(scroll.HoldsFollow);
+        scroll.Update(-20, 0, 400);   // past the top
+        Assert.True(scroll.HoldsFollow);
+        scroll.Stop();                // release, Escape or a lost capture
+        Assert.False(scroll.HoldsFollow);
+        Assert.False(scroll.IsScrolling);
     }
 
     [Theory]

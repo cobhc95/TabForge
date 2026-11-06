@@ -444,7 +444,7 @@ public sealed partial class ScorePreviewView : Control
     {
         if (_scrollViewer is not { } viewer) return;   // null while detached: no work
         EnsurePageOrigin(viewer, viewer.Offset);   // the line, its margin and the offset all come from the one live origin this frame
-        if (!Follow.FollowPlayback || !FollowHold.Allows(Follow)) return;
+        if (!Follow.FollowPlayback || !FollowHold.Allows(Follow) || _input.EdgeScrollHoldsFollow) return;
         // The follow keeps the whole playhead line (staff and tab) in view: parking the tab alone cut the staff off when the margin is shorter than the staff.
         if (_probe.Play.PlayheadLine(_probe) is not var (x, top, bottom)) return;
         _follower.Follow(Follow, viewer, PageLeftMargin(viewer), Zoom, (x, top, bottom), _probe.Play.CurrentBarWidth(_probe) ?? 0);

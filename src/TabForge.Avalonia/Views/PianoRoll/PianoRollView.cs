@@ -238,7 +238,7 @@ public sealed partial class PianoRollView : DockPanel
         Surface.Playhead.InvalidateVisual();
         var follow = _host.Follow().FollowPlayback;
         if (_followButton.IsChecked != follow) _followButton.IsChecked = follow;   // the View menu's Follow playback flips the same setting
-        if (follow && _session is { IsPlaying: true } && PlayheadBeat() is { } beat) Surface.Reveal(beat);
+        if (follow && !Surface.MarqueeScrollHoldsFollow && _session is { IsPlaying: true } && PlayheadBeat() is { } beat) Surface.Reveal(beat);
     }
 
     /// <summary>The playhead's beat on the piano roll's clock, or null with no playback.</summary>

@@ -23,6 +23,6 @@ public sealed partial class ArrangementView
 
     private void FollowPlayheadIfAllowed()
     {
-        if (FollowHold.Allows(Follow)) TimelineFollowScroll.FollowPlayhead(_sideways, Timeline);
+        if (FollowHold.Allows(Follow) && !Input.BoxScrollHoldsFollow) TimelineFollowScroll.FollowPlayhead(_sideways, Timeline);
     }
 }

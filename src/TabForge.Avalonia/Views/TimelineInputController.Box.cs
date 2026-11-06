@@ -23,6 +23,9 @@ public sealed partial class TimelineInputController
     private Point _boxPointer;
     private EdgeAutoScroll? _boxEdgeScroll;
 
+    /// <summary>True while a box dragged past the track rows holds the playhead follow (EdgeAutoScroll.HoldsFollow).</summary>
+    internal bool BoxScrollHoldsFollow => _boxEdgeScroll?.HoldsFollow == true;
+
     private EdgeAutoScroll BoxEdgeScroll => _boxEdgeScroll ??= new EdgeAutoScroll(
         dy => { var before = _view.RowScrollOffset; _view.RowScrollOffset = before + dy; return _view.RowScrollOffset - before; },
         moved => { _boxScrolled += moved; UpdateBoxSelect(_boxPointer); });

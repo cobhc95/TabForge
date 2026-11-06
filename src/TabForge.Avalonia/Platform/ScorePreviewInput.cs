@@ -47,6 +47,9 @@ internal sealed partial class ScorePreviewInput
         _edgeScroll = new EdgeAutoScroll(ScrollViewerBy, FollowScroll);
     }
 
+    /// <summary>True while a selection drag past the score's edge holds the playhead follow (EdgeAutoScroll.HoldsFollow).</summary>
+    internal bool EdgeScrollHoldsFollow => _edgeScroll.HoldsFollow;
+
     private ScrollViewer? Viewer => _view.FindAncestorOfType<ScrollViewer>();
 
     // Scrolls the score's viewer down by dy (up when negative) inside its extent; returns what it moved.
@@ -162,6 +165,7 @@ internal sealed partial class ScorePreviewInput
         // Space is Transport.PlayPause and Escape clears the score selection first; Space is left to bubble to the window's key table.
         if (e.Key == Key.Space) return;
         if (e.Key == Key.Escape && CancelRightDrag()) { e.Handled = true; return; }
+        if (e.Key == Key.Escape) _edgeScroll.Stop();   // Escape ends a selection drag's scroll and its hold on the follow
         if (e.Key == Key.Escape && _view.Editor.HasSelection)
         {
             _view.Editor.ClearSelection();
