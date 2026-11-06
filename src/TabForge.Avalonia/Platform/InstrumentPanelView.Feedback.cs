@@ -95,6 +95,6 @@ public sealed partial class InstrumentPanelView
     private void DrawFocusRing(IDrawContext d, Func<string, UiColor> ink)
     {
         DrawKeyFocusRing(d, ink);
-        if (_keyboardFocus) d.Rect(null, new UiStroke(ink("InstrumentAccent"), 2), 1, 1, Math.Max(0, Bounds.Width - 2), Math.Max(0, Bounds.Height - 2));
+        if (_keyboardFocus) d.Rect(null, new UiStroke(ink("Accent"), 2), 1, 1, Math.Max(0, Bounds.Width - 2), Math.Max(0, Bounds.Height - 2));
     }
 }

@@ -101,7 +101,7 @@ internal static partial class TimelineAudioClips
         var surface = light ? board : background;
         if (view.ClipDropLane is { } drop && drop.Track == track)
         {
-            var accent = ink("InstrumentAccent");
+            var accent = ink("Accent");
             var dropTop = top + Math.Max(0, drop.Lane) * ClipLanes.AudioLaneHeight;
             d.Rect(accent.WithOpacity(DropLaneFillOpacity), new UiStroke(accent, DropLaneStrokeWidth), laneFrom, dropTop, Math.Max(0, laneTo - laneFrom), laneHeight);
         }
@@ -161,7 +161,7 @@ internal static partial class TimelineAudioClips
         DrawFadeShades(d, view, clip, rect, ink);
         d.Pop();
         if (view.IsClipSelected(clip))
-            d.Rect(null, new UiStroke(ink("InstrumentAccent"), SelectionStrokeWidth), rect.X, rect.Y, rect.Width, rect.Height, ClipCornerRadius);
+            d.Rect(null, new UiStroke(ink("Accent"), SelectionStrokeWidth), rect.X, rect.Y, rect.Width, rect.Height, ClipCornerRadius);
         if (ShowsFadeHandles(view, clip, row, index)) DrawFadeHandles(d, view, clip, rect, nameInk, background);
     }
 
@@ -202,7 +202,7 @@ internal static partial class TimelineAudioClips
     {
         if (view.FileDropPreview is not { } preview) return;
         var laneHeight = ClipLanes.AudioLaneHeight;
-        var accent = ink("InstrumentAccent");
+        var accent = ink("Accent");
         UiColor colour;
         double laneTop;
         if (preview.Track is null)

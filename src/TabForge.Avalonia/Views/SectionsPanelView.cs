@@ -32,7 +32,6 @@ public sealed class SectionsPanelView : Border
     private const string RemoveTip = "Remove the selected section marker. The bars and notes stay.";
     private const string NeedsFullAppText = "Editing sections isn't available yet.";
     private const string LockGlyph = "🔒";
-    private const string FlashKey = "InstrumentAccent";
 
     // The confirm flash's glow over a row is drawn at this opacity at its peak (the flash strength scales it down as it fades).
     private const double FlashGlowPeakOpacity = 0.55;
@@ -138,7 +137,8 @@ public sealed class SectionsPanelView : Border
         DockPanel.SetDock(lockGlyph, Dock.Right);
         line.Children.Add(lockGlyph);
         line.Children.Add(title);
-        var glow = new Border { Background = new SolidColorBrush(AvaloniaPalette.ColorOf(Palette.Get(FlashKey))), CornerRadius = new CornerRadius(ChromeMetrics.RadiusTiny), Opacity = 0, IsHitTestVisible = false };
+        var glow = new Border { CornerRadius = new CornerRadius(ChromeMetrics.RadiusTiny), Opacity = 0, IsHitTestVisible = false };
+        glow[!Border.BackgroundProperty] = new global::Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("AccentBrush");   // the flash is the master accent
         var scale = new ScaleTransform(1, 1);
         var view = new Border
         {

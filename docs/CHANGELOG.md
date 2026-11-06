@@ -4,6 +4,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ## 0.9.1
 
+- Accent colour: the Track properties capo Full / Partial selector, the capo hover, ghost, landing badge and selection on its mini fretboard, the fretboard's focus rings and placement preview, the timeline's clip selection, drop and drag previews, the repeat pass picker, the Add track drop ghost, the active section band, the Band view's fretboard toggle and the Sections flash now follow the accent colour chosen in Appearance instead of a fixed blue (untested in app).
 - Track properties: a string's speaker button is lit in the accent colour while it repeats that string, and goes back to normal when the repeat stops (switched off, another string's speaker, or the window closes) (untested in app).
 - FX window meter: a track with no audio input now shows the MIDI notes it receives in its Input bar, in its own MIDI colour, lit on each note-on and fading out quickly; tracks with an audio input look as before (untested in app).
 - Fretboard note colours: Fretboard settings > Notes and markers has a Note colours card with the Now, Next and Upcoming colours (the same colour picker as Settings), Reset colours and a Fill or Ring dot style; the fretboard's dots and its legend use them, and a click on a legend dot opens the same picker there. The defaults are the colours from before (untested in app).

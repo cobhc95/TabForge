@@ -287,7 +287,7 @@ public sealed partial class TimelineView
 
     private void DrawSections(IDrawContext d, bool light, int activeSection)
     {
-        var accent = AvaloniaPalette.Get("InstrumentAccent", light);
+        var accent = AvaloniaPalette.Get("Accent", light);
         for (var i = 0; i < _sections.Count; i++)
         {
             var (start, end) = SectionBars(i);

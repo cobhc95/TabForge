@@ -477,7 +477,7 @@ public sealed partial class BandTrackPanel : Border
 
     private void ApplyLook()
     {
-        var accent = BandBrush.Of(this, "InstrumentAccent");
+        var accent = BandBrush.Of(this, "Accent");
         var trackBrush = Color.TryParse(_track?.ColorHex, out var colour) ? new SolidColorBrush(colour) : accent;
         // Every card, the selected one too, is framed in its own track's colour (the plain outline when the colour frame is off).
         BorderBrush = _colourFrame ? trackBrush : BandBrush.Of(this, "InstrumentBoardEdge");
@@ -485,8 +485,8 @@ public sealed partial class BandTrackPanel : Border
         _tick.Background = trackBrush;
         _title.Foreground = BandBrush.Of(this, "TextPrimary");
         _fretboardToggle.Background = _fretboardShown ? accent : BandBrush.Of(this, "InstrumentRowAlt");
-        // The icon takes the ink that reads on the fill it sits on: the instrument accent is not the UI accent, so OnAccent is not its ink.
-        var onAccent = new SolidColorBrush(AvaloniaPalette.ColorOf(TabForge.Platform.Theme.ThemeColours.InkOn(AvaloniaPalette.Get("InstrumentAccent", ActualThemeVariant == global::Avalonia.Styling.ThemeVariant.Light))));
+        // The icon takes the ink that reads on the fill it sits on (the master accent the toggle is lit in).
+        var onAccent = new SolidColorBrush(AvaloniaPalette.ColorOf(TabForge.Platform.Theme.ThemeColours.InkOn(AvaloniaPalette.Get("Accent", ActualThemeVariant == global::Avalonia.Styling.ThemeVariant.Light))));
         BandFretboardIcon.Paint(_fretboardIcon, _fretboardShown ? onAccent : BandBrush.Of(this, "TextPrimary"));
     }
 }

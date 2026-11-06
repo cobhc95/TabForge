@@ -197,7 +197,7 @@ internal static class TimelineRepeatPicker
         var regionSpan = view.BarX(region.EndBar + 1) - regionX;
         if (regionSpan <= 0) return;
         var shown = view.RepeatShown.ShownPass(region);
-        var accent = ink("InstrumentAccent");
+        var accent = ink("Accent");
         switch (FormFor(regionSpan, total))
         {
             case RepeatPickerForm.Dot:
@@ -234,7 +234,7 @@ internal static class TimelineRepeatPicker
         var box = PopoverBox(regionX, laneTop, total);
         d.Rect(ink("InstrumentBackground"), new UiStroke(ink("ClipOutline"), PickerStrokeDip), box.X, box.Y, box.Width, box.Height, PillRadiusDip);
         var pills = PopoverPillRects(regionX, laneTop, total);
-        DrawPills(d, pills, view, track, region, ink("InstrumentAccent"), ink("InstrumentLegible"));
+        DrawPills(d, pills, view, track, region, ink("Accent"), ink("InstrumentLegible"));
     }
 
     /// <summary>The floating popover box of a region above <paramref name="laneTop"/>: all its pills. One geometry of draw and hit-test.</summary>

@@ -155,7 +155,7 @@ public sealed partial class TrackPropertiesWindow
     // Own drawing avoids the theme's generic grey ToggleButton hover overriding the instrument accent.
     internal sealed class CapoToggle : ToggleButton
     {
-        internal const string AccentToken = "InstrumentAccent";
+        internal const string AccentToken = "Accent";   // the master accent (Appearance), as the rest of the window
         protected override Type StyleKeyOverride => typeof(ToggleButton);
         public CapoToggle()
         {

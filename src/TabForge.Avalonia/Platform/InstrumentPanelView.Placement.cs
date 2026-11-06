@@ -169,7 +169,7 @@ public sealed partial class InstrumentPanelView
         var right = Math.Min(paneWidth, targetBoard.Right + FretboardGeometryRules.LegendWidth);
         if (right <= left) return;
 
-        var accent = ink("InstrumentAccent");
+        var accent = ink("Accent");
         var x = left + LandingInset;
         var y = LandingInset;
         var width = right - left - 2 * LandingInset;

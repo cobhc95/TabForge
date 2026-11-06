@@ -113,7 +113,7 @@ internal static partial class TimelineAudioClips
         DrawSkippedPasses(d, view, slices, laneTop, ink, spanFrom, spanWidth);
         var box = FoldBox(view, slices, laneTop);
         if (view.IsClipSelected(clip))
-            d.Rect(null, new UiStroke(ink("InstrumentAccent"), SelectionStrokeWidth), box.X, box.Y, box.Width, box.Height, ClipCornerRadius);
+            d.Rect(null, new UiStroke(ink("Accent"), SelectionStrokeWidth), box.X, box.Y, box.Width, box.Height, ClipCornerRadius);
         if (ShowsFadeHandles(view, clip, row, index)) DrawFadeHandles(d, view, clip, box, nameInk, background, clampToBox: true);
     }
 
@@ -169,7 +169,7 @@ internal static partial class TimelineAudioClips
         }
         var box = FoldBox(view, slices, laneTop);
         if (view.IsClipSelected(clip))
-            d.Rect(null, new UiStroke(ink("InstrumentAccent"), SelectionStrokeWidth), box.X, box.Y, box.Width, box.Height, ClipCornerRadius);
+            d.Rect(null, new UiStroke(ink("Accent"), SelectionStrokeWidth), box.X, box.Y, box.Width, box.Height, ClipCornerRadius);
         if (ShowsFadeHandles(view, clip, row, index)) DrawFadeHandles(d, view, clip, box, nameInk, background, clampToBox: true);
     }
 

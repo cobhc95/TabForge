@@ -41,7 +41,7 @@ internal static partial class TimelineAudioClips
     {
         if (view.ClipDragPreview is not { } preview || preview.Ghosts.Count == 0) return;
         var laneHeight = ClipLanes.AudioLaneHeight;
-        var tone = ink(preview.Allowed ? "InstrumentAccent" : "Danger");
+        var tone = ink(preview.Allowed ? "Accent" : "Danger");
         d.PushClip(0, view.TrackRowsTop, width, Math.Max(0, Math.Max(view.TrackRowsBottom, view.Bounds.Height) - view.TrackRowsTop));
         for (var i = 0; i < preview.Ghosts.Count; i++)
         {
@@ -70,7 +70,7 @@ internal static partial class TimelineAudioClips
                 if (slot) DrawFileDropSlot(d, tone, width, laneTop, laneHeight);
                 else d.Rect(tone.WithOpacity(LandingWashOpacity), null, 0, laneTop, width, band);
             }
-            var colour = !preview.Allowed ? tone : ghost.Track is null ? ink("InstrumentAccent") : view.TrackColourOf(ghost.Track, tone);
+            var colour = !preview.Allowed ? tone : ghost.Track is null ? ink("Accent") : view.TrackColourOf(ghost.Track, tone);
             DrawLanded(d, ink, view, ghost, colour, laneTop, band, width);
         }
         d.Pop();

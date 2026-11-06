@@ -99,7 +99,7 @@ public sealed class AddTrackBar : Control
 
     private void DrawDropGhost(IDrawContext d, Func<string, UiColor> ink, (double X1, double X2, string Label, string Readout) ghost)
     {
-        var accent = ink("InstrumentAccent");
+        var accent = ink("Accent");
         var textInk = ink("TextPrimary");
         var left = Math.Max(ListWidth, 0);
         d.PushClip(left, 0, Math.Max(0, Bounds.Width - left), Bounds.Height);

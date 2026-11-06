@@ -64,7 +64,7 @@ internal static class FretboardBoardPainter
         var wood = FretboardArtist.Wood(layout, bass);
         var height = wood.Height * CapoOverhang * DialogMetrics.TrackCapoImageHeight / DialogMetrics.TrackCapoImageVisible;
         var width = height * size.Width / size.Height;
-        var accent = ink("InstrumentAccent");
+        var accent = ink("Accent");
         if (fullFret >= layout.FirstFret && fullFret <= layout.LastFret)
         {
             var bar = DrawCapoBar(d, image, shadow, layout, wood, fullFret, width, height);
@@ -309,13 +309,13 @@ internal class FretboardView : Control
         if (_ghostFret is { } ghost && _drag is null)
         {
             var x = PlacementBounds(layout, ghost);
-            d.Rect(ink("InstrumentAccent").WithOpacity(DialogMetrics.TrackCapoOffOpacity), new UiStroke(ink("InstrumentAccent"), DialogMetrics.TrackCapoSelectionThickness),
+            d.Rect(ink("Accent").WithOpacity(DialogMetrics.TrackCapoOffOpacity), new UiStroke(ink("Accent"), DialogMetrics.TrackCapoSelectionThickness),
                 x.X, x.Y, x.Width, x.Height, DialogMetrics.TrackCapoBarRadius);
         }
         if (_multiple && ShownFret > 0)
         {
             var bar = SelectionBounds!.Value;
-            d.Rect(null, new UiStroke(ink("InstrumentAccent"), DialogMetrics.TrackCapoSelectionThickness),
+            d.Rect(null, new UiStroke(ink("Accent"), DialogMetrics.TrackCapoSelectionThickness),
                 bar.X, bar.Y, bar.Width, bar.Height, DialogMetrics.TrackCapoBarRadius);
         }
     }
