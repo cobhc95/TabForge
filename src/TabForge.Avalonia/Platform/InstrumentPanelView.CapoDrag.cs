@@ -7,7 +7,7 @@ namespace TabForge.Avalonia.Platform;
 
 // Owns: the fretboard's capo drag: grabbing a drawn full or partial capo, previewing its fret while it moves (no song write)
 // and committing once on release through CapoCommitRequested / PartialCapoCommitRequested (one undo step, one engine sync in the owner).
-// Owns too: the hand pointer while the pointer hovers a drawn capo (the owner's one pointer-shape exception; the arrow while a drag runs).
+// Owns too: the hand pointer while the pointer hovers a drawn capo (the owner's one pointer-shape exception) and while a drag runs (Windows has no stock closed fist).
 // Does not own: the board geometry (Core FretboardGeometryRules), the capo rules (Core FretboardCapoRules), the capo drawing
 // (InstrumentPanelView.FretboardWood.cs) or the undo step (the strip commits through the score editor).
 // Tests: TabForge.Avalonia.Tests.InstrumentPanelViewTests, PartialCapoWindowTests.
@@ -53,7 +53,7 @@ public sealed partial class InstrumentPanelView
     /// <summary>Arms a capo drag when the press grabs a drawn partial or the full capo; false leaves the gesture to the board drag or the note pick.</summary>
     private bool TryArmCapoDrag(double x, double y)
     {
-        SetCapoPointer(false);   // a press starts the drag (or the board's own gesture): the pointer is the arrow, as before the hover
+        SetCapoPointer(false);   // a press that grabs no capo leaves the arrow; a grab keeps the hand
         if (_kind != InstrumentPanelKind.Fretboard || _track is null || _track.IsDrumTrack) return false;
         var scale = FretboardScale();
         if (!(scale > 0)) return false;
@@ -73,6 +73,7 @@ public sealed partial class InstrumentPanelView
                 _capoDrag = new FretboardCapoDrag(partial.Fret,
                     preview: fret => { _partialPreviewFret = fret; InvalidateVisual(); },
                     commit: fret => PartialCapoCommitRequested?.Invoke(index, fret) == true);
+                SetCapoPointer(true);
                 return true;
             }
         }
@@ -81,6 +82,7 @@ public sealed partial class InstrumentPanelView
         _capoDrag = new FretboardCapoDrag(_track.Capo,
             preview: fret => { _capoPreview = fret; InvalidateVisual(); },
             commit: fret => CapoCommitRequested?.Invoke(fret) == true);
+        SetCapoPointer(true);
         return true;
     }
 
@@ -128,7 +130,7 @@ public sealed partial class InstrumentPanelView
     /// <summary>Shows the hand pointer over a drawn capo, or the default arrow. Called only from the capo hover and drag, so no other control changes.</summary>
     private void SetCapoPointer(bool hand)
     {
-        var cursor = hand ? _handCursor ??= new Cursor(StandardCursorType.Hand) : null;
+        var cursor = hand || _capoDrag is not null ? _handCursor ??= new Cursor(StandardCursorType.Hand) : null;
         if (!ReferenceEquals(Cursor, cursor)) Cursor = cursor;
     }
 
@@ -152,6 +154,7 @@ public sealed partial class InstrumentPanelView
         _partialPreviewIndex = -1;
         _partialPreviewFret = null;
         drag.End();
+        SetCapoPointer(false);   // the next pointer move re-shows the hand if the pointer is still over the capo
         InvalidateVisual();
         return true;
     }

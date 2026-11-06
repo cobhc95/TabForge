@@ -94,7 +94,7 @@ public sealed class MainBoardCapoVisualTests
         var scale = view.FretboardScale();
         view.UpdateCapoHover(FretboardGeometryRules.FretX(layout, 4) * scale, FretboardGeometryRules.StringY(layout, 2) * scale);
         Assert.True(view.CapoHovered);
-        Assert.Null(view.Cursor);   // the hover shade shows it; the pointer shape never changes
+        Assert.NotNull(view.Cursor);   // the owner's one pointer exception: the hand over the capo
         view.UpdateCapoHover(2, 2);
         Assert.False(view.CapoHovered);
         Assert.Null(view.Cursor);
