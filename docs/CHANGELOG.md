@@ -7,6 +7,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 ### Added
 
 - Shortcuts: the piano roll's own keys can be rebound or cleared (Settings > Shortcuts, Note): the five tools (1 to 5), Quantize, Mute, Transpose, Zoom to fit, Legato, Duplicate and Invert selection keep their keys until you change them. A key can now be shared by commands that work in different places, and it is saved and loaded like any other.
+- Shortcuts: Metronome settings, Count-in settings, Loop settings, Loop selected bars, Clear loop, Clear selection and Show / hide master track can be given keys in Settings > Shortcuts.
 - Shortcuts: Fretboard settings (View) can be given a key; it opens the same window as the fretboard's right-click row.
 - Settings search finds every Fretboard settings option by its own label: Emphasise the root, Dim notes outside the scale and Only on the frets in view are now on the Fretboard & Keyboard page too, and Frets shown, Next notes shown ahead, the faint trail, Dot and number size and Clear highlight find their rows.
 - Settings > Fretboard & Keyboard > Appearance has the Now, Next and Upcoming note colours and the Note dot style, with the same colour picker as Appearance, and search finds them. Reset page and Reset all settings return them to the theme's colours and Fill; a colour you never changed keeps following the theme.
