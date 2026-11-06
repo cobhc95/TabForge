@@ -35,7 +35,7 @@ public sealed class LiveStripToggle : Control
         if (look == Look.Lit)
         {
             var probe = new FormattedText(label, System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
-                new Typeface(ChromeMetrics.UiFontFamily, FontStyle.Normal, FontWeight.Bold), ChromeMetrics.LiveStripFontSize, Brushes.Black);
+                new Typeface(ChromeMetrics.UiFontFamily, FontStyle.Normal, FontWeight.Bold), ChromeMetrics.LiveStripFontSize, null);
             width = Math.Max(width, Math.Ceiling(probe.Width) + 2 * LitPad);
         }
         Width = width; Height = height;

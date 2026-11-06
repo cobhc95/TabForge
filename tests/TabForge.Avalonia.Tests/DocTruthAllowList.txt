@@ -77,4 +77,5 @@ libHarfBuzzSharp
 libmpg123.so.0
 TabForge-0.9.0-linux-x64.tar.gz
 TabForge-0.9.0-linux-x86_64.AppImage
+TabForge-0.9.1-win-x64-portable.zip
 raw.githubusercontent.com
