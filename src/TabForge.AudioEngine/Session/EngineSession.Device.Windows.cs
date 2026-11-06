@@ -45,10 +45,7 @@ internal sealed partial class EngineSession
         _lossWatch = new OutputLossWatch(opened, Config.Driver == AudioOutputFactory.WasapiShared && string.IsNullOrWhiteSpace(Config.Device),
             why => Threads.Post(() => ReopenOutput(opened, why)));
         Mix.ResetClock();
-        // An ASIO output that follows the Windows volume waits in silence for its Windows path offset (SetWindowsPathOffset releases it).
-        var startHold = Config.Driver == AudioOutputFactory.Asio && Config.FollowWindowsVolume && !_pathOffsetKnown;
-        if (Config.PopGuard || startHold) (Mix.Fade ??= new OutputFade(SampleRate)).FadeIn(); else Mix.Fade = null;   // no callback runs here
-        if (startHold) Mix.Fade?.HoldStart();
+        if (Config.PopGuard) (Mix.Fade ??= new OutputFade(SampleRate)).FadeIn(); else Mix.Fade = null;   // no callback runs here
         Player.Play();
         FollowWindowsVolume(Config.Driver == AudioOutputFactory.Asio && Config.FollowWindowsVolume);
         return (latencyMs, description);
@@ -267,8 +264,6 @@ internal sealed partial class EngineSession
 
     private float _endpointGain = 1f, _sessionGain = 1f, _pathOffsetGain = 1f;
     private bool _following;
-    /// <summary>True once TabForge has sent this engine process its Windows path offset (until then an ASIO output starts held silent).</summary>
-    private bool _pathOffsetKnown;
 
     /// <summary>
     /// ASIO bypasses the Windows mixer entirely, so both the device's master volume and TabForge's own slider in the

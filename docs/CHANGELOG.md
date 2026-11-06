@@ -4,7 +4,6 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ## 0.9.1
 
-- Start-up loudness: an ASIO output that follows the Windows volume now stays silent until its Windows audio path offset is measured (about 1 s after start, at most 3 s), then ramps up, so the first second is no longer about 16 dB too loud (untested in app).
 - Fretboard legend: each of now, next and upcoming is a full-width row you can click (the dot and the label together); it shades with a thin edge under the pointer and opens the colour picker under the row. The Scales and Modify buttons stay below as before (untested in app).
 - Fretboard inlays: the Position inlay colour option is gone; each inlay material now shows its own colour over its grain (pearl white stays white, black pearl dark, abalone blue and green their own hues), and inlays never pick up the green of the playing-note dots. Older settings files load as before (untested in app).
 - Fretboard defaults follow the theme: the dark theme starts on Rosewood at 75% board brightness, the light theme on Maple at 90%; a look or brightness you chose stays when the theme changes, and Reset section on the Look page goes back to the shown theme's defaults (untested in app).

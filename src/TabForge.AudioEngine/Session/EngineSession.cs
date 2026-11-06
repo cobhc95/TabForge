@@ -295,10 +295,8 @@ internal sealed partial class EngineSession
     {
         AssertMain();
         _pathOffsetGain = Gain.FromDb(db);
-        _pathOffsetKnown = true;
         Log.Write($"Windows audio path offset {db:0.00} dB");
         ApplyFollowedGain();
-        Mix?.Fade?.ReleaseStartHold();   // the held start-up output ramps up now, at the measured level
     }
 
     // ---- Graph, routing, MIDI ----
