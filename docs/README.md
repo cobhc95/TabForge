@@ -1,4 +1,4 @@
-# TabForge 0.9.0
+# TabForge 0.9.1
 
 **A keyboard-driven tablature and notation editor for Windows, with experimental Linux packages.** Opens .gp3, .gp4, .gp5, .gpx and .gp files, and saves .gp and its own .tforge projects. Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard or keyboard, a piano roll, an arrangement timeline, audio and MIDI recording, a mixer, built-in effects, VST2, VST3 and CLAP plug-ins (32-bit and 64-bit VST), and offline audio and video rendering.
 
@@ -9,15 +9,15 @@
 ## Download
 
 > [!TIP]
-> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.9.0/TabForge-0.9.0-win-setup.exe)** · no administrator rights needed
+> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.9.1/TabForge-0.9.1-win-setup.exe)** · no administrator rights needed
 >
-> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.9.0/TabForge-0.9.0-win-x64-portable.zip)** · extract and run `TabForge.exe`
+> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.9.1/TabForge-0.9.1-win-x64-portable.zip)** · extract and run `TabForge.exe`
 
 Windows 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify your download](#verify-your-download). Older versions: [Releases](https://github.com/cobhc95/TabForge/releases).
 
 ### Linux packages (experimental)
 
-The main Linux download is the AppImage ([`TabForge-0.9.0-linux-x86_64.AppImage`](https://github.com/cobhc95/TabForge/releases/download/v0.9.0/TabForge-0.9.0-linux-x86_64.AppImage)). The archive ([`TabForge-0.9.0-linux-x64.tar.gz`](https://github.com/cobhc95/TabForge/releases/download/v0.9.0/TabForge-0.9.0-linux-x64.tar.gz)) is the fallback. Both include Wine 9.21 for Windows plug-ins, FFmpeg for video export and a General MIDI SoundFont, so sound works on first run.
+The main Linux download is the AppImage ([`TabForge-0.9.1-linux-x86_64.AppImage`](https://github.com/cobhc95/TabForge/releases/download/v0.9.1/TabForge-0.9.1-linux-x86_64.AppImage)). The archive ([`TabForge-0.9.1-linux-x64.tar.gz`](https://github.com/cobhc95/TabForge/releases/download/v0.9.1/TabForge-0.9.1-linux-x64.tar.gz)) is the fallback. Both include Wine 9.21 for Windows plug-ins, FFmpeg for video export and a General MIDI SoundFont, so sound works on first run.
 
 ```bash
 chmod +x TabForge-*-linux-x86_64.AppImage
