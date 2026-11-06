@@ -58,7 +58,11 @@ public sealed partial class AudioEngineClient : IDisposable
         // Group buses and the master chain run only alongside real engine tracks (they never start the engine themselves).
         if (project is not null && !ownIdle) wanted.AddRange(SongRigs.Running(project, null, SongRigKind.Bus | SongRigKind.Master).Select(r => r.AsTrack()));
         // Monitor FX (speaker calibration): after the master, live output only; the app-wide chain or the song's own. Global slot: wanted while any document's tracks are live.
-        if (project is not null && !idle) wanted.AddRange(SongRigs.Running(project, settings.MonitorFx, SongRigKind.Monitor).Select(r => r.AsTrack()));
+        var monitors = project is not null && !idle ? SongRigs.Running(project, settings.MonitorFx, SongRigKind.Monitor).Select(r => r.AsTrack()).ToList() : new List<TrackModel>();
+        wanted.AddRange(monitors);
+        // Sent before the device is configured: the engine builds every chain it has been asked for before it opens the output, so the
+        // first audible block already runs through the Monitor FX (sent after, the master would reach the device dry until it loaded).
+        if (monitors.Count > 0) SyncTrackChains(monitors, owner, quarantined, settings, mix, media);
         if (!ownIdle && _config != config) { var changing = _config is not null && config.PopGuard; if (_config is null || _config.Driver != config.Driver || _config.Device != config.Device) ForgetSingleRateAsio(); _config = config; if (changing) DeviceChanging?.Invoke(); if (!Send(EngineCommand.Configure, w => w.Write(config))) _config = null; }   // not delivered: the next sync configures the device again
         if (!ownIdle) SyncWindowsPathOffset(config);
         if (EngineProcessId is int enginePid && _limiterSent != (enginePid, settings.LiveLimiter))
