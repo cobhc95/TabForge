@@ -87,7 +87,8 @@ public sealed class TrackFxStrip : StripFrame
     public void Tick(double nowMs, DateTime utcNow)
     {
         var engine = _host.Engine;
-        Meters.Update(HasInput ? engine?.InputPeakOf(_track) ?? 0 : 0, engine?.PeakOf(_track) ?? 0, nowMs);
+        Meters.Update(HasInput ? engine?.InputPeakOf(_track) ?? 0 : 0, engine?.PeakOf(_track) ?? 0, nowMs,
+            HasInput ? 0 : LiveStripRules.MidiActivity(engine?.LastNoteOnOf(_track) ?? 0, System.Diagnostics.Stopwatch.GetTimestamp(), System.Diagnostics.Stopwatch.Frequency));
         var live = _host.PluginSettings.LiveInput;
         _readout.ReferenceHz = live.TunerReferenceHz;
         Tuner.ShowWindow(live.TunerWindowMs);

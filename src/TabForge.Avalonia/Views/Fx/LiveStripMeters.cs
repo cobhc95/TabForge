@@ -11,6 +11,7 @@ using TabForge.Platform.Theme;
 namespace TabForge.Avalonia.Views.Fx;
 
 // Owns: the Input and Output meters of the live input strip: two thin bars stacked in one drawn control (no text), the peak hold of the input, and the dB tooltip.
+//   A track with no audio input shows its MIDI activity in the Input bar instead (the MidiActivity colour, full on a note-on and fading out), only while there is some.
 // Does not own: where the peaks come from (the engine), the dB maths (LiveStripRules), the hold rule (PeakHold) or the frame loop (LiveInputStrip).
 // Tests: TabForge.Avalonia.Tests.LiveInputStripTests.
 // Thread: UI thread. A frame only repaints (InvalidateVisual) and only when a bar moved; the tooltip text changes only while the pointer is over the meters, a few times a second.
@@ -22,6 +23,7 @@ public sealed class LiveStripMeters : Control
     private readonly PeakHold _hold = new();
     private double _inFraction, _outFraction, _holdFraction = double.NaN, _inDb = LiveStripRules.MeterFloorDb, _outDb = LiveStripRules.MeterFloorDb, _tipAt = double.NegativeInfinity;
     private MeterTone _inTone, _outTone;
+    private double _midi;
 
     public LiveStripMeters()
     {
@@ -36,10 +38,12 @@ public sealed class LiveStripMeters : Control
     public double InputFraction => _inFraction;
     public double OutputFraction => _outFraction;
     public double InputHold => _holdFraction;
+    public double MidiLevel => _midi;
 
     /// <summary>Shows one frame of levels (linear peaks, 0..1+) at <paramref name="nowMs"/>; allocates nothing and repaints only when a bar moved.</summary>
-    public void Update(double inputPeak, double outputPeak, double nowMs)
+    public void Update(double inputPeak, double outputPeak, double nowMs, double midiLevel = 0)
     {
+        if (midiLevel != _midi) { _midi = midiLevel; InvalidateVisual(); }   // a note-on lights it; it repaints only while it fades
         _inDb = LiveStripRules.PeakToDb(inputPeak);
         var holdDb = LiveStripRules.PeakToDb(_hold.Update(inputPeak, nowMs));
         _outDb = LiveStripRules.PeakToDb(outputPeak);
@@ -57,7 +61,7 @@ public sealed class LiveStripMeters : Control
     }
 
     /// <summary>"Input -6 dB, Output -12 dB": the levels the bars show now.</summary>
-    public string Tip() => $"Input {LiveStripRules.DbText(_inDb)}, Output {LiveStripRules.DbText(_outDb)}";
+    public string Tip() => _midi > 0 ? $"MIDI in, Output {LiveStripRules.DbText(_outDb)}" : $"Input {LiveStripRules.DbText(_inDb)}, Output {LiveStripRules.DbText(_outDb)}";
 
     public override void Render(DrawingContext context)
     {
@@ -65,8 +69,17 @@ public sealed class LiveStripMeters : Control
         if (width < 1) return;
         var ink = AvaloniaPalette.InkOf(ActualThemeVariant == ThemeVariant.Light);
         var ctx = _draw.Use(context);
-        Bar(ctx, ink, 0, width, _inFraction, _inTone, _holdFraction);
+        if (_midi > 0) MidiBar(ctx, ink, width, _midi);
+        else Bar(ctx, ink, 0, width, _inFraction, _inTone, _holdFraction);
         Bar(ctx, ink, ChromeMetrics.LiveStripMeterBar + BarGap, width, _outFraction, _outTone, double.NaN);
+    }
+
+    // The Input bar showing MIDI: the whole bar in the MIDI colour at the activity's strength.
+    private static void MidiBar(IDrawContext ctx, System.Func<string, UiColor> ink, double width, double level)
+    {
+        var bar = ChromeMetrics.LiveStripMeterBar;
+        ctx.Rect(ink("TrackSliderTrack"), new UiStroke(ink("TrackSliderTrackBorder"), 1), 0, 0, width, bar, 2);
+        ctx.Rect(ink("MidiActivity").WithOpacity(level), null, 0, 0, width, bar, 2);
     }
 
     private static void Bar(IDrawContext ctx, System.Func<string, UiColor> ink, double y, double width, double fraction, MeterTone tone, double hold)

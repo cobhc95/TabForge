@@ -40,6 +40,8 @@ public sealed class AudioEngineFxAdapter : IFxChainEngine
     public float InputPeakOf(TrackModel track) => _client.InputPeakOf(track);
     /// <summary>The track's output peak.</summary>
     public float PeakOf(TrackModel track) => _client.PeakOf(track);
+
+    public long LastNoteOnOf(TrackModel track) => _client.LastNoteOnOf(track);
     /// <summary>Says whether the consumer wants the tuner.</summary>
     public void SetTunerWanted(object consumer, bool on) => _client.SetTunerWanted(consumer, on);
     /// <summary>The engine's tuner reading.</summary>

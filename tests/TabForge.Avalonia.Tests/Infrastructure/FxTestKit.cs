@@ -39,6 +39,9 @@ internal static class FxTestKit
         public event Action? OutputChanged;
         public void RaiseOutputChanged() => OutputChanged?.Invoke();
         public double CpuLoad => Load;
+        /// <summary>The Stopwatch time the latest note-on was due (LastNoteOnOf answers it for every track).</summary>
+        public long NoteOn { get; set; }
+        public long LastNoteOnOf(TrackModel track) => NoteOn;
         public AutoPitchMatcher? AutoPitch => null;
         public MixerOptions Mixer { get; } = new();
         public float OutputPeak { get; set; }

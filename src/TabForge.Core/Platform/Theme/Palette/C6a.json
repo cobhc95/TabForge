@@ -80,6 +80,7 @@
   { "name": "Selection", "dark": "#FF4C9AFF", "light": "#FF0F4489" },
   { "name": "Success", "dark": "#FF3FB950", "light": "#FF1F7A38" },
   { "name": "Warning", "dark": "#FFE6B93A", "light": "#FF8A6D1E" },
+  { "name": "MidiActivity", "dark": "#FFB07CFF", "light": "#FF6A3FC8" },
   { "name": "Grid", "dark": "#FF343940", "light": "#FFB2B2B5" },
   { "name": "Line", "dark": "#FF3A4049", "light": "#FF8E969F" },
   { "name": "IconDefault", "dark": "#FFC7CFDA", "light": "#FF3C3C3C" },

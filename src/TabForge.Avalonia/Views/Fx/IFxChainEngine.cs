@@ -26,6 +26,8 @@ public interface IFxChainEngine
     /// <summary>The latest linear peak of the track's raw input (before its chain) and of its output (after the chain, volume and pan); 0 when the engine has none.</summary>
     float InputPeakOf(TrackModel track) => 0;
     float PeakOf(TrackModel track) => 0;
+    /// <summary>The Stopwatch time the latest note-on for the track was due; 0 when it has had none.</summary>
+    long LastNoteOnOf(TrackModel track) => 0;
     /// <summary>Says whether <paramref name="consumer"/> wants the engine's tuner (it detects the pitch of the armed input; one tuner serves every consumer, each window counts for itself).</summary>
     void SetTunerWanted(object consumer, bool on) { }
     /// <summary>The engine's latest tuner reading (Hz 0: no pitch) and a counter that changes with each one.</summary>

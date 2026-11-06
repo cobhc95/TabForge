@@ -115,6 +115,12 @@ public sealed partial class AudioEngineClient : IDisposable
         if (IsRunning) Send(EngineCommand.Record, RecordMessage.WriteStop);
     }
 
+    // The Stopwatch time of the latest note-on queued for each slot (0: none yet).
+    private readonly long[] _noteOnStamps = new long[SharedBlock.MeterSlots];
+
+    /// <summary>The Stopwatch time the latest note-on for <paramref name="track"/> was due (0 when it has none, or no engine slot).</summary>
+    public long LastNoteOnOf(TrackModel track) => _slots.TryGetValue(track, out var slot) && (uint)slot < (uint)_noteOnStamps.Length ? Volatile.Read(ref _noteOnStamps[slot]) : 0;
+
     /// <summary>The engine slot a track plays through, or -1 (Windows MIDI).</summary>
     public int SlotOf(TrackModel track) => IsRunning && _slots.TryGetValue(track, out var slot) ? slot : -1;
 
@@ -126,6 +132,9 @@ public sealed partial class AudioEngineClient : IDisposable
     public bool Write(in TimedMidi message)
     {
         WrittenForTest?.Invoke(message);
+        // A note-on stamps its slot (one array write), so a meter can show the plug-in receiving MIDI.
+        if (message.Flags == 0 && (message.Status & 0xF0) == 0x90 && message.Data2 > 0 && (uint)message.Slot < (uint)_noteOnStamps.Length)
+            Volatile.Write(ref _noteOnStamps[message.Slot], message.Timestamp);
         lock (_writeGate) return Volatile.Read(ref _shared)?.TryWrite(message) ?? false;
     }
 

@@ -2,9 +2,10 @@ using System.Globalization;
 
 namespace TabForge.LiveInput;
 
-// Owns: the live input strip's fixed numbers and pure maths: knob ranges, the tuner's reference and window choices, and the meters' dB scale and texts.
+// Owns: the live input strip's fixed numbers and pure maths: knob ranges, the tuner's reference and window choices, the meters' dB scale and texts,
+//   and the MIDI activity blink (its fade from a note-on).
 // Does not own: the stored values (LiveInputSettings), the peak hold (PeakHold), the tuner's note rule (TunerPresenter), the drawing (Avalonia LiveInputStrip).
-// Tests: no dedicated test class.
+// Tests: TabForge.Avalonia.Tests.MidiActivityMeterTests (the MIDI blink).
 /// <summary>The colour class of a meter level.</summary>
 public enum MeterTone { Normal, Warm, Clip }
 
@@ -28,6 +29,18 @@ public static class LiveStripRules
     private static readonly IReadOnlyList<string> WindowItemTexts = Array.AsReadOnly(WindowChoices.Select(ms => string.Create(CultureInfo.InvariantCulture, $"{ms} ms")).ToArray());
 
     /// <summary>The tuner's analysis windows in ms (as Reaper offers): longer windows detect lower notes.</summary>
+    /// <summary>How long a note-on's MIDI blink takes to fade out (ms).</summary>
+    public const double MidiDecayMs = 300;
+
+    /// <summary>The MIDI activity shown for the latest note-on due at <paramref name="noteOnTicks"/>, at <paramref name="nowTicks"/> (Stopwatch
+    /// ticks at <paramref name="frequency"/>): 1 at the note-on, fading to 0 over <see cref="MidiDecayMs"/>; 0 before it or with none.</summary>
+    public static double MidiActivity(long noteOnTicks, long nowTicks, long frequency)
+    {
+        if (noteOnTicks <= 0 || frequency <= 0 || nowTicks < noteOnTicks) return 0;
+        var ageMs = (nowTicks - noteOnTicks) * 1000.0 / frequency;
+        return ageMs >= MidiDecayMs ? 0 : 1 - ageMs / MidiDecayMs;
+    }
+
     public static IReadOnlyList<int> WindowChoicesMs => WindowChoices;
 
     /// <summary>A window choice as the dropdown and Preferences show it ("100 ms").</summary>
