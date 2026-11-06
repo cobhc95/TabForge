@@ -296,6 +296,8 @@ public static class SettingsValidator
         value.ScaleHighlightCustomColour = value.ScaleHighlightCustomColour is { Length: 7 } hex && hex[0] == '#' && hex[1..].All(Uri.IsHexDigit) ? hex : "";
         value.ScaleHighlightColour = ScaleHighlightStyles.Colours.FirstOrDefault(v => string.Equals(v, value.ScaleHighlightColour, StringComparison.OrdinalIgnoreCase)) ?? "Accent";
         value.FretMarkerSizePercent = Math.Clamp(value.FretMarkerSizePercent, 60, 160);
+        foreach (var role in FretNoteColours.Roles) FretNoteColours.Set(value, role, FretNoteColours.Get(value, role) ?? "");
+        value.FretDotStyle = FretNoteColours.NormalizeStyle(value.FretDotStyle);
         value.ScaleHighlightStrength =Math.Clamp(value.ScaleHighlightStrength, ScaleHighlightStyles.MinStrength, ScaleHighlightStyles.MaxStrength);
         value.FretMarkerColour = FretMarkerLevels.Colours.FirstOrDefault(v => string.Equals(v, value.FretMarkerColour, StringComparison.OrdinalIgnoreCase)) ?? "White";
         value.FretNumberSize = FretNumberSizes.All.FirstOrDefault(v => string.Equals(v, value.FretNumberSize, StringComparison.OrdinalIgnoreCase)) ?? FretNumberSizes.Large;

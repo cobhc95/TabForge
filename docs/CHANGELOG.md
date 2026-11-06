@@ -4,6 +4,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ## 0.9.1
 
+- Fretboard note colours: Fretboard settings > Notes and markers has a Note colours card with the Now, Next and Upcoming colours (the same colour picker as Settings), Reset colours and a Fill or Ring dot style; the fretboard's dots and its legend use them, and a click on a legend dot opens the same picker there. The defaults are the colours from before (untested in app).
 - Drag selection scrolls: while you drag a selection in the score, the timeline lanes or the piano roll and carry the pointer out of the view (in the score, into the timeline below it or the area above it), the view keeps scrolling that way, faster the further out the pointer is, and stops when the pointer comes back or the content ends; the selection keeps following the pointer (untested in app).
 - Band view: the side panels (Tools, Structure, Rhythm, Layout, Sections, Lyrics) opened from the toolbar now come back in the same column, arrangement and width as in the normal view, instead of a narrow column with its tabs along the right edge (untested in app).
 - Rewind while playing: pressing Rewind (or another jump to the same spot) again while the song is still being prepared for that spot no longer starts the preparation over, and on a song without repeats a rewind after the first one jumps at once instead of preparing the song again, so the playhead no longer holds still between presses (untested in app).

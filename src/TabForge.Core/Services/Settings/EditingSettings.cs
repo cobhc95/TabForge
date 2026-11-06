@@ -51,6 +51,12 @@ public sealed class EditingSettings
     public string FretNumberSize { get; set; } = FretNumberSizes.Large;
     /// <summary>Note marker (bubble and number) size, 60 to 160 percent in 10% steps; 80 is the default, 100 is the original look.</summary>
     public int FretMarkerSizePercent { get; set; } = 90;
+    /// <summary>The fretboard's playing-note dot colours (now, next, upcoming) as "#RRGGBB"; empty is the theme's default (FretNoteColours).</summary>
+    public string FretNowColour { get; set; } = "";
+    public string FretNextColour { get; set; } = "";
+    public string FretUpcomingColour { get; set; } = "";
+    /// <summary>The fretboard's playing-note dots: "Fill" (default) or "Ring" (FretNoteColours.DotStyles).</summary>
+    public string FretDotStyle { get; set; } = FretNoteColours.Fill;
     /// <summary>Brightness of the entire physical neck (wood, inlays, wires, strings and capo), independent of note markers.</summary>
     public int FretboardBrightness { get; set; } = FretboardStyles.DefaultBoardBrightness;
     /// <summary>Brightness of cursor/playback note colours, independent of decorative position inlays and scale highlights.</summary>

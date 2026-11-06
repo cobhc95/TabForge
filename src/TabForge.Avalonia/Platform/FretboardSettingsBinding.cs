@@ -74,8 +74,15 @@ public sealed class FretboardSettingsBinding
         double VibrationRate = 1.0,
         bool StringNumbers = false,
         int BoardBrightness = FretboardStyles.DefaultBoardBrightness,
-        int NoteBrightness = FretboardStyles.DefaultNoteBrightness)
+        int NoteBrightness = FretboardStyles.DefaultNoteBrightness,
+        TabForge.Platform.UiColor? NowColour = null,
+        TabForge.Platform.UiColor? NextColour = null,
+        TabForge.Platform.UiColor? UpcomingColour = null,
+        bool RingDots = false)
     {
+        /// <summary>True when the person picked a colour of their own for any playing role (null colours follow the theme).</summary>
+        public bool HasNoteColours => NowColour is not null || NextColour is not null || UpcomingColour is not null;
+
         /// <summary>The fretboard look drawn: the settings' own names (the Rosewood preset until they are read).</summary>
         public FretboardStyles.Look Style => StyleOverride ?? FretboardStyles.DefaultLook;
 
@@ -116,7 +123,11 @@ public sealed class FretboardSettingsBinding
                 VibrationRate: FretboardStyles.VibrationRate(editing.FretboardVibrationSpeed),
                 StringNumbers: editing.FretboardStringNumbers,
                 BoardBrightness: FretboardStyles.ClampBrightness(editing.FretboardBrightness),
-                NoteBrightness: FretboardStyles.ClampBrightness(editing.FretboardNoteBrightness));
+                NoteBrightness: FretboardStyles.ClampBrightness(editing.FretboardNoteBrightness),
+                NowColour: CustomColour("Custom", editing.FretNowColour),
+                NextColour: CustomColour("Custom", editing.FretNextColour),
+                UpcomingColour: CustomColour("Custom", editing.FretUpcomingColour),
+                RingDots: FretNoteColours.NormalizeStyle(editing.FretDotStyle) == FretNoteColours.Ring);
         }
     }
 

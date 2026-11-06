@@ -41,6 +41,14 @@ public sealed class InstrumentPanelStrip : Grid
     /// <summary>The Scales button, the anchor of the scale popup; invisible when the pane has no scale (a drum track).</summary>
     internal Control ScalesAnchor => _scales;
     private readonly Canvas _scalesLayer = new();
+    private readonly FretboardLegendDots _legendDots;
+
+    /// <summary>The settings the legend's colour dots read and write, and the save that tells every observer; null keeps the dots off.</summary>
+    internal (Func<AppSettings?> Settings, Action Save)? NoteColourStore
+    {
+        get => _legendDots.Store;
+        set { _legendDots.Store = value; _legendDots.Place(); }
+    }
     private readonly Func<AvaloniaPlaybackSession?> _activePlayback;
     private readonly FretboardContextMenu? _contextMenu;
     private AvaloniaPlaybackSession? _playback;
@@ -72,6 +80,7 @@ public sealed class InstrumentPanelStrip : Grid
         contextMenu?.Attach(Panel, () => Panel.Kind, () => _scales.RaiseEvent(new global::Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent)));
         _scalesLayer.Children.Add(_scales);
         _scalesLayer.Children.Add(_customize);
+        _legendDots = new FretboardLegendDots(Panel, _scalesLayer);
         _customize.Click += (_, _) => CustomizeRequested?.Invoke();
         Children.Add(Panel);
         Children.Add(_scalesLayer);
@@ -242,6 +251,7 @@ public sealed class InstrumentPanelStrip : Grid
         var size = base.ArrangeOverride(finalSize);
         PlaceScalesButton();
         PlaceCustomizeButton();
+        _legendDots.Place();
         return size;
     }
 
@@ -305,6 +315,7 @@ public sealed class InstrumentPanelStrip : Grid
         _scales.IsVisible = _track is not null && Panel.Kind != InstrumentPanelKind.Drums;
         PlaceScalesButton();
         PlaceCustomizeButton();
+        _legendDots.Place();
     }
 
     // A window's OK edits through DocumentEdits.Run, which marks the song's timeline but does not raise the

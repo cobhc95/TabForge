@@ -266,8 +266,16 @@ public sealed partial class MainWindow
         void OpenFretboardSettings()
         {
             if (settings is null) return;
-            settings.OpenFretboardSettings(this, () => new Views.FretboardSettingsWindow(settings.Settings, () => settings.SaveSettings(),
-                () => MainWindowSettings.ShowPreferencesPage(settings, this, TabForge.Services.SettingsCatalog.Fretboard)));
+            settings.OpenFretboardSettings(this, () =>
+            {
+                var window = new Views.FretboardSettingsWindow(settings.Settings, () => settings.SaveSettings(),
+                    () => MainWindowSettings.ShowPreferencesPage(settings, this, TabForge.Services.SettingsCatalog.Fretboard));
+                // A colour picked on the fretboard's legend shows on the open window's Note colours card too.
+                void ShowNoteColours(TabForge.Services.AppSettings _) => window.ShowNoteColours();
+                settings.SettingsChanged += ShowNoteColours;
+                window.Closed += (_, _) => settings.SettingsChanged -= ShowNoteColours;
+                return window;
+            });
         }
         var fretboardMenu = new FretboardContextMenu(() => settings?.Settings ?? fretboardDefaults, () => settings?.SaveSettings(),
             OpenFretboardSettings,
@@ -287,6 +295,7 @@ public sealed partial class MainWindow
             }
             cachedInstrument = new InstrumentPanelStrip(scorePreview, () => d.CloseInstrument?.Invoke(), () => songs.Songs.Count == 0 ? null : playback?.For(songs.Active), fretboardMenu, () => _ = scaleFinder.OpenAsync());
             cachedInstrument.CustomizeRequested = OpenFretboardSettings;
+            if (settings is not null) cachedInstrument.NoteColourStore = (() => settings.Settings, settings.SaveSettings);
             compose.InstrumentStrip = fretboard.Attach(cachedInstrument);
             return cachedInstrument;
         },keepsNaturalHeight: InstrumentPanelStrip.LocksRowHeight(settings?.Settings.Appearance));

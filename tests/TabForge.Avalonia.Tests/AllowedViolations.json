@@ -80,7 +80,7 @@
     "Source/src/TabForge.Avalonia/Views/PluginSaveWindow.cs": 1,
     "Source/src/TabForge.Avalonia/Views/PreferencesChangesLink.cs": 1,
     "Source/src/TabForge.Avalonia/Views/PreferencesWindow.Chrome.cs": 3,
-    "Source/src/TabForge.Avalonia/Views/PreferencesWindow.cs": 7,
+    "Source/src/TabForge.Avalonia/Views/PreferencesWindow.cs": 6,
     "Source/src/TabForge.Avalonia/Views/Presets/PresetManagerWindow.cs": 15,
     "Source/src/TabForge.Avalonia/Views/ProjectSettingsWindow.cs": 9,
     "Source/src/TabForge.Avalonia/Views/PromptWindow.cs": 2,

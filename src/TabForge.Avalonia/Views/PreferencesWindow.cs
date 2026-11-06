@@ -53,8 +53,6 @@ public sealed partial class PreferencesWindow : Window, IPreferencesChangesHost
     private readonly TextBlock _status = ToolWindowParts.Status("Status");
     private readonly PreferencesChangesLink _changes;
     private const double FooterMarginLeft = 20, FooterMarginRight = 26, FooterMarginVertical = 10;
-    // A colour row: the colour button width.
-    private const double ColourButtonWidth = 200;
     // The status text sits left of the buttons, with this gap before them and wrapping at this width.
     private const double FooterStatusGap = 24, FooterStatusMaxWidth = 470;
     private readonly Button _resetPage = new() { Content = SettingsCatalog.Special(SettingsCatalog.ActionResetPage).Label };
@@ -393,7 +391,7 @@ public sealed partial class PreferencesWindow : Window, IPreferencesChangesHost
     /// </summary>
     private Control ColourEditor(SettingDescriptor row)
     {
-        var button = new ColourButton(DefaultColourOf(row.Key), Working.Appearance.RecentColours) { Width = ColourButtonWidth, Classes = { AvaloniaFormControlStyles.PrefsFieldClass } };
+        var button = new ColourButton(DefaultColourOf(row.Key), Working.Appearance.RecentColours) { Width = global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.ColourSettingWidth, Classes = { AvaloniaFormControlStyles.PrefsFieldClass } };
         button.Show(row.Get()?.ToString() ?? "");
         AutomationProperties.SetName(button, row.Title);
         button.Previewed += hex => Changed(row, hex);

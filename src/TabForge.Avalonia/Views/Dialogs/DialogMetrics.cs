@@ -92,6 +92,9 @@ internal static class DialogMetrics
     public static readonly Thickness ColourPartGap = new(0, 8, 0, 0);
     public static readonly Thickness ColourButtonGap = new(0, 0, 6, 0);
 
+    /// <summary>The width of a colour setting's button (ColourButton) in the settings windows (Settings and Fretboard settings), so the two cannot drift apart.</summary>
+    public const double ColourSettingWidth = 200;
+
     /// <summary>The gaps beside the swatch and before the arrow inside a colour button.</summary>
     public static readonly Thickness ColourButtonSwatchGap = new(0, 0, 8, 0), ColourButtonArrowGap = new(8, 0, 0, 0);
     public static readonly Thickness ColourSquareGap = new(0, 0, 8, 0);

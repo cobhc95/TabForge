@@ -11,7 +11,8 @@ namespace TabForge.Avalonia.Platform;
 internal enum PlaybackMarkerRole { Now, ReleasedNow, Next, Upcoming, Recent }
 
 // Owns: how a playing note is drawn on the fretboard: each role's radius, halo, fill, outline and number, the technique tag pill and the movement
-// line. Sizes are named here; colours are theme-table keys.
+// line, filled (the default) or as rings (the Ring dot style). Sizes are named here; colours are theme-table keys (the panel's note ink maps a
+// person's own note colours onto them).
 // Does not own: which note has which role (InstrumentPlaybackSnapshot), the board geometry (FretboardGeometryRules), or when the panel redraws (InstrumentPanelView).
 // Tests: TabForge.Avalonia.Tests.FretboardPlaybackMarkerTests.
 internal static class FretboardPlaybackMarkers
@@ -56,6 +57,8 @@ internal static class FretboardPlaybackMarkers
     public const double MovementLineWidth = 1.8;
     public const double MovementLineOpacity = 0.75;
     public const double MovementLineBend = 0.15;
+    /// <summary>The Ring dot style: the ring's width in the role's colour, the dot left open over the board.</summary>
+    public const double RingDotWidth = 2.4;
 
     /// <summary>The radius and the size factor a role's marker is drawn at.</summary>
     internal readonly record struct Geometry(double Radius, double Factor);
@@ -88,11 +91,12 @@ internal static class FretboardPlaybackMarkers
     }
 
     /// <summary>The sounding note: a tight halo, a solid marker with a background outline.</summary>
-    internal static void DrawNow(IDrawContext d, Func<string, UiColor> ink, FretboardGeometryRules.Layout layout, NoteEvent note, string label, Geometry g, double numberSize)
+    internal static void DrawNow(IDrawContext d, Func<string, UiColor> ink, FretboardGeometryRules.Layout layout, NoteEvent note, string label, Geometry g, double numberSize, bool ring = false)
     {
         if (PositionOf(layout, note) is not { } at) return;
         var colour = ink(IsLight(ink) ? "FretNow" : "InstrumentCurrent");
         d.Ellipse(colour.WithOpacity(HaloOpacity), null, at.X, at.Y, g.Radius + HaloGrow, g.Radius + HaloGrow);
+        if (ring) { DrawRing(d, ink, at, label, colour, g, numberSize, bold: true); return; }
         d.Ellipse(colour, new UiStroke(Ring(ink, IsLight(ink), ink("InstrumentBackground")), NowOutlineWidth), at.X, at.Y, g.Radius, g.Radius);
         DrawNumber(d, ink, at, label, colour, numberSize, bold: true);
     }
@@ -106,10 +110,11 @@ internal static class FretboardPlaybackMarkers
     }
 
     /// <summary>The next move: a tinted fill with a thick outline in its colour (an outline, never a glowing note).</summary>
-    internal static void DrawNext(IDrawContext d, Func<string, UiColor> ink, FretboardGeometryRules.Layout layout, NoteEvent note, string label, Geometry g, double numberSize)
+    internal static void DrawNext(IDrawContext d, Func<string, UiColor> ink, FretboardGeometryRules.Layout layout, NoteEvent note, string label, Geometry g, double numberSize, bool ring = false)
     {
         if (PositionOf(layout, note) is not { } at) return;
         var colour = ink("InstrumentNext");
+        if (ring) { DrawRing(d, ink, at, label, colour, g, numberSize, bold: false); return; }
         var light = IsLight(ink);
         var fill = light ? colour : colour.WithOpacity(NextFillOpacity);   // light: a solid disc with the thin white ring
         d.Ellipse(fill, new UiStroke(light ? ink("InstrumentWhite") : colour, light ? LightRingWidth : NextOutlineWidth), at.X, at.Y, g.Radius, g.Radius);
@@ -117,10 +122,11 @@ internal static class FretboardPlaybackMarkers
     }
 
     /// <summary>An upcoming move: the accent at its depth brightness, outlined in the accent.</summary>
-    internal static void DrawUpcoming(IDrawContext d, Func<string, UiColor> ink, FretboardGeometryRules.Layout layout, NoteEvent note, string label, Geometry g, double numberSize, double brightness)
+    internal static void DrawUpcoming(IDrawContext d, Func<string, UiColor> ink, FretboardGeometryRules.Layout layout, NoteEvent note, string label, Geometry g, double numberSize, double brightness, bool ring = false)
     {
         if (PositionOf(layout, note) is not { } at) return;
         var accent = ink("InstrumentAccent");
+        if (ring) { DrawRing(d, ink, at, label, accent.WithOpacity(brightness), g, numberSize, bold: false); return; }
         var fill = accent.WithOpacity(brightness);
         d.Ellipse(fill, new UiStroke(IsLight(ink) ? ink("InstrumentWhite") : accent, IsLight(ink) ? LightRingWidth : UpcomingOutlineWidth), at.X, at.Y, g.Radius, g.Radius);
         DrawNumber(d, ink, at, label, fill, numberSize, bold: false);
@@ -173,6 +179,13 @@ internal static class FretboardPlaybackMarkers
             sink.BezierTo(new UiPoint(start.X, midY), new UiPoint(end.X, midY), end);
         });
         d.Path(null, new UiStroke(ink("InstrumentNext").WithOpacity(MovementLineOpacity), MovementLineWidth), path);
+    }
+
+    /// <summary>The Ring dot style: an open ring in the role's colour, the number inked for the board under it.</summary>
+    private static void DrawRing(IDrawContext d, Func<string, UiColor> ink, UiPoint at, string label, UiColor colour, Geometry g, double numberSize, bool bold)
+    {
+        d.Ellipse(null, new UiStroke(colour, RingDotWidth), at.X, at.Y, g.Radius, g.Radius);
+        DrawNumber(d, ink, at, label, colour, numberSize, bold, over: ink("InstrumentBoard"));
     }
 
     private static UiPoint? PositionOf(FretboardGeometryRules.Layout layout, NoteEvent note) =>

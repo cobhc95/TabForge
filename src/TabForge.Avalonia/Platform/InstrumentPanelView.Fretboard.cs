@@ -145,20 +145,20 @@ public sealed partial class InstrumentPanelView
             {
                 var n = _playing.Upcoming[i];
                 var g = MarkerGeometry(PlaybackMarkerRole.Upcoming, layout);
-                FretboardPlaybackMarkers.DrawUpcoming(d, ink, layout, n, LabelOf(n), g, NumberSize(PlaybackMarkerRole.Upcoming, g), UpcomingBrightness(_playing.UpcomingDepth[i]));
+                FretboardPlaybackMarkers.DrawUpcoming(d, ink, layout, n, LabelOf(n), g, NumberSize(PlaybackMarkerRole.Upcoming, g), UpcomingBrightness(_playing.UpcomingDepth[i]), _look.RingDots);
             }
             foreach (var n in _playing.Next)
             {
                 if (FretboardMovementRules.Repeats(_playing.Now, n)) continue;
                 var g = MarkerGeometry(PlaybackMarkerRole.Next, layout);
-                FretboardPlaybackMarkers.DrawNext(d, ink, layout, n, LabelOf(n), g, NumberSize(PlaybackMarkerRole.Next, g));
+                FretboardPlaybackMarkers.DrawNext(d, ink, layout, n, LabelOf(n), g, NumberSize(PlaybackMarkerRole.Next, g), _look.RingDots);
                 FretboardPlaybackMarkers.DrawTag(d, ink, layout, n, g, _look.FretNumberScale, ink("InstrumentNext"));
             }
         }
         foreach (var n in _playing.Now)
         {
             var g = MarkerGeometry(PlaybackMarkerRole.Now, layout);
-            FretboardPlaybackMarkers.DrawNow(d, ink, layout, n, LabelOf(n), g, NumberSize(PlaybackMarkerRole.Now, g));
+            FretboardPlaybackMarkers.DrawNow(d, ink, layout, n, LabelOf(n), g, NumberSize(PlaybackMarkerRole.Now, g), _look.RingDots);
             FretboardPlaybackMarkers.DrawTag(d, ink, layout, n, g, _look.FretNumberScale, ink("InstrumentCurrent"));
         }
         foreach (var n in _playing.Released)
@@ -177,6 +177,14 @@ public sealed partial class InstrumentPanelView
     /// <summary>A marker on a sounding note: the note name inside the dot when note names are on, else the fret number.</summary>
     private void MarkDot(IDrawContext d, Func<string, UiColor> ink, FretboardGeometryRules.Layout layout, int stringIndex, int fret, UiColor fill, double radius)
     {
+        if (_look.RingDots && stringIndex >= 0 && stringIndex < layout.Strings)
+        {
+            var at = FretboardGeometryRules.PositionOfTab(layout, stringIndex, fret);
+            d.Ellipse(null, new UiStroke(fill, FretboardPlaybackMarkers.RingDotWidth), at.X, at.Y, radius, radius);
+            var text = d.Text(NoteNameOf(stringIndex, fret) ?? (fret + layout.CapoOf(stringIndex)).ToString(), Font, FretboardMarkerSizeRules.LabelFontSize(radius), ThemeColours.InkOn(ink("InstrumentBoard")), d.PixelsPerDip, weight: 700);
+            d.DrawText(text, at.X - text.Width / 2, at.Y - text.Height / 2);
+            return;
+        }
         MarkFret(d, ink, layout, stringIndex, fret, fill, radius, NoteNameOf(stringIndex, fret));
     }
 
@@ -184,15 +192,24 @@ public sealed partial class InstrumentPanelView
     private Func<string, UiColor>? _baseNoteInk, _adjustedNoteInk;
     private Func<string, UiColor> NoteInk(Func<string, UiColor> ink)
     {
-        if (_look.NoteBrightness == 100) return ink;
+        if (_look.NoteBrightness == 100 && !_look.HasNoteColours) return ink;
         _baseNoteInk = ink;
         return _adjustedNoteInk ??= AdjustedNoteColour;
     }
 
+    // The person's own note colours replace the theme's role colours (the legend and every dot read them here), then the note brightness applies.
     private UiColor AdjustedNoteColour(string key)
     {
-        var colour = _baseNoteInk!(key);
+        var own = key switch
+        {
+            "InstrumentCurrent" or "FretNow" => _look.NowColour,
+            "InstrumentNext" => _look.NextColour,
+            "InstrumentAccent" => _look.UpcomingColour,
+            _ => null,
+        };
+        var colour = own ?? _baseNoteInk!(key);
         if (key is not ("InstrumentCurrent" or "FretNow" or "InstrumentNext" or "InstrumentAccent" or "InstrumentPast")) return colour;
+        if (_look.NoteBrightness == 100) return colour;
         var alpha = FretboardStyles.BrightnessVeil(_look.NoteBrightness);
         if (_look.NoteBrightness >= 100) return ThemeColours.Brighten(colour, alpha);
         return new UiColor(colour.A, (byte)Math.Round(colour.R * (1 - alpha)), (byte)Math.Round(colour.G * (1 - alpha)), (byte)Math.Round(colour.B * (1 - alpha)));
@@ -231,7 +248,7 @@ public sealed partial class InstrumentPanelView
         for (var i = 0; i < rows.Length; i++)
         {
             var y = top + LegendTitleHeight + i * LegendRowHeight;
-            d.Ellipse(ink(rows[i].Key), new UiStroke(ink("InstrumentWood"), 1.5), x + 6, y + 7, 4.5, 4.5);
+            d.Ellipse(ink(rows[i].Key), new UiStroke(ink("InstrumentWood"), 1.5), x + LegendDotX, y + LegendDotY, LegendDotRadius, LegendDotRadius);
             var label = d.Text(rows[i].Label, Font, 12, ink("InstrumentLegible"), d.PixelsPerDip);
             d.DrawText(label, x + 17, y + (LegendRowHeight - label.Height) / 2);
         }
@@ -245,6 +262,21 @@ public sealed partial class InstrumentPanelView
         [("InstrumentCurrent", "now"), ("InstrumentNext", "next"), ("InstrumentAccent", "upcoming")],
         [("InstrumentCurrent", "now"), ("InstrumentNext", "next"), ("InstrumentAccent", "upcoming"), ("InstrumentPast", "recent")],
     ];
+
+    // A legend row's dot: its centre from the row's left and top, and its radius (board units).
+    private const double LegendDotX = 6, LegendDotY = 7, LegendDotRadius = 4.5;
+
+    /// <summary>The centre of the legend's dot for <paramref name="role"/>, in panel coordinates: null on the keyboard and drums, and for next and
+    /// upcoming while the legend does not list them (look-ahead off).</summary>
+    public UiPoint? LegendDotAnchor(FretNoteRole role)
+    {
+        if (_kind != InstrumentPanelKind.Fretboard) return null;
+        var row = role == FretNoteRole.Now ? 0 : _look.PreviewHorizon < 0 ? -1 : role == FretNoteRole.Next ? 1 : 2;
+        if (row < 0) return null;
+        var board = FretboardLayout().Board;
+        var s = FretboardScale();
+        return new UiPoint((board.Right + LegendGap + LegendDotX) * s, (LegendTop(board) + LegendTitleHeight + row * LegendRowHeight + LegendDotY) * s);
+    }
 
     /// <summary>Where the Scales button goes on a fretboard: under the legend, in panel coordinates. Null for the keyboard and drums.</summary>
     public UiPoint? ScalesAnchor()

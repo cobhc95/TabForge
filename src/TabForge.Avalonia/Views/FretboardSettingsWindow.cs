@@ -54,6 +54,7 @@ public sealed partial class FretboardSettingsWindow : Window
     private readonly TextBlock _status = new() { VerticalAlignment = VerticalAlignment.Center };
     private readonly Button _apply = new() { Name = "FretboardSettingsApply", Content = SettingsCatalog.Special(SettingsCatalog.ActionApply).Label, IsEnabled = false };
     private AppSettings _kept;
+    private readonly Dictionary<FretNoteRole, ColourButton> _noteColourButtons = new();
     private bool _dirty;
 
     /// <param name="settings">The live settings the rows read and write.</param>

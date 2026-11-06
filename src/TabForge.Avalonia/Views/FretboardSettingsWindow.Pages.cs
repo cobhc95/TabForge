@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using TabForge.Avalonia.Platform;
+using TabForge.Avalonia.Platform.Controls;
 using TabForge.Services;
 
 namespace TabForge.Avalonia.Views;
@@ -60,6 +61,7 @@ public sealed partial class FretboardSettingsWindow
                 Slide(dots, "NOTE BRIGHTNESS", "FretboardNoteBrightness", FretboardStyles.MinBrightness, FretboardStyles.MaxBrightness, FretboardStyles.BrightnessStep, e => e.FretboardNoteBrightness, v => ed.FretboardNoteBrightness = v, "%");
                 Slide(dots, "DOT AND NUMBER SIZE", "FretboardMarkerSize", 60, 160, 10, e => e.FretMarkerSizePercent, v => ed.FretMarkerSizePercent = v, "%");
                 Chips(dots, "NUMBER SIZE", "FretboardNumberSize", FretNumberSizes.All, () => ed.FretNumberSize, v => ed.FretNumberSize = v);
+                NoteColoursCard(Card("Note colours"));
                 break;
             case 2:
                 var board = Card("Board");
@@ -92,6 +94,40 @@ public sealed partial class FretboardSettingsWindow
                 break;
         }
         _page.Content = panel;
+    }
+
+    /// <summary>The Note colours card: the shared colour button for now, next and upcoming, Reset colours, and the Fill or Ring dot style.</summary>
+    private void NoteColoursCard(global::Avalonia.Controls.Controls rows)
+    {
+        var ed = _settings.Editing;
+        _noteColourButtons.Clear();
+        foreach (var role in FretNoteColours.Roles)
+        {
+            rows.Add(ScalePopupLayout.SectionLabel(FretNoteColours.Name(role).ToUpperInvariant()));
+            var light = ActualThemeVariant == global::Avalonia.Styling.ThemeVariant.Light;
+            var button = new ColourButton(FretNoteColours.DefaultHex(role, light), _settings.Appearance.RecentColours)
+            {
+                Name = "FretboardNoteColour" + FretNoteColours.Name(role), Width = global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.ColourSettingWidth,
+                HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Left,
+            };
+            AutomationProperties.SetName(button, FretNoteColours.Name(role) + " note colour");
+            button.Show(FretNoteColours.Shown(role, FretNoteColours.Get(ed, role), light));
+            button.Previewed += hex => { FretNoteColours.Set(ed, role, hex); Changed(rebuild: false); };   // every popup click shows on the board at once
+            button.Picked += hex => { FretNoteColours.Set(ed, role, hex); Changed(rebuild: false); };
+            _noteColourButtons[role] = button;
+            rows.Add(button);
+        }
+        var reset = new Button { Name = "FretboardResetNoteColours", Content = "Reset colours" }.WithMargin(0, 12, 0, 0);
+        reset.Click += (_, _) => { foreach (var role in FretNoteColours.Roles) FretNoteColours.Set(ed, role, ""); Changed(); };
+        rows.Add(reset);
+        Chips(rows, "DOT STYLE", "FretboardDotStyle", FretNoteColours.DotStyles, () => FretNoteColours.NormalizeStyle(ed.FretDotStyle), v => ed.FretDotStyle = v);
+    }
+
+    /// <summary>The note colour buttons show the stored colours again (a colour picked from the fretboard's legend while this window is open).</summary>
+    internal void ShowNoteColours()
+    {
+        var light = ActualThemeVariant == global::Avalonia.Styling.ThemeVariant.Light;
+        foreach (var (role, button) in _noteColourButtons) button.Show(FretNoteColours.Shown(role, FretNoteColours.Get(_settings.Editing, role), light));
     }
 
     private void Chips(global::Avalonia.Controls.Controls rows, string label, string prefix, IReadOnlyList<string> values, Func<string> get, Action<string> set, string? disabled = null)
@@ -150,7 +186,8 @@ public sealed partial class FretboardSettingsWindow
                 (ed.FretMarkerColour, ed.FretMarkerBrightness, ed.FretboardBrightness) = (d.FretMarkerColour, d.FretMarkerBrightness, d.FretboardBrightness);
                 break;
             case 1: (ed.PreviewNotesEnabled, ed.PreviewHorizon, ed.PreviewPreviousNotesEnabled, ed.ShowNoteNames, ed.FretboardNoteBrightness, ed.FretMarkerSizePercent, ed.FretNumberSize) =
-                    (d.PreviewNotesEnabled, d.PreviewHorizon, d.PreviewPreviousNotesEnabled, d.ShowNoteNames, d.FretboardNoteBrightness, d.FretMarkerSizePercent, d.FretNumberSize); break;
+                    (d.PreviewNotesEnabled, d.PreviewHorizon, d.PreviewPreviousNotesEnabled, d.ShowNoteNames, d.FretboardNoteBrightness, d.FretMarkerSizePercent, d.FretNumberSize);
+                (ed.FretNowColour, ed.FretNextColour, ed.FretUpcomingColour, ed.FretDotStyle) = (d.FretNowColour, d.FretNextColour, d.FretUpcomingColour, d.FretDotStyle); break;
             case 2: (ed.FretboardFrets, ed.LeftHanded, ed.FretStringSpacing, ap.FretboardPosition, ap.FretboardAtBottom, ap.LockInstrumentSize) =
                     (d.FretboardFrets, d.LeftHanded, d.FretStringSpacing, da.FretboardPosition, da.FretboardAtBottom, da.LockInstrumentSize); break;
             case 3: (ed.FretboardStringLook, ed.FretboardCapoLook, ed.FretboardVibration, ed.FretboardVibrationSpeed, ed.FretboardStringNumbers) =
