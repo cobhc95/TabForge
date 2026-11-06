@@ -6,7 +6,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ### Added
 
-- Capo shows a hand pointer on hover on the fretboard, so it is clear it can be dragged.
+- Capo: the fretboard's capo shows the Windows hand pointer when you hover it and keeps it while you drag it, so it is clear it can be moved.
 - Shortcuts: the piano roll's own keys can be rebound or cleared (Settings > Shortcuts, Note): the five tools (1 to 5), Quantize, Mute, Transpose, Zoom to fit, Legato, Duplicate and Invert selection keep their keys until you change them. A key can now be shared by commands that work in different places, and it is saved and loaded like any other.
 - Shortcuts: Metronome settings, Count-in settings, Loop settings, Loop selected bars, Clear loop, Clear selection and Show / hide master track can be given keys in Settings > Shortcuts.
 - Shortcuts: Fretboard settings (View) can be given a key; it opens the same window as the fretboard's right-click row.
@@ -50,7 +50,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 - Dead code removed: unused classes (TrackIconPicture, NullChildProcessGuard), unused members and constants, and unused settings (FretMarkerColour).
 - Dialog spacing: DialogMetrics has one helper each for centring, margins and padding, replacing copies with the same behaviour. Font sizes use the type scale in ChromeMetrics, and the interface font family is one shared constant.
 - Video encoders: the frame-queue mechanics that both encoders repeated now live in one class, and forwarding methods that only passed calls on are removed.
-- Pointer shape: the rule that only resize cursors change the pointer is enforced by a guard test with no exceptions.
+- Pointer shape: the rule that only resize cursors change the pointer is enforced by a guard test; its one exception is the hand over the fretboard's capo.
 - Test suite: shared test helpers replace copies in 26 test classes, and duplicated checks (such as the panel text contrast check, previously in five classes) run once.
 - Documentation checks: the doc-picture check accepts pictures kept in an earlier release's folder, and the guard and allow-list files are up to date.
 - Start-up path: the Monitor FX chain is sent before the output is configured, so the first sound is processed (see Fixed).

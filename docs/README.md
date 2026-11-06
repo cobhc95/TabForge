@@ -38,11 +38,21 @@ chmod +x TabForge-*-linux-x86_64.AppImage
 </tr>
 </table>
 
-**Contents:** [Download](#download) · [What's new in 0.9.0](#whats-new-in-090) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Piano roll](#piano-roll) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Plug-ins](#plug-ins) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
+**Contents:** [Download](#download) · [What's new in 0.9.1](#whats-new-in-091) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Piano roll](#piano-roll) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Plug-ins](#plug-ins) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
 
-## What's new in 0.9.0
+## What's new in 0.9.1
 
-0.9.0 is a stable release.
+0.9.1 is a stable release.
+
+- **More shortcuts:** the piano roll's tools and editing commands, the metronome, count-in and loop windows, loop commands, Clear selection, master track and Fretboard settings can all be given keys in Settings > Shortcuts.
+- **Fretboard note colours:** choose the Now, Next and Upcoming colours and a Fill or Ring dot style, with the same colour picker as Appearance.
+- **Capo pointer:** the fretboard's capo shows the Windows hand on hover and while you drag it.
+- **Drag selection scrolls:** dragging a selection past the edge of the score, timeline or piano roll keeps the view scrolling.
+- **Fixes:** the first sound at start-up now passes through Monitor FX, a start-up crash on the fretboard is fixed, docked plug-in editors scroll when larger than their area, and rewinding repeatedly no longer stalls.
+
+Full list: the [changelog](CHANGELOG.md#091).
+
+<details><summary>Earlier in 0.9.0: wound strings, lighter playback, ASIO</summary>
 
 [![The redesigned fretboard with drawn wound strings](media/screenshots/0.9.0/fretboard.png)](media/screenshots/0.9.0/fretboard.png)
 
@@ -55,6 +65,8 @@ chmod +x TabForge-*-linux-x86_64.AppImage
 - **Video recording:** the fretboard now shows in full.
 
 Full list: the [changelog](CHANGELOG.md#090).
+
+</details>
 
 <details><summary>Earlier in 0.8.8: fretboard, capos, tuning and plug-ins</summary>
 

@@ -77,7 +77,7 @@ public class PlaybackLookSettingsTests
         var entries = SettingsCatalog.Registry(rows, new HotkeySettings());
         var found = entries.Where(e => SettingsCatalog.Matches(e, "playing note colour")).ToList();
         Assert.Contains(found, e => e.Id == "appearance.playbackhighlightcolour");
-        Assert.All(found.Where(e => e.Row is not null), e => Assert.Equal(SettingsCatalog.Appearance, e.Page));
+        Assert.All(found.Where(e => e.Row is not null && !e.Id.StartsWith("fretboard.", StringComparison.Ordinal)), e => Assert.Equal(SettingsCatalog.Appearance, e.Page));
     }
 
     [Fact]

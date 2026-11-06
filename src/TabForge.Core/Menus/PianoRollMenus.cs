@@ -4,6 +4,8 @@
 // Does not own: opening the menu or running the rows (the app's PianoRollView), or the edits (PianoRollPresenter).
 // Tests: TabForge.Avalonia.Tests.PianoRollViewTests.
 
+using TabForge.Services;
+
 namespace TabForge.Menus;
 
 /// <summary>What the piano roll's menu depends on: a note under the pointer or a selection, a clipboard, and whether the pointer is inside the loop.</summary>
@@ -11,18 +13,18 @@ public sealed record PianoRollMenuState(bool OnNotes, bool CanPaste, bool Inside
 
 public static class PianoRollMenus
 {
-    public const string Cut = "PianoRoll.Cut", Copy = "PianoRoll.Copy", Paste = "PianoRoll.Paste", Delete = "PianoRoll.Delete", Duplicate = "PianoRoll.Duplicate",
-        Quantize = "PianoRoll.Quantize", QuantizeSettings = "PianoRoll.QuantizeSettings", Mute = "PianoRoll.Mute",
+    public const string Cut = "PianoRoll.Cut", Copy = "PianoRoll.Copy", Paste = "PianoRoll.Paste", Delete = "PianoRoll.Delete", Duplicate = PianoRollKeyIds.Duplicate,
+        Quantize = PianoRollKeyIds.Quantize, QuantizeSettings = "PianoRoll.QuantizeSettings", Mute = PianoRollKeyIds.Mute,
         TransposeUp = "PianoRoll.TransposeUp", TransposeDown = "PianoRoll.TransposeDown", OctaveUp = "PianoRoll.OctaveUp", OctaveDown = "PianoRoll.OctaveDown",
         TransposeBy = "PianoRoll.TransposeBy", VelocitySet = "PianoRoll.VelocitySet", VelocityScale = "PianoRoll.VelocityScale", VelocityRamp = "PianoRoll.VelocityRamp",
-        SelectAll = "PianoRoll.SelectAll", SelectPitch = "PianoRoll.SelectPitch", InvertSelection = "PianoRoll.InvertSelection", ShowInScoreId = "PianoRoll.ShowInScore", ClearLoop = "Transport.ClearLoopArea",
-        Legato = "PianoRoll.Legato", Glue = "PianoRoll.Glue", Randomise = "PianoRoll.Randomise", Humanise = "PianoRoll.Humanise", Colours = "PianoRoll.Colours",
+        SelectAll = "PianoRoll.SelectAll", SelectPitch = "PianoRoll.SelectPitch", InvertSelection = PianoRollKeyIds.InvertSelection, ShowInScoreId = "PianoRoll.ShowInScore", ClearLoop = "Transport.ClearLoopArea",
+        Legato = PianoRollKeyIds.Legato, Glue = "PianoRoll.Glue", Randomise = "PianoRoll.Randomise", Humanise = "PianoRoll.Humanise", Colours = "PianoRoll.Colours",
         MovePlayhead = "PianoRoll.MovePlayhead", LoopBar = "PianoRoll.LoopBar", LoopSection = "PianoRoll.LoopSection",
         PlaybackNeedle = "PianoRoll.PlaybackNeedle";
 
     /// <summary>Piano roll commands that only a key runs (no menu row): the Transpose dialog, zoom to fit and the five tools.</summary>
-    public const string TransposeDialog = "PianoRoll.TransposeDialog", ZoomToFit = "PianoRoll.ZoomToFit", EditTool = "PianoRoll.EditTool", EraseTool = "PianoRoll.EraseTool",
-        SplitTool = "PianoRoll.SplitTool", MuteTool = "PianoRoll.MuteTool", GlueTool = "PianoRoll.GlueTool";
+    public const string TransposeDialog = PianoRollKeyIds.TransposeDialog, ZoomToFit = PianoRollKeyIds.ZoomToFit, EditTool = PianoRollKeyIds.EditTool, EraseTool = PianoRollKeyIds.EraseTool,
+        SplitTool = PianoRollKeyIds.SplitTool, MuteTool = PianoRollKeyIds.MuteTool, GlueTool = PianoRollKeyIds.GlueTool;
 
     public const string ShowInScore = "Show in score mode (this track)", NeedleSettingKey = "editing.pianoroll.needle";
 

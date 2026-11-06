@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
 using Avalonia.Input;
@@ -157,7 +158,7 @@ public sealed partial class PianoRollSurface
     internal Action? ToolChanged { get; set; }
 
     // Select and Draw merged into the Edit tool (key 1); Select is the Edit tool's enum value.
-    private static readonly (string Id, PianoRollTool Tool)[] ToolKeys =
+    private static readonly IReadOnlyList<(string Id, PianoRollTool Tool)> ToolKeys = new[]
     {
         (PianoRollMenus.EditTool, PianoRollTool.Select), (PianoRollMenus.EraseTool, PianoRollTool.Erase), (PianoRollMenus.SplitTool, PianoRollTool.Split),
         (PianoRollMenus.MuteTool, PianoRollTool.Mute), (PianoRollMenus.GlueTool, PianoRollTool.Glue),

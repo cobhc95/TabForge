@@ -1,4 +1,3 @@
-using TabForge.Menus;
 using TabForge.Models;
 // Owns: the catalogue rows for main-menu commands that had no id, so each can be given a key in Preferences > Shortcuts.
 // Does not own: the menu rows and their handlers (MainWindow.Menus.cs), the registration of rows as commands (Views/MainMenu/MenuRowCommands.cs).
@@ -71,19 +70,19 @@ public static partial class HotkeyCatalog
         new("Insert.AudioFile", CategoryEdit, "Insert audio file", "", "Pick an audio file and place it at the cursor time on the selected audio / MIDI track (or on a new track when the selected track is a tab track)."),
         new("Insert.MidiFile", CategoryEdit, "Insert MIDI file", "", "Pick a MIDI file and place it as a MIDI clip at the cursor time on the selected audio / MIDI track (or on a new track when the selected track is a tab track)."),
         new("Insert.EmptyMidiClip", CategoryEdit, "Insert empty MIDI clip", "", "Add an empty MIDI clip one bar long at the cursor time on the selected audio / MIDI track."),
-        new(PianoRollMenus.TransposeDialog, CategoryNote, "Piano roll: transpose selection", "T", "Transpose the piano roll selection with the Transpose dialog (with the piano roll focused and notes selected; follows the scale lock and the transpose mode)."),
+        new(PianoRollKeyIds.TransposeDialog, CategoryNote, "Piano roll: transpose selection", "T", "Transpose the piano roll selection with the Transpose dialog (with the piano roll focused and notes selected; follows the scale lock and the transpose mode)."),
         // The piano roll's own keys (they act while the piano roll has the focus; the defaults are the keys it always had).
-        new(PianoRollMenus.Quantize, CategoryNote, "Piano roll: quantize", "Q", "Quantize the piano roll notes with the quantize options (the same as the Quantize button)."),
-        new(PianoRollMenus.Mute, CategoryNote, "Piano roll: mute / unmute selected notes", "M", "Mute the selected piano roll notes, or unmute them when they are muted."),
-        new(PianoRollMenus.ZoomToFit, CategoryNote, "Piano roll: zoom to fit", "F", "Zoom the piano roll so every note of the clip fits in view."),
-        new(PianoRollMenus.Legato, CategoryNote, "Piano roll: legato", "Ctrl+L", "Lengthen each piano roll note up to the next one, as one undo step."),
-        new(PianoRollMenus.Duplicate, CategoryNote, "Piano roll: duplicate selected notes", "Ctrl+D", "Add a copy of the selected piano roll notes right after them."),
-        new(PianoRollMenus.InvertSelection, CategoryNote, "Piano roll: invert selection", "Ctrl+I", "Select the piano roll notes that are not selected, and deselect the rest."),
-        new(PianoRollMenus.EditTool, CategoryNote, "Piano roll: Edit tool", "D1", "Pick the piano roll Edit tool (the pencil): click to write notes, drag to move or resize them.", "NumPad1"),
-        new(PianoRollMenus.EraseTool, CategoryNote, "Piano roll: Erase tool", "D2", "Pick the piano roll Erase tool: click or drag over notes to delete them.", "NumPad2"),
-        new(PianoRollMenus.SplitTool, CategoryNote, "Piano roll: Split tool", "D3", "Pick the piano roll Split tool: click a note to cut it in two.", "NumPad3"),
-        new(PianoRollMenus.MuteTool, CategoryNote, "Piano roll: Mute tool", "D4", "Pick the piano roll Mute tool: click notes to mute or unmute them.", "NumPad4"),
-        new(PianoRollMenus.GlueTool, CategoryNote, "Piano roll: Glue tool", "D5", "Pick the piano roll Glue tool: click or drag across notes of one pitch to join them.", "NumPad5"),
+        new(PianoRollKeyIds.Quantize, CategoryNote, "Piano roll: quantize", "Q", "Quantize the piano roll notes with the quantize options (the same as the Quantize button)."),
+        new(PianoRollKeyIds.Mute, CategoryNote, "Piano roll: mute / unmute selected notes", "M", "Mute the selected piano roll notes, or unmute them when they are muted."),
+        new(PianoRollKeyIds.ZoomToFit, CategoryNote, "Piano roll: zoom to fit", "F", "Zoom the piano roll so every note of the clip fits in view."),
+        new(PianoRollKeyIds.Legato, CategoryNote, "Piano roll: legato", "Ctrl+L", "Lengthen each piano roll note up to the next one, as one undo step."),
+        new(PianoRollKeyIds.Duplicate, CategoryNote, "Piano roll: duplicate selected notes", "Ctrl+D", "Add a copy of the selected piano roll notes right after them."),
+        new(PianoRollKeyIds.InvertSelection, CategoryNote, "Piano roll: invert selection", "Ctrl+I", "Select the piano roll notes that are not selected, and deselect the rest."),
+        new(PianoRollKeyIds.EditTool, CategoryNote, "Piano roll: Edit tool", "D1", "Pick the piano roll Edit tool (the pencil): click to write notes, drag to move or resize them.", "NumPad1"),
+        new(PianoRollKeyIds.EraseTool, CategoryNote, "Piano roll: Erase tool", "D2", "Pick the piano roll Erase tool: click or drag over notes to delete them.", "NumPad2"),
+        new(PianoRollKeyIds.SplitTool, CategoryNote, "Piano roll: Split tool", "D3", "Pick the piano roll Split tool: click a note to cut it in two.", "NumPad3"),
+        new(PianoRollKeyIds.MuteTool, CategoryNote, "Piano roll: Mute tool", "D4", "Pick the piano roll Mute tool: click notes to mute or unmute them.", "NumPad4"),
+        new(PianoRollKeyIds.GlueTool, CategoryNote, "Piano roll: Glue tool", "D5", "Pick the piano roll Glue tool: click or drag across notes of one pitch to join them.", "NumPad5"),
         new("PianoRoll.SelectTool", CategoryNote, "Select tool", "V", "Pick the piano roll Select tool (the arrow): click and drag to select, move and resize notes; nothing is written."),
         new("PianoRoll.Split", CategoryNote, "Split notes at the pointer", "S", "Split (S): cuts the selected notes at the dashed line (the pointer's snapped position; the playhead when the pointer is off the grid), as one undo step."),
         new("PianoRoll.Glue", CategoryNote, "Glue selected notes", "Ctrl+Shift+G", "Join the selected notes of one pitch that touch, overlap or lie within one snap step into one note, as one undo step."),
