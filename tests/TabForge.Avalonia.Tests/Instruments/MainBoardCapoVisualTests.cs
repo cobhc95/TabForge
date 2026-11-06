@@ -79,7 +79,7 @@ public sealed class MainBoardCapoVisualTests
     }
 
     [AvaloniaFact]
-    public void CapoHoverShowsHandCursorOverBar()
+    public void CapoHoverOverTheBarKeepsThePointerShape()
     {
         var track = Guitar();
         track.Capo = 4;
@@ -94,7 +94,7 @@ public sealed class MainBoardCapoVisualTests
         var scale = view.FretboardScale();
         view.UpdateCapoHover(FretboardGeometryRules.FretX(layout, 4) * scale, FretboardGeometryRules.StringY(layout, 2) * scale);
         Assert.True(view.CapoHovered);
-        Assert.Equal(new Cursor(StandardCursorType.Hand).ToString(), view.Cursor?.ToString());
+        Assert.Null(view.Cursor);   // the hover shade shows it; the pointer shape never changes
         view.UpdateCapoHover(2, 2);
         Assert.False(view.CapoHovered);
         Assert.Null(view.Cursor);

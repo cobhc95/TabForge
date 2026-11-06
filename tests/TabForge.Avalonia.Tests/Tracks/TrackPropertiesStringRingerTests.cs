@@ -75,14 +75,14 @@ public class TrackPropertiesStringRingerTests
     }
 
     [AvaloniaFact]
-    public void AStringShowsAHandLightsUnderThePointerAndGlowsWhenStruck()
+    public void AStringLightsUnderThePointerAndGlowsWhenStruck()
     {
         var (window, _) = Open();
         var hit = window.GetLogicalDescendants().OfType<Panel>().Single(c => c.Name == "StringHit1");
         var hover = window.GetLogicalDescendants().OfType<Border>().Single(c => c.Name == "StringHover1");
         var glow = window.GetLogicalDescendants().OfType<Border>().Single(c => c.Name == "StringGlow1");
 
-        Assert.NotNull(hit.Cursor);   // the pointing hand: set on the hit area only, so the speaker and note box keep their own
+        Assert.Null(hit.Cursor);   // the hover light shows it is clickable; the pointer shape never changes
         Assert.False(hover.IsVisible);
         Assert.Equal(0, glow.Opacity);
 

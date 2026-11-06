@@ -116,7 +116,7 @@ public sealed class SavePromptWindow : Window
         foreach (var line in details)
             list.Children.Add(new TextBlock { Text = "• " + line, TextWrapping = TextWrapping.Wrap, FontSize = ChromeMetrics.TextBody, Margin = new Thickness(0, 1) });
         var scroller = new ScrollViewer { Name = "DetailsList", Content = list, MaxHeight = 170, IsVisible = false };
-        var link = new TextBlock { Name = "DetailsLink", Text = ConfirmDialogPresenter.DetailsLink(details.Count, open: false), FontSize = ChromeMetrics.TextBody, TextDecorations = TextDecorations.Underline, Cursor = new Cursor(StandardCursorType.Hand) };
+        var link = new TextBlock { Name = "DetailsLink", Text = ConfirmDialogPresenter.DetailsLink(details.Count, open: false), FontSize = ChromeMetrics.TextBody, TextDecorations = TextDecorations.Underline };
         link[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("Accent");
         link.PointerPressed += (_, _) =>
         {

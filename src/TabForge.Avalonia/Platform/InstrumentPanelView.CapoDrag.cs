@@ -23,11 +23,8 @@ public sealed partial class InstrumentPanelView
     /// <summary>The drag in progress, or null at rest. Key: the press that grabbed a capo; thread: the UI thread.</summary>
     private FretboardCapoDrag? _capoDrag;
 
-    /// <summary>The capo under the pointer (-1 full, >=0 partial index), or null; the hand cursor follows it. The pointer shape never changes elsewhere.</summary>
+    /// <summary>The capo under the pointer (-1 full, >=0 partial index), or null; its shade shows the hover (the pointer shape never changes).</summary>
     private int? _hoverCapo;
-
-    /// <summary>The hand cursor over a draggable capo, made on first hover (a static would build before Avalonia boots).</summary>
-    private Cursor? _capoHandCursor;
 
     /// <summary>True while the pointer hovers a drawn capo.</summary>
     internal bool CapoHovered => _hoverCapo is not null;
@@ -82,7 +79,7 @@ public sealed partial class InstrumentPanelView
         return true;
     }
 
-    /// <summary>Refreshes the capo hover from the pointer (pane coordinates): the hand cursor follows the bar under it. Redraws only on change.</summary>
+    /// <summary>Refreshes the capo hover from the pointer (pane coordinates): the shade follows the bar under it. Redraws only on change.</summary>
     internal void UpdateCapoHover(double x, double y)
     {
         int? hover = null;
@@ -110,16 +107,14 @@ public sealed partial class InstrumentPanelView
         }
         if (hover == _hoverCapo) return;
         _hoverCapo = hover;
-        Cursor = hover is not null ? _capoHandCursor ??= new Cursor(StandardCursorType.Hand) : null;
         InvalidateVisual();
     }
 
-    /// <summary>Clears the capo hover (the hand cursor); nothing when already clear.</summary>
+    /// <summary>Clears the capo hover (its shade); nothing when already clear.</summary>
     internal void ClearCapoHover()
     {
         if (_hoverCapo is null) return;
         _hoverCapo = null;
-        Cursor = null;
         InvalidateVisual();
     }
 

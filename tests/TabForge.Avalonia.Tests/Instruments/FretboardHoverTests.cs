@@ -104,7 +104,7 @@ public class FretboardHoverTests
     }
 
     [AvaloniaFact]
-    public void HoveringTheCapoShowsTheHandCursor()
+    public void HoveringTheCapoKeepsThePointerShape()
     {
         var track = DemoSongFactory.Create().Tracks[0];
         track.Capo = 4;
@@ -120,7 +120,7 @@ public class FretboardHoverTests
         var at = panel.FretCentre(2, 0);   // the open string sits at the capo
         window.MouseMove(new Point(at.X, at.Y));
         Assert.True(panel.CapoHovered);
-        Assert.NotNull(panel.Cursor);   // the hand; the only pointer change in the app
+        Assert.Null(panel.Cursor);   // the hover shade shows it; the pointer shape never changes
         var canvas = new InstrumentFretNumberTests.RecordingDrawContext();
         panel.Draw(canvas, light: false);
         Assert.DoesNotContain(canvas.Texts, t => t.Text == "Drag to move capo");

@@ -54,7 +54,7 @@ internal sealed class TrackStringRow : Grid
         _glow = new Border { Name = $"StringGlow{index}", Opacity = 0, IsHitTestVisible = false, VerticalAlignment = VerticalAlignment.Center, CornerRadius = new CornerRadius(GlowHeight / 2),
             Height = GlowHeight, Effect = new BlurEffect { Radius = GlowBlur }, [!Border.BackgroundProperty] = new DynamicResourceExtension("AccentBrush") };
         var hit = new Panel { Name = $"StringHit{index}", Background = AvaloniaPalette.TransparentBrush,
-            Margin = new Thickness(0, 0, 8, 0), ClipToBounds = true, Cursor = new Cursor(StandardCursorType.Hand), Children = { _hoverLight, _glow, Line } };   // the hand says: clickable
+            Margin = new Thickness(0, 0, 8, 0), ClipToBounds = true, Children = { _hoverLight, _glow, Line } };   // the hover light says: clickable
         ToolTip.SetTip(hit, "Click to hear this string");
         hit.PointerEntered += (_, _) => SetHover(true);
         hit.PointerExited += (_, _) => SetHover(false);
