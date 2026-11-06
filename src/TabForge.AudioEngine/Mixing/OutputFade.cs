@@ -18,6 +18,11 @@ public sealed class OutputFade
     public const int StallMs = 60;
     /// <summary>The longest the silent output keeps running so the audio the driver still holds plays out.</summary>
     public const int MaxDrainMs = 300;
+    /// <summary>
+    /// The longest the output is held silent at start while the Windows audio path offset is still being measured (about 1.2 s).
+    /// Without the offset an ASIO output plays about 16 to 18 dB too loud, so the output waits for it, then ramps up.
+    /// </summary>
+    public const int StartHoldMs = 3000;
 
     private readonly int _rate;
     private readonly float _step;      // gain change per frame
@@ -28,6 +33,9 @@ public sealed class OutputFade
     private volatile bool _restart;    // control thread asks for gain 0 + one silent callback, then the ramp up
     private volatile int _callbacks;   // callbacks seen off the fast path (the wait's liveness signal)
     private volatile int _silent;      // whole callbacks delivered at gain 0 since FadeOut
+    private volatile bool _startHold;  // output held silent at start until ReleaseStartHold or the cap
+    private volatile bool _release;    // control thread: the start hold is over
+    private int _startHoldFrames;      // audio thread only: frames left before the cap ends the hold
 
     public OutputFade(int sampleRate) { _rate = Math.Max(1, sampleRate); _step = 1000f / (RampMs * _rate); }
 
@@ -35,10 +43,22 @@ public sealed class OutputFade
     public bool IsSilent => _silent > 0;
 
     /// <summary>Control thread: ramp to silence from the next callback on.</summary>
-    public void FadeOut() { _silent = 0; _restart = false; _target = 0f; }
+    public void FadeOut() { _startHold = false; _silent = 0; _restart = false; _target = 0f; }
 
     /// <summary>Control thread, before the device starts: the first callback is silent, then the gain ramps up to 1.</summary>
     public void FadeIn() { _target = 1f; _restart = true; }
+
+    /// <summary>Control thread, before the device starts: the output stays silent until <see cref="ReleaseStartHold"/> or <see cref="StartHoldMs"/>, then ramps up.</summary>
+    public void HoldStart()
+    {
+        _startHoldFrames = (int)Math.Min(int.MaxValue, (long)StartHoldMs * _rate / 1000);
+        _release = false;
+        _target = 0f;
+        _startHold = true;
+    }
+
+    /// <summary>Control thread: the start hold is over; the output ramps up from the next callback on.</summary>
+    public void ReleaseStartHold() => _release = true;
 
     /// <summary>
     /// Control thread: <see cref="FadeOut"/>, then waits until silence was delivered. Returns false when it gave up
@@ -78,6 +98,11 @@ public sealed class OutputFade
     public void Apply(float[] buffer, int offset, int frames)
     {
         _frames = frames;
+        if (_startHold)
+        {
+            _startHoldFrames -= frames;
+            if (_release || _startHoldFrames <= 0) { _startHold = false; _target = 1f; }
+        }
         var target = _target;
         if (_gain == 1f && target == 1f && !_restart) return;
         _callbacks++;
