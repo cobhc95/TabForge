@@ -299,7 +299,6 @@ public static class SettingsValidator
         foreach (var role in FretNoteColours.Roles) FretNoteColours.Set(value, role, FretNoteColours.Get(value, role) ?? "");
         value.FretDotStyle = FretNoteColours.NormalizeStyle(value.FretDotStyle);
         value.ScaleHighlightStrength =Math.Clamp(value.ScaleHighlightStrength, ScaleHighlightStyles.MinStrength, ScaleHighlightStyles.MaxStrength);
-        value.FretMarkerColour = FretMarkerLevels.Colours.FirstOrDefault(v => string.Equals(v, value.FretMarkerColour, StringComparison.OrdinalIgnoreCase)) ?? "White";
         value.FretNumberSize = FretNumberSizes.All.FirstOrDefault(v => string.Equals(v, value.FretNumberSize, StringComparison.OrdinalIgnoreCase)) ?? FretNumberSizes.Large;
         value.FretStringSpacing = FretStringSpacings.All.FirstOrDefault(v => string.Equals(v, value.FretStringSpacing, StringComparison.OrdinalIgnoreCase)) ?? FretStringSpacings.Natural;
         value.FretMarkerBrightness =FretMarkerLevels.All.FirstOrDefault(v => string.Equals(v, value.FretMarkerBrightness, StringComparison.OrdinalIgnoreCase)) ?? FretMarkerLevels.Original;

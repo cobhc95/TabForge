@@ -54,7 +54,7 @@ public sealed partial class InstrumentPanelView
     {
         var layout = FretboardLayout();
         var board = layout.Board;
-        var scene = new FretboardScene(d, ink, layout, _look.Style, FretInput.Bass, _assets, _inlays, _look.MarkerColourKey, _look.MarkerBrightness);
+        var scene = new FretboardScene(d, ink, layout, _look.Style, FretInput.Bass, _assets, _inlays, _look.MarkerBrightness);
         if (!DrawCachedBoard(d, ink, layout))
         {
             FretboardArtist.DrawBackdrop(scene);

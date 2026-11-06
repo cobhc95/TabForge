@@ -4,6 +4,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ## 0.9.1
 
+- Fretboard inlays: the Position inlay colour option is gone; each inlay material now shows its own colour over its grain (pearl white stays white, black pearl dark, abalone blue and green their own hues), and inlays never pick up the green of the playing-note dots. Older settings files load as before (untested in app).
 - Fretboard defaults follow the theme: the dark theme starts on Rosewood at 75% board brightness, the light theme on Maple at 90%; a look or brightness you chose stays when the theme changes, and Reset section on the Look page goes back to the shown theme's defaults (untested in app).
 - Drag selection scroll: while a selection drag is past the edge of the score, the timeline or the piano roll during playback, the view no longer jumps back to the playhead; following resumes when the pointer comes back inside or the drag ends (untested in app).
 - Accent colour: the Track properties capo Full / Partial selector, the capo hover, ghost, landing badge and selection on its mini fretboard, the fretboard's focus rings and placement preview, the timeline's clip selection, drop and drag previews, the repeat pass picker, the Add track drop ghost, the active section band, the Band view's fretboard toggle and the Sections flash now follow the accent colour chosen in Appearance instead of a fixed blue (untested in app).

@@ -60,4 +60,12 @@ public class FretboardThemeDefaultsTests
         Assert.Equal("Rosewood", Preset(lightPick));   // only the brightness, still the default, followed
         Assert.Equal(90, lightPick.FretboardBrightness);
     }
+
+    [Fact]
+    public void AnOlderFileWithTheRemovedInlayColourStillLoads()
+    {
+        var editing = System.Text.Json.JsonSerializer.Deserialize<EditingSettings>("{\"FretMarkerColour\":\"Default\",\"FretboardInlayMaterial\":\"Black pearl\"}")!;
+        Assert.Equal("Black pearl", editing.FretboardInlayMaterial);   // the old key is ignored
+        Assert.Equal("InlayBlackPearl", FretboardStyles.InlayToken(editing.FretboardInlayMaterial));
+    }
 }

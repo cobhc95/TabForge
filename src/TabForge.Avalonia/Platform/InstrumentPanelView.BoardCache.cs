@@ -16,7 +16,7 @@ namespace TabForge.Avalonia.Platform;
 // Threads: UI thread only.
 public sealed partial class InstrumentPanelView
 {
-    private readonly record struct BoardKey(Size Bounds, double Pixels, double Scale, FretboardGeometryRules.Layout Layout, FretboardStyles.Look Style, string MarkerKey, double MarkerBrightness, bool Bass, bool Light, int Palette);
+    private readonly record struct BoardKey(Size Bounds, double Pixels, double Scale, FretboardGeometryRules.Layout Layout, FretboardStyles.Look Style, double MarkerBrightness, bool Bass, bool Light, int Palette);
 
     private BoardKey? _boardKey;
     private RenderTargetBitmap? _boardBitmap;
@@ -30,7 +30,7 @@ public sealed partial class InstrumentPanelView
         var scale = FretboardScale();
         if (Bounds.Width <= 0 || Bounds.Height <= 0 || scale <= 0) return false;
         // The capo is drawn live and does not touch the still board, so dragging one never rebuilds it.
-        var key = new BoardKey(Bounds.Size, pixels, scale, layout with { CapoByString = 0 }, _look.Style, _look.MarkerColourKey, _look.MarkerBrightness, FretInput.Bass,
+        var key = new BoardKey(Bounds.Size, pixels, scale, layout with { CapoByString = 0 }, _look.Style, _look.MarkerBrightness, FretInput.Bass,
             ActualThemeVariant == global::Avalonia.Styling.ThemeVariant.Light, AvaloniaPalette.PublishVersion);
         if (_boardKey != key || _boardImage is null)
         {
@@ -56,7 +56,7 @@ public sealed partial class InstrumentPanelView
         {
             var draw = new AvaloniaDrawContext().Use(context);
             draw.PushScale(scale * pixels, scale * pixels);
-            var scene = new FretboardScene(draw, ink, layout, _look.Style, FretInput.Bass, _assets, _inlays, _look.MarkerColourKey, _look.MarkerBrightness);
+            var scene = new FretboardScene(draw, ink, layout, _look.Style, FretInput.Bass, _assets, _inlays, _look.MarkerBrightness);
             FretboardArtist.DrawBackdrop(scene);
             FretboardArtist.DrawInlays(scene);
             FretboardArtist.DrawWires(scene);

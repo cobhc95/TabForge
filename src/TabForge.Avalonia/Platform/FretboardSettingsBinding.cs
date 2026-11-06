@@ -60,7 +60,6 @@ public sealed class FretboardSettingsBinding
         string ScaleStyle,
         string ScaleColourKey,
         double ScaleStrength,
-        string MarkerColourKey,
         double MarkerBrightness,
         string WhiteKeyKey,
         double ScaleOpacity = 0.6,
@@ -109,7 +108,6 @@ public sealed class FretboardSettingsBinding
                 ScaleStyle: ScaleHighlightStyles.Normalize(editing.ScaleHighlightStyle),
                 ScaleColourKey: ColourKey(editing.ScaleHighlightColour),
                 ScaleStrength: ScaleHighlightStyles.StrengthFactor(editing.ScaleHighlightStrength),
-                MarkerColourKey: ColourKey(editing.FretMarkerColour),
                 MarkerBrightness: FretMarkerLevels.Level(editing.FretMarkerBrightness),
                 WhiteKeyKey: WhiteKeysPaletteKey(editing.KeyboardKeyColours),
                 ScaleOpacity: ScaleHighlightStyles.OpacityFactor(editing.ScaleHighlightOpacity),
@@ -146,7 +144,7 @@ public sealed class FretboardSettingsBinding
         return new TabForge.Platform.UiColor(255, (byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
     }
 
-    /// <summary>The theme-table key of a colour name from the Scale highlight, Fret marker colour settings; "Default" is the lit-note green.</summary>
+    /// <summary>The theme-table key of a Scale highlight colour name; anything else is the lit-note green.</summary>
     public static string ColourKey(string? name) => name switch
     {
         "Accent" => "Accent",   // the applied accent, live
@@ -157,8 +155,6 @@ public sealed class FretboardSettingsBinding
         "Teal" => "InstrumentTeal",
         "Grey" => "InstrumentGrey",
         "Green" => "InstrumentCurrent",
-        "White" => "InstrumentWhite",
-        "Silver" => "InstrumentSilver",
         _ => "InstrumentCurrent",
     };
 

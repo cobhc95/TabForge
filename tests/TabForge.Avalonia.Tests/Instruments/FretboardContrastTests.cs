@@ -108,15 +108,16 @@ public sealed class FretboardContrastTests
     }
 
     [AvaloniaFact]
-    public void EveryInlayColourAndBrightnessLevelChangesTheActualInlayPathsNotNoteDots()
+    public void EachInlayMaterialTintsWithItsOwnColourAndEveryBrightnessLevelLiftsTheInlaysNotNoteDots()
     {
-        foreach (var colour in FretMarkerLevels.Colours)
+        foreach (var material in FretboardStyles.InlayMaterials)
         {
-            var editing = new EditingSettings { FretMarkerColour = colour };
+            var editing = new EditingSettings { FretboardInlayMaterial = material };
             var panel = Panel(editing);
             var original = Draw(panel);
-            var tint = AvaloniaPalette.Get(FretboardSettingsBinding.ColourKey(colour), false).WithOpacity(0.45);
+            var tint = AvaloniaPalette.Get(FretboardStyles.InlayToken(material), false).WithOpacity(FretboardStyles.InlayTintOpacity);
             Assert.Equal(12, original.PathFills.Count(c => c == tint));
+            Assert.DoesNotContain(AvaloniaPalette.Get("InstrumentCurrent", false).WithOpacity(FretboardStyles.InlayTintOpacity), original.PathFills);   // never the now-note green
             foreach (var level in FretMarkerLevels.All.Skip(1))
             {
                 editing.FretMarkerBrightness = level;
@@ -169,20 +170,20 @@ public sealed class FretboardContrastTests
 
         Find<MiniSlider>("FretboardBrightness").SetByUser(60);
         Assert.Equal(60, settings.Editing.FretboardBrightness);
-        Find<ToggleButton>("FretboardMarkerColourBlue").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-        Assert.Equal("Blue", settings.Editing.FretMarkerColour);
+        Find<ToggleButton>("FretboardMarkerBrightnessBright").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Assert.Equal("Bright", settings.Editing.FretMarkerBrightness);
         Dispatcher.UIThread.RunJobs();
         window.Select(1);
-        Assert.DoesNotContain(window.GetLogicalDescendants().OfType<Control>(), c => c.Name == "FretboardMarkerColourBlue");
+        Assert.DoesNotContain(window.GetLogicalDescendants().OfType<Control>(), c => c.Name == "FretboardMarkerBrightnessBright");
         Find<MiniSlider>("FretboardNoteBrightness").SetByUser(105);
         Assert.Equal(105, settings.Editing.FretboardNoteBrightness);
         window.ResetSection(1);
         Assert.Equal(100, settings.Editing.FretboardNoteBrightness);
         Assert.Equal(60, settings.Editing.FretboardBrightness);
-        Assert.Equal("Blue", settings.Editing.FretMarkerColour);
+        Assert.Equal("Bright", settings.Editing.FretMarkerBrightness);
         window.ResetSection(0);
-        Assert.Equal(65, settings.Editing.FretboardBrightness);
-        Assert.Equal("White", settings.Editing.FretMarkerColour);
+        Assert.Equal(FretboardStyles.DefaultBoardBrightness, settings.Editing.FretboardBrightness);   // the window shows the dark theme here
+        Assert.Equal(FretMarkerLevels.Original, settings.Editing.FretMarkerBrightness);
         Assert.True(saves >= 5);
     }
 }

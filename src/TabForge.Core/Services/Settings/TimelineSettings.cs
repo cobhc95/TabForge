@@ -116,11 +116,9 @@ public static class FretMarkerLevels
     public const string Original = "Original";
     public const string Brighter = "Brighter";
     public static readonly string[] All = { Original, Brighter, "Bright", "Brightest" };
-    public static readonly string[] Colours = { "Default", "White", "Silver", "Amber", "Blue", "Green" };
 
     /// <summary>0 = the original dim dots, rising to 1 = brightest.</summary>
     public static double Level(string? level) => level switch { "Original" => 0, "Bright" => 0.6, "Brightest" => 1, _ => 0.3 };
-    // The colours for Colours are EditingSettings.FretMarkerColour.
 }
 
 public static class FretNumberSizes

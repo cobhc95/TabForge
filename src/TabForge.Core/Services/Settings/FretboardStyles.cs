@@ -72,6 +72,13 @@ public static class FretboardStyles
         "Pearl white", "Pearl cream", "Ivory", "Gold pearl", "Black pearl", "Pink pearl", "Abalone blue", "Abalone green", "Paua", "Black pearloid",
     };
 
+    /// <summary>The palette token of an inlay material's own colour ("Inlay" plus the name without spaces, e.g. InlayPearlWhite): the tint over its
+    /// grain and its flat colour when the texture is missing. An unknown name takes the first material's.</summary>
+    public static string InlayToken(string? material) => "Inlay" + Pick(InlayMaterials, material, InlayMaterials[0]).Replace(" ", "");
+
+    /// <summary>How strongly a material's own colour tints its grain (the grain stays visible under it).</summary>
+    public const double InlayTintOpacity = 0.45;
+
     public static readonly IReadOnlyList<string> CapoLooks = new[] { "Black", "Bronze", "Steel" };
 
     public static readonly IReadOnlyList<string> StringLooks = new[] { "Steel", "Nickel", "Gold", "Black", "Bronze" };

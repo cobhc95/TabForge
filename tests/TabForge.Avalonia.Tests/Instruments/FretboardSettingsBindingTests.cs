@@ -46,7 +46,6 @@ public class FretboardSettingsBindingTests
         new("ScaleHighlightColour", s => s.Editing.ScaleHighlightColour = "Red", null),
         new("ScaleHighlightStrength", s => s.Editing.ScaleHighlightStrength = 50, null),
         new("KeyboardKeyColours", s => s.Editing.KeyboardKeyColours = KeyboardKeyStyles.Grey, null),
-        new("FretMarkerColour", s => s.Editing.FretMarkerColour = "Amber", null),
         new("FretMarkerBrightness", s => s.Editing.FretMarkerBrightness = "Brightest", null),
         new("FretboardBrightness", s => s.Editing.FretboardBrightness = 60, null),
         new("FretboardNoteBrightness", s => s.Editing.FretboardNoteBrightness = 140, null),
@@ -92,11 +91,10 @@ public class FretboardSettingsBindingTests
     }
 
     [AvaloniaFact]
-    public void LitNowDotStaysPlayGreenWhileInlaysFollowTheMarkerColour()
+    public void LitNowDotStaysPlayGreenWhileInlaysKeepTheirMaterialColour()
     {
         var track = DemoSongFactory.Create().Tracks[0];
         var settings = new AppSettings();
-        settings.Editing.FretMarkerColour = "Amber";
         var panel = new InstrumentPanelView { Kind = InstrumentPanelKind.Fretboard, Look = FretboardSettingsBinding.Look.From(settings) };
         panel.Show(track, FirstLitNotes(track));
         panel.Measure(new Size(800, 150));
@@ -104,7 +102,8 @@ public class FretboardSettingsBindingTests
         var canvas = new InstrumentFretNumberTests.RecordingDrawContext();
         panel.Draw(canvas, light: false);
         Assert.Contains(canvas.Ellipses, e => e.Fill == AvaloniaPalette.Get("InstrumentCurrent", false));
-        Assert.Contains(AvaloniaPalette.Get("InstrumentNext", false).WithOpacity(0.45), canvas.PathFills);
+        Assert.Contains(AvaloniaPalette.Get(FretboardStyles.InlayToken(settings.Editing.FretboardInlayMaterial), false).WithOpacity(FretboardStyles.InlayTintOpacity), canvas.PathFills);
+        Assert.DoesNotContain(AvaloniaPalette.Get("InstrumentCurrent", false).WithOpacity(FretboardStyles.InlayTintOpacity), canvas.PathFills);
     }
 
     private static InstrumentLitNotes.Lit[] FirstLitNotes(TrackModel track)

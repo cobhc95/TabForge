@@ -7,7 +7,7 @@ namespace TabForge.Avalonia.Platform;
 
 /// <summary>What the artist draws: the surface, the theme colours, the board's layout, the chosen look, the instrument family and the panel's caches.</summary>
 internal readonly record struct FretboardScene(IDrawContext D, Func<string, UiColor> Ink, FretboardGeometryRules.Layout Layout, FretboardStyles.Look Look, bool Bass,
-    FretboardAssets Assets, FretboardInlayPlan Inlays, string InlayColourKey = "InstrumentWhite", double InlayBrightness = 0);
+    FretboardAssets Assets, FretboardInlayPlan Inlays, double InlayBrightness = 0);
 
 // Owns: the layered, lit drawing of the fretboard itself: the wood (tiled, never stretched) with edge shading and a soft sheen, the binding,
 //   the shaped inlays cut from their material, the bevelled fret wires, the nut and the strings with their cast shadows and ring blur, all to the
@@ -140,6 +140,7 @@ internal static class FretboardArtist
     {
         var d = s.D;
         var material = s.Assets.Inlay(s.Look.InlayMaterial);
+        var own = s.Ink(FretboardStyles.InlayToken(s.Look.InlayMaterial));   // the material's own colour: never a note or a setting colour
         var clipped = d is AvaloniaDrawContext && !AvaloniaDrawContext.ClipsAreSkipped && material is not null;
         foreach (var inlay in s.Inlays.For(s))
         {
@@ -153,10 +154,9 @@ internal static class FretboardArtist
                 d.Image(material!, inlay.X - inlay.Side / 2, inlay.Y - inlay.Side / 2, inlay.Side, inlay.Side);
                 d.Pop();
             }
-            else d.Path(s.Ink("FretboardInlayFallback"), null, inlay.Path);
-            // These are decorative position inlays, NOT the now/next note dots. Tint the material without hiding its grain.
-            // The old settings reached Look but were lost when textured inlays replaced the flat circles.
-            d.Path(s.Ink(s.InlayColourKey).WithOpacity(0.45), null, inlay.Path);
+            else d.Path(own, null, inlay.Path);
+            // These are decorative position inlays, NOT the now/next note dots: the material's own colour tints its grain without hiding it.
+            d.Path(own.WithOpacity(FretboardStyles.InlayTintOpacity), null, inlay.Path);
             if (s.InlayBrightness > 0)
                 d.Path(s.Ink("InstrumentWhite").WithOpacity(s.InlayBrightness * 0.65), null, inlay.Path);
             d.Path(null, new UiStroke(s.Ink("FretboardInlayRim"), 0.8), inlay.Path);

@@ -43,8 +43,6 @@ public sealed class EditingSettings
     public string ScaleHighlightColour { get; set; } = "Accent";
     /// <summary>Strength of the scale highlight in percent (100 = the standard look; the root always stays stronger than the other scale notes).</summary>
     public int ScaleHighlightStrength { get; set; } = ScaleHighlightStyles.DefaultStrength;
-    /// <summary>Colour of the fretboard position dots (inlays): "White" (default); "Default" follows the theme.</summary>
-    public string FretMarkerColour { get; set; } = "White";
     /// <summary>Brightness of the fretboard position dots: "Original" (default), "Brighter", "Bright" or "Brightest".</summary>
     public string FretMarkerBrightness { get; set; } = FretMarkerLevels.Original;
     /// <summary>Size of the fret numbers and note bubbles: "Small" (75%), "Medium" (85%) or "Large" (100%, default).</summary>

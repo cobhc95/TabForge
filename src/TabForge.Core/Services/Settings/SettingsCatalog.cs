@@ -216,7 +216,7 @@ public static partial class SettingsCatalog
         (Fretboard, "Guitar fretboard", "editing.frets editing.lefthanded editing.notenames"),
         (Fretboard, "Keyboard", "fretboard.keyboardkeys fretboard.keyboardcolours*"),
         (Fretboard, "Practice aids", "editing.horizon.enabled editing.scale follow.fretboard editing.horizon*"),   // audio.fretboardstyle: unbuilt, row hidden
-        (Fretboard, "Appearance", "fretboard.scalestyle* fretboard.scalecolour* fretboard.scalestrength* fretboard.markercolour* fretboard.markerbrightness* fretboard.numbersize* fretboard.markersize* fretboard.stringspacing*"),
+        (Fretboard, "Appearance", "fretboard.scalestyle* fretboard.scalecolour* fretboard.scalestrength* fretboard.markerbrightness* fretboard.numbersize* fretboard.markersize* fretboard.stringspacing*"),
         (Fretboard, "Scale readout", "scalereadout.readfrom scalereadout.listento scalereadout.prefercommon scalereadout.fretboard scalereadout.family.major* scalereadout.family.minor* scalereadout.family.pentatonic* scalereadout.family.blues* scalereadout.family.harmonic-minor* scalereadout.family.melodic-minor* scalereadout.family.modes* scalereadout.family.exotic*"),
 
         (Timeline, "Track list", "timeline.autofittimeline.trackgroups* timeline.addtracklane* timeline.mastertrack* timeline.mastertrackcolours* timeline.mastertrackcolour* timeline.mastertrackopacity*"),

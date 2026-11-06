@@ -45,7 +45,6 @@ public sealed partial class FretboardSettingsWindow
                 var inlays = Card("Inlays");
                 Chips(inlays, "INLAY SHAPE", "FretboardInlayShape", FretboardStyles.InlayShapes, () => ed.FretboardInlayShape, v => ed.FretboardInlayShape = v);
                 Chips(inlays, "INLAY MATERIAL", "FretboardInlayMaterial", FretboardStyles.InlayMaterials, () => ed.FretboardInlayMaterial, v => ed.FretboardInlayMaterial = v);
-                Chips(inlays, "POSITION INLAY COLOUR", "FretboardMarkerColour", FretMarkerLevels.Colours, () => ed.FretMarkerColour, v => ed.FretMarkerColour = v);
                 Chips(inlays, "POSITION INLAY BRIGHTNESS", "FretboardMarkerBrightness", FretMarkerLevels.All, () => ed.FretMarkerBrightness, v => ed.FretMarkerBrightness = v);
                 inlays.Add(new TextBlock { Text = "Position inlays mark frets 3, 5, 7, 9, 12…; playing-note brightness is under Notes and markers.", TextWrapping = global::Avalonia.Media.TextWrapping.Wrap });
                 Slide(Card("Board"), "FRETBOARD BRIGHTNESS", "FretboardBrightness", FretboardStyles.MinBrightness, FretboardStyles.MaxBrightness, FretboardStyles.BrightnessStep, e => e.FretboardBrightness, v => ed.FretboardBrightness = v, "%");
@@ -190,7 +189,7 @@ public sealed partial class FretboardSettingsWindow
         {
             case 0:
                 FretboardStyles.Apply(ed, FretboardStyles.LookOf(d));
-                (ed.FretMarkerColour, ed.FretMarkerBrightness, ed.FretboardBrightness) = (d.FretMarkerColour, d.FretMarkerBrightness, d.FretboardBrightness);
+                (ed.FretMarkerBrightness, ed.FretboardBrightness) = (d.FretMarkerBrightness, d.FretboardBrightness);
                 break;
             case 1: (ed.PreviewNotesEnabled, ed.PreviewHorizon, ed.PreviewPreviousNotesEnabled, ed.ShowNoteNames, ed.FretboardNoteBrightness, ed.FretMarkerSizePercent, ed.FretNumberSize) =
                     (d.PreviewNotesEnabled, d.PreviewHorizon, d.PreviewPreviousNotesEnabled, d.ShowNoteNames, d.FretboardNoteBrightness, d.FretMarkerSizePercent, d.FretNumberSize);
