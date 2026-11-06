@@ -2,9 +2,7 @@
 
 **A keyboard-driven tablature and notation editor for Windows, with experimental Linux packages.** Opens .gp3, .gp4, .gp5, .gpx and .gp files, and saves .gp and its own .tforge projects. Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard or keyboard, a piano roll, an arrangement timeline, audio and MIDI recording, a mixer, built-in effects, VST2, VST3 and CLAP plug-ins (32-bit and 64-bit VST), and offline audio and video rendering.
 
-[![TabForge with a drum plug-in](media/screenshots/0.9.0/github-main.jpg)](media/screenshots/0.9.0/github-main.jpg)
-
-*The plug-in shown is a third-party example (Superior Drummer 3 by Toontrack): not included and not affiliated.*
+[![TabForge with a drum plug-in](media/screenshots/github-main.jpg)](media/screenshots/github-main.jpg)
 
 ## Download
 
