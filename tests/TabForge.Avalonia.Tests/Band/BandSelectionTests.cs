@@ -13,6 +13,7 @@ using TabForge.Avalonia.Views;
 using TabForge.Documents;
 using TabForge.Presets;
 using Xunit;
+using static TabForge.Avalonia.Tests.TestUi;
 
 namespace TabForge.Avalonia.Tests;
 
@@ -44,15 +45,6 @@ public class BandSelectionTests
     {
         window.GetLogicalDescendants().OfType<MenuItem>().Single(m => m.Tag as string == commandId).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
         Dispatcher.UIThread.RunJobs();
-    }
-
-    private static void Settle(Window window)
-    {
-        for (var pass = 0; pass < 3; pass++)
-        {
-            Dispatcher.UIThread.RunJobs();
-            window.UpdateLayout();
-        }
     }
 
     // The window point on the tab line, a quarter into a bar of the card's first system.

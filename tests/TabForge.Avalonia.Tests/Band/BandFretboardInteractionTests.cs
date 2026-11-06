@@ -13,6 +13,7 @@ using TabForge.Models;
 using TabForge.Presets;
 using TabForge.Services;
 using Xunit;
+using static TabForge.Avalonia.Tests.TestUi;
 
 namespace TabForge.Avalonia.Tests;
 
@@ -25,15 +26,6 @@ namespace TabForge.Avalonia.Tests;
 public class BandFretboardInteractionTests
 {
     private static SongDocument DemoDocument() => new(() => null) { Project = DemoSongFactory.Create() };
-
-    private static void Settle(Window window)
-    {
-        for (var pass = 0; pass < 3; pass++)
-        {
-            Dispatcher.UIThread.RunJobs();
-            window.UpdateLayout();
-        }
-    }
 
     private static Point Centre(Window window, Control control) =>
         control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window)!.Value;

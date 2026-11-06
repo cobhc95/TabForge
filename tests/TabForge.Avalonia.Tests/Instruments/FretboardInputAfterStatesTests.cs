@@ -13,6 +13,7 @@ using Avalonia.VisualTree;
 using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Views.Docking;
 using Xunit;
+using static TabForge.Avalonia.Tests.TestUi;
 
 namespace TabForge.Avalonia.Tests;
 
@@ -35,15 +36,6 @@ public sealed class FretboardInputAfterStatesTests
         main.Show();
         Settle(main);
         return main;
-    }
-
-    private static void Settle(MainWindow main)
-    {
-        for (var pass = 0; pass < 3; pass++)
-        {
-            Dispatcher.UIThread.RunJobs();
-            main.UpdateLayout();
-        }
     }
 
     private static InstrumentPanelStrip Strip(MainWindow main) => main.GetVisualDescendants().OfType<InstrumentPanelStrip>().Single();

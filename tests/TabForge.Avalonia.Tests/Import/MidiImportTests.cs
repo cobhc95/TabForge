@@ -7,6 +7,7 @@ using TabForge.Models;
 using TabForge.Presets;
 using TabForge.Services;
 using Xunit;
+using static TabForge.Avalonia.Tests.TestUi;
 
 namespace TabForge.Avalonia.Tests;
 
@@ -35,14 +36,6 @@ public sealed class MidiImportTests : IDisposable
         }
         body.AddRange(new byte[] { 0, 0xFF, 0x2F, 0 });
         return Ascii("MTrk").Concat(new byte[] { 0, 0, (byte)(body.Count >> 8), (byte)body.Count }).Concat(body).ToArray();
-    }
-
-    private static void Vlq(List<byte> o, int v)
-    {
-        var parts = new Stack<byte>();
-        parts.Push((byte)(v & 0x7F));
-        for (v >>= 7; v > 0; v >>= 7) parts.Push((byte)(v & 0x7F | 0x80));
-        o.AddRange(parts);
     }
 
     private static byte[] File1(int format, params byte[][] chunks) =>

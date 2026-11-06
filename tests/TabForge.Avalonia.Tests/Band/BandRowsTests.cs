@@ -17,6 +17,7 @@ using TabForge.Documents;
 using TabForge.Presets;
 using TabForge.Services;
 using Xunit;
+using static TabForge.Avalonia.Tests.TestUi;
 
 namespace TabForge.Avalonia.Tests;
 
@@ -28,15 +29,6 @@ namespace TabForge.Avalonia.Tests;
 public sealed class BandRowsTests
 {
     private static SongDocument DemoDocument() => new(() => null) { Project = DemoSongFactory.Create() };
-
-    private static void Settle(Window window)
-    {
-        for (var pass = 0; pass < 3; pass++)
-        {
-            Dispatcher.UIThread.RunJobs();
-            window.UpdateLayout();
-        }
-    }
 
     private static (BandWindow Window, BandView View, BandTrackPanel Panel, SongDocument Document) Show()
     {

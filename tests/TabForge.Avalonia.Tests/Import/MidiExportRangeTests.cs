@@ -7,6 +7,7 @@ using TabForge.Presets;
 using TabForge.Rendering;
 using TabForge.Services;
 using Xunit;
+using static TabForge.Avalonia.Tests.TestUi;
 
 namespace TabForge.Avalonia.Tests;
 
@@ -48,18 +49,6 @@ public sealed class MidiExportRangeTests : IDisposable
 
     private static int ReadBe16(byte[] b, int at) => (b[at] << 8) | b[at + 1];
     private static int ReadBe32(byte[] b, int at) => (b[at] << 24) | (b[at + 1] << 16) | (b[at + 2] << 8) | b[at + 3];
-
-    private static int ReadVarLen(byte[] b, ref int p)
-    {
-        var value = 0;
-        for (var i = 0; i < 4; i++)
-        {
-            var x = b[p++];
-            value = (value << 7) | (x & 0x7F);
-            if ((x & 0x80) == 0) return value;
-        }
-        return value;
-    }
 
     private static MidiFile ParseMidi(byte[] b)
     {

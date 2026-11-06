@@ -8,6 +8,7 @@ using TabForge.Playback;
 using TabForge.Presets;
 using TabForge.Services;
 using Xunit;
+using static TabForge.Avalonia.Tests.TestUi;
 
 namespace TabForge.Avalonia.Tests;
 
@@ -23,12 +24,6 @@ public sealed class MidiSectionTechniqueKindTests : IDisposable
     public void Dispose() { try { Directory.Delete(_folder, true); } catch (IOException) { } }
 
     private static byte[] Ascii(string s) => Encoding.ASCII.GetBytes(s);
-    private static void Vlq(List<byte> o, int v)
-    {
-        var parts = new Stack<byte>(); parts.Push((byte)(v & 0x7F));
-        for (v >>= 7; v > 0; v >>= 7) parts.Push((byte)(v & 0x7F | 0x80));
-        o.AddRange(parts);
-    }
     private static byte[] Chunk(IEnumerable<(int Tick, byte[] Bytes)> events)
     {
         var body = new List<byte>(); var last = 0;

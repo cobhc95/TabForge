@@ -19,6 +19,7 @@ using TabForge.Models;
 using TabForge.Playback;
 using TabForge.Presets;
 using Xunit;
+using static TabForge.Avalonia.Tests.TestUi;
 
 namespace TabForge.Avalonia.Tests;
 
@@ -31,15 +32,6 @@ namespace TabForge.Avalonia.Tests;
 public sealed class BandPlaybackLayoutTests
 {
     private static SongDocument DemoDocument() => new(() => null) { Project = DemoSongFactory.Create() };
-
-    private static void Settle(Window window)
-    {
-        for (var pass = 0; pass < 3; pass++)
-        {
-            Dispatcher.UIThread.RunJobs();
-            window.UpdateLayout();
-        }
-    }
 
     [AvaloniaFact]
     public void CardStaffClickSeeksPlaybackToThatCell()

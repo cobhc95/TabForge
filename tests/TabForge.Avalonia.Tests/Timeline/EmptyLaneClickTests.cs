@@ -19,6 +19,7 @@ using TabForge.Presenters;
 using TabForge.Presets;
 using TabForge.Services;
 using Xunit;
+using static TabForge.Avalonia.Tests.TestUi;
 
 namespace TabForge.Avalonia.Tests;
 
@@ -58,15 +59,6 @@ public sealed class EmptyLaneClickTests
         Settle(window);
         document.MarkClean();
         return new Rig(window, arrangement, window.GetLogicalDescendants().OfType<PianoRollView>().Single(), window.GetLogicalDescendants().OfType<ScorePreviewView>().Single(), document, take);
-    }
-
-    private static void Settle(MainWindow window)
-    {
-        for (var pass = 0; pass < 3; pass++)
-        {
-            Dispatcher.UIThread.RunJobs();
-            window.UpdateLayout();
-        }
     }
 
     private static Point InLane(Rig rig, int row, int lane, int bar) => new(rig.Arrangement.Timeline.BarX(bar) + 3, rig.Arrangement.Timeline.LaneBandTopOf(row, lane) + ClipLanes.AudioLaneHeight / 2);

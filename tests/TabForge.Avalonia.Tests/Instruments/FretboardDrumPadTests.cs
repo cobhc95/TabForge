@@ -13,6 +13,7 @@ using TabForge.Presenters;
 using TabForge.Presets;
 using TabForge.Services;
 using Xunit;
+using static TabForge.Avalonia.Tests.TestUi;
 
 namespace TabForge.Avalonia.Tests;
 
@@ -59,14 +60,5 @@ public sealed class FretboardDrumPadTests
         Assert.Equal(before + 1, HitsOnLine());
         main.Songs.Active.MarkClean();   // the clicks above edited the song; a dirty song would open the save prompt on close
         main.Close();
-    }
-
-    private static void Settle(MainWindow main)
-    {
-        for (var pass = 0; pass < 3; pass++)
-        {
-            Dispatcher.UIThread.RunJobs();
-            main.UpdateLayout();
-        }
     }
 }

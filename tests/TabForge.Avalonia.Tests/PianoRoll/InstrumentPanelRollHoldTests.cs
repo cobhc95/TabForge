@@ -18,6 +18,7 @@ using TabForge.Models;
 using TabForge.Presets;
 using TabForge.Services;
 using Xunit;
+using static TabForge.Avalonia.Tests.TestUi;
 
 namespace TabForge.Avalonia.Tests;
 
@@ -120,15 +121,6 @@ public sealed class InstrumentPanelRollHoldTests
         document.MarkClean();
         return new Rig(window, arrangement, window.GetLogicalDescendants().OfType<PianoRollView>().Single(),
             window.GetVisualDescendants().OfType<EditorModePills>().Single(), clip, document);
-    }
-
-    private static void Settle(MainWindow window)
-    {
-        for (var pass = 0; pass < 3; pass++)
-        {
-            Dispatcher.UIThread.RunJobs();
-            window.UpdateLayout();
-        }
     }
 
     private static void Click(Rig rig, Point onTimeline)

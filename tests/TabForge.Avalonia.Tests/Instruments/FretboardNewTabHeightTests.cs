@@ -15,6 +15,7 @@ using TabForge.Presenters;
 using TabForge.Presets;
 using TabForge.Services;
 using Xunit;
+using static TabForge.Avalonia.Tests.TestUi;
 
 namespace TabForge.Avalonia.Tests;
 
@@ -38,16 +39,6 @@ public sealed class FretboardNewTabHeightTests
         main.Show();
         Settle(main);
         return main;
-    }
-
-    /// <summary>Runs the UI thread's queued jobs and lays out until the window stops changing, as the owner's launch does.</summary>
-    private static void Settle(MainWindow main)
-    {
-        for (var pass = 0; pass < 3; pass++)
-        {
-            Dispatcher.UIThread.RunJobs();
-            main.UpdateLayout();
-        }
     }
 
     private static double FretboardHeight(MainWindow main) => main.GetVisualDescendants().OfType<InstrumentPanelStrip>().Single().Bounds.Height;

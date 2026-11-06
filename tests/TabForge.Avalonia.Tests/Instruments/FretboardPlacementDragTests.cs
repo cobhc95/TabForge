@@ -12,6 +12,7 @@ using TabForge.Visualization;
 using TabForge.Presets;
 using TabForge.Services;
 using Xunit;
+using static TabForge.Avalonia.Tests.TestUi;
 
 namespace TabForge.Avalonia.Tests;
 
@@ -60,14 +61,5 @@ public sealed class FretboardPlacementDragTests
         Assert.Equal(1, saves);
         Assert.Null(panel.LandingPlace);
         window.Close();
-    }
-
-    private static void Settle(Window window)
-    {
-        for (var pass = 0; pass < 3; pass++)
-        {
-            Dispatcher.UIThread.RunJobs();
-            window.UpdateLayout();
-        }
     }
 }

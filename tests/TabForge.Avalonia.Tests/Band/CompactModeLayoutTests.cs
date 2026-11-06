@@ -16,6 +16,7 @@ using TabForge.Documents;
 using TabForge.Presets;
 using TabForge.Services;
 using Xunit;
+using static TabForge.Avalonia.Tests.TestUi;
 
 namespace TabForge.Avalonia.Tests;
 
@@ -216,15 +217,6 @@ public class CompactModeLayoutTests
         if (node is null || node.Kind != "split") return null;
         if (node.Orientation == "Vertical" && node.Second is { Kind: "tabs" } lower && lower.Panels.Contains(panelId, System.StringComparer.Ordinal)) return node;
         return SavedSplitAbove(node.First, panelId) ?? SavedSplitAbove(node.Second, panelId);
-    }
-
-    private static void Settle(MainWindow main)
-    {
-        for (var pass = 0; pass < 3; pass++)
-        {
-            Dispatcher.UIThread.RunJobs();
-            main.UpdateLayout();
-        }
     }
 
     private static void Drag(MainWindow window, DockSplitter splitter, double distance)

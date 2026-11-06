@@ -16,6 +16,7 @@ using TabForge.Models;
 using TabForge.Presets;
 using TabForge.Services;
 using Xunit;
+using static TabForge.Avalonia.Tests.TestUi;
 
 namespace TabForge.Avalonia.Tests;
 
@@ -70,10 +71,5 @@ public class TrackArmGrowTests
         if (node is null || node.Kind != "split") return null;
         if (node.Orientation == "Vertical" && node.Second is { Kind: "tabs" } lower && lower.Panels.Contains(panelId, StringComparer.Ordinal)) return node;
         return SplitAbove(node.First, panelId) ?? SplitAbove(node.Second, panelId);
-    }
-
-    private static void Settle(MainWindow main)
-    {
-        for (var pass = 0; pass < 3; pass++) { Dispatcher.UIThread.RunJobs(); main.UpdateLayout(); }
     }
 }

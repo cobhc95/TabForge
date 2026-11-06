@@ -14,6 +14,7 @@ using TabForge.Docking;
 using TabForge.Documents;
 using TabForge.Presets;
 using Xunit;
+using static TabForge.Avalonia.Tests.TestUi;
 
 namespace TabForge.Avalonia.Tests;
 
@@ -33,15 +34,6 @@ public class BandExitIntoCompactTests : IDisposable
     public void Dispose()
     {
         try { if (Directory.Exists(_folder)) Directory.Delete(_folder, recursive: true); } catch { }
-    }
-
-    private static void Settle(MainWindow main)
-    {
-        for (var pass = 0; pass < 3; pass++)
-        {
-            Dispatcher.UIThread.RunJobs();
-            main.UpdateLayout();
-        }
     }
 
     private static MenuItem Row(MainWindow main, string commandId) =>

@@ -15,6 +15,7 @@ using TabForge.Presenters;
 using TabForge.Presets;
 using TabForge.Services;
 using Xunit;
+using static TabForge.Avalonia.Tests.TestUi;
 
 namespace TabForge.Avalonia.Tests;
 
@@ -49,15 +50,6 @@ public sealed class TakeDeleteReturnsToScoreTests
 
     private static AudioClip Take(double from, double to) =>
         new() { File = "", Name = "take", StartSec = from, SourceLengthSec = to - from, FileLengthSec = to - from, Notes = new List<ClipNote> { new(0, 0.2, 60, 100) } };
-
-    private static void Settle(MainWindow window)
-    {
-        for (var pass = 0; pass < 3; pass++)
-        {
-            Dispatcher.UIThread.RunJobs();
-            window.UpdateLayout();
-        }
-    }
 
     private static void ClickClip(Rig rig)
     {

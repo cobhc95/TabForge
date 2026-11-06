@@ -12,6 +12,7 @@ using TabForge.Models;
 using TabForge.Presets;
 using TabForge.Services;
 using Xunit;
+using static TabForge.Avalonia.Tests.TestUi;
 
 namespace TabForge.Avalonia.Tests;
 
@@ -63,16 +64,6 @@ public class TrackListOwnerLayoutTests
         finally
         {
             if (Directory.Exists(folder)) Directory.Delete(folder, recursive: true);
-        }
-    }
-
-    /// <summary>Runs the UI thread's queued jobs and lays out until the window stops changing, as the owner's first launch does.</summary>
-    private static void Settle(MainWindow main)
-    {
-        for (var pass = 0; pass < 3; pass++)
-        {
-            Dispatcher.UIThread.RunJobs();
-            main.UpdateLayout();
         }
     }
 

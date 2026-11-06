@@ -11,6 +11,7 @@ using TabForge.Avalonia.Views;
 using TabForge.Documents;
 using TabForge.Presets;
 using Xunit;
+using static TabForge.Avalonia.Tests.TestUi;
 
 namespace TabForge.Avalonia.Tests;
 
@@ -23,15 +24,6 @@ namespace TabForge.Avalonia.Tests;
 public class BandNoteEditTests
 {
     private static SongDocument DemoDocument() => new(() => null) { Project = DemoSongFactory.Create() };
-
-    private static void Settle(Window window)
-    {
-        for (var pass = 0; pass < 3; pass++)
-        {
-            Dispatcher.UIThread.RunJobs();
-            window.UpdateLayout();
-        }
-    }
 
     /// <summary>The point in the window of a page position inside a card's staff (the staff draws scaled by its zoom).</summary>
     private static Point InCard(BandTrackPanel panel, double pageX, double pageY, Window window) =>

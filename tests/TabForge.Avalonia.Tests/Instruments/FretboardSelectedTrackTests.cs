@@ -14,6 +14,7 @@ using TabForge.Platform;
 using TabForge.Presets;
 using TabForge.Services;
 using Xunit;
+using static TabForge.Avalonia.Tests.TestUi;
 
 namespace TabForge.Avalonia.Tests;
 
@@ -119,15 +120,6 @@ public sealed class FretboardSelectedTrackTests
     {
         main.Songs.Active.TrackIndex = index;
         Settle(main);
-    }
-
-    private static void Settle(MainWindow main)
-    {
-        for (var pass = 0; pass < 3; pass++)
-        {
-            Dispatcher.UIThread.RunJobs();
-            main.UpdateLayout();
-        }
     }
 
     /// <summary>The window point of a fret centre in the strip's panel.</summary>
