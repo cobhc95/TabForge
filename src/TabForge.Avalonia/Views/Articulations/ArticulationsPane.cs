@@ -42,8 +42,8 @@ public sealed partial class ArticulationsPane : DockPanel
     private readonly Button _delete = Small("Delete", "Delete the selected preset of your own", "ArticulationDeleteButton");
     private readonly Button _manage = Small("Manage…", "Rename, delete or reorder your articulation presets", "ArticulationManageButton");
     private readonly TextBox _lead = new() { Width = DialogMetrics.ArticulationLeadWidth, Name = "ArticulationLeadBox", VerticalAlignment = VerticalAlignment.Center };
-    private readonly TextBlock _description = new TextBlock { TextWrapping = TextWrapping.Wrap, Name = "ArticulationDescription" }.Spaced(DialogMetrics.ArticulationTextGap);
-    private readonly TextBlock _status = new TextBlock { TextWrapping = TextWrapping.Wrap, Name = "ArticulationStatus" }.Spaced(DialogMetrics.ArticulationPaneGap);
+    private readonly TextBlock _description = new TextBlock { TextWrapping = TextWrapping.Wrap, Name = "ArticulationDescription" }.WithMargin(DialogMetrics.ArticulationTextGap);
+    private readonly TextBlock _status = new TextBlock { TextWrapping = TextWrapping.Wrap, Name = "ArticulationStatus" }.WithMargin(DialogMetrics.ArticulationPaneGap);
     private readonly PresetFolderStore _store = ArticulationPresets.UserStore();
     private bool _filling, _testing, _custom;
 
@@ -56,7 +56,7 @@ public sealed partial class ArticulationsPane : DockPanel
     public ArticulationsPane(IFxChainHost host, TrackModel track, PluginSlot? slot, Action<Action> edit, Window owner, Func<FxChainDialogs> dialogs)
     {
         (_host, _track, _slot, _edit, _owner, _dialogs) = (host, track, slot, edit, owner, dialogs);
-        this.Spaced(DialogMetrics.ArticulationPaneGap);
+        this.WithMargin(DialogMetrics.ArticulationPaneGap);
         Name = "ArticulationsPane";
         ClipToBounds = true;
         var top = new WrapPanel { Orientation = Orientation.Horizontal, Name = "ArticulationTopRow", ClipToBounds = true };
@@ -70,7 +70,7 @@ public sealed partial class ArticulationsPane : DockPanel
             {
                 Text = "Playback keeps the built-in sound; this map is used by MIDI exports that pick it and by an instrument added later.",
                 TextWrapping = TextWrapping.Wrap, Name = "ArticulationTrackHint",
-            }.Spaced(DialogMetrics.ArticulationTextGap);
+            }.WithMargin(DialogMetrics.ArticulationTextGap);
             hint[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MutedBrush");
             header.Children.Add(hint);
         }
@@ -109,22 +109,22 @@ public sealed partial class ArticulationsPane : DockPanel
 
     private static Button Small(string text, string tip, string name)
     {
-        var button = new Button { Content = text, Name = name }.WithPadding(DialogMetrics.ArticulationButtonPadding).Spaced(DialogMetrics.ArticulationButtonGap);
+        var button = new Button { Content = text, Name = name }.WithPadding(DialogMetrics.ArticulationButtonPadding).WithMargin(DialogMetrics.ArticulationButtonGap);
         MidiSharedRows.Tip(button, tip);
         return button;
     }
 
-    private static TextBlock Bold(string text) => new TextBlock { Text = text, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center }.Spaced(DialogMetrics.ArticulationLabelEnd);
+    private static TextBlock Bold(string text) => new TextBlock { Text = text, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center }.WithMargin(DialogMetrics.ArticulationLabelEnd);
 
     private Grid BuildTable()
     {
-        var grid = new Grid { ColumnDefinitions = ColumnDefinitions.Parse("Auto,Auto,Auto,Auto,Auto,Auto"), Name = "ArticulationTable", ClipToBounds = true }.Spaced(DialogMetrics.ArticulationTableGap);
+        var grid = new Grid { ColumnDefinitions = ColumnDefinitions.Parse("Auto,Auto,Auto,Auto,Auto,Auto"), Name = "ArticulationTable", ClipToBounds = true }.WithMargin(DialogMetrics.ArticulationTableGap);
         var heads = new[] { "Technique", "Action", "Value", "Value 2 (CC)", "Mode", "" };
         grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
         for (var column = 0; column < heads.Length; column++)
         {
             var head = Bold(heads[column]);
-            head.Spaced(column == 0 ? DialogMetrics.ArticulationHeadFirst : DialogMetrics.ArticulationHead);
+            head.WithMargin(column == 0 ? DialogMetrics.ArticulationHeadFirst : DialogMetrics.ArticulationHead);
             head[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("AccentBrush");
             Grid.SetColumn(head, column);
             grid.Children.Add(head);

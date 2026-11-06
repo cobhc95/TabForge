@@ -43,7 +43,7 @@ public sealed class PresetUndoToast
         if (_owner() is not { } top || OverlayLayer.GetOverlayLayer(top) is not { } layer) return;
         var label = new TextBlock { Text = text, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
         label[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
-        var button = new Button { Content = UndoText, Name = UndoName, VerticalAlignment = VerticalAlignment.Center }.Spaced(DialogMetrics.UndoToastButtonGap);
+        var button = new Button { Content = UndoText, Name = UndoName, VerticalAlignment = VerticalAlignment.Center }.WithMargin(DialogMetrics.UndoToastButtonGap);
         AutomationProperties.SetName(button, UndoText);
         button.Click += (_, _) => Undo();
         var toast = new Border

@@ -138,7 +138,7 @@ public sealed partial class PresetManagerWindow
             if (grip is Border handle && !entry.BuiltIn) BeginDrag(handle, entry);
             grid.Children.Add(grip);
             Grid.SetColumn(name, 1);
-            name.Spaced(DialogMetrics.PresetLabelGap);
+            name.WithMargin(DialogMetrics.PresetLabelGap);
         }
         grid.Children.Add(name);
         if (flat)

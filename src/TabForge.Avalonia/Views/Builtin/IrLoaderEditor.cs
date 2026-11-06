@@ -72,15 +72,15 @@ public sealed partial class IrLoaderEditor : UserControl
             {
                 SliderRow("Mix", _mix, _mixValue, "Dry / wet: 100 % is the IR only."),
                 SliderRow("Gain", _gain, _gainValue, "The level of the IR's sound, in dB."),
-                new WrapPanel { Orientation = Orientation.Horizontal, Children = { _autoLevel, _trim.WithMargin(DialogMetrics.IrButtonGap), _ab.WithMargin(DialogMetrics.IrButtonGap) } }.Spaced(DialogMetrics.IrRowGap),
-                _readout.Spaced(DialogMetrics.IrRowGap),
+                new WrapPanel { Orientation = Orientation.Horizontal, Children = { _autoLevel, _trim.WithMargin(DialogMetrics.IrButtonGap), _ab.WithMargin(DialogMetrics.IrButtonGap) } }.WithMargin(DialogMetrics.IrRowGap),
+                _readout.WithMargin(DialogMetrics.IrRowGap),
                 _status,
             },
         };
         ToolTip.SetTip(_ab, "A/B: compare the dry sound with the IR (the IR stays loaded).");
         DockPanel.SetDock(top, Dock.Top);
         DockPanel.SetDock(bottom, Dock.Bottom);
-        Content = DialogMetrics.Inset(new DockPanel { Children = { top, bottom, _graph.Spaced(DialogMetrics.IrSectionGap) } });
+        Content = DialogMetrics.Inset(new DockPanel { Children = { top, bottom, _graph.WithMargin(DialogMetrics.IrSectionGap) } });
         _poll = _ui.CreateTimer(TimeSpan.FromMilliseconds(ChromeMetrics.BuiltinPollMs));
         WireControls();
         WireEngine();
@@ -125,7 +125,7 @@ public sealed partial class IrLoaderEditor : UserControl
         grid.Children.Add(path);
         Grid.SetColumn(browseButton.WithMargin(DialogMetrics.IrButtonGap), 2);
         grid.Children.Add(browseButton);
-        return new StackPanel { Children = { grid } }.Spaced(DialogMetrics.IrRowGap);
+        return new StackPanel { Children = { grid } }.WithMargin(DialogMetrics.IrRowGap);
     }
 
     // The picker belongs to the window that shows this editor (embedded in the FX chain window or in its own); it opens without blocking the UI.
@@ -164,7 +164,7 @@ public sealed partial class IrLoaderEditor : UserControl
         Grid.SetColumn(value.WithMargin(DialogMetrics.IrButtonGap), 2);
         grid.Children.Add(slider);
         grid.Children.Add(value);
-        return grid.Spaced(DialogMetrics.IrRowGap);
+        return grid.WithMargin(DialogMetrics.IrRowGap);
     }
 
     private static TextBlock PathText(string name) => new() { Name = name, Text = "(none)", VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.PrefixCharacterEllipsis };

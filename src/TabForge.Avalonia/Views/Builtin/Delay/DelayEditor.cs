@@ -27,13 +27,13 @@ public sealed class DelayEditor : BuiltinEffectPanel
         {
             Children =
             {
-                Switch(DelayEffect.SyncId, "Sync to tempo", "On: the time follows the tempo of the song. Off: the time is in milliseconds.").Spaced(DialogMetrics.FxRowGap),
-                _division.Spaced(DialogMetrics.FxRowGap),
-                _time.Spaced(DialogMetrics.FxRowGap),
-                Slider(DelayEffect.FeedbackId, "Feedback", "How much of each echo is fed back to make the next one.").Spaced(DialogMetrics.FxRowGap),
-                Slider(DelayEffect.MixId, "Mix", "Level of the echoes; the dry sound is not changed.").Spaced(DialogMetrics.FxRowGap),
-                Slider(DelayEffect.LowCutId, "Low cut", "Takes the bass out of the echoes (left at the lowest value it does nothing).", ParamScale.Log, text: ParamSlider.Hertz).Spaced(DialogMetrics.FxRowGap),
-                Slider(DelayEffect.HighCutId, "High cut", "Takes the brightness out of the echoes (left at the highest value it does nothing).", ParamScale.Log, text: ParamSlider.Hertz).Spaced(DialogMetrics.FxRowGap),
+                Switch(DelayEffect.SyncId, "Sync to tempo", "On: the time follows the tempo of the song. Off: the time is in milliseconds.").WithMargin(DialogMetrics.FxRowGap),
+                _division.WithMargin(DialogMetrics.FxRowGap),
+                _time.WithMargin(DialogMetrics.FxRowGap),
+                Slider(DelayEffect.FeedbackId, "Feedback", "How much of each echo is fed back to make the next one.").WithMargin(DialogMetrics.FxRowGap),
+                Slider(DelayEffect.MixId, "Mix", "Level of the echoes; the dry sound is not changed.").WithMargin(DialogMetrics.FxRowGap),
+                Slider(DelayEffect.LowCutId, "Low cut", "Takes the bass out of the echoes (left at the lowest value it does nothing).", ParamScale.Log, text: ParamSlider.Hertz).WithMargin(DialogMetrics.FxRowGap),
+                Slider(DelayEffect.HighCutId, "High cut", "Takes the brightness out of the echoes (left at the highest value it does nothing).", ParamScale.Log, text: ParamSlider.Hertz).WithMargin(DialogMetrics.FxRowGap),
                 Row(Switch(DelayEffect.PingPongId, "Ping-pong", "The echoes bounce between left and right."), Switch(DelayEffect.BypassId, "Bypass", "Hear the sound without the delay (a short fade, no click).")),
             },
         });

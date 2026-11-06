@@ -53,7 +53,7 @@ internal sealed class CurveSidePanel : StackPanel
         _pick = pick;
         _presetsChanged = presetsChanged;
         Width = DialogMetrics.CurveSideWidth;
-        this.Spaced(DialogMetrics.CurveSideGap);
+        this.WithMargin(DialogMetrics.CurveSideGap);
         AutomationProperties.SetName(_types, "Curve types");
         AutomationProperties.SetName(_list, "Presets");
         AddTypeRows(kind, previous);
@@ -76,8 +76,8 @@ internal sealed class CurveSidePanel : StackPanel
         Children.Add(_types);
         Children.Add(Heading("Your presets", DialogMetrics.CurveSecondHeadingGap));
         Children.Add(_list);
-        Children.Add(buttons.Spaced(DialogMetrics.CurveButtonsGap));
-        Children.Add(manage.Spaced(DialogMetrics.CurveButtonsGap));
+        Children.Add(buttons.WithMargin(DialogMetrics.CurveButtonsGap));
+        Children.Add(manage.WithMargin(DialogMetrics.CurveButtonsGap));
         FillList(null);
     }
 
@@ -109,7 +109,7 @@ internal sealed class CurveSidePanel : StackPanel
 
     private static TextBlock Heading(string text, Thickness gap)
     {
-        var heading = new TextBlock { Text = text }.Spaced(gap);
+        var heading = new TextBlock { Text = text }.WithMargin(gap);
         heading[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
         return heading;
     }

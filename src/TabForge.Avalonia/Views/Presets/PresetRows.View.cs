@@ -72,11 +72,11 @@ public sealed partial class PresetRows
         {
             Orientation = Orientation.Horizontal, Spacing = PresetRowIcons.ButtonGap, VerticalAlignment = VerticalAlignment.Center,
             Children = { PresetRowIcons.Rename(name, () => BeginRename(name)), PresetRowIcons.Delete(name, () => Delete(name)) },
-        }.Spaced(DialogMetrics.PresetToolsGap);
+        }.WithMargin(DialogMetrics.PresetToolsGap);
         Grid.SetColumn(tools, ToolsColumn);
         Grid.SetRow(tools, ContentRow);
         grid.Children.Add(tools);
-        var error = new TextBlock { TextWrapping = TextWrapping.Wrap, IsVisible = false }.Spaced(DialogMetrics.PresetErrorGap);
+        var error = new TextBlock { TextWrapping = TextWrapping.Wrap, IsVisible = false }.WithMargin(DialogMetrics.PresetErrorGap);
         error[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("Danger");
         Grid.SetRow(error, ErrorRow);
         Grid.SetColumnSpan(error, ToolsColumn + 1);
@@ -88,7 +88,7 @@ public sealed partial class PresetRows
 
     private static void AddHeader(Grid grid, string text)
     {
-        var header = new TextBlock { Text = text, FontSize = DialogMetrics.PresetHeaderSize, FontWeight = FontWeight.SemiBold, IsHitTestVisible = false }.Spaced(DialogMetrics.PresetHeaderGap);
+        var header = new TextBlock { Text = text, FontSize = DialogMetrics.PresetHeaderSize, FontWeight = FontWeight.SemiBold, IsHitTestVisible = false }.WithMargin(DialogMetrics.PresetHeaderGap);
         header[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
         Grid.SetRow(header, HeaderRow);
         Grid.SetColumnSpan(header, ToolsColumn + 1);
@@ -146,7 +146,7 @@ public sealed partial class PresetRows
     private static TextBlock Plain(string text) => new() { Text = text, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
 
     // A label inside the open list, a little right of the grip column.
-    private static TextBlock RowLabel(string text) => Plain(text).Spaced(DialogMetrics.PresetLabelGap);
+    private static TextBlock RowLabel(string text) => Plain(text).WithMargin(DialogMetrics.PresetLabelGap);
 
     /// <summary>The row content: the organisable row inside the open list, plain text in the closed box.</summary>
     private sealed class PresetRowView : Decorator

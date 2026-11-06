@@ -31,13 +31,13 @@ public sealed class GateEditor : BuiltinEffectPanel
         {
             Children =
             {
-                Slider(GateEffect.ThresholdId, "Threshold", "Level above which the gate opens (it closes 3 dB lower).").Spaced(DialogMetrics.FxRowGap),
-                Slider(GateEffect.AttackId, "Attack", "How fast the gate opens.", ParamScale.Log).Spaced(DialogMetrics.FxRowGap),
-                Slider(GateEffect.HoldId, "Hold", "How long the gate stays open after the sound falls below the threshold.").Spaced(DialogMetrics.FxRowGap),
-                Slider(GateEffect.ReleaseId, "Release", "How fast the gate closes.", ParamScale.Log).Spaced(DialogMetrics.FxRowGap),
-                Slider(GateEffect.RangeId, "Range", "How far the sound is turned down while the gate is closed: 0 dB does nothing, -80 dB is silence.").Spaced(DialogMetrics.FxRowGap),
+                Slider(GateEffect.ThresholdId, "Threshold", "Level above which the gate opens (it closes 3 dB lower).").WithMargin(DialogMetrics.FxRowGap),
+                Slider(GateEffect.AttackId, "Attack", "How fast the gate opens.", ParamScale.Log).WithMargin(DialogMetrics.FxRowGap),
+                Slider(GateEffect.HoldId, "Hold", "How long the gate stays open after the sound falls below the threshold.").WithMargin(DialogMetrics.FxRowGap),
+                Slider(GateEffect.ReleaseId, "Release", "How fast the gate closes.", ParamScale.Log).WithMargin(DialogMetrics.FxRowGap),
+                Slider(GateEffect.RangeId, "Range", "How far the sound is turned down while the gate is closed: 0 dB does nothing, -80 dB is silence.").WithMargin(DialogMetrics.FxRowGap),
                 Row(Switch(GateEffect.BypassId, "Bypass", "Hear the sound without the gate (a short fade, no click).")),
-                MeterRow("Input level", _level, _levelText).Spaced(DialogMetrics.FxSectionGap),
+                MeterRow("Input level", _level, _levelText).WithMargin(DialogMetrics.FxSectionGap),
                 Row(_light, _state),
             },
         });

@@ -72,7 +72,7 @@ public sealed partial class MidiExportWindow : Window
         _barCount = TabForge.Services.BarRangeEditor.MaxMeasures(project);
         Title = "Export MIDI";
         Width = DialogMetrics.MidiExportWidth; Height = DialogMetrics.MidiExportHeight; MinWidth = DialogMetrics.MidiExportMinWidth; MinHeight = DialogMetrics.MidiExportMinHeight;
-        DialogMetrics.CenterOnOwner(this);
+        DialogMetrics.CentreOnOwner(this);
         ShowInTaskbar = false;
         this[!BackgroundProperty] = new DynamicResourceExtension("WindowBackground");
         this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");

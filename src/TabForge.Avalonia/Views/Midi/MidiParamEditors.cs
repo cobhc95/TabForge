@@ -90,14 +90,14 @@ public sealed class MidiParamEditors
     private static Control Wrap(Control content)
     {
         content.HorizontalAlignment = HorizontalAlignment.Stretch;
-        content.Spaced(DialogMetrics.MidiRowGap);
+        content.WithMargin(DialogMetrics.MidiRowGap);
         return content;
     }
 
     private CheckBox Check(PluginMidiProcessor proc, JsonObject values, MidiParamInfo p)
     {
         var box = new CheckBox { Content = p.Label, IsChecked = values[p.Key]!.GetValue<double>() >= 0.5, VerticalAlignment = VerticalAlignment.Center, Name = "Param_" + p.Key, HorizontalAlignment = HorizontalAlignment.Left };
-        box.Spaced(DialogMetrics.MidiCheckGap);
+        box.WithMargin(DialogMetrics.MidiCheckGap);
         if (p.Tip.Length > 0) MidiSharedRows.Tip(box, p.Tip);
         box.IsCheckedChanged += (_, _) =>
         {
@@ -121,7 +121,7 @@ public sealed class MidiParamEditors
         };
         MidiSharedRows.Tip(knob, p.Tip.Length > 0 ? p.Tip : p.Label);
         var text = new TextBlock { MinWidth = DialogMetrics.MidiValueMinWidth, VerticalAlignment = VerticalAlignment.Center, Name = "ParamValue_" + p.Key, TextWrapping = TextWrapping.Wrap };
-        text.Spaced(DialogMetrics.MidiValueGap);
+        text.WithMargin(DialogMetrics.MidiValueGap);
         knob.Value = Math.Round(values[p.Key]!.GetValue<double>() * scale);
         text.Text = p.Format(knob.Value / scale);
         knob.EditStarted += (_, _) => { _dragging = true; _since = _host.Checkpoint(); };
@@ -193,11 +193,11 @@ public sealed class MidiParamEditors
             IsVisible = values["NoteMode"]!.GetValue<double>() >= 0.5,
             [!Border.BorderBrushProperty] = new DynamicResourceExtension("BorderSoftBrush"), [!Border.BackgroundProperty] = new DynamicResourceExtension("PanelBrush"),
         };
-        frame.Padded(DialogMetrics.MidiFrameInset);
-        frame.Spaced(DialogMetrics.MidiRowGap);
+        frame.WithPadding(DialogMetrics.MidiFrameInset);
+        frame.WithMargin(DialogMetrics.MidiRowGap);
         NoteEditor = frame;
         var chips = new WrapPanel { Orientation = Orientation.Horizontal, Name = "NoteChips", HorizontalAlignment = HorizontalAlignment.Stretch };
-        chips.Spaced(DialogMetrics.MidiNoteGap);
+        chips.WithMargin(DialogMetrics.MidiNoteGap);
         var empty = new TextBlock { Text = "No notes yet: type some below or press Learn and play them.", FontSize = DialogMetrics.MidiSmallText, TextWrapping = TextWrapping.Wrap, [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MutedBrush") };
         List<int> Current() { var set = EM.NoteSetText.Parse(values[p.Key]!.GetValue<string>()); return Enumerable.Range(0, NoteSetMax).Where(n => set[n]).ToList(); }
         void Commit(IEnumerable<int> notes)

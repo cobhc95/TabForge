@@ -29,13 +29,13 @@ public sealed class LimiterEditor : BuiltinEffectPanel
         {
             Children =
             {
-                Slider(LimiterEffect.InputGainId, "Input gain", "Gain before the limiter: push the sound into it.").Spaced(DialogMetrics.FxRowGap),
-                Slider(LimiterEffect.CeilingId, "Ceiling", "The highest true peak the output reaches (dBTP, found at 4 times the sample rate).").Spaced(DialogMetrics.FxRowGap),
-                Slider(LimiterEffect.ReleaseId, "Release", "How fast the gain comes back after a peak (ignored while Auto release is on).", ParamScale.Log).Spaced(DialogMetrics.FxRowGap),
+                Slider(LimiterEffect.InputGainId, "Input gain", "Gain before the limiter: push the sound into it.").WithMargin(DialogMetrics.FxRowGap),
+                Slider(LimiterEffect.CeilingId, "Ceiling", "The highest true peak the output reaches (dBTP, found at 4 times the sample rate).").WithMargin(DialogMetrics.FxRowGap),
+                Slider(LimiterEffect.ReleaseId, "Release", "How fast the gain comes back after a peak (ignored while Auto release is on).", ParamScale.Log).WithMargin(DialogMetrics.FxRowGap),
                 Row(Switch(LimiterEffect.AutoReleaseId, "Auto release", "Fast for single peaks, slower for sustained loud sound."), Switch(LimiterEffect.BypassId, "Bypass", "Hear the sound without the limiter (a short fade, no click).")),
-                MeterRow("Gain reduction", _reduction, _reductionText).Spaced(DialogMetrics.FxSectionGap),
+                MeterRow("Gain reduction", _reduction, _reductionText).WithMargin(DialogMetrics.FxSectionGap),
                 MeterRow("Output level", _level, _levelText),
-                _latency.Spaced(DialogMetrics.FxSectionGap),
+                _latency.WithMargin(DialogMetrics.FxSectionGap),
             },
         });
     }

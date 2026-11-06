@@ -46,20 +46,20 @@ public sealed class CompressorEditor : BuiltinEffectPanel
         {
             Children =
             {
-                _presets.Spaced(DialogMetrics.FxRowGap),
-                _threshold.Spaced(DialogMetrics.FxRowGap),
-                _ratio.Spaced(DialogMetrics.FxRowGap),
-                _knee.Spaced(DialogMetrics.FxRowGap),
-                Slider(CompressorEffect.AttackId, "Attack", "How fast the compressor reacts to a louder sound.", ParamScale.Log).Spaced(DialogMetrics.FxRowGap),
-                Slider(CompressorEffect.ReleaseId, "Release", "How fast the compressor lets go after the sound gets quieter.", ParamScale.Log).Spaced(DialogMetrics.FxRowGap),
-                Slider(CompressorEffect.MakeupId, "Makeup gain", "Gain added after compressing (ignored while Auto makeup is on).").Spaced(DialogMetrics.FxRowGap),
+                _presets.WithMargin(DialogMetrics.FxRowGap),
+                _threshold.WithMargin(DialogMetrics.FxRowGap),
+                _ratio.WithMargin(DialogMetrics.FxRowGap),
+                _knee.WithMargin(DialogMetrics.FxRowGap),
+                Slider(CompressorEffect.AttackId, "Attack", "How fast the compressor reacts to a louder sound.", ParamScale.Log).WithMargin(DialogMetrics.FxRowGap),
+                Slider(CompressorEffect.ReleaseId, "Release", "How fast the compressor lets go after the sound gets quieter.", ParamScale.Log).WithMargin(DialogMetrics.FxRowGap),
+                Slider(CompressorEffect.MakeupId, "Makeup gain", "Gain added after compressing (ignored while Auto makeup is on).").WithMargin(DialogMetrics.FxRowGap),
                 Row(Switch(CompressorEffect.AutoMakeupId, "Auto makeup", "Adds the gain that brings a full-scale signal back to full scale."), Switch(CompressorEffect.BypassId, "Bypass", "Hear the sound without the compressor (a short fade, no click).")),
-                MeterRow("Gain reduction", _reduction, _reductionText).Spaced(DialogMetrics.FxSectionGap),
+                MeterRow("Gain reduction", _reduction, _reductionText).WithMargin(DialogMetrics.FxSectionGap),
                 MeterRow("Input level", _level, _levelText),
             },
         };
         var body = new ResponsiveColumns { MinColumnWidth = DialogMetrics.FxCompressorColumnMinWidth };
-        body.Children.Add(_curve.Spaced(DialogMetrics.FxColumnGap));
+        body.Children.Add(_curve.WithMargin(DialogMetrics.FxColumnGap));
         body.Children.Add(controls);
         Frame(body);
         _curve.SetCurve(_threshold.Value, _ratio.Value, _knee.Value);

@@ -61,7 +61,7 @@ public sealed class SectionStretchPromptWindow : Window
         Width = DialogMetrics.SectionAudioWidth;
         SizeToContent = SizeToContent.Height;
         CanResize = false;
-        DialogMetrics.CenterOnOwner(this);
+        DialogMetrics.CentreOnOwner(this);
         ShowInTaskbar = false;
         this[!BackgroundProperty] = new DynamicResourceExtension("PanelBackground");
         this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");

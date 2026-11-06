@@ -85,7 +85,6 @@ public static class ChromeMetrics
     /// <summary>The Settings "Reset page…" link: 12 DIP left and 6 DIP above, so it sits on the title row, at 12 DIP text.</summary>
     public const double SettingsResetPageMarginLeft = 12, SettingsResetPageMarginTop = 6, SettingsResetPageFontSize = 12;
 
-    /// <summary>The family of the drawn text of custom-painted controls (track rows, mixer buttons).</summary>
     /// <summary>The M and S boxes of a track header row: the letter size and weight, and the box corner.</summary>
     public const double TrackToggleFontSize = 11, TrackToggleCorner = 4;
     public const int TrackToggleWeight = 700;
@@ -93,6 +92,7 @@ public static class ChromeMetrics
     /// <summary>The selected track row's left-edge strip: its width and corner in DIPs.</summary>
     public const double SelectedStripWidth = 4, SelectedStripCorner = 2;
 
+    /// <summary>The family of the drawn text of custom-painted controls (track rows, mixer buttons, the timeline and the fretboard).</summary>
     public const string UiFontFamily = "Segoe UI";
 
     /// <summary>The Mixer's drawn FX buttons: the split FX button's width, the Monitor FX button's width and their shared height.</summary>

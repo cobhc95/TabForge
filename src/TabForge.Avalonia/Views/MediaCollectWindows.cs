@@ -37,7 +37,7 @@ public sealed class MediaCopyProgressWindow : Window
         Width = DialogMetrics.MediaProgressWidth;
         SizeToContent = SizeToContent.Height;
         CanResize = false;
-        DialogMetrics.CenterOnOwner(this);
+        DialogMetrics.CentreOnOwner(this);
         ShowInTaskbar = false;
         this[!BackgroundProperty] = new DynamicResourceExtension("PanelBackground");
         this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");

@@ -158,7 +158,7 @@ public abstract class BuiltinEffectPanel : UserControl
         grid.Children.Add(new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center });
         grid.Children.Add(bar);
         grid.Children.Add(value);
-        return grid.Spaced(DialogMetrics.FxRowGap);
+        return grid.WithMargin(DialogMetrics.FxRowGap);
     }
 
     /// <summary>The 0..1 position of a level in dB on a bar that runs from <paramref name="floorDb"/> to 0 dB.</summary>
@@ -169,6 +169,6 @@ public abstract class BuiltinEffectPanel : UserControl
     {
         var row = new WrapPanel { Orientation = Orientation.Horizontal };
         foreach (var item in items) row.Children.Add(row.Children.Count == 0 ? item : item.WithMargin(DialogMetrics.FxButtonGap));
-        return row.Spaced(DialogMetrics.FxRowGap);
+        return row.WithMargin(DialogMetrics.FxRowGap);
     }
 }

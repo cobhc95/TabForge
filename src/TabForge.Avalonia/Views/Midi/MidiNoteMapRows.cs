@@ -66,7 +66,7 @@ public sealed class MidiNoteMapRows
         };
         var fields = Viewer is null ? MidiSharedRows.ParamRow(p.Label, p.Tip.Length > 0 ? p.Tip : p.Label, combo) : MidiSharedRows.ParamRow(p.Label, p.Tip.Length > 0 ? p.Tip : p.Label, combo, Viewer);
         var stack = new StackPanel { HorizontalAlignment = HorizontalAlignment.Stretch };
-        stack.Spaced(DialogMetrics.MidiRowGap);
+        stack.WithMargin(DialogMetrics.MidiRowGap);
         stack.Children.Add(fields);
         if (p.Key == "To")
         {
@@ -75,17 +75,17 @@ public sealed class MidiNoteMapRows
             edit.Click += (_, _) => Edit(DrumMapLibrary.Find(Value("To")));
             create.Click += (_, _) => Edit(null);
             var buttons = new WrapPanel { Orientation = Orientation.Horizontal };
-            buttons.Spaced(DialogMetrics.MidiBarGap);
+            buttons.WithMargin(DialogMetrics.MidiBarGap);
             buttons.Children.Add(edit); buttons.Children.Add(create);
             stack.Children.Add(buttons);
-            _summary.Spaced(DialogMetrics.MidiBarGap);
+            _summary.WithMargin(DialogMetrics.MidiBarGap);
             stack.Children.Add(_summary);
             var overrides = new TextBlock
             {
                 Text = "For a single note, the Overrides setting also works, e.g. 40>38, or 42>x to drop a note.", TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
                 FontSize = ChromeMetrics.TextSmall, [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MutedBrush"),
             };
-            overrides.Spaced(DialogMetrics.MidiBarGap);
+            overrides.WithMargin(DialogMetrics.MidiBarGap);
             stack.Children.Add(overrides);
         }
         Fill();
@@ -96,7 +96,7 @@ public sealed class MidiNoteMapRows
     {
         var button = new Button { Content = text, Name = name, HorizontalAlignment = HorizontalAlignment.Left };
         DialogMetrics.WithPadding(button, DialogMetrics.MidiItemPad);
-        button.Spaced(DialogMetrics.MidiInputGap);
+        button.WithMargin(DialogMetrics.MidiInputGap);
         MidiSharedRows.Tip(button, tip);
         return button;
     }

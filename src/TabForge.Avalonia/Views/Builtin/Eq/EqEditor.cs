@@ -38,13 +38,13 @@ public sealed class EqEditor : BuiltinEffectPanel
             Children =
             {
                 bands,
-                cuts.Spaced(DialogMetrics.FxSectionGap),
-                Slider(EqEffect.OutputId, "Output gain", "Level after the filters, in dB.").Spaced(DialogMetrics.FxRowGap),
+                cuts.WithMargin(DialogMetrics.FxSectionGap),
+                Slider(EqEffect.OutputId, "Output gain", "Level after the filters, in dB.").WithMargin(DialogMetrics.FxRowGap),
                 Switch(EqEffect.BypassId, "Bypass", "Hear the sound without the EQ (a short fade, no click)."),
             },
         };
         DockPanel.SetDock(footer, Dock.Bottom);
-        Frame(new DockPanel { Children = { footer, _curve.Spaced(DialogMetrics.FxRowGap) } });
+        Frame(new DockPanel { Children = { footer, _curve.WithMargin(DialogMetrics.FxRowGap) } });
         for (var i = 0; i < _values.Length; i++) _values[i] = EqEffect.Descriptors[i].Default;
     }
 
@@ -54,13 +54,13 @@ public sealed class EqEditor : BuiltinEffectPanel
         var head = new TextBlock { Text = $"Band {n}", FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center };
         head[!TextBlock.ForegroundProperty] = new DynamicResourceExtension(BandHeadColours[band]);
         var top = new StackPanel { Orientation = Orientation.Horizontal, Children = { head, Switch(EqEffect.BandId(band, EqEffect.OnField), "On", $"Band {n} on or off.").WithMargin(DialogMetrics.FxButtonGap) } };
-        var column = new StackPanel { Children = { top.Spaced(DialogMetrics.FxBandHeadGap) } };
+        var column = new StackPanel { Children = { top.WithMargin(DialogMetrics.FxBandHeadGap) } };
         if (EqEffect.HasType(band))
-            column.Children.Add(Choice(band == 0 ? EqEffect.Band1TypeId : EqEffect.Band4TypeId, "Type", band == 0 ? "A low shelf lifts or cuts everything below the frequency; a bell works around it." : "A high shelf lifts or cuts everything above the frequency; a bell works around it.", TypeNames, compact: true).Spaced(DialogMetrics.FxRowGap));
-        column.Children.Add(Slider(EqEffect.BandId(band, EqEffect.FreqField), "Freq", $"Band {n} frequency.", ParamScale.Log, compact: true, text: ParamSlider.Hertz).Spaced(DialogMetrics.FxRowGap));
-        column.Children.Add(Slider(EqEffect.BandId(band, EqEffect.GainField), "Gain", $"Band {n} boost or cut in dB.", compact: true).Spaced(DialogMetrics.FxRowGap));
-        column.Children.Add(Slider(EqEffect.BandId(band, EqEffect.QField), "Q", $"Band {n} width: a higher Q is narrower. The mouse wheel on the curve changes it too.", ParamScale.Log, compact: true, text: q => q.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)).Spaced(DialogMetrics.FxRowGap));
-        return column.Spaced(band < EqEffect.Bands - 1 ? DialogMetrics.FxColumnGap : default);
+            column.Children.Add(Choice(band == 0 ? EqEffect.Band1TypeId : EqEffect.Band4TypeId, "Type", band == 0 ? "A low shelf lifts or cuts everything below the frequency; a bell works around it." : "A high shelf lifts or cuts everything above the frequency; a bell works around it.", TypeNames, compact: true).WithMargin(DialogMetrics.FxRowGap));
+        column.Children.Add(Slider(EqEffect.BandId(band, EqEffect.FreqField), "Freq", $"Band {n} frequency.", ParamScale.Log, compact: true, text: ParamSlider.Hertz).WithMargin(DialogMetrics.FxRowGap));
+        column.Children.Add(Slider(EqEffect.BandId(band, EqEffect.GainField), "Gain", $"Band {n} boost or cut in dB.", compact: true).WithMargin(DialogMetrics.FxRowGap));
+        column.Children.Add(Slider(EqEffect.BandId(band, EqEffect.QField), "Q", $"Band {n} width: a higher Q is narrower. The mouse wheel on the curve changes it too.", ParamScale.Log, compact: true, text: q => q.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)).WithMargin(DialogMetrics.FxRowGap));
+        return column.WithMargin(band < EqEffect.Bands - 1 ? DialogMetrics.FxColumnGap : default);
     }
 
     private Control CutColumn(bool high)
@@ -69,11 +69,11 @@ public sealed class EqEditor : BuiltinEffectPanel
         {
             Children =
             {
-                Slider(high ? EqEffect.HighCutFreqId : EqEffect.LowCutFreqId, high ? "High cut" : "Low cut", high ? "Frequency above which the sound is cut." : "Frequency below which the sound is cut.", ParamScale.Log, text: ParamSlider.Hertz).Spaced(DialogMetrics.FxRowGap),
-                Choice(high ? EqEffect.HighCutSlopeId : EqEffect.LowCutSlopeId, "Slope", "Off, or how steeply the cut falls: 12 or 24 dB per octave.", SlopeNames).Spaced(DialogMetrics.FxRowGap),
+                Slider(high ? EqEffect.HighCutFreqId : EqEffect.LowCutFreqId, high ? "High cut" : "Low cut", high ? "Frequency above which the sound is cut." : "Frequency below which the sound is cut.", ParamScale.Log, text: ParamSlider.Hertz).WithMargin(DialogMetrics.FxRowGap),
+                Choice(high ? EqEffect.HighCutSlopeId : EqEffect.LowCutSlopeId, "Slope", "Off, or how steeply the cut falls: 12 or 24 dB per octave.", SlopeNames).WithMargin(DialogMetrics.FxRowGap),
             },
         };
-        return column.Spaced(high ? default : DialogMetrics.FxColumnGap);
+        return column.WithMargin(high ? default : DialogMetrics.FxColumnGap);
     }
 
     protected override void ShowValues(IReadOnlyDictionary<uint, PluginParameterInfo> byId)

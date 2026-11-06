@@ -29,10 +29,10 @@ internal sealed class ArticulationRow
     public ArticulationTechnique Technique { get; }
     public TextBlock Label { get; }
     public ComboBox ActionBox { get; }
-    public TextBox ValueBox { get; } = new TextBox { MinWidth = DialogMetrics.ArticulationValueWidth, VerticalAlignment = VerticalAlignment.Center }.Spaced(DialogMetrics.ArticulationCellGap);
-    public TextBox Value2Box { get; } = new TextBox { MinWidth = DialogMetrics.ArticulationValue2Width, VerticalAlignment = VerticalAlignment.Center }.Spaced(DialogMetrics.ArticulationCellGap);
-    public ComboBox ModeBox { get; } = new ComboBox { ItemsSource = new[] { "Latched", "Per note" }, SelectedIndex = 0, MinWidth = DialogMetrics.ArticulationModeWidth, VerticalAlignment = VerticalAlignment.Center }.Spaced(DialogMetrics.ArticulationCellGap);
-    public Button TestButton { get; } = new Button { Content = "Test", VerticalAlignment = VerticalAlignment.Center }.WithPadding(DialogMetrics.ArticulationButtonPadding).Spaced(DialogMetrics.ArticulationCellGap);
+    public TextBox ValueBox { get; } = new TextBox { MinWidth = DialogMetrics.ArticulationValueWidth, VerticalAlignment = VerticalAlignment.Center }.WithMargin(DialogMetrics.ArticulationCellGap);
+    public TextBox Value2Box { get; } = new TextBox { MinWidth = DialogMetrics.ArticulationValue2Width, VerticalAlignment = VerticalAlignment.Center }.WithMargin(DialogMetrics.ArticulationCellGap);
+    public ComboBox ModeBox { get; } = new ComboBox { ItemsSource = new[] { "Latched", "Per note" }, SelectedIndex = 0, MinWidth = DialogMetrics.ArticulationModeWidth, VerticalAlignment = VerticalAlignment.Center }.WithMargin(DialogMetrics.ArticulationCellGap);
+    public Button TestButton { get; } = new Button { Content = "Test", VerticalAlignment = VerticalAlignment.Center }.WithPadding(DialogMetrics.ArticulationButtonPadding).WithMargin(DialogMetrics.ArticulationCellGap);
 
     /// <summary>Raised when the user changed the row (a pick, or Enter / leaving a box).</summary>
     public event Action? Edited;
@@ -43,9 +43,9 @@ internal sealed class ArticulationRow
         var normal = technique.Id == ArticulationTechniques.Normal;
         _actions = AllActions();
         if (normal) _actions = _actions.Where(a => a.Action is ArticulationAction.None or ArticulationAction.Keyswitch or ArticulationAction.Cc).ToArray();
-        Label = new TextBlock { Text = technique.Display, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, ClipToBounds = true }.Spaced(DialogMetrics.ArticulationLabelGap);
+        Label = new TextBlock { Text = technique.Display, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, ClipToBounds = true }.WithMargin(DialogMetrics.ArticulationLabelGap);
         MidiSharedRows.Tip(Label, technique.Display);
-        ActionBox = new ComboBox { ItemsSource = _actions.Select(a => a.Text).ToArray(), SelectedIndex = 0, MinWidth = DialogMetrics.ArticulationActionWidth, VerticalAlignment = VerticalAlignment.Center }.Spaced(DialogMetrics.ArticulationCellGap);
+        ActionBox = new ComboBox { ItemsSource = _actions.Select(a => a.Text).ToArray(), SelectedIndex = 0, MinWidth = DialogMetrics.ArticulationActionWidth, VerticalAlignment = VerticalAlignment.Center }.WithMargin(DialogMetrics.ArticulationCellGap);
         var tag = technique.Id;
         (Label.Name, ActionBox.Name, ValueBox.Name, Value2Box.Name, ModeBox.Name, TestButton.Name) =
             ("Tech" + tag, "Action" + tag, "Value" + tag, "Value2" + tag, "Mode" + tag, "Test" + tag);

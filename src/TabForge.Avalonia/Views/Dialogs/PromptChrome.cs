@@ -21,7 +21,7 @@ internal static class PromptChrome
         window.Width = width;
         window.SizeToContent = SizeToContent.Height;
         window.CanResize = false;
-        DialogMetrics.CenterOnOwner(window);
+        DialogMetrics.CentreOnOwner(window);
         window.ShowInTaskbar = false;
         window[!global::Avalonia.Controls.Primitives.TemplatedControl.BackgroundProperty] = new DynamicResourceExtension("PanelBackground");
         window[!global::Avalonia.Controls.Primitives.TemplatedControl.ForegroundProperty] = new DynamicResourceExtension("TextPrimary");

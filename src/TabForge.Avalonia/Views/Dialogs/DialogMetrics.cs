@@ -117,9 +117,6 @@ internal static class DialogMetrics
     /// <summary>The left indent of a line of a folder-tree sketch, <paramref name="depth"/> levels in.</summary>
     public static Thickness MediaTreeIndentOf(int depth) => new(depth * MediaTreeIndent, 0, 0, 0);
 
-    /// <summary>Centres a dialog over its owner window.</summary>
-    public static void CenterOnOwner(global::Avalonia.Controls.Window window) => window.WindowStartupLocation = global::Avalonia.Controls.WindowStartupLocation.CenterOwner;
-
     /// <summary>Sets the button's padding and returns it (builder code outside the metrics owner does not assign layout).</summary>
     public static global::Avalonia.Controls.Button WithPadding(this global::Avalonia.Controls.Button button, Thickness padding)
     {
@@ -139,25 +136,28 @@ internal static class DialogMetrics
         header.CornerRadius = new CornerRadius(PickerHeaderCorner);
     }
 
-    /// <summary>Sets the control's outer margin and returns it, so builder code outside the metrics owner does not spell layout numbers.</summary>
+    /// <summary>The margin with its top side set (the other sides as given).</summary>
     public static Thickness WithTop(this Thickness t, double top) => new(t.Left, top, t.Right, t.Bottom);
 
     /// <summary>The margin with its left side set (the other sides as given).</summary>
     public static Thickness WithLeft(this Thickness t, double left) => new(left, t.Top, t.Right, t.Bottom);
 
+    /// <summary>Sets the inner padding of a templated control and returns it (builder code outside the metrics owner does not assign layout).</summary>
     public static T WithPadding<T>(this T control, Thickness padding) where T : TemplatedControl
     {
         control.Padding = padding;
         return control;
     }
 
+    /// <summary>Sets the inner padding of a bordered box and returns it (builder code outside the metrics owner does not assign layout).</summary>
     public static Border WithPadding(this Border border, Thickness padding)
     {
         border.Padding = padding;
         return border;
     }
 
-    public static T WithMargin<T>(this T control, Thickness margin) where T : global::Avalonia.Controls.Control
+    /// <summary>Sets the outer margin of the control and returns it (builder code outside the metrics owner does not assign layout).</summary>
+    public static T WithMargin<T>(this T control, Thickness margin) where T : Layoutable
     {
         control.Margin = margin;
         return control;
@@ -246,20 +246,6 @@ internal static class DialogMetrics
         return toast;
     }
 
-    /// <summary>Sets the outer margin of the control and returns it (builder code outside the metrics owner does not assign layout).</summary>
-    public static T Spaced<T>(this T control, Thickness margin) where T : Layoutable
-    {
-        control.Margin = margin;
-        return control;
-    }
-
-    /// <summary>Sets the inner padding of a bordered box and returns it (builder code outside the metrics owner does not assign layout).</summary>
-    public static Border Padded(this Border box, Thickness pad)
-    {
-        box.Padding = pad;
-        return box;
-    }
-
     /// <summary>Gives a radio card its inset, outline and corner radius.</summary>
     public static void StyleChoiceCard(global::Avalonia.Controls.Border card)
     {
@@ -284,11 +270,11 @@ internal static class DialogMetrics
         FxLightSize = 16, FxDotRadius = 6, FxDotSelectedRadius = 8.5, FxDotHit = 12, FxCurveStroke = 2, FxGridStroke = 1, FxMarkerStroke = 1.5, FxMeterRadius = 3,
         FxPlotLeft = 38, FxPlotTop = 10, FxPlotRight = 12, FxPlotBottom = 22, FxLabelInset = 4, FxQStep = 1.12;
 
-    /// <summary>The built-in effect windows: the gap under a row, between columns and sections, and the padding of a small button or box.</summary>
     /// <summary>The built-in editors' on/off button: its padding, outline thickness and smallest height.</summary>
     public static readonly Thickness FxTogglePadding = new(10, 2, 10, 2), FxToggleOutline = new(1);
     public const double FxToggleMinHeight = 22;
 
+    /// <summary>The built-in effect windows: the gap under a row, between columns and sections, under a band heading and before a button.</summary>
     public static readonly Thickness FxRowGap = new(0, 0, 0, 6), FxColumnGap = new(0, 0, 14, 0), FxSectionGap = new(0, 10, 0, 6), FxBandHeadGap = new(0, 0, 0, 4), FxButtonGap = new(10, 0, 0, 0);
 
     /// <summary>The small action button beside a status line (Add plug-in: Pause, Resume, Stop): the notice button gap and padding.</summary>
@@ -340,7 +326,6 @@ internal static class DialogMetrics
     public const double PianoRollToolMinWidth = 30, PianoRollComboMinWidth = 76, PianoRollChipDot = 9,
         PianoRollInnerGap = 2, PianoRollGroupGap = 6, PianoRollRowGap = 4;
 
-    /// <summary>The piano roll toolbar group frame: outline and inset.</summary>
     /// <summary>The piano roll toolbar's group captions (tiny upper-case, muted) and the Step input group's dropdown least width.</summary>
     public const double PianoRollCaptionSize = 10, PianoRollWideComboMinWidth = 120;
 
@@ -353,6 +338,7 @@ internal static class DialogMetrics
     /// <summary>The thin outline drawn inside each plain piano roll note, so touching notes on one row read as separate blocks.</summary>
     public const double PianoRollNoteEdge = 1;
 
+    /// <summary>The piano roll toolbar group frame: outline and inset.</summary>
     public static readonly Thickness PianoRollFrameOutline = new(1), PianoRollFramePadding = new(2, 0);
 
     /// <summary>Gives a piano roll group frame its outline and inset.</summary>
@@ -412,9 +398,10 @@ internal static class DialogMetrics
         TrackStringRowHeight = 24, TrackStringNumberWidth = 26, TrackStringSpeakerWidth = 26, TrackStringNoteBoxWidth = 64,
         TrackStringStepWidth = 24, TrackStringStepHeight = 20, TrackStringSpeakerIconSize = 14, TrackStringSpeakerStroke = 1;
 
-    /// <summary>The track properties window insets: tuning card, capo card, MIDI card and string rows.</summary>
     /// <summary>The arrow on the All -1 and All +1 buttons, and the Fretboard settings sliders.</summary>
     public const double TrackTuningArrowSize = 12, TrackTuningArrowStroke = 1.6, FretboardSliderWidth = 280, FretboardSliderHeight = 22;
+
+    /// <summary>The track properties window insets: tuning card, capo card, MIDI card and string rows.</summary>
     public static readonly Thickness TrackTuningButtonPadding = new(6, 1), TrackTuningHeaderPartGap = new(0, 0, TrackTuningHeaderGap, 0),
         TrackTuningControlGap = new(0, 0, 0, 4), TrackTuningColumnGap = new(0, 0, 8, 0), TrackTuningPresetAllCountsGap = new(0, 6, 0, 6),
         TrackTuningPresetNoneInset = new(4, 6), TrackTuningGroupHeaderGap = new(4, 8, 0, 2), TrackMidiBoxPadding = new(4, 1),

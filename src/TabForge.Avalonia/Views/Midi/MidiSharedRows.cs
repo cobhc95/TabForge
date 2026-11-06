@@ -39,7 +39,7 @@ internal static class MidiSharedRows
     {
         var button = new ToggleButton { Content = LearnText, Name = name, Focusable = false, HorizontalAlignment = HorizontalAlignment.Left };
         DialogMetrics.WithPadding(button, DialogMetrics.MidiButtonPad);
-        button.Spaced(DialogMetrics.MidiLearnGap);
+        button.WithMargin(DialogMetrics.MidiLearnGap);
         PianoRollToolLook.Apply(button);
         Tip(button, LearnTip);
         button.IsChecked = listening;
@@ -69,7 +69,7 @@ internal static class MidiSharedRows
     {
         var button = new Button { Content = text, Name = name, HorizontalAlignment = HorizontalAlignment.Left };
         DialogMetrics.WithPadding(button, DialogMetrics.MidiButtonPad);
-        button.Spaced(DialogMetrics.MidiLearnGap);
+        button.WithMargin(DialogMetrics.MidiLearnGap);
         Tip(button, tip);
         return button;
     }
@@ -84,8 +84,8 @@ internal static class MidiSharedRows
             BorderThickness = DialogMetrics.MidiFrameBorder,
             Child = new TextBlock { Text = text, FontSize = DialogMetrics.MidiSmallText },
         };
-        chip.Spaced(DialogMetrics.MidiChipGap);
-        chip.Padded(DialogMetrics.MidiChipInset);
+        chip.WithMargin(DialogMetrics.MidiChipGap);
+        chip.WithPadding(DialogMetrics.MidiChipInset);
         chip[!Border.BorderBrushProperty] = new DynamicResourceExtension("AccentBrush");
         Tip(chip, tip);
         return chip;
@@ -124,7 +124,7 @@ internal static class MidiSharedRows
     private static Grid FinishParamRow(Grid grid, TextBlock label, string labelName, string tip, Control editor, ScrollViewer? viewer)
     {
         if (labelName.Length > 0) label.Name = labelName;
-        label.Spaced(DialogMetrics.MidiInputGap);
+        label.WithMargin(DialogMetrics.MidiInputGap);
         label[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MutedBrush");
         Tip(label, tip);
         if (viewer is not null)

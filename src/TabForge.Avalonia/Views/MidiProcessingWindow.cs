@@ -148,9 +148,9 @@ public sealed partial class MidiProcessingWindow : Window
     {
         if (_slot is null) return BuildNoSlotRoot();
         var top = new WrapPanel { Orientation = Orientation.Horizontal };
-        top.Spaced(DialogMetrics.MidiSearchGap);
+        top.WithMargin(DialogMetrics.MidiSearchGap);
         var presetsLabel = new TextBlock { Text = "Presets", FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center, [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextPrimary") };
-        presetsLabel.Spaced(DialogMetrics.MidiInputGap);
+        presetsLabel.WithMargin(DialogMetrics.MidiInputGap);
         top.Children.Add(presetsLabel);
         top.Children.Add(_presets!.ListBox);
         top.Children.Add(_presets.SaveList);
@@ -161,7 +161,7 @@ public sealed partial class MidiProcessingWindow : Window
         var detail = DetailPane(); Grid.SetColumn(detail, 2);
         body.Children.Add(catalog); body.Children.Add(list); body.Children.Add(detail);
         var root = new Grid { RowDefinitions = RowDefinitions.Parse("Auto,*,Auto") };
-        root.Spaced(DialogMetrics.MidiContentInset);
+        root.WithMargin(DialogMetrics.MidiContentInset);
         Grid.SetRow(top, 0); Grid.SetRow(body, 1); Grid.SetRow(_status, 2);
         root.Children.Add(top); root.Children.Add(body); root.Children.Add(_status);
         if (_slot!.Type == PluginSlotType.Instrument) _midiTabs = Articulations.ArticulationsTab.Install(root, top, body, () => new Articulations.ArticulationsPane(_host, _track, _slot, _edit, this, () => Dialogs));   // the Articulations tab
@@ -172,7 +172,7 @@ public sealed partial class MidiProcessingWindow : Window
     private Control BuildNoSlotRoot()
     {
         var root = new Grid { RowDefinitions = RowDefinitions.Parse("Auto,*,Auto") };
-        root.Spaced(DialogMetrics.MidiContentInset);
+        root.WithMargin(DialogMetrics.MidiContentInset);
         var note = new TextBlock { Text = MidiProcessingListPresenter.NoInstrumentDescription, TextWrapping = TextWrapping.Wrap, Name = "NoInstrumentNote" };
         note[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
         var processors = new StackPanel { Children = { Heading("Processors"), note } };
@@ -196,10 +196,10 @@ public sealed partial class MidiProcessingWindow : Window
         DockPanel.SetDock(heading, Dock.Top);
         DockPanel.SetDock(_search, Dock.Top);
         DockPanel.SetDock(_add, Dock.Bottom);
-        _search.Spaced(DialogMetrics.MidiSearchGap);
+        _search.WithMargin(DialogMetrics.MidiSearchGap);
         MidiSharedRows.Tip(_search, "Search processors and every parameter (e.g. \"velocity\", \"jitter\", \"drum map\"). Enter adds the processor or jumps to the parameter");
         _add.HorizontalAlignment = HorizontalAlignment.Left;
-        _add.Spaced(DialogMetrics.MidiBarGap);
+        _add.WithMargin(DialogMetrics.MidiBarGap);
         _catalog.ItemTemplate = new FuncDataTemplate<MidiProcessorCatalog.SearchHit>((hit, _) => MidiSmallLayout.CatalogText(hit?.Display ?? ""), supportsRecycling: true);
         // Perf: the catalog is virtualized (recycling template over a VirtualizingStackPanel): only the visible hits build controls.
         _catalog.ItemsPanel = new FuncTemplate<Panel?>(() => new VirtualizingStackPanel());
@@ -213,7 +213,7 @@ public sealed partial class MidiProcessingWindow : Window
         var heading = Heading("In order (top runs first)");
         DockPanel.SetDock(heading, Dock.Top);
         var buttons = new WrapPanel { Orientation = Orientation.Horizontal, Name = "ListButtonRow", ClipToBounds = true };
-        buttons.Spaced(DialogMetrics.MidiBarGap);
+        buttons.WithMargin(DialogMetrics.MidiBarGap);
         buttons.Children.Add(_up); buttons.Children.Add(_down); buttons.Children.Add(_remove);
         DockPanel.SetDock(buttons, Dock.Bottom);
         _list.ItemsPanel = new FuncTemplate<Panel?>(() => new VirtualizingStackPanel());
@@ -228,7 +228,7 @@ public sealed partial class MidiProcessingWindow : Window
         _logPanel.Children.Add(Heading("MIDI log (this window watches while it is open)"));
         _logPanel.Children.Add(_log);
         var clear = Btn("Clear log", null, "ClearLogButton");
-        clear.Spaced(DialogMetrics.MidiBarGap);
+        clear.WithMargin(DialogMetrics.MidiBarGap);
         clear.HorizontalAlignment = HorizontalAlignment.Left;
         clear.Click += (_, _) => { _logLines.Clear(); _log.Text = ""; };
         _logPanel.Children.Add(clear);
@@ -238,8 +238,8 @@ public sealed partial class MidiProcessingWindow : Window
         _parameterNote[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MutedBrush");
         _log[!BackgroundProperty] = new DynamicResourceExtension("PanelBrush");
         var detail = new StackPanel { Children = { _title, _description, _parameterNote, _presets!.ProcessorRow, _params } };
-        _title.Spaced(DialogMetrics.MidiHeadGap);
-        _description.Spaced(DialogMetrics.MidiNoteGap);
+        _title.WithMargin(DialogMetrics.MidiHeadGap);
+        _description.WithMargin(DialogMetrics.MidiNoteGap);
         var viewer = new ScrollViewer { Content = detail, Name = "DetailViewer", ClipToBounds = true, VerticalScrollBarVisibility = global::Avalonia.Controls.Primitives.ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = global::Avalonia.Controls.Primitives.ScrollBarVisibility.Auto };
         _detailViewer = viewer;
         MidiSharedRows.ConstrainToViewport(_title, viewer);
@@ -339,7 +339,7 @@ public sealed partial class MidiProcessingWindow : Window
     {
         var info = proc is null ? null : MidiProcessorCatalog.Find(proc.Type);
         var check = new CheckBox { IsChecked = proc?.Enabled == true, VerticalAlignment = VerticalAlignment.Center, Name = "ProcessorTick" };
-        check.Spaced(DialogMetrics.MidiCheckGap);
+        check.WithMargin(DialogMetrics.MidiCheckGap);
         MidiSharedRows.Tip(check, "Enabled (untick to bypass)");
         check.IsCheckedChanged += (_, _) =>
         {
@@ -354,7 +354,7 @@ public sealed partial class MidiProcessingWindow : Window
         };
         MidiSharedRows.Tip(label, MidiProcessingListPresenter.RowLabel(proc?.Type ?? "", info?.Name));
         var row = new DockPanel { ClipToBounds = true };
-        row.Spaced(DialogMetrics.MidiFrameGap);
+        row.WithMargin(DialogMetrics.MidiFrameGap);
         DockPanel.SetDock(check, Dock.Left);
         row.Children.Add(check);
         row.Children.Add(label);
@@ -405,7 +405,7 @@ public sealed partial class MidiProcessingWindow : Window
                 wrap.Children.Add(box);
             }
             var header = Heading(group);
-            if (group == groups.ElementAtOrDefault(1) && groups[0] == "Applies to" && info.Params.Any(p => p.Group == "Applies to")) header.Spaced(DialogMetrics.MidiSectionGap); else header.Spaced(DialogMetrics.MidiHeadGap);
+            if (group == groups.ElementAtOrDefault(1) && groups[0] == "Applies to" && info.Params.Any(p => p.Group == "Applies to")) header.WithMargin(DialogMetrics.MidiSectionGap); else header.WithMargin(DialogMetrics.MidiHeadGap);
             _params.Children.Add(header);
             _params.Children.Add(wrap);
             _sections.Add((header, wrap));
@@ -461,7 +461,7 @@ public sealed partial class MidiProcessingWindow : Window
     {
         var button = new Button { Content = text, Name = name, [!Button.ForegroundProperty] = new DynamicResourceExtension("TextPrimary") };
         DialogMetrics.WithPadding(button, DialogMetrics.MidiItemPad);
-        button.Spaced(DialogMetrics.MidiButtonGap);
+        button.WithMargin(DialogMetrics.MidiButtonGap);
         if (tip is not null) MidiSharedRows.Tip(button, tip);
         return button;
     }
@@ -473,7 +473,7 @@ public sealed partial class MidiProcessingWindow : Window
             Text = text, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap,
             [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("AccentBrush"),
         };
-        head.Spaced(DialogMetrics.MidiHeadGap);
+        head.WithMargin(DialogMetrics.MidiHeadGap);
         return head;
     }
 

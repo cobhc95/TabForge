@@ -19,7 +19,7 @@ namespace TabForge.Avalonia;
 /// <summary>
 /// The one popup and density-size entry point. Bar, row and pad take their existing base and scale it by density, so at
 /// Comfortable they return the base exactly (Compact shrinks and Spacious enlarges it). The popup clamp keeps a
-/// popup inside the owner working area for the supported placements; other placements are left alone. Nothing calls it yet.
+/// popup inside the owner working area for the supported placements; other placements are left alone.
 /// </summary>
 public static class UiMetrics
 {
@@ -147,13 +147,15 @@ public static class ScalePopupLayout
     /// <summary>The popup panel width (DIPs): the three radio cards, the pick-another drop-downs and the chips fit on it.</summary>
     public const double PanelSpan = 340;
 
-    /// <summary>The fretboard popup when the window is wide: the scale column and the look column side by side; the window width from which it is used; the full list height; the gap between columns.</summary>
     /// <summary>Margins and gaps of the fretboard popup.</summary>
     public static global::Avalonia.Thickness ColumnMargin => new(0, 0, ColumnGap, 0);
     public static global::Avalonia.Thickness ButtonRowMargin => new(0, 12, 0, 0);
     public static global::Avalonia.Thickness BadgeLinkMargin => new(8, 0, 0, 0);
     public static global::Avalonia.Thickness LinkRowMargin => new(0, 4, 0, 0);
     public const double ButtonGap = 8;
+
+    /// <summary>The fretboard popup when the window is wide: the scale column and the look column side by side; the window width from which it is used;
+    /// the full list height, the tallest the popup grows, the gap between columns, the percent read-out width and the opacity of greyed parts.</summary>
     public const double WidePanelSpan = 700, WideThreshold = 900, ListHeight = 260, PopupMaxHeight = 760, ColumnGap = 16, PercentSpan = 40, GreyedOpacity = 0.55;
 
     /// <summary>The colour swatches of the fretboard look: the circle size, the ring of the selected one and the gap between them.</summary>

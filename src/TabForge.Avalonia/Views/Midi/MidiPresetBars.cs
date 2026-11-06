@@ -65,7 +65,7 @@ public sealed class MidiPresetBars
         MidiSharedRows.Tip(ProcessorBox, "Presets of this processor: picking one sets its parameters (one undo step). Delete or reorder your own with Manage presets…");
         ProcessorRow.Children.Add(ProcessorBox);
         ProcessorRow.Children.Add(SaveProcessor);
-        ProcessorRow.Spaced(DialogMetrics.MidiNoteGap);
+        ProcessorRow.WithMargin(DialogMetrics.MidiNoteGap);
         _ = PresetRows.Attach(ListBox, () => _listStore, item => item is Entry { Name: not null, Manage: false } entry ? entry.Name : null,
             () => PresetCatalogKind.MidiChain, () => null, () => FillList(ListSelectedKey()), item => item is Entry { Manage: true }, isBuiltIn: item => item is Entry { Build: not null });
         _ = PresetRows.Attach(ProcessorBox, () => _processorStore, item => item is Entry { Name: not null, Manage: false } entry ? entry.Name : null,
@@ -85,7 +85,7 @@ public sealed class MidiPresetBars
     {
         var button = new Button { Content = text, Name = name, HorizontalAlignment = HorizontalAlignment.Left };
         DialogMetrics.WithPadding(button, DialogMetrics.MidiItemPad);
-        button.Spaced(DialogMetrics.MidiButtonGap);
+        button.WithMargin(DialogMetrics.MidiButtonGap);
         MidiSharedRows.Tip(button, tip);
         return button;
     }
