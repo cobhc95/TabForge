@@ -145,6 +145,9 @@ public static partial class HotkeyCatalog
 
     public const string NoteLonger ="Note.Longer", NoteShorter = "Note.Shorter";
 
+    /// <summary>Opens the Fretboard settings window (the fretboard's right-click row runs the same id).</summary>
+    public const string FretboardSettings = "Fretboard.Settings";
+
     // ---------- gesture formatting / parsing ----------
 
     public static string Format(string key, HotkeyModifiers mods)

@@ -143,7 +143,11 @@ public sealed partial class MainWindow
         MainWindowViewMenu.Register(commands, this, dock, scorePreview, settings, mode: compose.FretboardMode);
         MainWindowViewHotkeys.Register(commands, songs, dock, settings);
         MainWindowViewToggles.Register(commands, settings, showStatus);
-        if (compose.FretboardMenu is { } fretboardMenu) commands.Add("View.InstrumentView", fretboardMenu.CycleInstrumentView);
+        if (compose.FretboardMenu is { } fretboardMenu)
+        {
+            commands.Add("View.InstrumentView", fretboardMenu.CycleInstrumentView);
+            commands.Add(FretboardContextMenu.SettingsId, () => fretboardMenu.Run(FretboardContextMenu.SettingsId, null));   // a key opens the window the right-click row opens
+        }
         MainWindowRangeCommands.Register(commands, () => panes.Selection.ActiveScore, () => panes.Selection.Model, showStatus);
     }
 

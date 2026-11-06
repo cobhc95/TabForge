@@ -150,6 +150,7 @@ public static partial class HotkeyCatalog
         new("View.BandView", CategoryView, "Show / hide Band view", "", "Switch to the Band layout (every track's instrument and tab in rows, with the arrangement below), or back to the layout you left (same as View > Band view)."),
         new("View.FretboardPosition", CategoryView, "Fretboard position: toggle top / bottom", "", "Move the fretboard / keyboard pane between above the score (default) and below it, above the timeline (same as the fretboard's right-click menu > Position)."),
         new("View.LockInstrumentSize", CategoryView, "Lock fretboard size", "", "Lock or unlock the fretboard / keyboard pane's height. Unlocked, dragging its edge resizes it and the drawing scales to fit; locked, it keeps its size."),
+        new(FretboardSettings, CategoryView, "Fretboard settings", "", "Open the Fretboard settings window: look, notes and markers (the note colours and dot style of the legend), layout, strings and capo, scale highlight (the fretboard's right-click Fretboard settings row)."),
         new("View.Mixer", CategoryView, "Mixer", "", "Open the mixer: track and group levels, pan, pitch, sound source and FX chains."),
         new("Track.FxChain", CategoryView, "Track FX chain", "", "Open the selected track's FX (plug-in) chain."),
         new("View.AutoFitTrackList", CategoryView, "Auto-resize track list to fit", "", "Turn on / off growing and shrinking the track list to fit all tracks and group rows."),

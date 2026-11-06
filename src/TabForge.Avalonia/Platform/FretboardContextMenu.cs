@@ -19,7 +19,7 @@ namespace TabForge.Avalonia.Platform;
 // Tests: TabForge.Avalonia.Tests.FretboardContextMenuTests.
 public sealed class FretboardContextMenu : IMenuCommandRunner
 {
-    public const string ViewId = "Fretboard.View", ScaleId = "Fretboard.Scale", FindScaleId = "Fretboard.FindScale", ClearScaleId = "Fretboard.ClearScale", SettingsId = "Fretboard.Settings";
+    public const string ViewId = "Fretboard.View", ScaleId = "Fretboard.Scale", FindScaleId = "Fretboard.FindScale", ClearScaleId = "Fretboard.ClearScale", SettingsId = HotkeyCatalog.FretboardSettings;
 
     private const string ShowThisTrackAs = "Show this track as", Scale = "Scale", FindScale = "Find scale…", ClearScale = "Clear scale";
     private const string Settings = "Fretboard settings…";
