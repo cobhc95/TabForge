@@ -59,6 +59,17 @@ public sealed class PaletteThemeTokenTests
         Assert.True(ThemeColours.Contrast(fg, bg) >= ratio, $"{foreground} on {background}: {ThemeColours.Contrast(fg, bg):0.00} < {ratio}");
     }
 
+    /// <summary>The dialog text over the panel (the plug-in browser, song info, track properties, paste options and Mix Table windows) in both themes.</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void DialogTextReadsAtLeastFourAndAHalfToOneOnThePanel(bool light)
+    {
+        var panel = TabForge.Avalonia.Platform.AvaloniaPalette.Get("PanelBackground", light);
+        foreach (var text in new[] { "TextPrimary", "TextMuted" })
+            Assert.True(ThemeColours.Contrast(TabForge.Avalonia.Platform.AvaloniaPalette.Get(text, light), panel) >= 4.5, $"{text} on PanelBackground (light: {light})");
+    }
+
     [Theory]
     [InlineData("ScoreLightStaffLineDefault")]
     [InlineData("Playhead")]

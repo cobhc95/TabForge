@@ -270,16 +270,6 @@ public class PluginBrowserWindowTests
         }
     }
 
-    [AvaloniaTheory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void TextContrastOverThePanelIsLegible(bool light)
-    {
-        var panel = AvaloniaPalette.Get("PanelBackground", light);
-        foreach (var text in new[] { "TextPrimary", "TextMuted" })
-            Assert.True(ThemeColours.Contrast(AvaloniaPalette.Get(text, light), panel) >= 4.5, $"{text} on PanelBackground (light: {light})");
-    }
-
     private static PluginBrowserWindow Open()
     {
         var window = New();

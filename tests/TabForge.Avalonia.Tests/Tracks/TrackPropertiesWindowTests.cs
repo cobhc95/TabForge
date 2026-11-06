@@ -398,16 +398,6 @@ public class TrackPropertiesWindowTests
         }
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void TextReadsAtLeastFourAndAHalfToOneOnThePanel(bool light)
-    {
-        var panel = AvaloniaPalette.Get("PanelBackground", light);
-        foreach (var text in new[] { "TextPrimary", "TextMuted" })
-            Assert.True(ThemeColours.Contrast(AvaloniaPalette.Get(text, light), panel) >= 4.5, $"{text} on PanelBackground (light: {light})");
-    }
-
     // Cancel, then Yes on the discard question: the window closes without applying.
     private static void Discard(TrackPropertiesWindow window)
     {

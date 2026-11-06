@@ -234,16 +234,6 @@ public class MixTableColourChooserEffectValuesTests
         window.Close();
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void TextReadsAtLeastFourAndAHalfToOne(bool light)
-    {
-        var panel = AvaloniaPalette.Get("PanelBackground", light);
-        foreach (var text in new[] { "TextPrimary", "TextMuted" })
-            Assert.True(ThemeColours.Contrast(AvaloniaPalette.Get(text, light), panel) >= 4.5, $"{text} on PanelBackground (light: {light})");
-    }
-
     private static List<string> ButtonTexts(Window window) =>
         window.GetLogicalDescendants().OfType<Button>().Where(b => b is not global::Avalonia.Controls.Primitives.ToggleButton && b.Content is string).Select(b => (string)b.Content!).ToList();
 

@@ -161,16 +161,6 @@ public class ProjectSettingsWindowTests
         Assert.True(new FileInfo(path).Length > 0);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void TextReadsAtLeastFourAndAHalfToOneOnThePanel(bool light)
-    {
-        var panel = AvaloniaPalette.Get("PanelBackground", light);
-        foreach (var text in new[] { "TextPrimary", "TextMuted" })
-            Assert.True(ThemeColours.Contrast(AvaloniaPalette.Get(text, light), panel) >= 4.5, $"{text} on PanelBackground (light: {light})");
-    }
-
     private static IEnumerable<string> Buttons(Window window) =>
         window.GetLogicalDescendants().OfType<Button>().Where(b => b is not global::Avalonia.Controls.Primitives.ToggleButton).Select(b => (string)b.Content!).ToList();
 
