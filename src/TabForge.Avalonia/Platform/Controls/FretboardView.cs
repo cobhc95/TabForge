@@ -17,7 +17,7 @@ namespace TabForge.Avalonia.Platform.Controls;
 // Owns: the one shared real-fretboard-with-capo: the board painter both surfaces draw through (the scene, wood,
 // inlays, wires, strings, the behind-capo shade and the capo bars with their landing badge, all from the layout,
 // the look and the capo state) and the board control the Capo card hosts (hover with a ghost preview on an empty
-// fret and a hand cursor with a tooltip on every bar, click to place/select, drag to move with one commit).
+// fret and a tooltip on every bar, the pointer shape unchanged; click to place/select, drag to move with one commit).
 // The instrument panel draws its board through FretboardBoardPainter (its markers, legend, scale marks, playback,
 // scroll and selection stay in the panel); the Capo card hosts FretboardView, which draws the same board and
 // shares the same painter, hit test and drag session. Colours are palette tokens, sizes are DialogMetrics tokens.
@@ -185,7 +185,6 @@ internal class FretboardView : Control
     private bool _pressArmed;
     private Point _pressAt;
     private int? _pressFret;
-    private Cursor? _handCursor;
     private IReadOnlyList<PartialCapo>? _partials;
     private int _fullFret;
     private int _selected = -1;
@@ -243,7 +242,6 @@ internal class FretboardView : Control
         _drag = null;
         _hoverCapo = null;
         _ghostFret = null;
-        Cursor = null;
         RefreshSingle();
         ToolTip.SetTip(this, null);
         InvalidateVisual();
@@ -409,7 +407,6 @@ internal class FretboardView : Control
         if (hover == _hoverCapo && ghost == _ghostFret) return;
         _hoverCapo = hover;
         _ghostFret = ghost;
-        Cursor = hover is not null ? _handCursor ??= new Cursor(StandardCursorType.Hand) : null;
         ToolTip.SetTip(this, hover is { } index
             ? $"{(index < 0 ? "Full capo" : "Partial capo")} fret {(index < 0 ? full : partials![index].Fret)}, drag to move"
             : ghost is { } ghostFret ? $"Place {(_placementMask is null ? "full" : "partial")} capo at fret {ghostFret}" : null);
@@ -473,7 +470,6 @@ internal class FretboardView : Control
         if (_hoverCapo is null && _ghostFret is null) return;
         _hoverCapo = null;
         _ghostFret = null;
-        Cursor = null;
         ToolTip.SetTip(this, null);
         InvalidateVisual();
     }
