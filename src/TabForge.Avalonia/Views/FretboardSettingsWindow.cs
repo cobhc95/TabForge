@@ -15,7 +15,7 @@ using TabForge.Services;
 namespace TabForge.Avalonia.Views;
 
 // Owns: the Fretboard settings window (a modeless tool window): a settings-style section rail on the left (Look, Notes and markers, Layout and size,
-//   Strings and capo, Scale highlight, each with its glyph), the chosen section's cards on the right, and the Settings footer: "More settings in Preferences"
+//   Strings and capo, Scale highlight, each with its glyph), the chosen section's cards on the right, and the Settings footer: "More settings" and "Reset all"
 //   on the left; the status, Cancel, Apply and OK on the right. Every pick is written to the settings and shows on the board at once; Apply and OK keep
 //   the picks, and Cancel or closing the window writes back the values from the last Apply (or from opening).
 // Does not own: the settings types (EditingSettings, AppearanceSettings), the look names (FretboardStyles), the rail look (PreferencesWindow's
@@ -88,12 +88,18 @@ public sealed partial class FretboardSettingsWindow : Window
         Closing += (_, _) => Revert();
     }
 
-    /// <summary>The Settings footer band: the link to Preferences on the left; the status, Cancel, Apply and OK on the right.</summary>
+    /// <summary>The Settings footer band: "More settings" (the link to Preferences) and "Reset all" on the left; the status, Cancel, Apply and OK on the right.</summary>
     private Border BuildFooter(Action morePreferences)
     {
-        var more = new Button { Name = "FretboardMoreSettings", Content = "More settings in Preferences" };
+        var more = new Button { Name = "FretboardMoreSettings", Content = "More settings" };
         more.Classes.Add("PrefsActionButton");
         more.Click += (_, _) => morePreferences();
+        ToolTip.SetTip(more, "Open Preferences for the settings that are not about the fretboard");
+        var resetAll = new Button { Name = "FretboardResetAll", Content = "Reset all" };
+        resetAll.Classes.Add("PrefsActionButton");
+        resetAll.Click += (_, _) => ResetAll();
+        ToolTip.SetTip(resetAll, "Restore every fretboard setting to its default; Cancel still goes back to how they were");
+        var left = ToolWindowParts.Row(more, resetAll);
         var cancel = new Button { Name = "FretboardSettingsCancel", Content = SettingsCatalog.Special(SettingsCatalog.ActionCancel).Label, IsCancel = true };
         cancel.Classes.Add("PrefsActionButton");
         cancel.Click += (_, _) => Close();
@@ -105,9 +111,9 @@ public sealed partial class FretboardSettingsWindow : Window
         ok.Click += (_, _) => { Apply(); Close(); };
         ShowStatus();
         var right = ToolWindowParts.Row(_status.WithMargin(0, 0, FretboardChromeMetrics.FooterGap, 0), cancel, _apply, ok);
-        DockPanel.SetDock(more, Dock.Left);
+        DockPanel.SetDock(left, Dock.Left);
         DockPanel.SetDock(right, Dock.Right);
-        var footer = new DockPanel { LastChildFill = false, Children = { more, right } }.WithMargin(12, 8, 12, 8);
+        var footer = new DockPanel { LastChildFill = false, Children = { left, right } }.WithMargin(12, 8, 12, 8);
         var band = new Border { Child = footer, BorderThickness = FretboardChromeMetrics.FooterBandBorder };
         band[!Border.BackgroundProperty] = new global::Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("WindowBrush");
         band[!Border.BorderBrushProperty] = new global::Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("BorderSoftBrush");

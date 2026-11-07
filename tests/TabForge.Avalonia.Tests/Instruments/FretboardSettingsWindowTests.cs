@@ -134,10 +134,32 @@ public class FretboardSettingsWindowTests
     }
 
     [AvaloniaFact]
+    public void ResetAllWritesEveryPagesDefaultsBack()
+    {
+        var (window, settings, _) = Make();
+        settings.Editing.FretboardVibration = "Strong";
+        settings.Editing.PreviewHorizon = 7;
+        settings.Editing.FretNowColour = "#112233";
+        settings.Editing.FretLegendMinimised = true;
+        settings.Editing.ScaleDimOutside = true;
+        settings.Appearance.FretboardAtBottom = true;
+        Click(Find<Button>(window, "FretboardResetAll"));
+        var defaults = new EditingSettings();
+        Assert.Equal(defaults.FretboardVibration, settings.Editing.FretboardVibration);
+        Assert.Equal(defaults.PreviewHorizon, settings.Editing.PreviewHorizon);
+        Assert.Equal("", settings.Editing.FretNowColour);
+        Assert.False(settings.Editing.FretLegendMinimised);
+        Assert.False(settings.Editing.ScaleDimOutside);
+        Assert.Equal(new AppearanceSettings().FretboardAtBottom, settings.Appearance.FretboardAtBottom);
+        Assert.Equal(FretboardStyles.ThemeDefaults(window.ActualThemeVariant == global::Avalonia.Styling.ThemeVariant.Light).Look, FretboardStyles.LookOf(settings.Editing));
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public void TheFooterMatchesTheProgramStyle()
     {
         var (window, _, _) = Make();
-        foreach (var name in new[] { "FretboardMoreSettings", "FretboardSettingsCancel", "FretboardSettingsApply", "FretboardSettingsOk" })
+        foreach (var name in new[] { "FretboardMoreSettings", "FretboardResetAll", "FretboardSettingsCancel", "FretboardSettingsApply", "FretboardSettingsOk" })
             Assert.Contains("PrefsActionButton", Find<Button>(window, name).Classes);
         var done = Find<Button>(window, "FretboardSettingsOk");
         Assert.Contains(AvaloniaDefaultLooks.AccentLook, done.Classes);

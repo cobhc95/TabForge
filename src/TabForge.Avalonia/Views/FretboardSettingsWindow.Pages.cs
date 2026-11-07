@@ -178,6 +178,14 @@ public sealed partial class FretboardSettingsWindow
         Changed();
     }
 
+    /// <summary>Every page back to its defaults at once (the Look page to the shown theme's); Cancel still returns to how they were.</summary>
+    internal void ResetAll()
+    {
+        for (var section = 0; section < SectionCount; section++) CopySection(section, new EditingSettings(), new AppearanceSettings());
+        FretboardStyles.ResetToTheme(_settings.Editing, ActualThemeVariant == global::Avalonia.Styling.ThemeVariant.Light);
+        Changed();
+    }
+
     /// <summary>Writes one page's settings from the given values to the live settings.</summary>
     private void CopySection(int section, EditingSettings d, AppearanceSettings da)
     {
@@ -191,7 +199,7 @@ public sealed partial class FretboardSettingsWindow
                 break;
             case 1: (ed.PreviewNotesEnabled, ed.PreviewHorizon, ed.PreviewPreviousNotesEnabled, ed.ShowNoteNames, ed.FretboardNoteBrightness, ed.FretMarkerSizePercent, ed.FretNumberSize) =
                     (d.PreviewNotesEnabled, d.PreviewHorizon, d.PreviewPreviousNotesEnabled, d.ShowNoteNames, d.FretboardNoteBrightness, d.FretMarkerSizePercent, d.FretNumberSize);
-                (ed.FretNowColour, ed.FretNextColour, ed.FretUpcomingColour, ed.FretDotStyle) = (d.FretNowColour, d.FretNextColour, d.FretUpcomingColour, d.FretDotStyle); break;
+                (ed.FretNowColour, ed.FretNextColour, ed.FretUpcomingColour, ed.FretDotStyle, ed.FretLegendMinimised) = (d.FretNowColour, d.FretNextColour, d.FretUpcomingColour, d.FretDotStyle, d.FretLegendMinimised); break;
             case 2: (ed.FretboardFrets, ed.LeftHanded, ed.FretStringSpacing, ap.FretboardPosition, ap.FretboardAtBottom, ap.LockInstrumentSize) =
                     (d.FretboardFrets, d.LeftHanded, d.FretStringSpacing, da.FretboardPosition, da.FretboardAtBottom, da.LockInstrumentSize); break;
             case 3: (ed.FretboardStringLook, ed.FretboardCapoLook, ed.FretboardVibration, ed.FretboardVibrationSpeed, ed.FretboardStringNumbers) =
