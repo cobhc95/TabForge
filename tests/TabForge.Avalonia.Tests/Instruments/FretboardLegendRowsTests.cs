@@ -69,7 +69,7 @@ public class FretboardLegendRowsTests
     }
 
     [AvaloniaFact]
-    public void TheLegendNeverGrowsPastItsDesignSizeAndStaysInsideThePane()
+    public void TheLegendFillsTheBoardsHeightAndStaysInsideThePane()
     {
         var heights = new List<double>();
         foreach (var paneHeight in new[] { 120.0, 220.0, 400.0 })
@@ -78,12 +78,18 @@ public class FretboardLegendRowsTests
             window.Height = paneHeight;
             Dispatcher.UIThread.RunJobs();
             window.UpdateLayout();
-            var (scales, _, _) = strip.Panel.ActionTileBounds()!.Value;
+            var (scales, _, unit) = strip.Panel.ActionTileBounds()!.Value;
             Assert.True(scales.Bottom <= strip.Panel.Bounds.Height + 0.5, "the legend stays inside the pane at every height");
+            var board = strip.Panel.FretboardLayout().Board;
+            var scale = strip.Panel.FretboardScale();
+            var cardTop = strip.Panel.LegendRowBounds(FretNoteRole.Now)!.Value.Y - 32 * unit;   // the card's padding and title above the tiles
+            var cardBottom = scales.Bottom + 8 * unit;                                           // and its padding under the Scales and Modify tiles
+            Assert.Equal(board.Y * scale, cardTop, 1);
+            Assert.Equal(board.Bottom * scale, cardBottom, 1);                                  // the card is exactly as tall as the board
             heights.Add(strip.Panel.LegendRowBounds(FretNoteRole.Now)!.Value.Height / strip.Panel.FretboardScale());
             window.Close();
         }
-        Assert.All(heights, h => Assert.InRange(h, 1, InstrumentPanelView.LegendTileHeight + 0.01));   // never above the design size
+        Assert.All(heights, h => Assert.True(h >= 1));
     }
 
     [AvaloniaFact]
