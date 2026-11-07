@@ -153,7 +153,7 @@ public sealed class GuitarLayerTests(ITestOutputHelper output)
 
     // ---- listening files -------------------------------------------------------------------------------------------------------------
 
-    private const double Eighth = 0.25;   // 120 bpm
+    internal const double Eighth = 0.25;   // 120 bpm
 
     [Fact]
     public void WritesListeningFilesWhenAsked()
@@ -185,15 +185,15 @@ public sealed class GuitarLayerTests(ITestOutputHelper output)
         return TestSoundFont.WriteWav(name, l, r, Rate);
     }
 
-    private static void Note(List<(double, int, int, int)> song, int ch, double at, double length, int note, int vel)
+    internal static void Note(List<(double, int, int, int)> song, int ch, double at, double length, int note, int vel)
     {
         song.Add((at, 0x90 | ch, note, vel));
         song.Add((at + length, 0x80 | ch, note, 0));
     }
 
-    private static List<(double, int, int, int)> Riff(int ch)
+    internal static List<(double, int, int, int)> Riff(int ch, int program = 30)
     {
-        var song = new List<(double, int, int, int)> { (0, 0xC0 | ch, 30, 0) };
+        var song = new List<(double, int, int, int)> { (0, 0xC0 | ch, program, 0) };
         int[][] bars = [[40, 40, 40, 40, 43, 0, 45, 0], [40, 40, 40, 40, 48, 0, 47, 0], [40, 40, 40, 40, 43, 0, 45, 0], [40, 40, 40, 0, 0, 0, 0, 0]];
         for (var bar = 0; bar < 4; bar++)
             for (var e = 0; e < 8; e++)
@@ -207,7 +207,7 @@ public sealed class GuitarLayerTests(ITestOutputHelper output)
         return song;
     }
 
-    private static List<(double, int, int, int)> Arpeggio(int ch)
+    internal static List<(double, int, int, int)> Arpeggio(int ch)
     {
         var song = new List<(double, int, int, int)> { (0, 0xC0 | ch, 27, 0) };
         int[][] bars = [[57, 60, 64, 69, 64, 60, 64, 60], [48, 55, 60, 64, 67, 64, 60, 55], [43, 50, 55, 59, 62, 59, 55, 50], [40, 47, 52, 55, 59, 55, 52, 47]];
@@ -216,7 +216,7 @@ public sealed class GuitarLayerTests(ITestOutputHelper output)
         return song;
     }
 
-    private static List<(double, int, int, int)> BassLine(int ch)
+    internal static List<(double, int, int, int)> BassLine(int ch)
     {
         var song = new List<(double, int, int, int)> { (0, 0xC0 | ch, 33, 0) };
         int[][] bars = [[28, 28, 28, 28, 28, 28, 31, 33], [28, 28, 28, 28, 36, 36, 35, 35], [28, 28, 28, 28, 28, 28, 31, 33], [28, 28, 28, 28, 28, 28, 28, 28]];

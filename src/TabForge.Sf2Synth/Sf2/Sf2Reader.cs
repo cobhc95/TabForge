@@ -24,7 +24,7 @@ internal static class Sf2Reader
         byte[] C(string id) => chunks.TryGetValue(id, out var b) ? b : throw new InvalidDataException("missing " + id);
 
         font.Samples = Records(C("shdr"), 46, b => new SampleHeader(Name(b), b.ReadInt32(), b.ReadInt32(), b.ReadInt32(), b.ReadInt32(),
-            b.ReadInt32(), b.ReadByte(), b.ReadSByte()));
+            b.ReadInt32(), b.ReadByte(), b.ReadSByte(), b.ReadUInt16(), b.ReadUInt16()));
         var ibag = Records(C("ibag"), 4, b => new Bag(b.ReadUInt16(), b.ReadUInt16()));
         var igen = Records(C("igen"), 4, b => new GenRec(b.ReadUInt16(), b.ReadInt16()));
         var imod = Records(C("imod"), 10, ReadMod);

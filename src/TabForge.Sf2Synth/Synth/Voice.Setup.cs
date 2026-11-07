@@ -9,6 +9,8 @@ namespace TabForge.Sf2Synth;
 internal sealed partial class Voice
 {
     private const int MaxMods = 64;
+    // EMU hardware (and FluidSynth/MeltySynth after it) applies 0.4 × initialAttenuation; real banks are voiced for that.
+    private const float EmuAttenuationScale = 0.4f;
     private readonly float[] _gen = new float[Gens.Count];
     private readonly float[] _mod = new float[Gens.Count];
     private readonly Mod[] _mods = new Mod[MaxMods];
@@ -22,6 +24,7 @@ internal sealed partial class Voice
             if (!Gens.PresetIgnores(g)) v += pZone.Has(g) ? pZone.Gen[g] : pGlobal is { } pg && pg.Has(g) ? pg.Gen[g] : 0;
             _gen[g] = v;
         }
+        _gen[(int)G.Attenuation] *= EmuAttenuationScale;
         _modN = 0;
         foreach (var m in Mod.Defaults) Put(m, false);
         if (iGlobal is not null) foreach (var m in iGlobal.Mods) Put(m, false);

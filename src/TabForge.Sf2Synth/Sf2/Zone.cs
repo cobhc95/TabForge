@@ -15,7 +15,7 @@ internal sealed class Zone
     public bool Covers(int key, int vel) => key >= KeyLo && key <= KeyHi && vel >= VelLo && vel <= VelHi;
 }
 
-internal sealed record SampleHeader(string Name, int Start, int End, int LoopStart, int LoopEnd, int Rate, int Root, int Correction);
+internal sealed record SampleHeader(string Name, int Start, int End, int LoopStart, int LoopEnd, int Rate, int Root, int Correction, int Link, int Type);
 
 internal sealed record Instrument(string Name, Zone? Global, Zone[] Zones);
 
