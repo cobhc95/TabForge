@@ -6,6 +6,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ### Added
 
+- Fretboard legend: Now, Next and Upcoming are three side-by-side tiles, each tinted and edged in its own colour with its dot over its name, instead of three small rows. A click on a tile still opens the colour picker below it, and it shades under the pointer. The legend card is wider to fit them; Scales and Modify are unchanged.
 - Section stretch: dragging a section's start back past the previous section has a new option, Add a new section in those bars. The added empty bars become a section of their own, with a name and a colour you set inside the option; the stretched section keeps its length. The button reads Add section, and Remember my choice does not apply to it.
 
 ## 0.9.1

@@ -37,17 +37,17 @@ public class FretboardLegendRowsTests
     }
 
     [AvaloniaFact]
-    public void EachListedRoleHasAFullWidthRowInsideTheLegend()
+    public void EachListedRoleHasATileInOneRowInsideTheLegend()
     {
         var (strip, window) = Open(lookAhead: true);
         var rows = FretNoteColours.Roles.Select(r => strip.LegendRows.RowOf(r)).ToArray();
         Assert.All(rows, row => Assert.True(row.IsVisible));
         var bounds = FretNoteColours.Roles.Select(r => strip.Panel.LegendRowBounds(r)!.Value).ToArray();
-        Assert.All(bounds, b => Assert.Equal(bounds[0].Width, b.Width, 6));                       // one width: the card's, less its insets
-        Assert.True(bounds[1].Y >= bounds[0].Bottom - 0.01 && bounds[2].Y >= bounds[1].Bottom - 0.01);  // stacked, never overlapping
-        Assert.True(bounds[0].Width > bounds[0].Height * 3, "a row, not a dot");
+        Assert.All(bounds, bound => Assert.Equal(bounds[0].Width, bound.Width, 6));                      // three tiles of one width
+        Assert.All(bounds, bound => Assert.Equal(bounds[0].Y, bound.Y, 6));                              // in one row
+        Assert.True(bounds[1].X >= bounds[0].Right - 0.01 && bounds[2].X >= bounds[1].Right - 0.01);     // side by side, never overlapping
         var scales = strip.ScalesAnchor;
-        Assert.True(Canvas.GetTop(scales) >= bounds[2].Bottom - 0.01, "Scales stays under the rows");
+        Assert.True(Canvas.GetTop(scales) >= bounds[2].Bottom - 0.01, "Scales stays under the tiles");
         window.Close();
     }
 

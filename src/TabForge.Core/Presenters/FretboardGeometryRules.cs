@@ -45,7 +45,7 @@ public static class FretboardGeometryRules
     /// <summary>Top-right strip kept clear for the pane's hide (X) button.</summary>
     public const double CornerReserve = 24;
     /// <summary>Legend column (108) plus the hide-button corner strip, so neither overlaps the board.</summary>
-    public const double LegendWidth = 108 + CornerReserve;
+    public const double LegendWidth = 170 + CornerReserve;
     /// <summary>The margin kept between the board's room and the content's right edge.</summary>
     public const double BoardMargin = 28;
 

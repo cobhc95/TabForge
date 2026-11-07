@@ -53,6 +53,7 @@ internal sealed class FretboardLegendRows
             Canvas.SetTop(row, r.Y);
             row.Width = r.Width;
             row.Height = r.Height;
+            row.CornerRadius = new CornerRadius(r.Height * InstrumentPanelView.LegendTileRadius / InstrumentPanelView.LegendTileHeight);   // the drawn tile's corners at the drawing scale
         }
     }
 

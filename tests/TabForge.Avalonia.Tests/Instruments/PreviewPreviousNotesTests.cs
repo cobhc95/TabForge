@@ -98,8 +98,8 @@ public class PreviewPreviousNotesTests
         var draw = new InstrumentFretNumberTests.RecordingDrawContext();
         panel.Draw(draw, light: false);
         var labels = draw.Texts.Select(t => t.Text).ToList();
-        Assert.Equal(previous, labels.Contains("recent"));
-        Assert.Equal(next, labels.Contains("next"));
+        Assert.Equal(previous, labels.Contains("Recent"));
+        Assert.Equal(next, labels.Contains("Next"));
     }
 
     [AvaloniaFact]

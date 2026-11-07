@@ -55,7 +55,10 @@ public sealed partial class InstrumentPanelView : Control
     private const double LegendTopMinimum = 10;
     private const double LegendRowHeight = 18;
     /// <summary>The legend card: its title row, the room round its contents and its width.</summary>
-    private const double LegendTitleHeight = 24, LegendCardPad = 8, LegendCardWidth = 114;
+    private const double LegendTitleHeight = 24, LegendCardPad = 8, LegendCardWidth = 176;
+    /// <summary>The now, next and upcoming tiles share one row inside the card: each tile's height, the gap between tiles and its corner radius (board units).</summary>
+    internal const double LegendTileHeight = 44, LegendTileRadius = 8;
+    private const double LegendTileGap = 4;
     private const double LegendScalesGap = 6;
     private const double ScalesButtonHeight = 24;
     /// <summary>The gap between the Scales button and the Customize button under it, in real pixels.</summary>

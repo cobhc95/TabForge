@@ -285,8 +285,8 @@ public class InstrumentPanelViewTests
         on.ShowPlayback(PreviewNotes(), 1200);
         var onDraw = new InstrumentFretNumberTests.RecordingDrawContext();
         on.Draw(onDraw, light: false);
-        Assert.Contains(onDraw.Texts, t => t.Text == "next");
-        Assert.Contains(onDraw.Texts, t => t.Text == "upcoming");
+        Assert.Contains(onDraw.Texts, t => t.Text == "Next");
+        Assert.Contains(onDraw.Texts, t => t.Text == "Upcoming");
         Assert.Contains(onDraw.Texts, t => t.Text == "L.R.");
         Assert.Contains(64, on.LitMidis());
         Assert.Contains(69, on.LitMidis());
@@ -297,10 +297,10 @@ public class InstrumentPanelViewTests
         var offDraw = new InstrumentFretNumberTests.RecordingDrawContext();
         off.Draw(offDraw, light: false);
         var labels = offDraw.Texts.Select(t => t.Text).ToList();
-        Assert.Contains("now", labels);
-        Assert.Contains("recent", labels);
-        Assert.DoesNotContain("next", labels);
-        Assert.DoesNotContain("upcoming", labels);
+        Assert.Contains("Now", labels);
+        Assert.Contains("Recent", labels);
+        Assert.DoesNotContain("Next", labels);
+        Assert.DoesNotContain("Upcoming", labels);
         // The sounding note keeps its tag; the next/upcoming let-ring tags are never drawn.
         Assert.Contains(offDraw.Texts, t => t.Text == "H/P");
         Assert.DoesNotContain(offDraw.Texts, t => t.Text == "L.R.");
@@ -364,8 +364,8 @@ public class InstrumentPanelViewTests
             var draw = new InstrumentFretNumberTests.RecordingDrawContext();
             panel.Draw(draw, light: false);
             var labels = draw.Texts.Select(t => t.Text).ToList();
-            Assert.DoesNotContain("next", labels);
-            Assert.DoesNotContain("upcoming", labels);
+            Assert.DoesNotContain("Next", labels);
+            Assert.DoesNotContain("Upcoming", labels);
         }
     }
 
