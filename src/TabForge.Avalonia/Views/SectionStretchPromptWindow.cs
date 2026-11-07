@@ -10,12 +10,14 @@ using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Platform.Controls;
 using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Presenters;
+using TabForge.Platform.Theme;
 using TabForge.Services;
+using Avalonia.Automation;
 
 namespace TabForge.Avalonia.Views;
 
 /// <summary>
-/// The "Stretch Chorus by 4 bars?" prompt: a muted line (where the section and the next one end up), four clickable radio cards (add empty bars, default; repeat the section's last bars; add a repeat sign,
+/// The "Stretch Chorus by 4 bars?" prompt: a muted line (where the section and the next one end up), four clickable radio cards (the backward prompt has a fifth, add a new named section, with name and colour fields inside it) (add empty bars, default; repeat the section's last bars; add a repeat sign,
 /// disabled with a reason line when a repeat is in the way; stop at the next section), "Remember my choice" with its hint and Cancel / Stretch. Enter stretches, Esc cancels.
 /// <see cref="Answer"/> is null on cancel.
 /// Owns: the window's controls and reading them back. Does not own: the words (SectionStretchPromptPresenter), the edit (SectionStretch) or the stored setting.
@@ -24,7 +26,7 @@ namespace TabForge.Avalonia.Views;
 public sealed class SectionStretchPromptWindow : Window
 {
     private static SectionStretchMode[] ForwardModes => new[] { SectionStretchMode.AddEmpty, SectionStretchMode.RepeatLast, SectionStretchMode.AddRepeatSign, SectionStretchMode.Stop };
-    private static SectionStretchBackMode[] BackModes => new[] { SectionStretchBackMode.AddEmpty, SectionStretchBackMode.RepeatFirst, SectionStretchBackMode.TakeFromPrevious, SectionStretchBackMode.Stop };
+    private static SectionStretchBackMode[] BackModes => new[] { SectionStretchBackMode.AddEmpty, SectionStretchBackMode.RepeatFirst, SectionStretchBackMode.TakeFromPrevious, SectionStretchBackMode.NewSection, SectionStretchBackMode.Stop };
     private readonly List<RadioCard> _cards = new();
     private readonly CheckBox _remember;
     private int _choice = -1;
@@ -33,9 +35,16 @@ public sealed class SectionStretchPromptWindow : Window
     public SectionStretchAnswer? Answer => _choice < 0 || _back ? null : new SectionStretchAnswer(ForwardModes[_choice], _remember.IsChecked == true);
 
     /// <summary>The backward prompt's answer; null on Cancel / Esc / close (or for the forward prompt).</summary>
-    public SectionStretchBackAnswer? BackAnswer => _choice < 0 || !_back ? null : new SectionStretchBackAnswer(BackModes[_choice], _remember.IsChecked == true);
+    public SectionStretchBackAnswer? BackAnswer => _choice < 0 || !_back ? null : BackAnswerOf(BackModes[_choice]);
 
     private readonly bool _back;
+    private TextBox? _sectionName;
+    private ColourButton? _sectionColour;
+    private Control? _sectionFields;
+
+    private SectionStretchBackAnswer BackAnswerOf(SectionStretchBackMode mode) => mode == SectionStretchBackMode.NewSection
+        ? new SectionStretchBackAnswer(mode, false, _sectionName?.Text, _sectionColour?.Value)
+        : new SectionStretchBackAnswer(mode, _remember.IsChecked == true);
 
     public SectionStretchPromptWindow(SectionStretchQuestion question) : this(false, SectionStretchPromptPresenter.Title(question), SectionStretchPromptPresenter.Body(question), new (string, string, string, string?)[]
     {
@@ -50,6 +59,7 @@ public sealed class SectionStretchPromptWindow : Window
         ("Add", SectionStretchBackPromptPresenter.AddTitle(question), SectionStretchBackPromptPresenter.AddHint, null),
         ("Repeat", SectionStretchBackPromptPresenter.RepeatTitle(question), SectionStretchBackPromptPresenter.RepeatHint(question), null),
         ("Take", SectionStretchBackPromptPresenter.TakeTitle(question), SectionStretchBackPromptPresenter.TakeHint(question), SectionStretchBackPromptPresenter.TakeConflict(question)),
+        ("NewSection", SectionStretchBackPromptPresenter.NewSectionTitle(question), SectionStretchBackPromptPresenter.NewSectionHint(question), null),
         ("Stop", SectionStretchBackPromptPresenter.StopTitle(question), SectionStretchBackPromptPresenter.StopHint, null),
     }) { }
 
@@ -74,7 +84,7 @@ public sealed class SectionStretchPromptWindow : Window
         var group = new RadioCardGroup("SectionStretchChoice");
         foreach (var option in options)
         {
-            var card = new RadioCard(group, option.Name, option.Title, option.Hint, selected: _cards.Count == 0);
+            var card = new RadioCard(group, option.Name, option.Title, option.Hint, selected: _cards.Count == 0, preview: option.Name == "NewSection" ? NewSectionFields() : null);
             _cards.Add(card);
             body.Children.Add(card);
             if (option.Reason is not { } reason) continue;
@@ -98,6 +108,20 @@ public sealed class SectionStretchPromptWindow : Window
         ok.Click += (_, _) => Accept();
         body.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8, Children = { cancel, ok } }.WithMargin(DialogMetrics.FooterGap));
         Content = body;
+        if (_sectionName is not null)
+        {
+            // The name and colour show only while the new-section card is selected; the button then says what it does, and Remember does not apply (a name and colour are asked each time).
+            void Sync()
+            {
+                var isNew = _cards.Find(card => card.Name == "NewSectionCard")?.IsSelected == true;
+                _sectionFields!.IsVisible = isNew;
+                ok.Content = isNew ? SectionStretchBackPromptPresenter.NewSectionButton : SectionStretchPromptPresenter.StretchText;
+                _remember.IsEnabled = !isNew;
+            }
+            foreach (var card in _cards) card.Radio.IsCheckedChanged += (_, _) => Sync();
+            Sync();
+            _cards.Find(card => card.Name == "NewSectionCard")!.Radio.IsCheckedChanged += (_, _) => { if (_cards.Find(card => card.Name == "NewSectionCard")!.IsSelected) _sectionName.Focus(); };
+        }
 
         AddHandler(KeyDownEvent, (_, e) =>
         {
@@ -107,6 +131,17 @@ public sealed class SectionStretchPromptWindow : Window
             e.Handled = true;
         }, RoutingStrategies.Tunnel);
         Opened += (_, _) => _cards[0].Focus();
+    }
+
+    // The new-section card's name box and colour button, in one row under its hint.
+    private Control NewSectionFields()
+    {
+        _sectionName = new TextBox { Name = "NewSectionName", Text = SectionStretchBackPromptPresenter.NewSectionName, Width = DialogMetrics.ColourSettingWidth, VerticalAlignment = VerticalAlignment.Center };
+        AutomationProperties.SetName(_sectionName, "New section name");
+        _sectionColour = new ColourButton(NamedColourSwatches.SectionDefaultColour, new List<string>()) { Name = "NewSectionColour", Width = DialogMetrics.ColourSettingWidth, VerticalAlignment = VerticalAlignment.Center };
+        AutomationProperties.SetName(_sectionColour, "New section colour");
+        _sectionColour.Show(NamedColourSwatches.SectionDefaultColour);
+        return _sectionFields = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { _sectionName, _sectionColour } };
     }
 
     /// <summary>Shows the prompt over <paramref name="owner"/>; null when the user cancelled.</summary>

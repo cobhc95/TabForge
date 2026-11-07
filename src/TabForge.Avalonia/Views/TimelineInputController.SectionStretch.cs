@@ -117,8 +117,8 @@ public sealed partial class TimelineInputController
         {
             var answer = await ask(SectionStretchBackPromptPresenter.Question(plan, bars));
             if (!ReferenceEquals(document, _document) || !document.Project.Markers.Contains(marker) || answer is not { } picked) return;
-            if (picked.Remember) SectionStretchBackRemember?.Invoke(SectionStretchBackChoice.Store(picked.Mode));
-            ApplyStretchBack(document, marker, picked.Mode, bars);
+            if (picked.Remember && picked.Mode != SectionStretchBackMode.NewSection) SectionStretchBackRemember?.Invoke(SectionStretchBackChoice.Store(picked.Mode));
+            ApplyStretchBack(document, marker, picked.Mode, bars, picked.SectionName, picked.SectionColour);
         }
         finally
         {
@@ -127,10 +127,10 @@ public sealed partial class TimelineInputController
         }
     }
 
-    private void ApplyStretchBack(IEditableDocument document, MarkerModel marker, SectionStretchBackMode mode, int bars)
+    private void ApplyStretchBack(IEditableDocument document, MarkerModel marker, SectionStretchBackMode mode, int bars, string? name = null, string? colour = null)
     {
         int[]? map = null;
-        var changed = DocumentEdits.Run(document, song => SectionStretchBack.Apply(song, marker, mode, bars, out map), label: "Stretch section").Changed;
+        var changed = DocumentEdits.Run(document, song => SectionStretchBack.Apply(song, marker, mode, bars, out map, name, colour), label: "Stretch section").Changed;
         if (!changed) return;
         AfterEdit();
         if (map is { } moved) SectionMoved?.Invoke(document, moved);

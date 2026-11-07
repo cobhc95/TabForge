@@ -1,9 +1,10 @@
 using TabForge.Models;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Services;
 
-/// <summary>What stretching a section's start back past the previous one does (the answers of the prompt and, but for Ask, the stored values of EditingSettings.SectionStretchBack).</summary>
-public enum SectionStretchBackMode { AddEmpty, RepeatFirst, TakeFromPrevious, Stop }
+/// <summary>What stretching a section's start back past the previous one does (the answers of the prompt and, but for Ask, the stored values of EditingSettings.SectionStretchBack). NewSection is asked each time and never stored: it adds empty bars as a section of their own.</summary>
+public enum SectionStretchBackMode { AddEmpty, RepeatFirst, TakeFromPrevious, Stop, NewSection }
 
 public static class SectionStretchBackChoice
 {
@@ -36,7 +37,7 @@ public static class SectionStretchBackChoice
         SectionStretchBackMode.AddEmpty => AddEmpty,
         SectionStretchBackMode.RepeatFirst => RepeatFirst,
         SectionStretchBackMode.TakeFromPrevious => TakePrevious,
-        _ => Stop,
+        _ => Stop,   // NewSection needs a name and colour each time, so it is never remembered
     };
 }
 
@@ -48,7 +49,7 @@ public sealed record SectionStretchBackPlan(MarkerModel Section, MarkerModel? Pr
 }
 
 // Owns: the rule of stretching a section BACK (dragging its left edge past the previous section): the plan and the one edit for each choice (add empty bars at its start / repeat its first bars as a lead-in /
-//   take the previous section's last bars / stop) as steps of ONE model edit. New bars go in through the shared BarInsert at the section's start; the section keeps its start bar and grows, everything from
+//   take the previous section's last bars / stop / put the new bars in a new named section) as steps of ONE model edit. New bars go in through the shared BarInsert at the section's start; the section keeps its start bar and grows, everything from
 //   the old start moves later, the previous section is unchanged.
 // Does not own: the drag, the preview and the prompt (TimelineInputController.SectionStretch, TimelineView.SectionStretch, SectionStretchPromptWindow), the forward stretch (SectionStretch) or the undo step.
 // Tests: TabForge.Avalonia.Tests.SectionStretchTests.
@@ -75,7 +76,7 @@ public static class SectionStretchBack
     /// AddEmpty inserts empty bars at its start on every track, RepeatFirst inserts copies of its first min(bars, length) bars there (cycling), TakeFromPrevious adds no bars and moves the start back over
     /// the previous section's last bars (clamped so that one keeps a bar). <paramref name="map"/> is the old-to-new bar map when bars went in. False when nothing changed.
     /// </summary>
-    public static bool Apply(SongProject project, MarkerModel marker, SectionStretchBackMode mode, int bars, out int[]? map)
+    public static bool Apply(SongProject project, MarkerModel marker, SectionStretchBackMode mode, int bars, out int[]? map, string? newName = null, string? newColour = null)
     {
         map = null;
         if (PlanFor(project, marker) is not { } first) return false;
@@ -94,7 +95,7 @@ public static class SectionStretchBack
             return true;
         }
         var kept = project.Markers.Select(m => (Marker: m, Index: m.MeasureIndex, Length: m.LengthBars)).ToList();
-        if (mode == SectionStretchBackMode.AddEmpty) map = BarInsert.Empty(project, plan.Start, bars, fillRests: false);
+        if (mode is SectionStretchBackMode.AddEmpty or SectionStretchBackMode.NewSection) map = BarInsert.Empty(project, plan.Start, bars, fillRests: false);
         else
         {
             var count = Math.Max(1, length);
@@ -113,8 +114,18 @@ public static class SectionStretchBack
         foreach (var (m, index, len) in kept)
         {
             var own = ReferenceEquals(m, marker);
-            m.MeasureIndex = own ? plan.Start : index >= plan.Start ? index + bars : index;
-            m.LengthBars = own ? length + bars : len;
+            var shifted = own && mode == SectionStretchBackMode.NewSection;   // the new section takes the new bars; this one keeps its length and moves after them
+            m.MeasureIndex = shifted ? plan.Start + bars : own ? plan.Start : index >= plan.Start ? index + bars : index;
+            m.LengthBars = own && !shifted ? length + bars : len;
+        }
+        if (mode == SectionStretchBackMode.NewSection)
+        {
+            var named = !string.IsNullOrWhiteSpace(newColour);
+            project.Markers.Add(new MarkerModel
+            {
+                MeasureIndex = plan.Start, LengthBars = bars, Title = string.IsNullOrWhiteSpace(newName) ? "New section" : newName.Trim(),
+                ColorHex = named ? newColour! : NamedColourSwatches.SectionDefaultColour, ColorIsExplicit = named,
+            });
         }
         SectionLayout.Normalize(project);
         return true;

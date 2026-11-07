@@ -54,7 +54,7 @@ public static class SectionStretchPromptPresenter
 }
 
 /// <summary>What the backward prompt answered: the chosen option and whether to remember it.</summary>
-public readonly record struct SectionStretchBackAnswer(SectionStretchBackMode Mode, bool Remember);
+public readonly record struct SectionStretchBackAnswer(SectionStretchBackMode Mode, bool Remember, string? SectionName = null, string? SectionColour = null);
 
 /// <summary>What the backward prompt shows: the section, its bars now and the bars asked for, the previous section's name (null for the first section) and the bars it can give.</summary>
 public sealed record SectionStretchBackQuestion(string Section, int Bars, int Added, string? Previous, int Takeable);
@@ -91,6 +91,13 @@ public static class SectionStretchBackPromptPresenter
     /// <summary>Why the previous section cannot give bars; null when it can.</summary>
     public static string? TakeConflict(SectionStretchBackQuestion q) =>
         q.Previous is null ? $"No section comes before {q.Section}." : q.Takeable < 1 ? $"{q.Previous} would be left with no bars." : null;
+
+    public const string NewSectionName = "New section";
+    public const string NewSectionButton = "Add section";
+
+    public static string NewSectionTitle(SectionStretchBackQuestion q) => $"Add a new section in {(q.Added == 1 ? "that bar" : $"those {q.Added} bars")}";
+
+    public static string NewSectionHint(SectionStretchBackQuestion q) => $"{q.Section} stays {Bars(q.Bars)}. The new empty {(q.Added == 1 ? "bar becomes" : "bars become")} their own section.";
 
     public static string StopTitle(SectionStretchBackQuestion q) => q.Previous is null ? "Stop at the start of the song" : $"Stop at {q.Previous}";
 }

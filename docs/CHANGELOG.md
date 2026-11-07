@@ -4,9 +4,9 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ## 0.9.2
 
-### Fixed
+### Added
 
-- (none yet)
+- Section stretch: dragging a section's start back past the previous section has a new option, Add a new section in those bars. The added empty bars become a section of their own, with a name and a colour you set inside the option; the stretched section keeps its length. The button reads Add section, and Remember my choice does not apply to it.
 
 ## 0.9.1
 

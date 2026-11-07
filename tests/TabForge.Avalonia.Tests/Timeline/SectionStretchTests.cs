@@ -483,6 +483,21 @@ public class SectionStretchTests
     }
 
     [AvaloniaFact]
+    public void BackNewSectionGivesTheNewBarsTheirOwnNamedColouredSection()
+    {
+        var rig = new Rig { BackAnswer = new SectionStretchBackAnswer(SectionStretchBackMode.NewSection, false, "Bridge", "#112233") };
+        rig.StretchBack(3);
+        var song = rig.Song;
+        AssertBarCount(song, Bars + 3);
+        Assert.Equal((12, 15), Bounds(song, "Bridge"));
+        Assert.Equal((15, 19), Bounds(song, "Break"));
+        Assert.Equal((8, 12), Bounds(song, "Chorus"));
+        Assert.Equal("#112233", Section(song, "Bridge").ColorHex);
+        Assert.True(Section(song, "Bridge").ColorIsExplicit);
+        rig.Win.Close();
+    }
+
+    [AvaloniaFact]
     public void BackRepeatFirstCopiesTheOpeningBarsInFront()
     {
         var rig = Back(SectionStretchBackMode.RepeatFirst);
