@@ -2,6 +2,12 @@
 
 TabForge is actively developed; please report anything odd on the Issues page.
 
+## 0.9.2
+
+### Fixed
+
+- (none yet)
+
 ## 0.9.1
 
 ### Added
