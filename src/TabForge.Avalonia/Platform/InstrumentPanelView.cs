@@ -51,7 +51,7 @@ public sealed partial class InstrumentPanelView : Control
     private const double NoTrackFontSize = ChromeMetrics.TextDialog;
     private const double NoTrackLift = 8;
     // The legend column beside the board: now and recent always, plus next and upcoming while previewing (sizes).
-    private const double LegendGap = 14;
+    private const double LegendGap = 28;
     private const double LegendTopMinimum = 10;
     private const double LegendRowHeight = 18;
     /// <summary>The legend card: its title row, the room round its contents and its width.</summary>
