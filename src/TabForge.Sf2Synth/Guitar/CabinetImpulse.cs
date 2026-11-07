@@ -5,11 +5,10 @@ namespace TabForge.Sf2Synth.Guitar;
 
 // Owns: procedural cabinet impulse responses: an impulse through speaker resonances and roll-off, one close-mic reflection,
 //   a faded tail, normalised to 0 dB at 1 kHz. Built at construction, never in render.
-// Does not own: running the FIR (GuitarBus). A measured IR can replace Build's output later.
+// Does not own: running it (Dsp/FftConvolver), a measured IR (Dsp/WavIr).
 // Tests: GuitarLayerTests.
 internal static class CabinetImpulse
 {
-    public const int MaxTaps = 1024;
     private const double Seconds = 0.0107, ReflectionSeconds = 0.0006, ReflectionGain = 0.25, FadeShare = 0.3;
 
     private static readonly EqSpec[] GuitarSpeaker =
@@ -24,7 +23,7 @@ internal static class CabinetImpulse
     public static float[] Build(CabKind kind, double rate)
     {
         var specs = kind == CabKind.Bass ? BassSpeaker : GuitarSpeaker;
-        var taps = Math.Min(MaxTaps, (int)Math.Round(Seconds * rate));
+        var taps = (int)Math.Round(Seconds * rate);
         var filters = specs.Select(s => new Biquad { C = BiquadCoefs.Of(s, rate) }).ToArray();
         var raw = new double[taps];
         for (var n = 0; n < taps; n++)
@@ -41,11 +40,6 @@ internal static class CabinetImpulse
             h[n] = raw[n] + (n >= lag ? ReflectionGain * raw[n - lag] : 0);
             if (n >= taps - fade) h[n] *= 0.5 * (1 + Math.Cos(Math.PI * (n - (taps - fade)) / fade));
         }
-        double re = 0, im = 0, w = 2 * Math.PI * 1000 / rate;
-        for (var n = 0; n < taps; n++) { re += h[n] * Math.Cos(w * n); im -= h[n] * Math.Sin(w * n); }
-        var gain = 1 / Math.Max(1e-9, Math.Sqrt(re * re + im * im));
-        var kernel = new float[FirHistory.Pad(taps)];
-        for (var n = 0; n < taps; n++) kernel[n] = (float)(h[n] * gain);
-        return kernel;
+        return WavIr.Normalise(h.Select(v => (float)v).ToArray(), rate);
     }
 }

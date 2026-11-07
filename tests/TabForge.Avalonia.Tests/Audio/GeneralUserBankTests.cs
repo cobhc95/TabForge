@@ -99,6 +99,30 @@ public sealed class GeneralUserBankTests(ITestOutputHelper output)
             if (vel == 100) Assert.InRange(Db(a, b) - Db(c, d), -2, 2);   // velocity 40 differs on purpose: we honour the bank's own velocity modulators
         }
     }
+    // Same MIDI, layer on vs off: the modelled guitars sit within 3 dB of the bank's own (velocity 100, chord and single note).
+    [Fact]
+    public void TheLayerIsAsLoudAsTheBankGuitars()
+    {
+        if (string.IsNullOrEmpty(BankPath) || !File.Exists(BankPath)) return;
+        var font = new SoundFont(BankPath);
+        foreach (var program in new[] { 24, 25, 26, 27, 28, 29, 30, 31, 33, 34 })
+            foreach (var notes in new[] { new[] { 45 }, program >= 32 ? [33] : new[] { 40, 47, 52, 55 } })
+            {
+                double Db(bool layer)
+                {
+                    var s = new Synthesizer(font, Rate, 64, effects: false) { MasterVolume = 0.5f, Layer = layer ? new GuitarLayer(Rate) : null };
+                    s.ProcessMidiMessage(0, 0xC0, program, 0);
+                    foreach (var n in notes) s.ProcessMidiMessage(0, 0x90, program >= 32 ? n - 12 : n, 100);
+                    float[] l = new float[Rate], r = new float[Rate];
+                    s.Render(l, r);
+                    return 10 * Math.Log10(l.Concat(r).Sum(v => (double)v * v) / (2.0 * Rate) + 1e-20);
+                }
+                var diff = Db(true) - Db(false);
+                output.WriteLine($"program {program}, {notes.Length} note(s): layer {Db(true):F1} dB, bank {Db(false):F1} dB, diff {diff:F1} dB");
+                Assert.InRange(diff, -3, 3);
+            }
+    }
+
     private static (float Step, int At) MaxStep(float[] x)
     {
         var (best, at) = (0f, 0);
