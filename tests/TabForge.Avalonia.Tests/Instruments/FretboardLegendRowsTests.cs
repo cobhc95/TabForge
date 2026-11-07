@@ -80,10 +80,10 @@ public class FretboardLegendRowsTests
             window.UpdateLayout();
             var (scales, _, unit) = strip.Panel.ActionTileBounds()!.Value;
             Assert.True(scales.Bottom <= strip.Panel.Bounds.Height + 0.5, "the legend stays inside the pane at every height");
-            var board = strip.Panel.FretboardLayout().Board;
+            var board = strip.Panel.LegendBoard();   // the whole neck: wood and binding, not just the string span
             var scale = strip.Panel.FretboardScale();
-            var cardTop = strip.Panel.LegendRowBounds(FretNoteRole.Now)!.Value.Y - 32 * unit;   // the card's padding and title above the tiles
-            var cardBottom = scales.Bottom + 8 * unit;                                           // and its padding under the Scales and Modify tiles
+            var cardTop = strip.Panel.LegendRowBounds(FretNoteRole.Now)!.Value.Y - 40 * unit;   // the card's padding (12) and title (28) above the tiles
+            var cardBottom = scales.Bottom + 12 * unit;                                         // and its padding under the Scales and Modify tiles
             Assert.Equal(board.Y * scale, cardTop, 1);
             Assert.Equal(board.Bottom * scale, cardBottom, 1);                                  // the card is exactly as tall as the board
             heights.Add(strip.Panel.LegendRowBounds(FretNoteRole.Now)!.Value.Height / strip.Panel.FretboardScale());

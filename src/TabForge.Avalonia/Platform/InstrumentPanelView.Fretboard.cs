@@ -84,7 +84,7 @@ public sealed partial class InstrumentPanelView
         FretboardArtist.DrawBrightness(scene, _look.BoardBrightness);
         DrawShadedCells(d, ink, layout);
         var noteInk = NoteInk(ink);
-        DrawLegend(d, noteInk, board);
+        DrawLegend(d, noteInk, FretboardArtist.Frame(layout, scene.Bass, _look.Style));   // as tall as the whole neck, binding included
         DrawScaleMarks(d, ink, layout, Math.Min(ScaleMarkMaxRadius, layout.StringGap * FretboardMarkerSizeRules.MaxRadiusShareOfGap));
         var radius = MarkerGeometry(PlaybackMarkerRole.Now, layout).Radius;
         if (_playbackShown)
@@ -317,7 +317,10 @@ public sealed partial class InstrumentPanelView
     private const double LegendDotX = 6, LegendDotY = 7, LegendDotRadius = 4.5;
 
     // A clickable legend row is inset this far from the card's sides (board units), so it stays inside the card.
-    private const double LegendRowInset = 4;
+    private const double LegendRowInset = 8;
+
+    /// <summary>The neck's whole visible extent (wood and binding), which the legend matches in height.</summary>
+    internal UiRect LegendBoard() => FretboardArtist.Frame(FretboardLayout(), FretInput.Bass, _look.Style);
 
     /// <summary>The legend tile for <paramref name="role"/> in the row of colour tiles, in panel coordinates: null on the keyboard and
     /// drums, and for next and upcoming while the legend does not list them (look-ahead off).</summary>
@@ -326,7 +329,7 @@ public sealed partial class InstrumentPanelView
         if (_kind != InstrumentPanelKind.Fretboard || _look.LegendMinimised) return null;
         var row = role == FretNoteRole.Now ? 0 : _look.PreviewHorizon < 0 ? -1 : role == FretNoteRole.Next ? 1 : 2;
         if (row < 0) return null;
-        var board = FretboardLayout().Board;
+        var board = LegendBoard();
         var s = FretboardScale();
         var box = LegendFrame(board);
         var (x, w) = LegendTileSpan(box.Left, row, _look.PreviewHorizon < 0 ? 1 : 3, box.Unit);
@@ -338,7 +341,7 @@ public sealed partial class InstrumentPanelView
     public (UiRect Scales, UiRect Customize, double Unit)? ActionTileBounds()
     {
         if (_kind != InstrumentPanelKind.Fretboard || _look.LegendMinimised) return null;
-        var board = FretboardLayout().Board;
+        var board = LegendBoard();
         var s = FretboardScale();
         var box = LegendFrame(board);
         var y = LegendActionsTop(box) * s;
@@ -359,7 +362,7 @@ public sealed partial class InstrumentPanelView
     public (UiRect Rect, bool Minimised, double Unit)? LegendToggleBounds()
     {
         if (_kind != InstrumentPanelKind.Fretboard) return null;
-        var board = FretboardLayout().Board;
+        var board = LegendBoard();
         var s = FretboardScale();
         var box = LegendFrame(board);
         var (u, left, top) = (box.Unit, box.Left, box.Top);

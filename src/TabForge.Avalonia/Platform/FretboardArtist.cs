@@ -39,14 +39,19 @@ internal static class FretboardArtist
     }
 
     /// <summary>The binding strip's height in DIPs: none without binding, else a little over a tenth of the string gap.</summary>
-    internal static double BindingHeight(in FretboardScene s) =>
-        s.Look.Binding == FretboardStyles.None ? 0 : Math.Clamp(s.Layout.StringGap * 0.14, 2.5, 6.5);
+    internal static double BindingHeight(in FretboardScene s) => BindingHeight(s.Layout, s.Look);
+
+    private static double BindingHeight(in FretboardGeometryRules.Layout layout, FretboardStyles.Look look) =>
+        look.Binding == FretboardStyles.None ? 0 : Math.Clamp(layout.StringGap * 0.14, 2.5, 6.5);
 
     /// <summary>The wood and its binding together: what the nut covers and the fret wires run across.</summary>
-    internal static UiRect Frame(in FretboardScene s)
+    internal static UiRect Frame(in FretboardScene s) => Frame(s.Layout, s.Bass, s.Look);
+
+    /// <summary>The wood and its binding together for a layout and look, without a scene: the neck's whole visible height (the legend matches it).</summary>
+    internal static UiRect Frame(in FretboardGeometryRules.Layout layout, bool bass, FretboardStyles.Look look)
     {
-        var wood = Wood(s.Layout, s.Bass);
-        var binding = BindingHeight(s);
+        var wood = Wood(layout, bass);
+        var binding = BindingHeight(layout, look);
         return new UiRect(wood.X, wood.Y - binding, wood.Width, wood.Height + 2 * binding);
     }
 
