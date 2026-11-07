@@ -65,6 +65,8 @@ public static class SoundFontStore
     {
         SoundEngines.None => SoundEngines.None,
         SoundEngines.WindowsGm => "",
+        // Plays GeneralUser GS when it is downloaded (else the engine's bundled copy, else this OS's fallback bank).
+        SoundEngines.TabForgeSynth => SoundEngines.TabForgeSynthPath + (SoundBankCatalog.ForEngine(SoundEngines.SoundFont) is { } gs ? "|" + BankPath(gs, windowsHost) : ""),
         SoundEngines.OwnFile => UserPath(settings),
         var engine when SoundBankCatalog.ForEngine(engine) is { } bank => BankPath(bank, windowsHost),
         _ => "",

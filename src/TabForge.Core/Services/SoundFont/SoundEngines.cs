@@ -1,6 +1,6 @@
 namespace TabForge.Services;
 
-// Owns: the "Sound engine" choice (Windows GM, one of the download-and-play Sound banks, the user's own .sf2, or silence) and its
+// Owns: the "Sound engine" choice (Windows GM, one of the download-and-play Sound banks, the experimental TabForge Synth, the user's own .sf2, or silence) and its
 //   default for the operating system, plus how an older saved value maps onto today's choices.
 // Does not own: fetching a bank (SoundFontDownloader), where it lives (SoundFontStore) or playing it (the audio engine's GmBank).
 // Tests: SoundEngineTests.
@@ -17,13 +17,17 @@ public static class SoundEngines
     public const string MuseScoreGeneral = "MuseScore General";
     /// <summary>The user's own .sf2 file: TabForge never copies, alters or deletes it.</summary>
     public const string OwnFile = "Open your own .sf2…";
+    /// <summary>TabForge's own experimental synth: modelled guitars and basses over its own SoundFont player (GeneralUser GS), else over Windows GM.</summary>
+    public const string TabForgeSynth = "TabForge Synth (experimental)";
+    /// <summary>What <see cref="SoundFontStore.ActivePath(PluginSettings)"/> hands the engine for <see cref="TabForgeSynth"/> (never a file).</summary>
+    public const string TabForgeSynthPath = "tabforge:synth";
     /// <summary>Silence: the built-in synth plays nothing.</summary>
     public const string None = "None";
 
     /// <summary>The engines this system offers. Windows GM is listed on Windows only (there is no gm.dls elsewhere).</summary>
     public static IReadOnlyList<string> All { get; } = OperatingSystem.IsWindows()
-        ? new[] { None, WindowsGm, SoundFont, FluidR3, MuseScoreGeneral, OwnFile }
-        : new[] { None, SoundFont, FluidR3, MuseScoreGeneral, OwnFile };
+        ? new[] { None, WindowsGm, SoundFont, FluidR3, MuseScoreGeneral, TabForgeSynth, OwnFile }
+        : new[] { None, SoundFont, FluidR3, MuseScoreGeneral, TabForgeSynth, OwnFile };
 
     /// <summary>Windows GM on Windows (what the app has always played), GeneralUser GS on every other system.</summary>
     public static string Default => OperatingSystem.IsWindows() ? WindowsGm : SoundFont;
@@ -42,6 +46,7 @@ public static class SoundEngines
         SoundFont => SoundFont,
         FluidR3 => FluidR3,
         MuseScoreGeneral => MuseScoreGeneral,
+        TabForgeSynth => TabForgeSynth,
         OwnFile => OwnFile,
         _ => windowsHost ? WindowsGm : SoundFont,
     };
@@ -55,6 +60,7 @@ public static class SoundEngines
         LegacySoundFont or SoundFont or "generaluser-gs" or "bank:generaluser-gs" => SoundFont,
         FluidR3 or "fluidr3-gm" or "bank:fluidr3-gm" => FluidR3,
         MuseScoreGeneral or "musescore-general" or "bank:musescore-general" => MuseScoreGeneral,
+        TabForgeSynth or "tabforge-synth" or TabForgeSynthPath => TabForgeSynth,
         OwnFile or "own" or "own-file" => OwnFile,
         _ => "",
     };

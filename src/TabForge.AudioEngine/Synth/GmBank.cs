@@ -2,7 +2,8 @@ using MeltySynth;
 
 namespace TabForge.AudioEngine.Synth;
 
-// Owns: which sound bank the General MIDI synths play: the Windows gm.dls (converted) or a SoundFont 2 file (GeneralUser GS), the live switch, and the rule that off Windows
+// Owns: which sound bank the General MIDI synths play: the Windows gm.dls (converted) or a SoundFont 2 file (GeneralUser GS), whether the experimental TabForge Synth
+//   plays over it (its fallback is the bank "no SoundFont" would play), the live switch, and the rule that off Windows
 //   the gm.dls is never read (the bundled SoundFont plays, else a clear "download the SoundFont" failure instead of silence).
 // Does not own: the synth (GmSynth), the DLS conversion (DlsToSoundFont) or fetching the SoundFont (the app).
 // Tests: AudioSmokeTests (bank switch with the local SF2), PortableBackendTests (the non-Windows fallback, with the OS flag injected).
@@ -16,8 +17,9 @@ public sealed class GmBank
     public const float SoundFontMasterVolume = 0.6f;
 
     /// <summary>One published choice: the font (null = Windows GM, loaded on demand), the master volume, the version that changes with every switch.</summary>
-    public sealed record Choice(SoundFont? Font, string Path, float MasterVolume, int Version, bool WindowsHost = true, bool Silent = false)
+    public sealed record Choice(SoundFont? Font, string Path, float MasterVolume, int Version, bool WindowsHost = true, bool Silent = false, TabForge.Sf2Synth.Sf2.SoundFont? Sf2 = null, bool Experimental = false)
     {
+        // Experimental: the TabForge Synth's guitar layer plays; Sf2 (when readable) replaces MeltySynth for everything else.
         /// <summary>The font to play. Windows without a SoundFont: the converted gm.dls. Elsewhere without a SoundFont: a failure that says to download it (the synth then reports itself failed). Never read when <see cref="Silent"/>.</summary>
         public SoundFont Bank => Silent ? throw new InvalidOperationException("The silent sound bank has no font to play.") : Font ?? (WindowsHost ? DlsToSoundFont.LoadWindowsBank() : throw new FileNotFoundException(NoBankMessage));
     }
@@ -67,6 +69,19 @@ public sealed class GmBank
         }
     }
 
+    // "tabforge:synth|<sf2>" (no file: the bundled SoundFont). An unreadable file plays this OS's fallback bank, so the song always sounds.
+    private Choice Experimental(string path, int version, out string error)
+    {
+        error = "";
+        var file = path.IndexOf('|') is var bar and >= 0 && bar + 1 < path.Length ? path[(bar + 1)..] : _bundledPath;
+        try { return new Choice(null, path, SoundFontMasterVolume, version, _windowsHost, Sf2: new TabForge.Sf2Synth.Sf2.SoundFont(file), Experimental: true); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException)
+        {
+            error = ex.Message;
+            return Fallback(version) with { Path = path, Experimental = true };
+        }
+    }
+
     public Choice Current => _current;
 
     // Control-thread notification only. Synths prepare replacements here; the render callback only swaps a prepared reference.
@@ -86,6 +101,7 @@ public sealed class GmBank
         if (string.Equals(old.Path, path, StringComparison.OrdinalIgnoreCase)) return true;
         if (path.Length == 0) { Publish(Fallback(old.Version + 1)); return true; }
         if (string.Equals(path, TabForge.Services.SoundEngines.None, StringComparison.Ordinal)) { Publish(new Choice(null, path, 0, old.Version + 1, _windowsHost, Silent: true)); return true; }
+        if (path.StartsWith(TabForge.Services.SoundEngines.TabForgeSynthPath, StringComparison.Ordinal)) { Publish(Experimental(path, old.Version + 1, out error)); return true; }
         var font = TryLoad(path, out error);
         if (font is null) return false;
         Publish(new Choice(font, path, SoundFontMasterVolume, old.Version + 1, _windowsHost));

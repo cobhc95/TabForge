@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Standalone SoundFont 2 synthesizer with an optional modelled guitar/bass layer. No TabForge or third-party dependencies. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="TabForge.Avalonia.Tests" />
+  </ItemGroup>
+</Project>
