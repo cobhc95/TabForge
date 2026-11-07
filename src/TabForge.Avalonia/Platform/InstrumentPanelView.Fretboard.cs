@@ -228,54 +228,67 @@ public sealed partial class InstrumentPanelView
         d.DrawText(text, p.X - text.Width / 2, p.Y - text.Height / 2);
     }
 
-    /// <summary>Top of the colour legend: bottom-aligned with the board, with the Scales button under it, never above the board's top strip.</summary>
-    /// <remarks>The Scales button is 24 real pixels, so it is that many virtual DIPs at the drawing scale.</remarks>
-    private double LegendTop(UiRect board) => Math.Max(LegendTopMinimum, board.Bottom - (LegendTitleHeight + LegendRowsHeight + LegendScalesGap + (ScalesButtonHeight * 2 + ButtonStackGap) / FretboardScale()));
+    /// <summary>
+    /// The legend card's frame beside the board: its unit (1 at the design size, smaller when the board is shorter so the card never grows taller than the board, never below
+    /// <see cref="LegendMinUnit"/>), and its left and top edges, bottom-aligned with the board and never above the board's top strip. Every legend size is its design size times the unit.
+    /// </summary>
+    private (double Unit, double Left, double Top) LegendFrame(UiRect board)
+    {
+        var design = LegendTitleHeight + LegendRowsHeight + LegendScalesGap + LegendTileHeight + 2 * LegendCardPad;
+        var unit = Math.Clamp(board.Height / design, LegendMinUnit, 1);
+        return (unit, board.Right + LegendGap - LegendCardPad, Math.Max(LegendTopMinimum, board.Bottom - design * unit));
+    }
+
+    // The legend never shrinks below this fraction of its design size, so its names stay readable.
+    private const double LegendMinUnit = 0.45;
 
     /// <summary>The colour legend beside the board: now, next, upcoming and recent while previewing, else now and recent only
     /// (the legend lists only what can appear), in the palette colours the legend uses.</summary>
     private void DrawLegend(IDrawContext d, Func<string, UiColor> ink, UiRect board)
     {
+        if (_look.LegendMinimised) return;   // only the round restore button shows (FretboardLegendToggle)
         var rows = LegendRowVariants[(_look.PreviewHorizon >= 0 ? 2 : 0) | (_look.PreviewPrevious ? 1 : 0)];
-        var x = board.Right + LegendGap;
-        var top = LegendTop(board);
-        // The card: rounded, with its title over a thin rule; the rows and the Scales button sit inside it.
-        var height = LegendTitleHeight + LegendRowsHeight + LegendScalesGap + (ScalesButtonHeight * 2 + ButtonStackGap) / FretboardScale() + LegendCardPad;
-        d.Rect(ink("FretboardCardFill"), new UiStroke(ink("FretboardCardStroke"), 1), x - LegendCardPad, top - LegendCardPad, LegendCardWidth, height + LegendCardPad, 8);
-        var title = d.Text("Legend", Font, 12.5, ink("FretboardCardTitle"), d.PixelsPerDip, weight: 600);
-        d.DrawText(title, x + 2, top + (LegendTitleHeight - title.Height) / 2 - 2);
-        d.Line(new UiStroke(ink("FretboardCardStroke"), 1), x - LegendCardPad + 6, top + LegendTitleHeight - 3, x - LegendCardPad + LegendCardWidth - 6, top + LegendTitleHeight - 3);
+        var (u, left, top) = LegendFrame(board);
+        var x = left + LegendCardPad * u;        // the content's left edge
+        var y0 = top + LegendCardPad * u;        // the content's top edge
+        // The card: rounded, with its title over a thin rule; the colour tiles and the Scales and Modify tiles sit inside it.
+        var height = (LegendTitleHeight + LegendRowsHeight + LegendScalesGap + LegendTileHeight + 2 * LegendCardPad) * u;
+        d.Rect(ink("FretboardCardFill"), new UiStroke(ink("FretboardCardStroke"), 1), left, top, LegendCardWidth * u, height, 8 * u);
+        var title = d.Text("Legend", Font, 12.5 * u, ink("FretboardCardTitle"), d.PixelsPerDip, weight: 600);
+        d.DrawText(title, x + 2 * u, y0 + (LegendTitleHeight * u - title.Height) / 2 - 2 * u);
+        d.Line(new UiStroke(ink("FretboardCardStroke"), 1), left + 6 * u, y0 + (LegendTitleHeight - 3) * u, left + (LegendCardWidth - 6) * u, y0 + (LegendTitleHeight - 3) * u);
         var tiles = rows.Length - (_look.PreviewPrevious ? 1 : 0);
+        var ty = y0 + LegendTitleHeight * u;
         for (var i = 0; i < tiles; i++)
         {
             // One tile per colour: tinted and edged in its own colour, the dot over its name.
-            var (tx, tw) = LegendTileSpan(x - LegendCardPad, i, tiles);
-            var ty = top + LegendTitleHeight;
+            var (tx, tw) = LegendTileSpan(left, i, tiles, u);
             var colour = ink(rows[i].Key);
-            d.Rect(new UiColor(LegendTileTint, colour.R, colour.G, colour.B), new UiStroke(new UiColor(LegendTileEdge, colour.R, colour.G, colour.B), 1), tx, ty, tw, LegendTileHeight, LegendTileRadius);
-            d.Ellipse(colour, new UiStroke(ink("InstrumentWood"), 1.5), tx + tw / 2, ty + 14, LegendDotRadius + 1, LegendDotRadius + 1);
-            var name = d.Text(rows[i].Label, Font, 11, ink("InstrumentLegible"), d.PixelsPerDip);
-            d.DrawText(name, tx + (tw - name.Width) / 2, ty + 25);
+            d.Rect(new UiColor(LegendTileTint, colour.R, colour.G, colour.B), new UiStroke(new UiColor(LegendTileEdge, colour.R, colour.G, colour.B), 1), tx, ty, tw, LegendTileHeight * u, LegendTileRadius * u);
+            d.Ellipse(colour, new UiStroke(ink("InstrumentWood"), 1.5), tx + tw / 2, ty + 14 * u, (LegendDotRadius + 1) * u, (LegendDotRadius + 1) * u);
+            var name = d.Text(rows[i].Label, Font, 11 * u, ink("InstrumentLegible"), d.PixelsPerDip);
+            d.DrawText(name, tx + (tw - name.Width) / 2, ty + 25 * u);
         }
         if (!_look.PreviewPrevious) return;
         // The recent colour has no setting, so it stays a plain row under the tiles.
-        var y = top + LegendTitleHeight + LegendTileHeight;
-        d.Ellipse(ink(rows[^1].Key), new UiStroke(ink("InstrumentWood"), 1.5), x + LegendDotX, y + LegendDotY, LegendDotRadius, LegendDotRadius);
-        var label = d.Text(rows[^1].Label, Font, 12, ink("InstrumentLegible"), d.PixelsPerDip);
-        d.DrawText(label, x + 17, y + (LegendRowHeight - label.Height) / 2);
+        var y = ty + LegendTileHeight * u;
+        d.Ellipse(ink(rows[^1].Key), new UiStroke(ink("InstrumentWood"), 1.5), x + LegendDotX * u, y + LegendDotY * u, LegendDotRadius * u, LegendDotRadius * u);
+        var label = d.Text(rows[^1].Label, Font, 12 * u, ink("InstrumentLegible"), d.PixelsPerDip);
+        d.DrawText(label, x + 17 * u, y + (LegendRowHeight * u - label.Height) / 2);
     }
 
     // Tile alphas: the tint under the dot and name, and its edge.
     private const byte LegendTileTint = 0x33, LegendTileEdge = 0x88;
 
-    /// <summary>The left edge and width of tile <paramref name="index"/> of <paramref name="count"/>, inside a card whose left edge is <paramref name="cardLeft"/> (board units).</summary>
-    private static (double X, double Width) LegendTileSpan(double cardLeft, int index, int count)
+    /// <summary>The left edge and width of tile <paramref name="index"/> of <paramref name="count"/>, inside a card whose left edge is <paramref name="cardLeft"/>, at legend unit <paramref name="unit"/> (board units).</summary>
+    private static (double X, double Width) LegendTileSpan(double cardLeft, int index, int count, double unit)
     {
-        var width = (LegendCardWidth - 2 * LegendRowInset - LegendTileGap * (count - 1)) / count;
-        return (cardLeft + LegendRowInset + index * (width + LegendTileGap), width);
+        var gap = LegendTileGap * unit;
+        var width = (LegendCardWidth * unit - 2 * LegendRowInset * unit - gap * (count - 1)) / count;
+        return (cardLeft + LegendRowInset * unit + index * (width + gap), width);
     }
 
-    /// <summary>The height of the legend's colour block: the tile row, and the recent row under it while it is listed.</summary>
+    /// <summary>The height of the legend's colour block at the design size: the tile row, and the recent row under it while it is listed.</summary>
     private double LegendRowsHeight => LegendTileHeight + (_look.PreviewPrevious ? LegendRowHeight : 0);
 
     // Immutable variants; never retain theme colours, sizes or per-panel state in this shared table.
@@ -293,29 +306,55 @@ public sealed partial class InstrumentPanelView
     // A clickable legend row is inset this far from the card's sides (board units), so it stays inside the card.
     private const double LegendRowInset = 4;
 
-    /// <summary>The legend row (dot and label) for <paramref name="role"/> (its tile in the row of colour tiles), in panel coordinates: null on the keyboard and
+    /// <summary>The legend tile for <paramref name="role"/> in the row of colour tiles, in panel coordinates: null on the keyboard and
     /// drums, and for next and upcoming while the legend does not list them (look-ahead off).</summary>
     public UiRect? LegendRowBounds(FretNoteRole role)
     {
-        if (_kind != InstrumentPanelKind.Fretboard) return null;
+        if (_kind != InstrumentPanelKind.Fretboard || _look.LegendMinimised) return null;
         var row = role == FretNoteRole.Now ? 0 : _look.PreviewHorizon < 0 ? -1 : role == FretNoteRole.Next ? 1 : 2;
         if (row < 0) return null;
         var board = FretboardLayout().Board;
         var s = FretboardScale();
-        var (left, width) = LegendTileSpan(board.Right + LegendGap - LegendCardPad, row, _look.PreviewHorizon < 0 ? 1 : 3);
-        return new UiRect(left * s, (LegendTop(board) + LegendTitleHeight) * s, width * s, LegendTileHeight * s);
+        var (u, left, top) = LegendFrame(board);
+        var (x, w) = LegendTileSpan(left, row, _look.PreviewHorizon < 0 ? 1 : 3, u);
+        return new UiRect(x * s, (top + (LegendCardPad + LegendTitleHeight) * u) * s, w * s, LegendTileHeight * u * s);
     }
 
-    /// <summary>Where the Scales button goes on a fretboard: under the legend, in panel coordinates. Null for the keyboard and drums.</summary>
-    public UiPoint? ScalesAnchor()
+    /// <summary>Where the Scales and Modify buttons go on a fretboard: two tiles in one row under the colour tiles, the same height and corners, in panel coordinates, and the size of one legend unit
+    /// in real pixels (the drawing scale times the legend's own unit), which sizes their icon and text. Null for the keyboard and drums.</summary>
+    public (UiRect Scales, UiRect Customize, double Unit)? ActionTileBounds()
+    {
+        if (_kind != InstrumentPanelKind.Fretboard || _look.LegendMinimised) return null;
+        var board = FretboardLayout().Board;
+        var s = FretboardScale();
+        var (u, left, top) = LegendFrame(board);
+        var y = (top + (LegendCardPad + LegendTitleHeight + LegendRowsHeight + LegendScalesGap) * u) * s;
+        UiRect Tile(int index) { var (x, w) = LegendTileSpan(left, index, 2, u); return new UiRect(x * s, y, w * s, LegendTileHeight * u * s); }
+        return (Tile(0), Tile(1), u * s);
+    }
+
+    /// <summary>True while the fretboard's legend is minimised to its round button.</summary>
+    internal bool LegendMinimised => _kind == InstrumentPanelKind.Fretboard && _look.LegendMinimised;
+
+    // The minimised legend's round button, in board units at the legend's unit; the minimise button in the title row.
+    private const double LegendRestoreSize = 30, LegendMinimiseSize = 18;
+
+    /// <summary>
+    /// Where the legend's minimise and restore button goes, in panel coordinates, and the legend unit in real pixels: a small button at the right of the title row while the legend is open,
+    /// the round restore button where the card's bottom-left corner was while it is minimised. Null for the keyboard and drums.
+    /// </summary>
+    public (UiRect Rect, bool Minimised, double Unit)? LegendToggleBounds()
     {
         if (_kind != InstrumentPanelKind.Fretboard) return null;
         var board = FretboardLayout().Board;
         var s = FretboardScale();
-        return new UiPoint((board.Right + LegendGap - 2) * s, (LegendTop(board) + LegendTitleHeight + LegendRowsHeight + LegendScalesGap) * s);
+        var (u, left, top) = LegendFrame(board);
+        if (_look.LegendMinimised)
+        {
+            var cardBottom = top + (LegendTitleHeight + LegendRowsHeight + LegendScalesGap + LegendTileHeight + 2 * LegendCardPad) * u;
+            return (new UiRect(left * s, (cardBottom - LegendRestoreSize * u) * s, LegendRestoreSize * u * s, LegendRestoreSize * u * s), true, u * s);
+        }
+        var size = LegendMinimiseSize * u;
+        return (new UiRect((left + LegendCardWidth * u - 6 * u - size) * s, (top + LegendCardPad * u + (LegendTitleHeight * u - size) / 2 - 1.5 * u) * s, size * s, size * s), false, u * s);
     }
-
-    /// <summary>Where the Customize button goes on a fretboard: under the Scales button in the legend card, in panel coordinates. Null for the keyboard and drums.</summary>
-    public UiPoint? CustomizeAnchor() =>
-        ScalesAnchor() is { } scales ? new UiPoint(scales.X, scales.Y + ScalesButtonHeight + ButtonStackGap) : null;
 }

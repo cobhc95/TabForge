@@ -55,6 +55,8 @@ public sealed class EditingSettings
     public string FretUpcomingColour { get; set; } = "";
     /// <summary>The fretboard's playing-note dots: "Fill" (default) or "Ring" (FretNoteColours.DotStyles).</summary>
     public string FretDotStyle { get; set; } = FretNoteColours.Fill;
+    /// <summary>The fretboard's colour legend is minimised to one round button; the button restores it.</summary>
+    public bool FretLegendMinimised { get; set; }
     /// <summary>Brightness of the entire physical neck (wood, inlays, wires, strings and capo), independent of note markers.</summary>
     public int FretboardBrightness { get; set; } = FretboardStyles.DefaultBoardBrightness;
     /// <summary>What the fretboard look follows: the theme ("Dark" or "Light") its default was last set for, "Own" once the person chose a

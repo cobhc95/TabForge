@@ -77,7 +77,8 @@ public sealed class FretboardSettingsBinding
         TabForge.Platform.UiColor? NowColour = null,
         TabForge.Platform.UiColor? NextColour = null,
         TabForge.Platform.UiColor? UpcomingColour = null,
-        bool RingDots = false)
+        bool RingDots = false,
+        bool LegendMinimised = false)
     {
         /// <summary>True when the person picked a colour of their own for any playing role (null colours follow the theme).</summary>
         public bool HasNoteColours => NowColour is not null || NextColour is not null || UpcomingColour is not null;
@@ -125,7 +126,8 @@ public sealed class FretboardSettingsBinding
                 NowColour: CustomColour("Custom", editing.FretNowColour),
                 NextColour: CustomColour("Custom", editing.FretNextColour),
                 UpcomingColour: CustomColour("Custom", editing.FretUpcomingColour),
-                RingDots: FretNoteColours.NormalizeStyle(editing.FretDotStyle) == FretNoteColours.Ring);
+                RingDots: FretNoteColours.NormalizeStyle(editing.FretDotStyle) == FretNoteColours.Ring,
+                LegendMinimised: editing.FretLegendMinimised);
         }
     }
 

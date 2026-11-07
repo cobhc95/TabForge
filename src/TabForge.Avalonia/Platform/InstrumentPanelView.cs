@@ -59,10 +59,7 @@ public sealed partial class InstrumentPanelView : Control
     /// <summary>The now, next and upcoming tiles share one row inside the card: each tile's height, the gap between tiles and its corner radius (board units).</summary>
     internal const double LegendTileHeight = 44, LegendTileRadius = 8;
     private const double LegendTileGap = 4;
-    private const double LegendScalesGap = 6;
-    private const double ScalesButtonHeight = 24;
-    /// <summary>The gap between the Scales button and the Customize button under it, in real pixels.</summary>
-    private const double ButtonStackGap = 4;
+    private const double LegendScalesGap = LegendTileGap;
     /// <summary>Text on a lit fret marker (black on the lit green), whatever the theme.</summary>
     private static readonly int[] StandardTuning = { 64, 59, 55, 50, 45, 40 };
 

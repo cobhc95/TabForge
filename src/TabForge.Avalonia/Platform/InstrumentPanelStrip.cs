@@ -1,5 +1,6 @@
 using System;
 using Avalonia;
+using TabForge.Platform;
 using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
 using Avalonia.Layout;
@@ -41,6 +42,7 @@ public sealed class InstrumentPanelStrip : Grid
     /// <summary>The Scales button, the anchor of the scale popup; invisible when the pane has no scale (a drum track).</summary>
     internal Control ScalesAnchor => _scales;
     private readonly Canvas _scalesLayer = new();
+    private readonly FretboardLegendToggle _legendToggle;
     private readonly FretboardLegendRows _legendRows;
 
     /// <summary>The legend's now, next and upcoming row targets (tests read them).</summary>
@@ -84,6 +86,8 @@ public sealed class InstrumentPanelStrip : Grid
         _scalesLayer.Children.Add(_scales);
         _scalesLayer.Children.Add(_customize);
         _legendRows = new FretboardLegendRows(Panel, _scalesLayer);
+        _legendToggle = new FretboardLegendToggle(() => NoteColourStore);
+        _scalesLayer.Children.Add(_legendToggle);
         _customize.Click += (_, _) => CustomizeRequested?.Invoke();
         Children.Add(Panel);
         Children.Add(_scalesLayer);
@@ -254,6 +258,7 @@ public sealed class InstrumentPanelStrip : Grid
         var size = base.ArrangeOverride(finalSize);
         PlaceScalesButton();
         PlaceCustomizeButton();
+        PlaceLegendToggle();
         _legendRows.Place();
         return size;
     }
@@ -315,9 +320,10 @@ public sealed class InstrumentPanelStrip : Grid
         ClearPlaybackNotesKey();
         ShowPlaybackNotes();
         // Drum tracks have no scale: the Scales button stays hidden on the drum map.
-        _scales.IsVisible = _track is not null && Panel.Kind != InstrumentPanelKind.Drums;
+        _scales.IsVisible = _track is not null && Panel.Kind != InstrumentPanelKind.Drums && !Panel.LegendMinimised;
         PlaceScalesButton();
         PlaceCustomizeButton();
+        PlaceLegendToggle();
         _legendRows.Place();
     }
 
@@ -330,30 +336,64 @@ public sealed class InstrumentPanelStrip : Grid
         _timelineWatch.Bind(song);
     }
 
-    /// <summary>Under the fretboard's colour legend when the panel has one; otherwise at the top-right, left of the close X (a keyboard or drum panel).</summary>
+    /// <summary>A tile under the fretboard's colour tiles when the panel has a legend; otherwise Scales sits at the top-right, left of the close X (a keyboard or drum panel).</summary>
     private void PlaceScalesButton()
     {
-        if (Panel.ScalesAnchor() is { } anchor)
+        _scales.IsVisible = _track is not null && Panel.Kind != InstrumentPanelKind.Drums && !Panel.LegendMinimised;
+        if (Panel.LegendMinimised) return;   // the legend is folded into its round button
+        if (Panel.ActionTileBounds() is { } tiles)
         {
             Canvas.SetRight(_scales, double.NaN);
-            Canvas.SetLeft(_scales, anchor.X);
-            Canvas.SetTop(_scales, anchor.Y);
+            Place(_scales, tiles.Scales, tiles.Unit);
             return;
         }
+        FitButton(_scales, null, 1);
         Canvas.SetLeft(_scales, double.NaN);
         Canvas.SetRight(_scales, InstrumentPanelView.CloseButtonReserve);
         Canvas.SetTop(_scales, CornerScalesTop);
     }
 
-    /// <summary>Under Scales in the legend; hidden on the keyboard and the drum map, which have no board to customise.</summary>
+    /// <summary>Beside Scales in the legend; hidden on the keyboard and the drum map, which have no board to customise.</summary>
     private void PlaceCustomizeButton()
     {
-        var anchor = Panel.CustomizeAnchor();
-        _customize.IsVisible = anchor is not null && _track is not null;
-        if (anchor is not { } point) return;
-        // Match Scales' real-DIP font and button size; the shorter label fits the legend.
-        Canvas.SetLeft(_customize, point.X);
-        Canvas.SetTop(_customize, point.Y);
+        var tiles = Panel.ActionTileBounds();
+        _customize.IsVisible = tiles is not null && _track is not null && !Panel.LegendMinimised;
+        if (tiles is { } both) Place(_customize, both.Customize, both.Unit);
+    }
+
+    // The legend's minimise / restore button: beside the title while open, a round button while minimised; hidden on the keyboard and drums.
+    private void PlaceLegendToggle()
+    {
+        var bounds = Panel.LegendToggleBounds();
+        _legendToggle.IsVisible = bounds is not null && _track is not null && NoteColourStore is not null;
+        if (bounds is not { } b) return;
+        _legendToggle.Fit(b.Rect, b.Minimised, b.Unit);
+        Canvas.SetLeft(_legendToggle, b.Rect.X);
+        Canvas.SetTop(_legendToggle, b.Rect.Y);
+    }
+
+    private static void Place(Button button, UiRect tile, double unit)
+    {
+        FitButton(button, tile, unit);
+        Canvas.SetLeft(button, tile.X);
+        Canvas.SetTop(button, tile.Y);
+    }
+
+    // A legend tile (icon over label, the colour tiles' height and corners, its icon and text at the legend's unit) or the corner pill (icon beside label).
+    private static void FitButton(Button button, UiRect? tile, double unit)
+    {
+        var content = (StackPanel)button.Content!;
+        var icon = (Viewbox)content.Children[0];
+        content.Orientation = tile is null ? Orientation.Horizontal : Orientation.Vertical;
+        content.HorizontalAlignment = HorizontalAlignment.Center;
+        content.VerticalAlignment = VerticalAlignment.Center;
+        var size = tile is null ? FretboardChromeMetrics.PillIcon : FretboardChromeMetrics.TileIcon * unit;
+        icon.Width = icon.Height = size;
+        icon.Margin = tile is null ? new Thickness(0, 0, FretboardChromeMetrics.PillIconGap, 0) : new Thickness(0, 0, 0, FretboardChromeMetrics.TileIconGap * unit);
+        button.FontSize = ((TextBlock)content.Children[1]).FontSize = FretboardChromeMetrics.PillFontSize * (tile is null ? 1 : unit);
+        button.Width = tile?.Width ?? FretboardChromeMetrics.PillWidth;
+        button.Height = tile?.Height ?? FretboardChromeMetrics.PillHeight;
+        button.CornerRadius = new CornerRadius(tile is { } t ? t.Height * InstrumentPanelView.LegendTileRadius / InstrumentPanelView.LegendTileHeight : FretboardChromeMetrics.PillRadius);
     }
 
     private static Button CustomizeButton()

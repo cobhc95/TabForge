@@ -147,7 +147,7 @@ public class InstrumentPanelViewTests
                 .Where(b => b.Name is "ScalesButton" or "FretboardCustomizeButton").ToList();
             Assert.Equal(2, buttons.Count);
             var labels = buttons.Select(b => ((StackPanel)b.Content!).Children.OfType<TextBlock>().Single()).ToList();
-            Assert.All(labels, label => Assert.Equal(FretboardChromeMetrics.PillFontSize, label.FontSize));
+            Assert.Equal(labels[0].FontSize, labels[1].FontSize);   // one size for both; the legend's unit sets it
             Assert.Equal(labels[0].FontFamily, labels[1].FontFamily);
             Assert.Equal(labels[0].FontWeight, labels[1].FontWeight);
             Assert.Equal(labels[0].FontStyle, labels[1].FontStyle);
