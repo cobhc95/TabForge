@@ -367,9 +367,9 @@ public sealed class InstrumentPanelStrip : Grid
         var bounds = Panel.LegendToggleBounds();
         _legendToggle.IsVisible = bounds is not null && _track is not null && NoteColourStore is not null;
         if (bounds is not { } b) return;
-        _legendToggle.Fit(b.Rect, b.Minimised, b.Unit);
-        Canvas.SetLeft(_legendToggle, b.Rect.X);
-        Canvas.SetTop(_legendToggle, b.Rect.Y);
+        var reach = _legendToggle.Fit(b.Rect, b.Minimised, b.Unit);   // the clickable area reaches this far beyond the chip
+        Canvas.SetLeft(_legendToggle, b.Rect.X - reach);
+        Canvas.SetTop(_legendToggle, b.Rect.Y - reach);
     }
 
     private static void Place(Button button, UiRect tile, double unit)

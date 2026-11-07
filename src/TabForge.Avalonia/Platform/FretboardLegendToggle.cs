@@ -23,6 +23,8 @@ internal sealed class FretboardLegendToggle : Button
     private readonly Func<(Func<AppSettings?> Settings, Action Save)?> _store;
     private readonly Path _glyph = new() { StrokeLineCap = PenLineCap.Round, StrokeJoin = PenLineJoin.Round };
     private readonly Viewbox _icon = new() { Stretch = Stretch.Uniform };
+    // The visible chip (the chevron, or the round palette button); the button around it is larger so it is easy to hit.
+    private readonly Border _chip = new() { IsHitTestVisible = false, HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center, VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center };
     private bool _minimised;
 
     public FretboardLegendToggle(Func<(Func<AppSettings?> Settings, Action Save)?> store)
@@ -37,20 +39,28 @@ internal sealed class FretboardLegendToggle : Button
         VerticalContentAlignment = global::Avalonia.Layout.VerticalAlignment.Center;
         _glyph[!Shape.StrokeProperty] = new DynamicResourceExtension("IconActiveBrush");
         _icon.Child = _glyph;
-        Content = _icon;
-        this[!BorderBrushProperty] = new DynamicResourceExtension("BorderSoftBrush");
+        _chip.Child = _icon;
+        Content = _chip;
+        BorderThickness = new Thickness(0);
+        Background = AvaloniaPalette.TransparentBrush;   // a brush, so the whole area around the chip takes the click
         HoverShade.Attach(this, hovered => Rest(hovered));
         Click += (_, _) => Flip();
     }
 
-    /// <summary>Shapes the button for the legend's state: <paramref name="rect"/> is its place in panel coordinates, <paramref name="unit"/> the legend unit in real pixels.</summary>
-    public void Fit(UiRect rect, bool minimised, double unit)
+    /// <summary>
+    /// Shapes the button for the legend's state: <paramref name="rect"/> is the chip's place in panel coordinates, <paramref name="unit"/> the legend unit in real pixels. The clickable
+    /// area is larger than the chip all round; returns how far it reaches beyond the chip, so the caller places the button that much up and left.
+    /// </summary>
+    public double Fit(UiRect rect, bool minimised, double unit)
     {
         _minimised = minimised;
-        Width = rect.Width;
-        Height = rect.Height;
-        CornerRadius = new CornerRadius(minimised ? rect.Width / 2 : 4 * unit);
-        BorderThickness = minimised ? FretboardChromeMetrics.PillBorder : new Thickness(0);
+        var pad = Math.Max(5, 7 * unit);
+        Width = rect.Width + 2 * pad;
+        Height = rect.Height + 2 * pad;
+        _chip.Width = rect.Width;
+        _chip.Height = rect.Height;
+        _chip.CornerRadius = new CornerRadius(minimised ? rect.Width / 2 : 4 * unit);
+        _chip.BorderThickness = minimised ? FretboardChromeMetrics.PillBorder : new Thickness(1);
         _glyph.Data = Geometry.Parse(minimised ? FretboardChromeMetrics.PillIconPath : ChevronPath);
         _glyph.StrokeThickness = FretboardChromeMetrics.PillStroke;
         _glyph.Width = _glyph.Height = minimised ? 24 : 14;
@@ -59,13 +69,15 @@ internal sealed class FretboardLegendToggle : Button
         ToolTip.SetTip(this, label);
         AutomationProperties.SetName(this, label);
         Rest(false);
+        return pad;
     }
 
+    // Rest: the round button keeps its panel fill and edge, the chevron has none. Hover: the chip takes the hover shade and an edge in both states.
     private void Rest(bool hovered)
     {
-        if (hovered) Background = HoverShade.Brush(this);
-        else if (_minimised) this[!BackgroundProperty] = new DynamicResourceExtension("Panel2Brush");
-        else Background = AvaloniaPalette.TransparentBrush;
+        if (hovered) { _chip.Background = HoverShade.Brush(this); _chip[!Border.BorderBrushProperty] = new DynamicResourceExtension("BorderBrush"); return; }
+        if (_minimised) { _chip[!Border.BackgroundProperty] = new DynamicResourceExtension("Panel2Brush"); _chip[!Border.BorderBrushProperty] = new DynamicResourceExtension("BorderSoftBrush"); }
+        else { _chip.Background = AvaloniaPalette.TransparentBrush; _chip.BorderBrush = AvaloniaPalette.TransparentBrush; }
     }
 
     private void Flip()
