@@ -5,7 +5,7 @@ Standalone SoundFont 2.04 synthesizer (no dependencies) with an optional modelle
 ## Files
 - `Sf2/` file model: `SoundFont` (RIFF, samples), `Sf2Reader` (pdta hydra), `Zone` (zones, presets, instruments, sample headers), `Gen` (generator numbers, defaults), `Mod` (modulator curves, default modulators).
 - `Synth/` playback: `Synthesizer` (public API, voice allocation), `Channel` (MIDI state, RPN), `Voice.Setup` (zones -> generators + modulators), `Voice` (render), `Envelope` (DAHDSR + LFO), `ILayer`, `SynthOptions` (every switch, live).
-- `Humanize/` the MIDI pre-stage: `Humanizer` (batch per instant, look-ahead queue, order per key, note lengths), `Evidence` (is the input flat?), `Phrase` (pulse, bar grid, level and timing parts of a stroke), `Strum` (strings of a stroke), `Noise` (seeded Rng, 1/f Pink), `Nuance` (per-note voice variation), `HumanTable` (all values: feel styles, families).
+- `Humanize/` the note pass a host runs on the written notes: `Humanizer` (strokes, window, motifs, neighbours, per-key order), `Notes` (input, output, level parts), `Dynamics` (level parts), `Timing` (onset parts, fast runs, lengths), `Strum` (strings of a stroke), `Evidence` (is the input flat?), `Noise` (position-keyed hashes and value noise), `HumanTable` (all values: feel styles, families); in the synth `VoiceVariation` draws each note's `Nuance` (voice variation).
 - `Effects/` `Reverb` (Freeverb), `Chorus`.
 - `Dsp/` shared: `Biquad`, `FirHistory` (SIMD FIR), `Oversampler2x`.
 - `Guitar/` the layer: `GuitarLayer` (MIDI, strings, mix), `PluckedString` (waveguide; `.Attack`: pluck, slap, tap noise, fretless mwah), `StringPhysics`, `GuitarBus` (rig), `BodyModes` (acoustic body), `Compressor`, `StageAmp` (IAmpModel), `CabinetImpulse` (guitar, bass, room), `Voicings` (all values), `VoicingSpecs` (their types), `GuitarRig` (user files, the embedded captured amp), `Amps/captured.nam` (embedded resource).
@@ -32,11 +32,33 @@ trained on: low cut 135 Hz, pickup resonance near 900 Hz under a 2 kHz roll-off,
 two-coil bridge humbucker. `GuitarLayerTests.TheDiMatchesTheMeasuredGuitarDi` keeps its octave-band shape within 3 dB of the measured curve.
 
 ## Humanizer
-Off in the library (`Options.Humanize`). The model and its numbers: `docs/specs/HUMAN_FEEL_SPEC.md`; every value in `HumanTable`.
-- Evidence: per channel, over the last 16 notes, velocities on 4 levels or fewer, or with small spread and long identical runs, are flat; onsets whose intervals match each other in simple ratios within 0.1 ms are a grid. Only what is flat changes, scaled by how flat (0 = untouched); the first 6 notes never change. Guitars/basses (24-39) and bowed (40-51) only; never channel 10.
-- Level in dB (no step cap): metric accent, a bar pattern that repeats bar to bar, phrase arch, 1/f noise, white, down/up picking, softer fast notes, soft ceiling, ghost strokes on 16th offbeats, steady palm-mute chugs. Timing: bar pattern, 1/f, jitter, tempo drift, laid-back or pushed bias, placed around a look-ahead so notes land early and late. Strums by direction, dynamics and tempo; note lengths vary.
-- Feel presets (`SynthOptions.Feel`, also in `SynthOptions.Choices`): Tight (level std ~2.5 dB, onsets ~7 ms, strum 14 ms, look-ahead 20 ms), Natural (default: 4 dB, 12 ms, 25 ms, 35 ms), Loose (5 dB, 19 ms, 45 ms laid back, 50 ms).
-- Latency: while on, every event of every channel waits for the look-ahead; `Synthesizer.Latency` reports it (0 when off), a host shifts the output back. Note-offs stay in order per key, never before their note-on, across switch-off, `NoteOffAll` and `Reset`. Seeded per channel; `Reset` repeats a render bit for bit.
+A pass over a track's WRITTEN notes, run by the host before playback or render (TabForge: `SynthHumanizePass` through
+`PlaybackOptions.Humanizer`): `Humanizer.Apply(notes, output, program, options, seed)`. Early notes are simply scheduled earlier: no
+look-ahead, no latency. Guitars/basses (24-39) and bowed (40-51) only; never drums. Every value is in `HumanTable`.
+- Input (`HumanNote`): written on/off ms, key, velocity, string, the performed bar (a key: passes of a repeat differ), the section's first
+  bar, beat position, meter (beats, unit), beat length, a stroke id (notes struck together) and written marks (palm mute, legato,
+  slide, ghost, dead, accent, pick up/down).
+- Window: each bar is judged from `Before` (2) bars back to `After` (4) ahead: energy (strokes per beat) and the evidence that the
+  input is flat. Every random value is a pure hash of position (seed, bar, beat), and the slow drifts are octaves of value noise at
+  that position, so a start mid-song gives the same notes as the whole song once the window is filled, and an edit changes only bars
+  within the window of it (`HumanizerTests`).
+- Level (dB, `Dynamics`): every part but one follows from the music: meter (downbeat, middle, beats, 8ths, 16ths from the real time
+  signature; compound meters in threes), syncopation, note length, melodic peaks and rising lines, a 4-bar arch from the section start,
+  energy, pick hand and string crossing, run grouping, motif memory (the hash of a beat's rhythm and intervals keys its offsets, so the
+  same riff gets the same accents) and legato finger unevenness. The only free part, the residue, is slow, smooth and bounded to +-1 dB.
+  Ghost and dead notes keep half; palm-mute chugs half of motif and residue. Then the feel's scale, a 3:1 ceiling above +4 dB, +-10 dB cap.
+- Timing (ms, `Timing`): bias, slow wander (1-8 bars), smooth pushes and pulls (1/8-1/2 bar), small jitter, the motif's own timing.
+  Fast single-note runs (next note within 250 ms): first of each group of 2/3/4 early and louder, upstrokes late and softer (grid
+  alternation unless marked), string crossing +1..4 ms, rush on rising and lean on falling lines, legato notes late, a rare smoothly early
+  or late note (never a wrong or missing note). Offsets are about constant in ms and capped at 30 % of the neighbouring intervals.
+  Lengths change by up to 12 % (15 ms), the same for the same motif position. Chords of 3+ notes keep the strum model (`Strum`).
+- Order: per key every note keeps its note-off after its note-on and ends before the same key starts again.
+- Leave human input alone (`Evidence`): velocity is human with many distinct values and a spread or short runs; timing with few
+  onsets on the grid; human parts get 0.
+- Feel presets (`SynthOptions.Feel`): Tight, Natural (default), Loose scale level and timing (0.65 / 1 / 1.5) and set strum, bias and odd-note rate.
+- Add a rule: add its amount to `HumanTable`, compute it in `Dynamics.Parts` (a new `LevelParts` field, counted in `Structural` when it
+  follows from the music) or in `Timing.Shift`, from the stroke's `Ctx` (add what it needs in `Humanizer.Contexts`, from notes within
+  the window only); keep it a function of position and nearby content, and check it in `HumanizerTests`.
 
 `SynthOptions` holds every switch (guitar layer, humanize and its parts: velocity, timing, voice, drift, feel); swap the whole record from any thread; `SynthOptions.Fields` and `Choices` list name, help, get and set for a generated menu.
 
@@ -45,7 +67,8 @@ Off in the library (`Options.Humanize`). The model and its numbers: `docs/specs/
 var synth = new Synthesizer(new SoundFont("bank.sf2"), 48000, maxVoices: 64, effects: true) { Layer = new GuitarLayer(48000) };
 synth.ProcessMidiMessage(channel, 0x90, key, velocity);
 synth.Render(left, right);   // any length, no allocation
-synth.Options = synth.Options with { Humanize = true };   // any thread, mid-song too
+synth.Options = synth.Options with { Humanize = true };   // voice variation; any thread, mid-song too
+Humanizer.Apply(notes, played, program: 30, synth.Options, seed: 1);   // the note pass, before playing
 ```
 
 ## Add an instrument processor

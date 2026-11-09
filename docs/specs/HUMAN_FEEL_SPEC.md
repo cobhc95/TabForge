@@ -98,8 +98,8 @@ Remove the ±12 velocity cap (MaxDelta); cap at ±10 dB instead.
 | Fast notes | IOI < 120 ms: jitter ×0.7 | fast playing is motor-locked |
 | Swing (only if the score asks) | ratio = clamp(2.8 - 0.009·(BPM-60), 1.2, 3.0); per-note σ 0.3 | falls with tempo |
 Target onset std vs grid: tight 6-8, natural 11-14 (owner 11.7), loose 18-24 ms.
-The engine can only delay: run with a fixed look-ahead budget of 35 ms (tight 20, loose 50) reported as latency, and place
-offsets around that, so early notes exist. Max total delay = budget + max positive offset + strum (about 110 ms at loose).
+Since v3 the humanizer is a pass over the written notes before playback, so early notes are simply scheduled earlier (no look-ahead,
+no latency); v3's structural model and numbers are in `TABFORGE_SYNTH_STATUS.md` and the library README.
 
 ### Strum (chords of ≥ 3 notes arriving together)
 | Part | Natural value | Notes |
