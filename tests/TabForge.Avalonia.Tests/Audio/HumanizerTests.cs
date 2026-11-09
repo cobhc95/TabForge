@@ -12,7 +12,7 @@ using Xunit.Abstractions;
 namespace TabForge.Avalonia.Tests;
 
 // Owns: the checks of the humanizer v3 (a pass over the written notes): levels follow the music (explained share, every change
-//   between neighbours explained, identical bars within 2 dB), fast runs (constant-ms correlated timing, group accents, picking and
+//   between neighbours explained, identical bars within 2.5 dB), fast runs (constant-ms correlated timing, group accents, picking and
 //   string crossing, no flams), strums, the window (mid-song start and an edit change only the neighbourhood), determinism, per-key
 //   order under fuzz, human input untouched, feels ordered, voice variation in the synth (bit-identical, no allocation), CPU.
 // Does not own: songs and statistics (HumanizerTests.Songs.cs), the demo (HumanizerTests.Demo.cs), the guitar sound (GuitarLayerTests).
@@ -30,7 +30,7 @@ public sealed partial class HumanizerTests(ITestOutputHelper output)
         var structural = parts.Select(p => Dynamics.Total(p with { Residue = 0 }, HumanTable.Styles[1], HumanTable.Guitar)).ToArray();
         var explained = 1 - Std(db.Zip(structural, (a, b) => a - b)) * Std(db.Zip(structural, (a, b) => a - b)) / (Std(db) * Std(db));
         output.WriteLine($"level std {Std(db):F2} dB, structural {Std(structural):F2} dB, explained variance {explained:P1}, residue max {parts.Max(p => Math.Abs(p.Residue)):F2} dB");
-        Assert.InRange(Std(db), 2, 5);
+        Assert.InRange(Std(db), 3.8, 5.2);   // natural about 4.5 dB (owner 4.3-6.1)
         Assert.True(explained > 0.8);
         Assert.All(parts, p => Assert.InRange(p.Residue, -HumanTable.ResidueDb, HumanTable.ResidueDb));
         // Between neighbours the change that the rules do not explain is the residue's slow step plus velocity rounding.
@@ -38,12 +38,12 @@ public sealed partial class HumanizerTests(ITestOutputHelper output)
         output.WriteLine($"largest unexplained step between neighbours {worst:F2} dB");
         Assert.True(worst < 1);
 
-        // Identical bars (the riff's bars 0-2, 4-6, ...): the same contour within 2 dB (after their mean), raw difference reported.
+        // Identical bars (the riff's bars 0-2, 4-6, ...): the same contour within 2.5 dB (after their mean), raw difference reported.
         var bars = song.Notes.Select((n, i) => (n, d: db[i])).Where(x => x.n.Bar < 16 && x.n.Bar % 4 != 3).GroupBy(x => x.n.Bar).Select(g => g.Select(x => x.d).ToArray()).ToList();
         var contour = bars.Skip(1).Max(b => b.Zip(bars[0], (x, y) => Math.Abs(x - b.Average() - (y - bars[0].Average()))).Max());
         var raw = bars.Skip(1).Max(b => b.Zip(bars[0], (x, y) => Math.Abs(x - y)).Max());
         output.WriteLine($"identical bars: contour difference {contour:F2} dB (raw incl. phrase arch {raw:F2} dB)");
-        Assert.True(contour <= 2);
+        Assert.True(contour <= 2.5);   // half the 4.5 dB level spread
     }
 
     [Theory]
@@ -66,7 +66,7 @@ public sealed partial class HumanizerTests(ITestOutputHelper output)
             $"upstrokes {up - down:F1} ms later, closest onsets {gaps:F1} ms, level std {Std(song.Notes.Select((n, i) => Db(n, o[i]))):F2} dB");
         Assert.InRange(Std(off), 5, 12);
         Assert.True(lag1 > 0.3);   // smooth pushes and pulls, not independent jitter
-        Assert.InRange(first - rest, 1, 5);
+        Assert.InRange(first - rest, 4, 9);   // owner: the two pulse positions differ by 5-7 dB
         Assert.True(up > down);
         Assert.True(gaps > 0.4 * ioi);
         Assert.Equal(song.Notes.Count, o.Length);
@@ -150,6 +150,8 @@ public sealed partial class HumanizerTests(ITestOutputHelper output)
             (Db: Std(song.Notes.Select((n, i) => Db(n, o[i]))), Ms: Std(song.Notes.Select((n, i) => o[i].OnMs - n.OnMs)))).ToArray();
         output.WriteLine(string.Join("; ", sd.Select((x, i) => $"{(Feel)i}: {x.Db:F2} dB, {x.Ms:F1} ms")));
         Assert.True(sd[0].Db < sd[1].Db && sd[1].Db < sd[2].Db && sd[0].Ms < sd[1].Ms && sd[1].Ms < sd[2].Ms);
+        Assert.InRange(sd[0].Db, 2.5, 3.5);
+        Assert.InRange(sd[2].Db, 5.2, 7);
     }
 
     [Fact]

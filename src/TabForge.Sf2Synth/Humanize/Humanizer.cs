@@ -14,7 +14,8 @@ internal struct Ctx
 
 // Owns: the humanizer as one pass over a track's WRITTEN notes (no streaming, no look-ahead): strokes, the window around each bar
 //   (Evidence.Window) for energy and evidence, the motif of each beat (hash of its rhythm and intervals), neighbours,
-//   fast runs, pick direction; then each stroke's level (Dynamics), onset (Timing) and strum (Strum), and the per-key order check
+//   fast runs, pick direction; then each stroke's level (Dynamics, under a headroom so accents fit below velocity 127), onset (Timing)
+//   and strum (Strum), and the per-key order check
 //   (no stuck or colliding notes). Every value is a pure function of position and nearby content, so a start mid-song or an edit
 //   changes only the neighbourhood.
 // Does not own: the parts (Dynamics, Timing, Strum), evidence (Evidence), noise (Noise), values (HumanTable), building notes (host).
@@ -51,7 +52,7 @@ public static class Humanizer
             for (var j = 0; j < st.Count; j++)
             {
                 var i = st[j];
-                var d = level + (j < m && o.HumanizeVelocity ? db[j] * c.Vf : 0);
+                var d = level + (j < m && o.HumanizeVelocity ? db[j] * c.Vf : 0) - (o.HumanizeVelocity ? Math.Max(0, HeadDb - 40 * Math.Log10(127.0 / a[i].Velocity)) * c.Vf : 0);
                 var t = shift + (j < m && o.HumanizeTiming ? ms[j] * c.Tf : 0);
                 output[i] = new(a[i].OnMs + t, a[i].OffMs + shift + len, Math.Clamp((int)Math.Round(a[i].Velocity * Math.Pow(10, d / 40)), 1, 127));
                 if (i < parts.Length) parts[i] = lp;

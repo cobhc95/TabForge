@@ -22,11 +22,13 @@ public static class HumanTable
     public const double StdLo = 3, StdHi = 6, DistinctLo = 4, DistinctHi = 7, RunLo = 3, RunHi = 6, GridMs = 0.5, GridLo = 0.3, GridHi = 0.6;
 
     // Level (dB), all structural: meter, syncopation, length, melodic contour, phrase arch, energy, hand, run group, motif memory.
-    public const double DownDb = 2.5, MidDb = 1.5, BeatDb = 1, EighthDb = -1.5, SixteenthDb = -3, RunMeterK = 0.35, SyncDb = 1.5;
-    public const double LenDbPerOct = 0.6, PeakDb = 1.2, RiseDb = 1, ArchDb = 1.5, ArchBars = 4, EnergyDb = 0.8, EnergyRef = 2;
-    public const double CrossDb = -0.3, UpDb = -0.8, GroupDb = 1, MotifDb = 1, LegatoDb = 1, SoftK = 0.5, ChugK = 0.5;
+    public const double DownDb = 6, MidDb = 3.5, BeatDb = 2.5, EighthDb = -3.5, SixteenthDb = -6, RunMeterK = 0.35, SyncDb = 3;
+    public const double LenDbPerOct = 1, PeakDb = 2.4, RiseDb = 1.8, ArchDb = 3, ArchBars = 4, EnergyDb = 1.2, EnergyRef = 2;
+    public const double CrossDb = -0.5, UpDb = -1.4, GroupDb = 2.4, MotifDb = 1.8, LegatoDb = 1.8, SoftK = 0.5, ChugK = 0.5;
     // Residue: the only free part, slow and smooth (octaves of value noise over bars), bounded to +-ResidueDb.
-    public const double ResidueDb = 1, KneeDb = 4, Ratio = 3, CapDb = 10;
+    public const double ResidueDb = 1, KneeDb = 8, Ratio = 3, CapDb = 12;
+    // Headroom: a flat loud input is lowered so an accent of this many dB still fits under velocity 127 (peaks above, not only dips).
+    public const double HeadDb = 9;
 
     // Timing (ms): wander (slow, bars 1..8), micro (smooth, 1/8..1/2 bar), jitter, motif; fast runs below FastMs.
     public const double WanderMs = 6, MicroMs = 4, JitMs = 3, MotifMs = 3, FastMs = 250, ShiftCapMs = 30, IoiShare = 0.3;
@@ -38,7 +40,7 @@ public static class HumanTable
     // Strum: spread x dynamics (pp / mf / ff in dB re 127), up x, at most a share of the interval; gaps first..last, jitter, cap.
     public const double PpDb = -24, MfDb = -6, FfDb = 0, PpX = 1.4, FfX = 0.7, UpX = 0.8, IoiFrac = 0.3, StrumCapMs = 100;
     public const double BiasStrumPerMs = 0.025, GapFirst = 1.3, GapLast = 0.8, GapJit = 0.2, GapMaxMs = 39;
-    public const double FirstDb = 1, LastDb = -1, StringDb = 1, UpLowDb = -6, MissChance = 0.3, MissDb = -20, InnerChance = 0.08, InnerDb = -8;
+    public const double FirstDb = 2, LastDb = -2, StringDb = 1, UpLowDb = -6, MissChance = 0.3, MissDb = -20, InnerChance = 0.08, InnerDb = -8;
 
     // Voice: detune fall, vibrato onset and ramp, brightness of SF2 voices.
     public const double DetuneSeconds = 0.15, DetuneUntil = 1, VibOnset = 0.4, VibRamp = 0.3, VibLo = 4.5, VibHi = 6, FcCentsPerBright = 1500;
