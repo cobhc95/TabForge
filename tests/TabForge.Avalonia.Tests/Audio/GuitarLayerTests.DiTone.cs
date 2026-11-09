@@ -10,12 +10,13 @@ using Song = System.Collections.Generic.List<(double At, int Status, int D1, int
 
 namespace TabForge.Avalonia.Tests;
 
-// Owns: the DI tone guard (octave-band shape and 2 kHz decay of the pickup DI of 27/29/30 against a measured real guitar DI) and the
+// Owns: the DI tone guard (octave-band shape and 2 kHz decay of the pickup DI of 27/29/30 against a measured real guitar DI), the
+//   captured amp's output guard (29/30 octave bands against the same take through the real amp) and the
 //   render of a note list (TABFORGE_DI_NOTES: lines "onset-s note attack-peak-dBFS off-s"; skipped without it): each note's velocity is
 //   fitted so its attack peak in the trimmed DI matches the list, then programs 29 and 27 render as pickup DI and 29 through the
 //   captured amp into TABFORGE_SYNTH_WAV_DIR (tfsynth7_raw_*.wav, tag TABFORGE_DI_TAG).
 // Does not own: the rest of the layer (GuitarLayerTests.cs, .CapturedAmp).
-// Tests: GuitarLayer.DiOnly, GuitarBus (pickup), PluckedString, Voicings 27/29.
+// Tests: GuitarLayer.DiOnly, GuitarBus (pickup, captured amp EQ), PluckedString, Voicings 27/29.
 public sealed partial class GuitarLayerTests
 {
     private static readonly int[] FitVelocities = [20, 40, 70, 100, 127];
@@ -60,6 +61,23 @@ public sealed partial class GuitarLayerTests
         var slope = Enumerable.Range(0, db.Length).Sum(i => (i - 22.0) * (db[i] - mean)) / Enumerable.Range(0, db.Length).Sum(i => (i - 22.0) * (i - 22.0)) * 100;
         output.WriteLine($"program {program}: T60 at 2 kHz {-60 / slope:F2} s (target {DiT60At2k})");
         Assert.InRange(-60 / slope, DiT60At2k / 1.6, DiT60At2k * 1.6);
+    }
+
+    // The same take through the real amp (the captured amp's source): octave bands as above. The captured amp's output EQ brings our take
+    // there within 1 dB (without it 125-250 Hz were 3-4 dB low, 1-8 kHz about 2 dB high).
+    private static readonly double[] AmpTarget = [-12.3, -7.2, -6.8, -6.8, -7.9, -9.7, -12.9, -20.4];
+    private const double AmpBandTolerance = 2.5;
+
+    [Theory]
+    [InlineData(29)]
+    [InlineData(30)]
+    public void TheCapturedAmpMatchesTheRealAmp(int program)
+    {
+        var x = RenderSong(new GuitarLayer(Rate), Dry([(0, 0xC0, program, 0), .. DiPhrase()]), SynthOptions.Default, (int)(6.8 * Rate));
+        var power = DiBands.Select(hz => Band(x, hz).Average(v => (double)v * v)).ToArray();
+        var levels = power.Select(p => 10 * Math.Log10(p / power.Sum())).ToArray();
+        output.WriteLine($"program {program}: amp bands {string.Join(" / ", DiBands)} Hz: ours {string.Join(" / ", levels.Select(v => v.ToString("F1")))}, target {string.Join(" / ", AmpTarget)} dB");
+        for (var i = 0; i < DiBands.Length; i++) Assert.InRange(levels[i] - AmpTarget[i], -AmpBandTolerance, AmpBandTolerance);
     }
 
     private static float[] Band(float[] x, double hz)

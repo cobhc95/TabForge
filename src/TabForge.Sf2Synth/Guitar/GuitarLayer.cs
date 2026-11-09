@@ -53,6 +53,7 @@ public sealed class GuitarLayer : ILayer
         for (var i = 0; i < 16; i++)
             _ch[i] = new Ch { Bus = new GuitarBus(rate, Chunk, gCab, bCab, rCab, captured is null ? null : new NamAmp(captured, rate, Chunk)), Mono = new float[Chunk] };
         _tail = (int)(TailSeconds * rate);
+        UseRig();
         Reset();
     }
 
@@ -84,14 +85,14 @@ public sealed class GuitarLayer : ILayer
     // Audio thread (or before playing): a changed distorted amp choice; idle channels take it at once, playing ones fade like LoadRig.
     public void Apply(SynthOptions options)
     {
-        var changed = options.DistAmp != _opt.DistAmp || options.CapturedAmpCabinet != _opt.CapturedAmpCabinet;
+        var changed = options.DistAmp != _opt.DistAmp || options.CapturedAmpCabinet != _opt.CapturedAmpCabinet || options.CapturedAmpEq != _opt.CapturedAmpEq;
         _opt = options;
         if (changed) UseRig();
     }
 
     private void UseRig()
     {
-        for (var i = 0; i < 16; i++) _ch[i].Bus.Use(new(_slots?[i], _opt.DistAmp, _opt.CapturedAmpCabinet), now: _ch[i].Tail <= 0);
+        for (var i = 0; i < 16; i++) _ch[i].Bus.Use(new(_slots?[i], _opt.DistAmp, _opt.CapturedAmpCabinet, _opt.CapturedAmpEq), now: _ch[i].Tail <= 0);
     }
 
     public void Reset()

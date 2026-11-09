@@ -36,6 +36,10 @@ internal static class Voicings
     private static readonly EqSpec[] MeasuredDi = [new(HighPass, 135, 0.7), new(Peak, 900, 1, 13.5), new(LowPass, 2070, 0.4)];
     private static readonly StringSpec MeasuredString = Gtr(6.0, 2.0, 0.55, 0.25, 78, 45, 0.10, 3500) with { Pickup2Mm = 63, Vel = 1.85 };
 
+    // Captured amp output EQ, fitted to the real amp recording of the measured take (status doc): low mids up, the 830 Hz bump and
+    // upper mids down, the capture's fizz above 6 kHz down.
+    private static readonly EqSpec[] CapturedEq = [new(Peak, 210, 0.9, 4), new(Peak, 830, 1.1, -6), new(Peak, 2550, 1, -3.5), new(HighShelf, 5700, 0.7, -10)];
+
     private static RigSpec Body(BodySpec body, params EqSpec[] eq) => new(1, eq, [], 0, [], CabKind.None, 0.9f) { Body = body };
     private static RigSpec Clean(params EqSpec[] tone) => new(0.6f, [new EqSpec(HighPass, 70, 0.7)], CleanStages, 0.05f, tone, CabKind.Room, 0.55f) { Pickup = SingleCoil, Comp = CleanComp };
     private static RigSpec BassRig(EqSpec[] pickup, params EqSpec[] tone) => new(1.2f, [new EqSpec(HighPass, 30, 0.7)], BassStages, 0.05f, tone, CabKind.Bass, 0.8f) { Pickup = pickup, Comp = BassComp };
@@ -52,10 +56,10 @@ internal static class Voicings
             Clean(new EqSpec(HighShelf, 2500, 0.7, 3)) with { Level = 2.08f, Pickup = MeasuredDi }),
         new(Gtr(1.2, 0.2, 0.45, 0.20, 65, 78, 0.06, 2500) with { Vel = 2, Drop = 0 }, Clean(new EqSpec(LowShelf, 150, 0.7, 3)) with { Level = 2.56f }), // 28 muted
         new(MeasuredString,                                                                                                                     // 29 overdrive
-            new RigSpec(1, [new(HighPass, 90, 0.7), new(Peak, 750, 0.9, 5)], CrunchStages, 0.10f, [new(HighShelf, 3000, 0.7, 1)], CabKind.Guitar, 0.126f) { Pickup = MeasuredDi, Captured = new(0.30f, 0.84f) }),
+            new RigSpec(1, [new(HighPass, 90, 0.7), new(Peak, 750, 0.9, 5)], CrunchStages, 0.10f, [new(HighShelf, 3000, 0.7, 1)], CabKind.Guitar, 0.126f) { Pickup = MeasuredDi, Captured = new(0.30f, 0.94f, CapturedEq) }),
         new(MeasuredString,                                                                                                                     // 30 distortion
             new RigSpec(1, [new(HighPass, 110, 0.7), new(Peak, 900, 0.8, 4)], LeadStages, 0.15f,
-                [new(LowShelf, 100, 0.7, 2), new(Peak, 650, 0.9, -5), new(HighShelf, 3000, 0.7, 2)], CabKind.Guitar, 0.057f) { Pickup = MeasuredDi, Captured = new(0.30f, 0.65f) }),
+                [new(LowShelf, 100, 0.7, 2), new(Peak, 650, 0.9, -5), new(HighShelf, 3000, 0.7, 2)], CabKind.Guitar, 0.057f) { Pickup = MeasuredDi, Captured = new(0.30f, 0.73f, CapturedEq) }),
         new(Gtr(4.0, 2.5, 0.05, 0, 324, 110, 0.15, 4000, harmonic: true) with { Vel = 2 }, Clean(new EqSpec(HighShelf, 2500, 0.7, 2)) with { Level = 0.54f }), // 31 harmonics
         new(Bass(3.5, 0.8, 0.50, 0.10, 173, 0, 0.15, 1200) with { Vel = 1.75, Tap = new(2.5f, 90, 1.2, 25) },                                    // 32 upright
             Body(Upright, new(HighPass, 30, 0.7), new(HighShelf, 2000, 0.7, -6)) with { Level = 2.90f }),

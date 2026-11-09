@@ -46,6 +46,8 @@ public sealed record SynthOptions
     public DistAmp DistAmp { get; init; } = DistAmp.Captured;
     /// <summary>The built-in cabinet after the captured amp (off: its capture is a full amp output).</summary>
     public bool CapturedAmpCabinet { get; init; }
+    /// <summary>The captured amp's output EQ, fitted to the real amp it was captured from (Guitar/Voicings); not with a cabinet.</summary>
+    public bool CapturedAmpEq { get; init; } = true;
 
     public static readonly SynthOptions Default = new();
 
@@ -59,6 +61,7 @@ public sealed record SynthOptions
         ("Note variation", "No two notes sound identical", o => o.HumanizeVoice, (o, v) => o with { HumanizeVoice = v }),
         ("Drift and vibrato", "Slow tempo drift, gentle vibrato on long notes", o => o.HumanizeDrift, (o, v) => o with { HumanizeDrift = v }),
         ("Captured amp cabinet", "Add the built-in cabinet after the captured amp", o => o.CapturedAmpCabinet, (o, v) => o with { CapturedAmpCabinet = v }),
+        ("Captured amp EQ", "Tone of the captured amp matched to the real amp's recording", o => o.CapturedAmpEq, (o, v) => o with { CapturedAmpEq = v }),
     ];
 
     /// <summary>For a generated settings menu: name, help, the choices' labels, read and write as the choice's index.</summary>

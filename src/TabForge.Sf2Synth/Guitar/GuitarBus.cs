@@ -4,7 +4,7 @@ using TabForge.Sf2Synth.Nam;
 namespace TabForge.Sf2Synth.Guitar;
 
 // Owns: one channel's rig behind the strings: pickup resonance (the DI), the acoustic body (BodyModes), then the user's NAM amp,
-//   or on the distorted programs the captured amp (trimmed DI, DC blocker, cabinet optional) or the clean DI alone, else the built-in compressor,
+//   or on the distorted programs the captured amp (trimmed DI, DC blocker, cabinet or output EQ) or the clean DI alone, else the built-in compressor,
 //   pre-EQ, 2x-oversampled StageAmp and tone stack; then the cabinet (user IR or synthetic, FFT convolution), level. Electric
 //   programs take the user's files; a new Setup fades out one block and in the next. Mono, in place, no allocation.
 // Does not own: the strings (PluckedString), values (Voicings), loading files (GuitarRig), volume/pan and options (GuitarLayer).
@@ -13,11 +13,11 @@ internal sealed class GuitarBus(double rate, int maxBlock, float[] guitarCab, fl
 {
     public const float NamLevel = 0.35f;
 
-    // What plays: the user's files, the distorted programs' amp and whether the captured amp gets the built-in cabinet.
-    internal readonly record struct Setup(GuitarRig.Slot? User, DistAmp Amp, bool CapturedCab);
+    // What plays: the user's files, the distorted programs' amp, whether the captured amp gets the built-in cabinet and its output EQ.
+    internal readonly record struct Setup(GuitarRig.Slot? User, DistAmp Amp, bool CapturedCab, bool CapturedEq);
 
-    private readonly Biquad[] _di = new Biquad[Voicings.MaxBands], _pre = new Biquad[Voicings.MaxBands], _tone = new Biquad[Voicings.MaxBands];
-    private int _diN, _preN, _toneN;
+    private readonly Biquad[] _di = new Biquad[Voicings.MaxBands], _pre = new Biquad[Voicings.MaxBands], _tone = new Biquad[Voicings.MaxBands], _post = new Biquad[Voicings.MaxBands];
+    private int _diN, _preN, _toneN, _postN;
     private readonly IAmpModel _amp = new StageAmp();
     private readonly BodyModes _body = new();
     private readonly Compressor _comp = new();
@@ -36,7 +36,7 @@ internal sealed class GuitarBus(double rate, int maxBlock, float[] guitarCab, fl
     public void Configure(RigSpec rig)
     {
         static int Set(Biquad[] f, EqSpec[] s, double rate) { var n = Math.Min(s.Length, f.Length); for (var i = 0; i < n; i++) f[i].C = BiquadCoefs.Of(s[i], rate); return n; }
-        (_diN, _preN, _toneN) = (Set(_di, rig.Pickup, rate), Set(_pre, rig.PreEq, rate), Set(_tone, rig.Tone, rate));
+        (_diN, _preN, _toneN, _postN) = (Set(_di, rig.Pickup, rate), Set(_pre, rig.PreEq, rate), Set(_tone, rig.Tone, rate), Set(_post, rig.Captured?.Eq ?? [], rate));
         _hasAmp = rig.Stages.Length > 0;
         if (_hasAmp) _amp.Configure(rig, 2 * rate);
         _body.Configure(rig.Body, rate);
@@ -73,7 +73,7 @@ internal sealed class GuitarBus(double rate, int maxBlock, float[] guitarCab, fl
 
     public void Reset()
     {
-        for (var i = 0; i < _pre.Length; i++) { _di[i].Reset(); _pre[i].Reset(); _tone[i].Reset(); }
+        for (var i = 0; i < _pre.Length; i++) { _di[i].Reset(); _pre[i].Reset(); _tone[i].Reset(); _post[i].Reset(); }
         _amp.Reset();
         _dc.Reset();
         _body.Reset();
@@ -129,7 +129,10 @@ internal sealed class GuitarBus(double rate, int maxBlock, float[] guitarCab, fl
             captured!.Process(mono);
             for (var n = 0; n < mono.Length; n++) mono[n] = _dc.Process(mono[n]);
             _capturedPlayed = true;
-            (user?.Cab ?? (_now.CapturedCab ? _cab : null))?.Process(mono);
+            if ((user?.Cab ?? (_now.CapturedCab ? _cab : null)) is { } cab) cab.Process(mono);
+            else if (_now.CapturedEq)
+                for (var n = 0; n < mono.Length; n++)
+                    for (var i = 0; i < _postN; i++) mono[n] = _post[i].Process(mono[n]);
             return cap.Level;
         }
         BuiltIn(mono);
