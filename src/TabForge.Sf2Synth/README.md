@@ -1,7 +1,8 @@
 # TabForge.Sf2Synth
 
 Standalone SoundFont 2.04 synthesizer (no dependencies) with an optional modelled guitar/bass layer.
-nHandover for a new agent (priorities, commands, the app seam, how to work with the owner): `HANDOVER.md`. Measurements log: `../../docs/specs/TABFORGE_SYNTH_STATUS.md`.
+
+Handover for a new agent (priorities, commands, the app seam, how to work with the owner): `HANDOVER.md`. Measurements log: `../../docs/specs/TABFORGE_SYNTH_STATUS.md`.
 
 ## Files
 - `Sf2/` file model: `SoundFont` (RIFF, samples), `Sf2Reader` (pdta hydra), `Zone` (zones, presets, instruments, sample headers), `Gen` (generator numbers, defaults), `Mod` (modulator curves, default modulators).
