@@ -1,9 +1,12 @@
+using TabForge.Sf2Synth.Humanize;
+
 namespace TabForge.Sf2Synth.Guitar;
 
 // Owns: one string as a digital waveguide: integer delay + Thiran all-pass (exact tuning), two dispersion all-passes from the
 //   fretted string's stiffness (StringPhysics), loop low-pass + gain for a length-correct decay (highs die first); the pluck
 //   (PluckedString.Attack), the pickup comb at its distance from the bridge (two taps for a humbucker or two pickups), legato
-//   (hammer, pull, slide glide) on the same string, re-pluck, release damping, retune.
+//   (hammer, pull, slide glide) on the same string, re-pluck, release damping, retune, the note's Nuance (seed, pick position,
+//   brightness, release, pitch offset over its age).
 // Does not own: which note or when (GuitarLayer), values (Voicings, StringPhysics), anything after the pickup (GuitarBus).
 // Tests: GuitarLayerTests.
 internal sealed partial class PluckedString
@@ -19,7 +22,8 @@ internal sealed partial class PluckedString
     private float _eta, _apX, _apY, _c, _d1X, _d1Y, _d2X, _d2Y, _lpA, _lp, _g;
     private StringSpec _spec = null!;
     private StringPhysics.Fretted _f;
-    private double _hz, _dark, _t60, _glideSemis;
+    private double _hz, _dark, _t60, _glideSemis, _cents;
+    private Nuance _nu;
     private long _age;
 
     public bool Active { get; private set; }
@@ -40,16 +44,16 @@ internal sealed partial class PluckedString
         _mask = size - 1;
     }
 
-    public void Pluck(int channel, int note, double hz, int velocity, StringSpec spec, long started, uint seed, float[] scratch)
+    public void Pluck(int channel, int note, double hz, int velocity, StringSpec spec, long started, uint seed, float[] scratch, in Nuance nu = default)
     {
         var ringing = Active && Channel == channel && Note == note;
         if (!ringing) { Array.Clear(_buf); _apX = _apY = _d1X = _d1Y = _d2X = _d2Y = _lp = 0; }
         else for (var i = 0; i < _buf.Length; i++) _buf[i] *= RepluckKeep;
-        (Active, Released, Held, Channel, Started, _spec, _age, _glideLeft, _glideSemis) = (true, false, false, channel, started, spec, 0, 0, 0);
+        (Active, Released, Held, Channel, Started, _spec, _age, _glideLeft, _glideSemis, _nu, _cents) = (true, false, false, channel, started, spec, 0, 0, 0, nu, 0);
         var v = Math.Clamp(velocity / 127.0, 0, 1);
-        _dark = Math.Clamp(spec.Darkness * (1.25 - 0.5 * v), 0, 0.95);
+        _dark = Math.Clamp(spec.Darkness * (1.25 - 0.5 * v) + nu.Bright, 0, 0.95);
         Fret(note, hz, -1);
-        Excite(v, (float)(0.5 * Math.Pow(v, spec.Vel)), seed, scratch);
+        Excite(v, (float)(0.5 * Math.Pow(v, spec.Vel)), nu.Seed != 0 ? nu.Seed : seed, scratch);
     }
 
     // Same string, new note: hammer/pull (kick > 0 re-excites a little) or slide (glide seconds).
@@ -72,7 +76,7 @@ internal sealed partial class PluckedString
     }
 
     // Loop delay = D + Thiran fraction + 2 dispersion all-passes + loop low-pass, all as phase delays at f0.
-    public void Retune(double hz) { _hz = hz; Tune(hz * Math.Pow(2, _glideSemis / 12)); }
+    public void Retune(double hz) { _hz = hz; Tune(hz * Math.Pow(2, (_glideSemis + _cents / 100) / 12)); }
 
     private void Tune(double hz)
     {
@@ -102,7 +106,7 @@ internal sealed partial class PluckedString
         if (!Active || Released) return;
         (Released, Held) = (true, false);
         var shortNote = Age < ShortNote;
-        _t60 = _spec.ReleaseT60 * (shortNote ? 0.5 : 1);
+        _t60 = _spec.ReleaseT60 * (shortNote ? 0.5 : 1) * (1 + _nu.Release);
         _dark = Math.Min(0.95, _dark + ReleaseDarken * (shortNote ? 1.5 : 1));
         Retune(_hz);
     }
@@ -118,6 +122,7 @@ internal sealed partial class PluckedString
             _glideLeft -= step;
             Retune(_hz);
         }
+        if (_nu.Moves && (Age < HumanTable.DetuneUntil || _nu.VibCents != 0)) { _cents = _nu.Offset(Age, Released); Retune(_hz); }
         if (_spec.Mwah > 0) Mwah();
         var buf = _buf;
         var mf = _mw;

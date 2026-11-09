@@ -1,11 +1,12 @@
 using TabForge.Sf2Synth.Dsp;
+using TabForge.Sf2Synth.Humanize;
 using TabForge.Sf2Synth.Sf2;
 
 namespace TabForge.Sf2Synth;
 
 // Owns: rendering one voice: 4-point cubic Hermite sample interpolation with loop modes 0/1/3, resonant low-pass (RBJ, coefficients
 //   swept linearly across the chunk), pitch from key/tuning/LFOs/mod env/pitch wheel, gain ramped across each chunk (click-free),
-//   constant-power pan, reverb/chorus sends. No allocation.
+//   constant-power pan, reverb/chorus sends, the note's Nuance (pitch offset over its age, brightness). No allocation.
 // Does not own: setup from zones (Voice.Setup), allocation and stealing (Synthesizer).
 // Tests: Sf2SynthTests.
 internal sealed partial class Voice(double rate)
@@ -22,6 +23,8 @@ internal sealed partial class Voice(double rate)
     private BiquadCoefs _filter;
     private float _z1, _z2, _gl, _gr;
     private bool _filterOn, _first;
+    private Nuance _nu;
+    private double _age;
 
     public int Channel, Key, Velocity, ExclusiveClass;
     public long Started;
@@ -52,9 +55,11 @@ internal sealed partial class Voice(double rate)
 
         var cents = (_modKey - _rootKey) * P(G.ScaleTuning) + P(G.CoarseTune) * 100 + P(G.FineTune) + _correction + P(G.Pitch) + _ch.TuneCents
                     + vibLfo * P(G.VibLfoToPitch) + modLfo * P(G.ModLfoToPitch) + modEnv * P(G.ModEnvToPitch);
+        if (_nu.Moves) { cents += (float)_nu.Offset(_age, Released); _age += dt; }
         var step = _rateRatio * Math.Pow(2, cents / 1200.0);
 
         var fc = Math.Clamp(P(G.FilterFc) + modEnv * P(G.ModEnvToFc) + modLfo * P(G.ModLfoToFc), 1500, 13500);
+        if (_nu.Bright != 0 && fc < 13500) fc = Math.Clamp(fc - _nu.Bright * (float)HumanTable.FcCentsPerBright, 1500, 13500);
         var q = Math.Clamp(P(G.FilterQ), 0, 960);
         _filterOn |= fc < 13500 || q > 0;
         BiquadCoefs target = default, d = default;

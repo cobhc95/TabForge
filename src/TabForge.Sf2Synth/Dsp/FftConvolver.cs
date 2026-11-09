@@ -41,7 +41,7 @@ internal sealed class FftConvolver
         return r;
     }
 
-    public void Reset() { Array.Clear(_xRe); Array.Clear(_xIm); Array.Clear(_in); Array.Clear(_out); _fill = 0; }
+    public void Reset() { Array.Clear(_xRe); Array.Clear(_xIm); Array.Clear(_in); Array.Clear(_out); (_fill, _slot) = (0, 0); }
 
     public void Process(Span<float> x)
     {

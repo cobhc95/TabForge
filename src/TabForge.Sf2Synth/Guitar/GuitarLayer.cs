@@ -1,9 +1,11 @@
+using TabForge.Sf2Synth.Humanize;
+
 namespace TabForge.Sf2Synth.Guitar;
 
 // Owns: the modelled guitar/bass layer (GM programs 24-37, never the drum channel): per-channel MIDI state, the string pool
 //   (six strings per channel, steal oldest), legato (a note starting while one other note of the channel is held within a few
 //   semitones moves that string: hammer, pull-off or slide; undone if the old note is not released within the window, CC68
-//   forces it), one GuitarBus per channel, the user's amp/cab swap (LoadRig) and the stereo mix it adds.
+//   forces it), one GuitarBus per channel, the user's amp/cab swap (LoadRig), the next note's Nuance (Vary) and the stereo mix it adds.
 // Does not own: the SoundFont sound of every other channel (Synthesizer), DSP (PluckedString, GuitarBus), values (Voicings), files (GuitarRig).
 // Tests: GuitarLayerTests.
 public sealed class GuitarLayer : ILayer
@@ -20,6 +22,7 @@ public sealed class GuitarLayer : ILayer
         public long Due;
         public bool Sustain, Retune, Marked, Legato;
         public PluckedString? Moved;
+        public Nuance Nu;
         public GuitarBus Bus = null!;
         public float[] Mono = null!;
         public double BendSemis => (Bend - 8192) / 8192.0 * BendRange;
@@ -70,6 +73,8 @@ public sealed class GuitarLayer : ILayer
 
     // Any thread but the audio thread: the status LoadRig would report (loads and checks the files, keeps nothing).
     public static string DescribeRig(string? namPath, string? irPath) => GuitarRig.Build(namPath, irPath, 48000, Chunk, 0).Status;
+
+    public void Vary(int channel, in Nuance nuance) => _ch[channel & 15].Nu = nuance;
 
     public void Reset()
     {
@@ -122,6 +127,8 @@ public sealed class GuitarLayer : ILayer
     {
         if (!Owns(channel)) return;
         var v = Voicings.Of(c.Program);
+        var nu = c.Nu;
+        c.Nu = default;
         if (c.Configured != c.Program) { c.Bus.Configure(v.Rig); c.Configured = c.Program; }
         _seed = _seed * 1664525 + 1013904223;
         c.Tail = _tail;
@@ -133,7 +140,7 @@ public sealed class GuitarLayer : ILayer
             s.Legato(note, Hz(c, note), glide, glide > 0 ? 0 : step > 0 ? Hammer : Pull, _seed, _scratch);
             return;
         }
-        Pick(channel, note, v.String.MaxStrings).Pluck(channel, note, Hz(c, note), velocity, v.String, ++_count, _seed, _scratch);
+        Pick(channel, note, v.String.MaxStrings).Pluck(channel, note, Hz(c, note), velocity, v.String, ++_count, _seed, _scratch, nu);
     }
 
     // The one held string of the channel, close in pitch and not part of a strum; any held string when CC68 is on.

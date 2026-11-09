@@ -20,7 +20,7 @@ internal sealed partial class PluckedString
     private void Excite(double v, float amp, uint seed, float[] scratch)
     {
         var n = Math.Min(_d, scratch.Length);
-        var pick = Math.Clamp((int)Math.Round(Math.Min(0.5, _spec.PickMm / 1000 / _f.Length) * n), 1, n - 1);
+        var pick = Math.Clamp((int)Math.Round(Math.Min(0.5, _spec.PickMm * (1 + _nu.Pick) / 1000 / _f.Length) * n), 1, n - 1);
         var c = (float)(1 - Math.Exp(-2 * Math.PI * _spec.PluckHz * (0.25 + 0.75 * Math.Pow(v, 1.2)) / _rate));
         var mix = (float)_spec.NoiseMix;
         var width = Math.Max(2f, n * (0.06f - 0.03f * (float)v));   // slap: a harder thumb is a narrower bump
@@ -45,7 +45,7 @@ internal sealed partial class PluckedString
         mean /= n;
         for (var i = 0; i < n; i++) _buf[(_w - n + i) & _mask] += amp * (scratch[i] - mean);
         var on = !_spec.Harmonic;
-        (_click, _noise) = (on ? Click * _spec.Click * amp * (float)v : 0, state);
+        (_click, _noise, _clickX) = (on ? Click * _spec.Click * amp * (float)v : 0, state, 0);
         var t = _spec.Tap;
         _tap = on && t.Amount > 0 ? t.Amount * amp * (float)v : 0;
         if (_tap > 0)

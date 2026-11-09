@@ -1,3 +1,4 @@
+using TabForge.Sf2Synth.Humanize;
 using TabForge.Sf2Synth.Sf2;
 
 namespace TabForge.Sf2Synth;
@@ -16,7 +17,7 @@ internal sealed partial class Voice
     private readonly Mod[] _mods = new Mod[MaxMods];
     private int _modN, _version;
 
-    public void Start(SoundFont font, Channel ch, int channel, int key, int vel, Zone? pGlobal, Zone pZone, Zone? iGlobal, Zone iZone, long started)
+    public void Start(SoundFont font, Channel ch, int channel, int key, int vel, Zone? pGlobal, Zone pZone, Zone? iGlobal, Zone iZone, long started, in Nuance nu)
     {
         for (var g = 0; g < Gens.Count; g++)
         {
@@ -56,6 +57,7 @@ internal sealed partial class Voice
         _z1 = _z2 = _gl = _gr = 0;
         _filterOn = false;
         _first = true;
+        (_nu, _age) = (nu, 0);
     }
 
     private static bool Contains(Mod[] list, in Mod m)

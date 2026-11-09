@@ -1,12 +1,14 @@
 using TabForge.Sf2Synth.Effects;
+using TabForge.Sf2Synth.Humanize;
 using TabForge.Sf2Synth.Sf2;
 
 namespace TabForge.Sf2Synth;
 
 // Owns: the public synth: MIDI in (MeltySynth-shaped: ProcessMidiMessage, Render, NoteOffAll, Reset), zone matching, voice
-//   allocation (free, else quietest released, else oldest), exclusive class, sustain, the optional ILayer, reverb/chorus, master volume.
-// Does not own: a voice's DSP (Voice), file parsing (Sf2), the layer's sound (e.g. Guitar/GuitarLayer).
-// Tests: Sf2SynthTests, GuitarLayerTests.
+//   allocation (free, else quietest released, else oldest), exclusive class, sustain, the optional ILayer, reverb/chorus, master
+//   volume, the live Options and the humanizer pre-stage (events it delays play inside Render at their frame).
+// Does not own: a voice's DSP (Voice), file parsing (Sf2), the layer's sound (e.g. Guitar/GuitarLayer), humanizing (Humanize/).
+// Tests: Sf2SynthTests, GuitarLayerTests, HumanizerTests.
 public sealed class Synthesizer
 {
     public const int Chunk = 64;
@@ -16,7 +18,9 @@ public sealed class Synthesizer
     private readonly float[] _l = new float[Chunk], _r = new float[Chunk], _rev = new float[Chunk], _cho = new float[Chunk];
     private readonly Reverb? _reverb;
     private readonly Chorus? _chorus;
-    private long _count;
+    private readonly Humanizer _hum;
+    private volatile SynthOptions _opt = SynthOptions.Default;
+    private long _count, _frame;
 
     public int SampleRate { get; }
     public int MaximumPolyphony => _voices.Length;
@@ -24,12 +28,18 @@ public sealed class Synthesizer
     /// <summary>Plays the channels it owns instead of the SoundFont; null = SoundFont only.</summary>
     public ILayer? Layer { get; set; }
     public int ActiveVoices => _voices.Count(v => v.Active);
+    /// <summary>The optional stages; swap the whole set from any thread, during playback too.</summary>
+    public SynthOptions Options { get => _opt; set => _opt = value ?? SynthOptions.Default; }
+    /// <summary>The humanizer's longest possible note delay in frames (0 latency is reported; this is what a host could add).</summary>
+    public int HumanizeMaxDelay => _hum.MaxDelay;
+    public Humanizer Humanizer => _hum;
 
     public Synthesizer(SoundFont font, int sampleRate, int maxVoices = 64, bool effects = true)
     {
         (_font, SampleRate) = (font, sampleRate);
         _voices = Enumerable.Range(0, maxVoices).Select(_ => new Voice(sampleRate)).ToArray();
         if (effects) (_reverb, _chorus) = (new Reverb(sampleRate), new Chorus(sampleRate));
+        _hum = new Humanizer(sampleRate);
         Reset();
     }
 
@@ -40,22 +50,34 @@ public sealed class Synthesizer
         _reverb?.Reset();
         _chorus?.Reset();
         Layer?.Reset();
+        _hum.Reset();
+        _frame = 0;
     }
 
+    /// <summary>Also drops note-ons the humanizer still holds (everything else it holds applies now), so nothing starts afterwards.</summary>
     public void NoteOffAll(bool immediate)
     {
+        _hum.Commit(_frame, _opt);
+        while (_hum.Take(long.MaxValue, out var e)) if (e.Command != 0x90 || e.Data2 == 0) Apply(e.Channel, e.Command, e.Data1, e.Data2);
         foreach (var v in _voices) if (v.Active) { if (immediate) v.Stop(); else v.Release(); }
     }
 
     public void ProcessMidiMessage(int channel, int command, int data1, int data2)
     {
         channel &= 15;
+        if (!_hum.Add(channel, command, data1, data2, _opt.Humanize)) Apply(channel, command, data1, data2);
+    }
+
+    private void Apply(int channel, int command, int data1, int data2)
+    {
         var c = _ch[channel];
-        if (command == 0x90 && data2 > 0 && Layer?.Owns(channel) == true) { Layer.ProcessMidi(channel, command, data1, data2); return; }
+        var o = _opt;
+        var nu = command == 0x90 && data2 > 0 ? _hum.Vary(channel, data1, o) : default;
+        if (command == 0x90 && data2 > 0 && o.GuitarLayer && Layer?.Owns(channel) == true) { Layer.Vary(channel, nu); Layer.ProcessMidi(channel, command, data1, data2); return; }
         Layer?.ProcessMidi(channel, command, data1, data2);
         switch (command)
         {
-            case 0x90 when data2 > 0: NoteOn(c, channel, data1, data2); break;
+            case 0x90 when data2 > 0: NoteOn(c, channel, data1, data2, nu); break;
             case 0x90 or 0x80: NoteOff(c, channel, data1); break;
             case 0xC0: c.Program = data1; break;
             case 0xD0: c.Pressure = data1; c.Version++; break;
@@ -82,7 +104,7 @@ public sealed class Synthesizer
         }
     }
 
-    private void NoteOn(Channel c, int channel, int key, int vel)
+    private void NoteOn(Channel c, int channel, int key, int vel, in Nuance nu)
     {
         var preset = _font.Find(c.Bank, c.Program, c.Drum);
         foreach (var pz in preset.Zones)
@@ -94,7 +116,7 @@ public sealed class Synthesizer
                 if (!iz.Covers(key, vel) || inst.Global is { } ig && !ig.Covers(key, vel) || iz.Link >= _font.Samples.Length) continue;
                 var exclusive = iz.Has(57) ? iz.Gen[57] : inst.Global?.Gen[57] ?? 0;
                 if (exclusive != 0) foreach (var x in _voices) if (x.Active && x.Channel == channel && x.ExclusiveClass == exclusive) x.Kill();
-                Free().Start(_font, c, channel, key, vel, preset.Global, pz, inst.Global, iz, ++_count);
+                Free().Start(_font, c, channel, key, vel, preset.Global, pz, inst.Global, iz, ++_count, nu);
             }
         }
     }
@@ -111,13 +133,20 @@ public sealed class Synthesizer
         return quiet ?? old!;
     }
 
-    /// <summary>Overwrites both spans with the next frames (any length). No allocation.</summary>
+    /// <summary>Overwrites both spans with the next frames (any length). No allocation. Delayed events start at their frame.</summary>
     public void Render(Span<float> left, Span<float> right)
     {
-        for (var at = 0; at < left.Length; at += Chunk)
+        for (var at = 0; at < left.Length;)
         {
             var n = Math.Min(Chunk, left.Length - at);
+            if (_hum.Busy)
+            {
+                _hum.Commit(_frame, _opt);
+                while (_hum.Take(_frame, out var e)) Apply(e.Channel, e.Command, e.Data1, e.Data2);
+                n = (int)Math.Min(n, Math.Max(1, _hum.NextDue - _frame));
+            }
             RenderChunk(left.Slice(at, n), right.Slice(at, n));
+            (at, _frame) = (at + n, _frame + n);
         }
     }
 
