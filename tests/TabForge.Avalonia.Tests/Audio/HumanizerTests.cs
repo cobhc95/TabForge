@@ -241,24 +241,37 @@ public sealed partial class HumanizerTests(ITestOutputHelper output)
         Assert.True(us < 50);
     }
 
-    // ---- listening files: the flat .mid of the earlier pair, humanizer off and each feel (output shifted back by the latency) ----------
+    // ---- listening files: one flat .mid per song, humanizer off and each feel (output shifted back by the latency), one gain per song ----
 
     [Fact]
     public void WritesListeningFilesWhenAsked()
     {
         var dir = Environment.GetEnvironmentVariable("TABFORGE_SYNTH_WAV_DIR");
         if (string.IsNullOrEmpty(dir)) return;
-        foreach (var (name, song) in Songs())
+        foreach (var (name, song) in ListeningSongs())
         {
-            var mid = Path.Combine(dir, $"tfsynth4_{name}.mid");
-            if (File.Exists(mid)) Assert.Equal(File.ReadAllBytes(mid), Mid(song));   // the very same flat file
-            else File.WriteAllBytes(mid, Mid(song));
-            foreach (var feel in new Feel?[] { null, Feel.Tight, Feel.Natural, Feel.Loose })
+            var earlier = Path.Combine(dir, $"tfsynth4_{name}.mid");
+            if (File.Exists(earlier)) Assert.Equal(File.ReadAllBytes(earlier), Mid(song));   // the very same flat file
+            File.WriteAllBytes(Path.Combine(dir, $"tfsynth8_{name}.mid"), Mid(song));
+            var feels = new Feel?[] { null, Feel.Tight, Feel.Natural, Feel.Loose };
+            var takes = feels.Select(feel =>
             {
                 var s = Synth(feel is { } f ? With(f) : SynthOptions.Default);
+                var watch = Stopwatch.StartNew();
                 var (l, r) = Render(s, song);
-                TestSoundFont.WriteWav($"tfsynth6_{name}_{feel?.ToString().ToLowerInvariant() ?? "flat"}.wav", l[s.Latency..], r[s.Latency..], Rate);
+                output.WriteLine($"{name} {feel?.ToString() ?? "flat"}: cpu {watch.Elapsed.TotalSeconds * Rate / l.Length * 100:F2} % of one core, latency {s.Latency} frames");
+                return (L: l[s.Latency..], R: r[s.Latency..]);
+            }).ToList();
+            double Rms(float[] x) => Math.Sqrt(x.Average(v => (double)v * v));
+            var gain = Math.Min(Math.Pow(10, -1) / Rms(takes[0].L), 0.95 / takes.Max(t => t.L.Concat(t.R).Max(MathF.Abs)));   // flat at -20 dBFS rms, no take above 0.95
+            for (var k = 0; k < feels.Length; k++)
+            {
+                var feel = feels[k];
+                var (l, r) = (takes[k].L.Select(v => (float)(v * gain)).ToArray(), takes[k].R.Select(v => (float)(v * gain)).ToArray());
+                TestSoundFont.WriteWav($"tfsynth8_{name}_{feel?.ToString().ToLowerInvariant() ?? "flat"}.wav", l, r, Rate);
+                output.WriteLine($"{name} {feel?.ToString() ?? "flat"}: rms {20 * Math.Log10(Rms(l)):F1} dBFS, peak {20 * Math.Log10(l.Concat(r).Max(MathF.Abs)):F1} dBFS (gain {20 * Math.Log10(gain):F1} dB)");
                 if (feel is null) continue;
+                var s = Synth(With(feel.Value));
                 var m = Match(song, Run(song, s.Options));
                 var spread = Strokes(song, Run(song, s.Options)).Select(x => x.Spread).DefaultIfEmpty(0).ToList();
                 output.WriteLine($"{name} {feel}: level std {Std(m.Select(x => Db(x.In, x.Out))):F1} dB / {Std(m.Select(x => (double)x.Out.D2)):F1} steps, " +

@@ -33,7 +33,7 @@ public sealed partial class HumanizerTests
         return s.OrderBy(e => e.At).ThenBy(e => (e.Status & 0xF0) == 0x80 ? 0 : 1).ToList();
     }
 
-    private static List<Ev> Riff() => Song(30, s =>
+    private static List<Ev> Riff(int program = 30) => Song(program, s =>
     {
         for (var bar = 0; bar < 4; bar++)
         {
@@ -47,7 +47,7 @@ public sealed partial class HumanizerTests
 
     private static List<Ev> Arpeggio() => Song(27, s => { for (var bar = 0; bar < 4; bar++) for (var e = 0; e < 8; e++) Note(s, 0, bar * 4 + e * 0.5, 0.95, ArpBars[bar][e]); });
 
-    private static List<Ev> Strum() => Song(25, s =>
+    private static List<Ev> Strum(int program = 25) => Song(program, s =>
     {
         int[][] chords = [[40, 47, 52, 56, 59, 64], [45, 52, 57, 61, 64], [50, 57, 62, 66], [43, 47, 50, 55, 59, 67]];
         double[] rhythm = [0, 1, 1.5, 2.5, 3];
@@ -85,6 +85,7 @@ public sealed partial class HumanizerTests
     }
 
     private static IEnumerable<(string, List<Ev>)> Songs() => [("riff30", Riff()), ("arp27", Arpeggio()), ("strum25", Strum()), ("bass33", Bass())];
+    private static IEnumerable<(string, List<Ev>)> ListeningSongs() => [.. Songs(), ("riff29", Riff(29)), ("strum27", Strum(27))];
 
     // ---- harness: add at the frame, commit, take what is due; output times shifted back by the latency ----------------------------
 
