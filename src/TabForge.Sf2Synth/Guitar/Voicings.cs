@@ -27,9 +27,14 @@ internal static class Voicings
     private static readonly BodySpec Steel = new(0.6f, [new(102, 15, 1.2f), new(210, 20, 1.5f), new(300, 20, 0.9f), new(420, 25, 0.6f), new(620, 25, 0.5f), new(900, 28, 0.4f), new(1500, 25, 0.35f), new(2600, 20, 0.3f)]);
     private static readonly BodySpec Upright = new(0.5f, [new(60, 10, 1.6f), new(105, 14, 1.4f), new(150, 15, 0.8f), new(230, 18, 0.6f), new(400, 20, 0.4f), new(700, 20, 0.3f)]);
 
-    private static readonly EqSpec[] SingleCoil = [new(LowPass, 5000, 2.2)], NeckHumbucker = [new(LowPass, 2800, 1.6)], Humbucker = [new(LowPass, 3300, 2.2)],
+    private static readonly EqSpec[] SingleCoil = [new(LowPass, 5000, 2.2)], NeckHumbucker = [new(LowPass, 2800, 1.6)],
         PBass = [new(LowPass, 2500, 1.5)], JBass = [new(LowPass, 5000, 1.3)];
     private static readonly EqSpec Hp60 = new(HighPass, 60, 0.7);
+
+    // 29/30 DI fitted to a measured real guitar DI (status doc): low cut 135 Hz, pickup resonance 900 Hz (+13.5 dB, Q 1) under a
+    // 2.07 kHz roll-off; a dark loop (highs: T60 0.8 s at 2 kHz), softer pluck, two-coil bridge humbucker.
+    private static readonly EqSpec[] MeasuredDi = [new(HighPass, 135, 0.7), new(Peak, 900, 1, 13.5), new(LowPass, 2070, 0.4)];
+    private static readonly StringSpec MeasuredString = Gtr(6.0, 2.0, 0.55, 0.25, 78, 45, 0.10, 3500) with { Pickup2Mm = 63 };
 
     private static RigSpec Body(BodySpec body, params EqSpec[] eq) => new(1, eq, [], 0, [], CabKind.None, 0.9f) { Body = body };
     private static RigSpec Clean(params EqSpec[] tone) => new(0.6f, [new EqSpec(HighPass, 70, 0.7)], CleanStages, 0.05f, tone, CabKind.Room, 0.55f) { Pickup = SingleCoil, Comp = CleanComp };
@@ -43,14 +48,14 @@ internal static class Voicings
             Body(Steel, Hp60, new(Peak, 3000, 1, 2)) with { Level = 1.125f }),
         new(Gtr(6.0, 1.8, 0.30, 0.15, 130, 155, 0.12, 3500) with { Vel = 1.85, Pickup2Mm = 173, Tap = new(0.1f, 2500, 0.7, 2) },                  // 26 jazz
             Clean(new(LowShelf, 200, 0.7, 2), new(HighShelf, 2000, 0.7, -6)) with { Level = 1.06f, Pickup = NeckHumbucker }),
-        new(Gtr(8.0, 2.5, 0.12, 0.30, 84, 110, 0.12, 7000) with { Vel = 1.85, Tap = new(0.15f, 4000, 0.8, 2) },                                   // 27 clean
-            Clean(new EqSpec(HighShelf, 2500, 0.7, 3)) with { Level = 0.845f }),
+        new(MeasuredString with { Vel = 1.85, Tap = new(0.15f, 4000, 0.8, 2) },                                 // 27 clean
+            Clean(new EqSpec(HighShelf, 2500, 0.7, 3)) with { Level = 2.08f, Pickup = MeasuredDi }),
         new(Gtr(1.2, 0.2, 0.45, 0.20, 65, 78, 0.06, 2500) with { Vel = 2 }, Clean(new EqSpec(LowShelf, 150, 0.7, 3)) with { Level = 2.56f }), // 28 muted
-        new(Gtr(6.0, 2.0, 0.12, 0.35, 78, 45, 0.10, 7000),                                                                                      // 29 overdrive
-            new RigSpec(1, [new(HighPass, 90, 0.7), new(Peak, 750, 0.9, 5)], CrunchStages, 0.10f, [new(HighShelf, 3000, 0.7, 1)], CabKind.Guitar, 0.126f) { Pickup = Humbucker, Captured = new(0.385f, 0.87f) }),
-        new(Gtr(7.0, 2.5, 0.10, 0.40, 71, 42, 0.10, 8000),                                                                                      // 30 distortion
+        new(MeasuredString,                                                                                                                     // 29 overdrive
+            new RigSpec(1, [new(HighPass, 90, 0.7), new(Peak, 750, 0.9, 5)], CrunchStages, 0.10f, [new(HighShelf, 3000, 0.7, 1)], CabKind.Guitar, 0.126f) { Pickup = MeasuredDi, Captured = new(0.30f, 0.87f) }),
+        new(MeasuredString,                                                                                                                     // 30 distortion
             new RigSpec(1, [new(HighPass, 110, 0.7), new(Peak, 900, 0.8, 4)], LeadStages, 0.15f,
-                [new(LowShelf, 100, 0.7, 2), new(Peak, 650, 0.9, -5), new(HighShelf, 3000, 0.7, 2)], CabKind.Guitar, 0.057f) { Pickup = Humbucker, Captured = new(0.376f, 0.68f) }),
+                [new(LowShelf, 100, 0.7, 2), new(Peak, 650, 0.9, -5), new(HighShelf, 3000, 0.7, 2)], CabKind.Guitar, 0.057f) { Pickup = MeasuredDi, Captured = new(0.30f, 0.68f) }),
         new(Gtr(4.0, 2.5, 0.05, 0, 324, 110, 0.15, 4000, harmonic: true) with { Vel = 2 }, Clean(new EqSpec(HighShelf, 2500, 0.7, 2)) with { Level = 0.54f }), // 31 harmonics
         new(Bass(3.5, 0.8, 0.50, 0.10, 173, 0, 0.15, 1200) with { Vel = 1.75, Tap = new(2.5f, 90, 1.2, 25) },                                    // 32 upright
             Body(Upright, new(HighPass, 30, 0.7), new(HighShelf, 2000, 0.7, -6)) with { Level = 3.03f }),
