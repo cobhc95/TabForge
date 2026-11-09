@@ -26,6 +26,11 @@ Programs 29/30 only (`RigSpec.Captured`); clean, acoustic, muted and bass progra
 - `CleanOnly`: the trimmed pickup DI, no amp or cabinet, for an amp plug-in after the synth.
 Changes fade out one 64-frame block and in the next (`GuitarBus.Use`); notes keep sounding.
 
+## DI tone
+The pickup DI of 27/29/30 (`Voicings.MeasuredDi`, `MeasuredString`) is fitted to a measured real guitar DI, the kind the captured amp was
+trained on: low cut 135 Hz, pickup resonance near 900 Hz under a 2 kHz roll-off, a dark loop (2 kHz decays in about 1 s), a soft pluck and a
+two-coil bridge humbucker. `GuitarLayerTests.TheDiMatchesTheMeasuredGuitarDi` keeps its octave-band shape within 3 dB of the measured curve.
+
 ## Humanizer
 Off in the library (`Options.Humanize`). Evidence rule: per channel, over the last 16 notes, velocities with spread under ~5, few distinct values or long identical runs are flat, and onsets whose intervals match each other in simple ratios within 0.15 ms are a grid. Only what is flat changes, scaled by how flat (0 = untouched, bit for bit); the first 6 notes never change. Guitars/basses (24-39) and bowed (40-51) only; never channel 10. Velocity within ±12, 1..127; note-ons only delayed (≤ 21 ms, `HumanizeMaxDelay`), note-offs never before their note-on. Seeds: channel, key, per-channel count; `Reset` repeats a render bit for bit.
 `SynthOptions` holds every switch (guitar layer, humanize and its parts: velocity, timing, voice, drift); swap the whole record from any thread; `SynthOptions.Fields` lists name, help, get and set for a generated menu.

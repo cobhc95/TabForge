@@ -31,7 +31,7 @@ internal static class Voicings
         PBass = [new(LowPass, 2500, 1.5)], JBass = [new(LowPass, 5000, 1.3)];
     private static readonly EqSpec Hp60 = new(HighPass, 60, 0.7);
 
-    // 29/30 DI fitted to a measured real guitar DI (status doc): low cut 135 Hz, pickup resonance 900 Hz (+13.5 dB, Q 1) under a
+    // 27/29/30 DI fitted to a measured real guitar DI (status doc): low cut 135 Hz, pickup resonance 900 Hz (+13.5 dB, Q 1) under a
     // 2.07 kHz roll-off; a dark loop (highs: T60 0.8 s at 2 kHz), softer pluck, two-coil bridge humbucker.
     private static readonly EqSpec[] MeasuredDi = [new(HighPass, 135, 0.7), new(Peak, 900, 1, 13.5), new(LowPass, 2070, 0.4)];
     private static readonly StringSpec MeasuredString = Gtr(6.0, 2.0, 0.55, 0.25, 78, 45, 0.10, 3500) with { Pickup2Mm = 63 };

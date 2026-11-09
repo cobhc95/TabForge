@@ -99,6 +99,43 @@ The guitar layer (modelled string, stage amp, synthetic cab) sounded better than
 - A/B WAVs (humanizer off, riff of `tfsynth2`): `tfsynth5_riff<29|30>_<captured|stage>.wav`, `tfsynth5_riff30_cleanonly.wav`, agent scratch folder. Owner to listen.
 - Open: the adapter has no Settings row for DistAmp yet (the engine plays the default, Captured); status text still says "built-in amp".
 
+## DI tone fitted to a measured real guitar DI (Nov 2026)
+- Data: one 8.5 s riff DI (48 kHz) and the same take through the real amp the captured model learned; private, only statistics kept.
+  57 onsets: muted low D2/Bb2 chugs (read 20-50 cents sharp) between single notes E3-G3; attack peak -17.1 ± 5.6 dBFS (median -14.9).
+- Method: Python (1/6-octave LTAS, per-onset centroid 0-30 / 30-300 ms, band T60, 2-8 kHz share of the first 15 ms, pitch by harmonic sum);
+  `GuitarLayerTests.ANoteListRendersAsDiAtItsAttackLevels` plays the recovered notes at the measured onsets, note-offs (20 dB under the
+  attack) and attack peaks (velocity interpolated on our own peak-vs-velocity curve per note; 40 of 57 clamp at 127 at the training trim).
+- Measured, DI (real / ours before / ours after, program 29; 27 after is within 0.2 of 29):
+
+| measure | real DI | before | after |
+|---|---|---|---|
+| band distance, 1/6 oct, 50 Hz-12 kHz, level-matched (RMS dB) | 0 | 14.8 | 2.8 |
+| octave bands 63/125/250/500/1k/2k/4k/8k (dB re sum) | -16.9/-10.0/-5.8/-4.0/-7.6/-14.6/-21.4/-28.3 | -13.9/-8.9/-7.4/-7.6/-10.1/-8.0/-7.2/-15.5 | -16.4/-9.2/-5.8/-4.4/-7.2/-14.5/-21.3/-28.2 |
+| level 3.2 kHz band re 500 Hz (dB) | -36.5 | +3.1 | -31.0 |
+| below 80 Hz re 100-400 Hz (dB) | -21.2 | -11.8 | -22.5 |
+| centroid 0-30 / 30-300 ms, single notes (Hz) | 526 / 488 | 1508 / 1388 | 458 / 468 |
+| centroid 0-30 / 30-300 ms, muted chugs (Hz) | 373 / 249 | 1343 / 1000 | 361 / 326 |
+| T60 f0 / 2 kHz, held notes (s) | 4.1 / 0.76 | 4.1 / 3.1 | 4.1 / 0.84 |
+| 2-8 kHz share of the first 15 ms (dB re broadband), notes / chugs | -26 / -33 | -5 / -5 | -26 / -24 |
+| crest (dB) | 19.1 | 16.8 | 17.4 |
+| noise floor / hum | -42 dBFS rms quietest frames, 100/120 Hz hum -64/-60 dB | none | none |
+
+- Pickup resonance: no peak in 2-6 kHz; the fit puts it near 900 Hz under a 2 kHz roll-off (a heavily loaded bridge humbucker). Above 5 kHz
+  the real DI is mostly pick and hiss.
+- Changed (`Voicings`: `MeasuredDi`, `MeasuredString`, 27/29/30): low cut 135 Hz; resonance Peak 900 Hz +13.5 dB Q 1 + LowPass 2.07 kHz Q 0.4
+  (was LowPass 3.3 kHz Q 2.2 on 29/30, 5 kHz Q 2.2 on 27); loop Darkness 0.55 (was 0.10-0.12); pluck 3.5 kHz, noise 0.25 (was 7-8 kHz, 0.3-0.4);
+  second coil at 63 mm. 29/30 now share one string. Trim 0.30 (riff DI -29.1 dBFS rms, peak 0.27, as before); 27 Level 2.08 (bank 0.00 dB).
+  29/30 vs the bank at velocity 100: +0.20 / +0.22 dB; captured - stage riff -0.8 / +1.6 dB.
+- End to end, ours DI -> captured amp vs the real amp recording (same notes; real / before / after): 1/6-octave distance 8.4 -> 3.75 dB;
+  centroid 0-30 / 30-300 ms single notes 1007 / 1112, 1836 / 1789, 1101 / 1226 Hz; chugs 855 / 539, 1877 / 1446, 1078 / 746 Hz;
+  crest 10.9 / 11.2 / 11.4 dB. The amp's tone barely depends on input level here (distance 3.64-3.80 over -7..+3 dB of trim).
+- Still different: our amp output has 2-8 dB less at 110-400 Hz and 4-9 dB more fizz at 7-14 kHz; muted chugs ring brighter after the attack
+  (no palm mute, only release damping); the real picking is 5 dB hotter per note than ours at velocity 100 and twice as varied; no hum or hiss.
+- Guard: `GuitarLayerTests.TheDiMatchesTheMeasuredGuitarDi` (27/29/30): octave bands within 3 dB of the curve above (a phrase in the same
+  register, not the take), 2 kHz T60 of a held F3 within 0.76 s ×/÷ 1.6 (now 1.15 s).
+- A/B WAVs, all at -22 dBFS rms (gain: real DI +7.4, real amp -8.3, ours DI +9.8 / +10.4, ours amp -1.4 / -1.4 dB):
+  `tfsynth7_di_<owner|ours_before|ours_after>.wav`, `tfsynth7_amp_<owner_fx|ours_before|ours_after>.wav`, agent scratch folder. Owner to listen.
+
 ## Architecture decision
 Clean pickup-style guitar DI, then a user-chosen Neural Amp Modeler `.nam` model as the amp, then an optional cabinet `.wav` IR. Built-in defaults: the captured amp (no cabinet) on 29/30, the stage amp and synthetic cab on the other electric programs. NAM runtime is written from scratch from the public format spec (no copied code).
 

@@ -6,6 +6,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ### Added
 
+- TabForge Synth (experimental): the clean, overdriven and distortion electric guitars sound like a real guitar's direct signal: much darker and warmer (the old tone was up to 30 dB too bright around 3 kHz), with less low rumble and treble that fades like a real string; the built-in captured amp gets the input it was made for (untested in app).
 - TabForge Synth (experimental): the overdriven and distortion guitars now play through a built-in captured amp (a learned model of a real amp, no cabinet added by default) at the same loudness as before; a chosen .nam amp file still takes its place (untested in app).
 - TabForge Synth (experimental): new setting Humanize flat dynamics (on): where a track's guitar or bass notes all share one velocity and exact timing, they get a player's accents, phrasing, picking and strum, and no two notes sound quite alike; notes that already vary are left as they are (untested in app).
 - TabForge Synth (experimental): more realistic modelled clean, jazz and acoustic guitars (nylon and steel bodies, pickup character, a gentle amp with a small room) and basses (five strings down to low B, P and J pickups, compressor, fretless slides, slap and pop, upright body); each plays as loud as the SoundFont's own and now follows its velocity curve (untested in app).
