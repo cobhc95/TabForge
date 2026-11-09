@@ -36,7 +36,7 @@ internal static class NamFile
             case "SlimmableContainer":
                 var widest = config.GetProperty("submodels").EnumerateArray().MaxBy(s => s.GetProperty("max_value").GetDouble());
                 var inner = Parse(widest.GetProperty("model"), name);
-                return inner with { Architecture = "A2 " + inner.Architecture };
+                return inner with { Architecture = "A2 " + inner.Architecture, Loudness = inner.Loudness ?? Meta("loudness"), InputDbu = inner.InputDbu ?? Meta("input_level_dbu") };
             case "Sequential":
                 var parts = config.GetProperty("models").EnumerateArray().Select(c => Parse(c, name)).ToArray();
                 return new(name, arch, rate, parts[^1].Loudness, parts[0].InputDbu, () => new Chain(parts.Select(p => p.Build()).ToArray()));

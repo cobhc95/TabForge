@@ -3,7 +3,8 @@ using System.Text.Json;
 namespace TabForge.Sf2Synth.Nam;
 
 // Owns: WaveNet inference for .nam files, both the first architecture (fixed kernel, Tanh, optional sigmoid gate, 1x1 head)
-//   and A2 (per-layer kernel sizes and activations, gating/blending, bottleneck, optional head1x1, K-tap head conv).
+//   and A2 (per-layer kernel sizes and activations, gating/blending, bottleneck, optional head1x1, K-tap head conv); a
+//   slimmable array (slice_channels_uniform) runs at full width, which is the plain model.
 //   Per layer: z = conv(x) + mixin(cond); a = act(z) (gated: P(top)·S(bottom); blended: S·P + (1-S)·top); head += a or
 //   head1x1(a); x += layer1x1(a). Arrays chain residual and head; output = head_scale · last head. Blocks of up to NamConv.Max frames, no allocation.
 // Does not own: file parsing and model choice (NamFile), levels and resampling (NamAmp).
@@ -52,7 +53,7 @@ internal sealed class NamWaveNet : INamNet
         bool On(JsonElement? o, bool def) => o is { } e && e.TryGetProperty("active", out var a) ? a.GetBoolean() : def;
         foreach (var p in c.EnumerateObject())
             if ((p.Name.EndsWith("_film") && On(p.Value, false)) || (p.Name.StartsWith("groups") && p.Value.ValueKind == JsonValueKind.Number && p.Value.GetInt32() != 1)
-                || (p.Name == "slimmable" && p.Value.ValueKind != JsonValueKind.Null))
+                || (p.Name == "slimmable" && p.Value.ValueKind == JsonValueKind.Object && p.Value.GetProperty("method").GetString() != "slice_channels_uniform"))
                 throw new FormatException($"{p.Name} not supported");
         var ch = I("channels");
         var b = I("bottleneck", ch);

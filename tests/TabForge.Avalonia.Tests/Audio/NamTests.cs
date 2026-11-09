@@ -44,6 +44,7 @@ public sealed class NamTests(ITestOutputHelper output)
             {
                 ["input_size"] = a.In, ["condition_size"] = 1, ["head_size"] = a.HeadOut, ["channels"] = a.Ch, ["kernel_size"] = a.K[0],
                 ["dilations"] = new JsonArray(a.D.Select(d => (JsonNode)d).ToArray()), ["activation"] = a.Act, ["gated"] = a.Gate[0] == "gated", ["head_bias"] = a.HeadBias,
+                ["slimmable"] = new JsonObject { ["method"] = "slice_channels_uniform" },   // full width = the plain model
             };
         var model = new JsonObject
         {
