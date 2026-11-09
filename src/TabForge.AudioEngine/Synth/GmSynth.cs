@@ -51,7 +51,7 @@ public sealed class GmSynth : IPluginInstance
         ? new Sf2Synthesizer(font, sampleRate, MaxVoices, GmSynthTuning.ReverbAndChorus) { MasterVolume = bank.MasterVolume, Layer = new GuitarLayer(sampleRate) }
         : null;
 
-    private static GuitarLayer? NewLayer(int sampleRate, GmBank.Choice bank) => bank.Experimental && bank.Sf2 is null && !bank.Silent ? new GuitarLayer(sampleRate) : null;
+    private static GuitarLayer? NewLayer(int sampleRate, GmBank.Choice bank) => bank.Experimental && bank.Sf2 is null && !bank.Silent ? new GuitarLayer(sampleRate) { Gain = bank.MasterVolume } : null;
 
     /// <summary>
     /// Voices per track synth. One GM synth serves one track (a guitar's chords with let-ring, or a kit's hits and cymbal tails), so

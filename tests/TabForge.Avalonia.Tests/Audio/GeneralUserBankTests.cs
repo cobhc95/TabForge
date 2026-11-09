@@ -99,28 +99,38 @@ public sealed class GeneralUserBankTests(ITestOutputHelper output)
             if (vel == 100) Assert.InRange(Db(a, b) - Db(c, d), -2, 2);   // velocity 40 differs on purpose: we honour the bank's own velocity modulators
         }
     }
-    // Same MIDI, layer on vs off: the modelled guitars sit within 3 dB of the bank's own (velocity 100, chord and single note).
+    // Same MIDI, layer on vs off: per program (mean of single note and chord) the modelled guitars sit within 2 dB of the bank's own
+    // at velocity 100; the layer's velocity curve (clean programs) drifts at most 10 dB from the bank's between velocity 40 and 127.
     [Fact]
     public void TheLayerIsAsLoudAsTheBankGuitars()
     {
         if (string.IsNullOrEmpty(BankPath) || !File.Exists(BankPath)) return;
         var font = new SoundFont(BankPath);
-        foreach (var program in new[] { 24, 25, 26, 27, 28, 29, 30, 31, 33, 34 })
+        double Db(int program, int[] notes, int vel, bool layer)
+        {
+            var s = new Synthesizer(font, Rate, 64, effects: false) { MasterVolume = 0.5f, Layer = layer ? new GuitarLayer(Rate) : null };
+            s.ProcessMidiMessage(0, 0xC0, program, 0);
+            foreach (var n in notes) s.ProcessMidiMessage(0, 0x90, program >= 32 ? n - 12 : n, vel);
+            float[] l = new float[Rate], r = new float[Rate];
+            s.Render(l, r);
+            return 10 * Math.Log10(l.Concat(r).Sum(v => (double)v * v) / (2.0 * Rate) + 1e-20);
+        }
+        var (worst, drift) = (0.0, 0.0);
+        foreach (var program in Enumerable.Range(24, 14))
+        {
+            var at100 = 0.0;
             foreach (var notes in new[] { new[] { 45 }, program >= 32 ? [33] : new[] { 40, 47, 52, 55 } })
             {
-                double Db(bool layer)
-                {
-                    var s = new Synthesizer(font, Rate, 64, effects: false) { MasterVolume = 0.5f, Layer = layer ? new GuitarLayer(Rate) : null };
-                    s.ProcessMidiMessage(0, 0xC0, program, 0);
-                    foreach (var n in notes) s.ProcessMidiMessage(0, 0x90, program >= 32 ? n - 12 : n, 100);
-                    float[] l = new float[Rate], r = new float[Rate];
-                    s.Render(l, r);
-                    return 10 * Math.Log10(l.Concat(r).Sum(v => (double)v * v) / (2.0 * Rate) + 1e-20);
-                }
-                var diff = Db(true) - Db(false);
-                output.WriteLine($"program {program}, {notes.Length} note(s): layer {Db(true):F1} dB, bank {Db(false):F1} dB, diff {diff:F1} dB");
-                Assert.InRange(diff, -3, 3);
+                var diffs = new[] { 40, 70, 100, 127 }.Select(v => Db(program, notes, v, true) - Db(program, notes, v, false)).ToArray();
+                output.WriteLine($"program {program}, {notes.Length} note(s): layer - bank at velocity 40/70/100/127 = {string.Join(" / ", diffs.Select(d => d.ToString("F1")))} dB");
+                at100 += diffs[2] / 2;
+                if (program is not (29 or 30)) drift = Math.Max(drift, diffs.Max() - diffs.Min());   // amp compression is meant
             }
+            worst = Math.Max(worst, Math.Abs(at100));
+        }
+        output.WriteLine($"worst program at velocity 100 {worst:F1} dB, worst velocity drift (clean) {drift:F1} dB");
+        Assert.InRange(worst, 0, 2);
+        Assert.InRange(drift, 0, 10);
     }
 
     private static (float Step, int At) MaxStep(float[] x)

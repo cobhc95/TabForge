@@ -129,7 +129,7 @@ public sealed class Synthesizer
         foreach (var v in _voices) if (v.Active) v.Render(l, r, rev, cho);
         _reverb?.Process(rev, l, r);
         _chorus?.Process(cho, l, r);
+        Layer?.Render(l, r);
         for (var i = 0; i < n; i++) { left[i] = l[i] * MasterVolume; right[i] = r[i] * MasterVolume; }
-        Layer?.Render(left, right);
     }
 }

@@ -12,7 +12,7 @@ Standalone SoundFont 2.04 synthesizer (no dependencies) with an optional modelle
 ## Signal flow
 MIDI -> `Synthesizer.ProcessMidiMessage` -> note-on on a channel the `Layer` owns goes to the layer, everything else starts SF2 voices.
 Voice: sample -> cubic Hermite -> resonant low-pass -> gain ramp (vol env, attenuation, modulators) -> pan -> mix + reverb/chorus sends.
-`Render` overwrites the output with the SF2 mix × `MasterVolume`, then the layer adds its sound.
+`Render` adds the layer to the SF2 mix, then writes the sum × `MasterVolume` (layer and bank guitars level-matched, `GeneralUserBankTests`).
 Guitar layer: strings (per channel) -> pre-EQ -> 2x oversampled amp stages -> tone stack -> cabinet FIR -> volume/pan.
 
 ## API

@@ -51,6 +51,9 @@ public sealed class GuitarLayer : ILayer
     public bool Owns(int channel) => channel != 9 && Models(_ch[channel & 15].Program);
     public int ActiveStrings => _strings.Count(s => s.Active);
 
+    // Output gain: 1 inside Synthesizer (it applies MasterVolume after the layer); a host mixing the layer itself sets its master here.
+    public float Gain { get; set; } = 1;
+
     // The clean pickup signal only, no amp or cabinet (for judging the strings).
     public bool DiOnly { set { foreach (var c in _ch) c.Bus.DiOnly = value; } }
 
@@ -217,7 +220,7 @@ public sealed class GuitarLayer : ILayer
             c.Bus.Process(mono);
             if ((c.Tail -= n) <= 0) c.Bus.Reset();
             // GM gain curves: (cc/127)² each; constant-power pan, unity at centre.
-            var gain = (float)(Math.Pow(c.Volume / 127.0, 2) * Math.Pow(c.Expression / 127.0, 2) * Math.Sqrt(2));
+            var gain = (float)(Gain * Math.Pow(c.Volume / 127.0, 2) * Math.Pow(c.Expression / 127.0, 2) * Math.Sqrt(2));
             var theta = c.Pan / 127.0 * Math.PI / 2;
             float gl = gain * (float)Math.Cos(theta), gr = gain * (float)Math.Sin(theta);
             for (var i = 0; i < n; i++) { left[i] += mono[i] * gl; right[i] += mono[i] * gr; }

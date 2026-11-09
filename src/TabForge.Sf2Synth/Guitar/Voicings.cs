@@ -17,7 +17,8 @@ internal sealed record StringSpec(double RefHz, double T60Ref, double T60At1k, d
 // One tube stage: gain, grid bias (asymmetry), coupling high-pass and plate low-pass (Hz).
 internal readonly record struct StageSpec(float Gain, float Bias, double HighPassHz, double LowPassHz);
 
-// Pickup = the DI's magnetic resonance (inductance into cable capacitance), before any amp.
+// Pickup = the DI's magnetic resonance (inductance into cable capacitance), before any amp. Level is calibrated so each program
+// matches the GeneralUser GS guitar of the same program at velocity 100 (GeneralUserBankTests).
 internal sealed record RigSpec(float Drive, EqSpec[] PreEq, StageSpec[] Stages, float Sag, EqSpec[] Tone, CabKind Cab, float Level)
 {
     public EqSpec[] Pickup { get; init; } = [];
@@ -50,22 +51,22 @@ internal static class Voicings
     private static readonly Voicing[] Table =
     [
         new(Gtr(3.5, 1.0, 0.35, 0.12, 117, 0, 0.15, 3000), Body(Hp60, GuitarBodyLow, GuitarTop, new(HighShelf, 4000, 0.7, -4))),     // 24 nylon
-        new(Gtr(5.0, 1.5, 0.18, 0.30, 97, 0, 0.18, 6000), Body(Hp60, GuitarBodyLow, GuitarTop, new(Peak, 3000, 1, 2))),             // 25 steel
-        new(Gtr(4.0, 1.2, 0.30, 0.15, 130, 162, 0.12, 3500), Clean(new(LowShelf, 200, 0.7, 2), new(HighShelf, 2000, 0.7, -6))),    // 26 jazz
-        new(Gtr(5.0, 1.5, 0.12, 0.30, 84, 110, 0.12, 7000), Clean(new EqSpec(HighShelf, 2500, 0.7, 3))),                           // 27 clean
-        new(Gtr(0.25, 0.12, 0.45, 0.20, 65, 78, 0.06, 2500), Clean(new EqSpec(LowShelf, 150, 0.7, 3))),                           // 28 muted
+        new(Gtr(5.0, 1.5, 0.18, 0.30, 97, 0, 0.18, 6000), Body(Hp60, GuitarBodyLow, GuitarTop, new(Peak, 3000, 1, 2)) with { Level = 0.68f }),             // 25 steel
+        new(Gtr(4.0, 1.2, 0.30, 0.15, 130, 162, 0.12, 3500), Clean(new(LowShelf, 200, 0.7, 2), new(HighShelf, 2000, 0.7, -6)) with { Level = 0.36f }),    // 26 jazz
+        new(Gtr(5.0, 1.5, 0.12, 0.30, 84, 110, 0.12, 7000), Clean(new EqSpec(HighShelf, 2500, 0.7, 3)) with { Level = 0.27f }),                           // 27 clean
+        new(Gtr(0.25, 0.12, 0.45, 0.20, 65, 78, 0.06, 2500), Clean(new EqSpec(LowShelf, 150, 0.7, 3)) with { Level = 1.3f }),                           // 28 muted
         new(Gtr(6.0, 2.0, 0.12, 0.35, 78, 45, 0.10, 7000),                                                                        // 29 overdrive
-            new RigSpec(1, [new(HighPass, 90, 0.7), new(Peak, 750, 0.9, 5)], CrunchStages, 0.10f, [new(HighShelf, 3000, 0.7, 1)], CabKind.Guitar, 0.30f) { Pickup = Humbucker }),
+            new RigSpec(1, [new(HighPass, 90, 0.7), new(Peak, 750, 0.9, 5)], CrunchStages, 0.10f, [new(HighShelf, 3000, 0.7, 1)], CabKind.Guitar, 0.126f) { Pickup = Humbucker }),
         new(Gtr(7.0, 2.5, 0.10, 0.40, 71, 42, 0.10, 8000),                                                                        // 30 distortion
             new RigSpec(1, [new(HighPass, 110, 0.7), new(Peak, 900, 0.8, 4)], LeadStages, 0.15f,
-                [new(LowShelf, 100, 0.7, 2), new(Peak, 650, 0.9, -5), new(HighShelf, 3000, 0.7, 2)], CabKind.Guitar, 0.25f) { Pickup = Humbucker }),
-        new(Gtr(4.0, 2.5, 0.05, 0, 324, 110, 0.15, 4000, harmonic: true), Clean(new EqSpec(HighShelf, 2500, 0.7, 2))),               // 31 harmonics
-        new(Bass(2.5, 0.6, 0.45, 0.10, 173, 0, 0.15, 1200), Body(new(HighPass, 30, 0.7), new(Peak, 80, 1.5, 4), new(HighShelf, 2000, 0.7, -6))), // 32 upright
-        new(Bass(5.0, 1.0, 0.30, 0.15, 173, 173, 0.12, 2500), BassRig(new EqSpec(Peak, 800, 1, 1))),                                // 33 finger
-        new(Bass(5.0, 1.2, 0.20, 0.35, 104, 130, 0.10, 5000), BassRig(new EqSpec(HighShelf, 1500, 0.7, 4))),                        // 34 pick
-        new(Bass(4.0, 0.8, 0.35, 0.10, 216, 173, 0.15, 2000), BassRig(new(Peak, 1000, 0.7, 3), new(HighShelf, 2500, 0.7, -4))),    // 35 fretless
-        new(Bass(3.0, 1.0, 0.15, 0.50, 69, 104, 0.10, 8000), BassRig(new(Peak, 500, 0.8, -6), new(HighShelf, 2500, 0.7, 6))),     // 36 slap 1
-        new(Bass(3.0, 1.0, 0.15, 0.50, 69, 104, 0.10, 8000), BassRig(new(Peak, 500, 0.8, -4), new(HighShelf, 2500, 0.7, 4))),     // 37 slap 2
+                [new(LowShelf, 100, 0.7, 2), new(Peak, 650, 0.9, -5), new(HighShelf, 3000, 0.7, 2)], CabKind.Guitar, 0.057f) { Pickup = Humbucker }),
+        new(Gtr(4.0, 2.5, 0.05, 0, 324, 110, 0.15, 4000, harmonic: true), Clean(new EqSpec(HighShelf, 2500, 0.7, 2)) with { Level = 0.164f }),               // 31 harmonics
+        new(Bass(2.5, 0.6, 0.45, 0.10, 173, 0, 0.15, 1200), Body(new(HighPass, 30, 0.7), new(Peak, 80, 1.5, 4), new(HighShelf, 2000, 0.7, -6)) with { Level = 2.7f }), // 32 upright
+        new(Bass(5.0, 1.0, 0.30, 0.15, 173, 173, 0.12, 2500), BassRig(new EqSpec(Peak, 800, 1, 1)) with { Level = 0.56f }),                                // 33 finger
+        new(Bass(5.0, 1.2, 0.20, 0.35, 104, 130, 0.10, 5000), BassRig(new EqSpec(HighShelf, 1500, 0.7, 4)) with { Level = 0.45f }),                        // 34 pick
+        new(Bass(4.0, 0.8, 0.35, 0.10, 216, 173, 0.15, 2000), BassRig(new(Peak, 1000, 0.7, 3), new(HighShelf, 2500, 0.7, -4)) with { Level = 0.62f }),    // 35 fretless
+        new(Bass(3.0, 1.0, 0.15, 0.50, 69, 104, 0.10, 8000), BassRig(new(Peak, 500, 0.8, -6), new(HighShelf, 2500, 0.7, 6)) with { Level = 1.25f }),     // 36 slap 1
+        new(Bass(3.0, 1.0, 0.15, 0.50, 69, 104, 0.10, 8000), BassRig(new(Peak, 500, 0.8, -4), new(HighShelf, 2500, 0.7, 4)) with { Level = 0.56f }),     // 37 slap 2
     ];
 
     public static Voicing Of(int program) => Table[Math.Clamp(program, First, Last) - First];
