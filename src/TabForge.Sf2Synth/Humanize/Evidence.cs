@@ -2,10 +2,11 @@ using static TabForge.Sf2Synth.Humanize.HumanTable;
 
 namespace TabForge.Sf2Synth.Humanize;
 
-// Owns: one channel's evidence of a human player in the incoming notes: recent velocities (spread, distinct values, identical runs)
-//   and onsets (inter-onset intervals in exact simple ratios = a grid), smoothed into VelFlat and TimeFlat 0..1 (0 = human: untouched).
-//   Fewer than MinNotes notes: no evidence, nothing changes. Allocation-free rings.
-// Does not own: what is changed (Phrase), the pulse (Phrase reads Onset).
+// Owns: one channel's evidence of a human player in the incoming notes, smoothed into VelFlat and TimeFlat 0..1 (0 = human:
+//   untouched). Velocity is human when it has many distinct values (more than 4 levels, counted as if the window were full) and
+//   either a real spread or short runs of equal values; timing is human when few inter-onset intervals sit in exact simple
+//   ratios (within 0.1 ms) to another. Fewer than MinNotes notes: no evidence, nothing changes. Allocation-free rings.
+// Does not own: what is changed (Phrase, Humanizer), the pulse (Phrase reads Onset).
 // Tests: HumanizerTests.
 internal sealed class Evidence
 {
@@ -38,21 +39,23 @@ internal sealed class Evidence
         return f < Snap ? 0 : f;
     }
 
+    private int Vel(int back) => _vel[(_vi - 1 - back + 2 * Window) % Window];
+
     private double VelHuman()
     {
         double sum = 0, sq = 0;
         int distinct = 0, run = 1, maxRun = 1;
         for (var i = 0; i < _nv; i++)
         {
-            var v = _vel[(_vi - 1 - i + 2 * Window) % Window];
+            var v = Vel(i);
             (sum, sq) = (sum + v, sq + v * v);
             var seen = false;
-            for (var j = 0; j < i && !seen; j++) seen = _vel[(_vi - 1 - j + 2 * Window) % Window] == v;
+            for (var j = 0; j < i && !seen; j++) seen = Vel(j) == v;
             if (!seen) distinct++;
-            if (i > 0) { run = _vel[(_vi - i + 2 * Window) % Window] == v ? run + 1 : 1; maxRun = Math.Max(maxRun, run); }
+            if (i > 0) { run = Vel(i - 1) == v ? run + 1 : 1; maxRun = Math.Max(maxRun, run); }
         }
         var std = Math.Sqrt(Math.Max(0, sq / _nv - sum * sum / _nv / _nv));
-        return Math.Min(Math.Min(Smooth(StdLo, StdHi, std), Smooth(DistinctLo, DistinctHi, distinct)), 1 - Smooth(RunLo, RunHi, maxRun));
+        return Math.Min(Smooth(DistinctLo, DistinctHi, distinct * (double)Window / _nv),Math.Max(Smooth(StdLo, StdHi, std), 1 - Smooth(RunLo, RunHi, maxRun)));
     }
 
     // Fraction of intervals that equal another one times a simple ratio m:n (1..4) within SameMs.

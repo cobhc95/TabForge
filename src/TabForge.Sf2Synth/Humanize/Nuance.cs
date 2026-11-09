@@ -10,7 +10,7 @@ public readonly record struct Nuance(uint Seed, float Cents, float Bright, float
 {
     public bool Moves => Cents != 0 || VibCents != 0;
 
-    public static Nuance Of(Profile p, int channel, int key, int count, bool voice, bool vibrato)
+    public static Nuance Of(Family p, int channel, int key, int count, bool voice, bool vibrato)
     {
         var h = (uint)(channel * 131 + key + 1) * 0x9E3779B9u ^ (uint)count * 0x85EBCA6Bu;
         h ^= h >> 15; h *= 0x2C1B3C6Du; h ^= h >> 12;

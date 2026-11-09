@@ -6,7 +6,7 @@ namespace TabForge.Sf2Synth;
 
 // Owns: the public synth: MIDI in (MeltySynth-shaped: ProcessMidiMessage, Render, NoteOffAll, Reset), zone matching, voice
 //   allocation (free, else quietest released, else oldest), exclusive class, sustain, the optional ILayer, reverb/chorus, master
-//   volume, the live Options and the humanizer pre-stage (events it delays play inside Render at their frame).
+//   volume, the live Options and the humanizer pre-stage (events it holds play inside Render at their frame; Latency).
 // Does not own: a voice's DSP (Voice), file parsing (Sf2), the layer's sound (e.g. Guitar/GuitarLayer), humanizing (Humanize/).
 // Tests: Sf2SynthTests, GuitarLayerTests, HumanizerTests.
 public sealed class Synthesizer
@@ -30,8 +30,8 @@ public sealed class Synthesizer
     public int ActiveVoices => _voices.Count(v => v.Active);
     /// <summary>The optional stages; swap the whole set from any thread, during playback too.</summary>
     public SynthOptions Options { get => _opt; set => _opt = value ?? SynthOptions.Default; }
-    /// <summary>The humanizer's longest possible note delay in frames (0 latency is reported; this is what a host could add).</summary>
-    public int HumanizeMaxDelay => _hum.MaxDelay;
+    /// <summary>Frames the output runs behind the MIDI input: the humanizer's look-ahead while it is on, else 0. A host reports it as latency.</summary>
+    public int Latency => _hum.Latency(_opt);
     public Humanizer Humanizer => _hum;
 
     public Synthesizer(SoundFont font, int sampleRate, int maxVoices = 64, bool effects = true)

@@ -11,6 +11,17 @@ public enum DistAmp
     CleanOnly,
 }
 
+/// <summary>How loosely the humanizer plays (values in Humanize/HumanTable.Styles).</summary>
+public enum Feel
+{
+    /// <summary>A studio player: small spread, quick strums, 20 ms look-ahead.</summary>
+    Tight,
+    /// <summary>A good live player (the measured owner's playing): the default, 35 ms look-ahead.</summary>
+    Natural,
+    /// <summary>Relaxed and laid back: wide dynamics, slow strums, more ghost notes, 50 ms look-ahead.</summary>
+    Loose,
+}
+
 // Owns: every switch of the engine's optional stages as one immutable set (Synthesizer.Options swaps it whole, so any thread may
 //   change it during playback), and the descriptor tables a settings menu can be generated from.
 // Does not own: what the switches do (Synthesizer, Humanize/Humanizer, Guitar/GuitarLayer).
@@ -21,13 +32,15 @@ public sealed record SynthOptions
     public bool GuitarLayer { get; init; } = true;
     /// <summary>Master switch of the humanizer; off: every event passes unchanged and on time.</summary>
     public bool Humanize { get; init; }
-    /// <summary>Accents, phrase arch, picking and strum dynamics, only where the incoming velocities are flat.</summary>
+    /// <summary>How loosely the humanizer plays; also sets its look-ahead (reported as latency while on).</summary>
+    public Feel Feel { get; init; } = Feel.Natural;
+    /// <summary>Accents, bar pattern, phrasing, picking, ghost and strum dynamics, only where the incoming velocities are flat.</summary>
     public bool HumanizeVelocity { get; init; } = true;
-    /// <summary>Strum spread and slight laziness (delays only), only where the incoming timing is grid-exact.</summary>
+    /// <summary>Early and late notes, strum spread and note lengths, only where the incoming timing is grid-exact.</summary>
     public bool HumanizeTiming { get; init; } = true;
     /// <summary>Per-note voice variation: pick noise and position, decaying detune, brightness, release.</summary>
     public bool HumanizeVoice { get; init; } = true;
-    /// <summary>Slow level drift and a gentle late vibrato on long notes (not on channels that send CC1 or pitch bend).</summary>
+    /// <summary>Slow tempo drift and a gentle late vibrato on long notes (not on channels that send CC1 or pitch bend).</summary>
     public bool HumanizeDrift { get; init; } = true;
     /// <summary>The distorted guitars' amp; a user .nam still wins over Captured. Switching fades over two short blocks.</summary>
     public DistAmp DistAmp { get; init; } = DistAmp.Captured;
@@ -41,10 +54,10 @@ public sealed record SynthOptions
     [
         ("Guitar layer", "Modelled guitars and basses instead of the SoundFont's", o => o.GuitarLayer, (o, v) => o with { GuitarLayer = v }),
         ("Humanize", "Add a player's dynamics and timing where the song's notes are flat", o => o.Humanize, (o, v) => o with { Humanize = v }),
-        ("Dynamics", "Accents, phrasing and picking dynamics", o => o.HumanizeVelocity, (o, v) => o with { HumanizeVelocity = v }),
-        ("Timing", "Strum spread and slight laziness", o => o.HumanizeTiming, (o, v) => o with { HumanizeTiming = v }),
+        ("Dynamics", "Accents, phrasing, picking and ghost notes", o => o.HumanizeVelocity, (o, v) => o with { HumanizeVelocity = v }),
+        ("Timing", "Early and late notes, strum spread, note lengths", o => o.HumanizeTiming, (o, v) => o with { HumanizeTiming = v }),
         ("Note variation", "No two notes sound identical", o => o.HumanizeVoice, (o, v) => o with { HumanizeVoice = v }),
-        ("Drift and vibrato", "Slow level drift, gentle vibrato on long notes", o => o.HumanizeDrift, (o, v) => o with { HumanizeDrift = v }),
+        ("Drift and vibrato", "Slow tempo drift, gentle vibrato on long notes", o => o.HumanizeDrift, (o, v) => o with { HumanizeDrift = v }),
         ("Captured amp cabinet", "Add the built-in cabinet after the captured amp", o => o.CapturedAmpCabinet, (o, v) => o with { CapturedAmpCabinet = v }),
     ];
 
@@ -53,5 +66,6 @@ public sealed record SynthOptions
     [
         ("Distorted guitar amp", "Amp of the overdriven and distortion guitars when no amp file is set", ["Captured amp", "Stage amp", "Clean (for an amp plug-in)"],
             o => (int)o.DistAmp, (o, v) => o with { DistAmp = (DistAmp)v }),
+        ("Feel", "How loosely the humanizer plays", ["Tight", "Natural", "Loose"], o => (int)o.Feel, (o, v) => o with { Feel = (Feel)v }),
     ];
 }
