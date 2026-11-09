@@ -12,158 +12,157 @@ using Xunit.Abstractions;
 
 namespace TabForge.Avalonia.Tests;
 
-// Owns: the checks of the humanizer: flat input gains human-range velocity spread and bounded delays, human input passes
-//   unchanged, per-key order and note-offs kept, bit-identical renders, no allocation, no stuck notes or NaN while options
-//   change mid-song, its CPU, and the listening WAVs + flat .mid files (TABFORGE_SYNTH_WAV_DIR).
-// Does not own: the guitar sound (GuitarLayerTests), the SoundFont player (Sf2SynthTests).
-// Tests: Humanizer, Evidence, Phrase, Nuance, SynthOptions, Synthesizer (pre-stage).
-public sealed class HumanizerTests(ITestOutputHelper output)
+// Owns: the checks of the humanizer (docs/specs/HUMAN_FEEL_SPEC.md 'What to test'): per feel, flat input reaches the human level
+//   spread (dB and velocity steps), onset spread, lag-1 interval and DFA exponents, bar-to-bar pattern correlation, strum spreads
+//   and gaps, ghost rate; the 1/f noise exponent; human input untouched; per-key pairing and bounds under fuzz; latency only while
+//   on; bit-identical renders; no allocation; CPU; the listening WAVs (TABFORGE_SYNTH_WAV_DIR).
+// Does not own: songs, harness and statistics (HumanizerTests.Songs.cs), the guitar sound (GuitarLayerTests).
+// Tests: Humanizer, Phrase, Strum, Evidence, Noise, Nuance, SynthOptions, Synthesizer (pre-stage), GmSynth latency.
+public sealed partial class HumanizerTests(ITestOutputHelper output)
 {
-    private const int Rate = 48000;
-    private static readonly SynthOptions On = new() { Humanize = true };
-    private record struct Ev(long At, int Status, int D1, int D2);
-
-    // ---- songs: flat (velocity 90, exact grid) -------------------------------------------------------------------------------------
-
-    private static void Note(List<Ev> s, int ch, double beat, double beats, int key, int vel = 90, double jitterMs = 0)
+    [Theory]
+    [InlineData(Feel.Tight, 2.1, 2.9, 9, 15, 6, 8)]
+    [InlineData(Feel.Natural, 3.4, 4.6, 15, 24, 11, 14)]
+    [InlineData(Feel.Loose, 4.7, 6.3, 20, 31, 18, 24)]
+    public void FlatInputReachesTheHumanRangesOfItsFeel(Feel feel, double dbLo, double dbHi, double stepLo, double stepHi, double msLo, double msHi)
     {
-        var at = (long)Math.Round(beat * 0.5 * Rate + jitterMs * Rate / 1000);   // 120 bpm
-        s.Add(new(at, 0x90 | ch, key, vel));
-        s.Add(new(at + (long)(beats * 0.5 * Rate), 0x80 | ch, key, 0));
-    }
-
-    private static List<Ev> Song(int program, Action<List<Ev>> notes)
-    {
-        var s = new List<Ev> { new(0, 0xC0, program, 0) };
-        notes(s);
-        return s.OrderBy(e => e.At).ThenBy(e => (e.Status & 0xF0) == 0x80 ? 0 : 1).ToList();
-    }
-
-    private static List<Ev> Riff() => Song(30, s =>
-    {
-        for (var bar = 0; bar < 4; bar++)
+        var o = With(feel);
+        var style = HumanTable.Styles[(int)feel];
+        var line = Line();
+        var ml = Match(line, Run(line, o)).Skip(32).ToList();   // after the evidence settles
+        var strum = Strums(0.5);
+        double[] db = ml.Select(m => Db(m.In, m.Out)).ToArray(), off = ml.Select(m => Ms(m.In, m.Out)).ToArray();
+        var bars = Enumerable.Range(0, db.Length / 16 - 1).ToList();
+        double BarCorr(double[] x) => bars.Average(b => Corr(x[(b * 16)..(b * 16 + 16)], x[(b * 16 + 16)..(b * 16 + 32)]));
+        var onsets = ml.Select(m => (double)m.Out.At).ToArray();
+        var ioi = onsets.Zip(onsets.Skip(1), (a, b) => b - a).ToArray();
+        var lag1 = Corr(ioi[..^1], ioi[1..]);
+        var (dfaS, dfaL) = (Dfa(off, 4, 16), Dfa(off, 32, 256));
+        var strokes = Strokes(strum, Run(strum, o)).Skip(32).ToList();
+        var (down, up) = (Median(strokes.Where(s => s.Down).Select(s => s.Spread)), Median(strokes.Where(s => !s.Down).Select(s => s.Spread)));
+        var sixteen = Strums(0.25);
+        // Ghost rate from the count; in the output a stroke 7 dB under the median of its slot 4 and 8 bars away is low: beats must be
+        // no lower than 8th offbeats (which never ghost either), 16th offbeats clearly lower.
+        var hg = new Humanizer(Rate);
+        var st16 = Strokes(sixteen, Run(sixteen, o, hg)).Skip(32).ToDictionary(s => s.At / (Rate / 8), s => s.Db);
+        var ghost = hg.Ghosts(0) / (64.0 * 8);
+        double Low(Func<long, bool> cls)
         {
-            var run = bar % 2 == 1;   // palm-muted 8th chugs; every second bar a 16th run down from the half-bar
-            for (var e = 0; e < (run ? 4 : 8); e++) foreach (var k in new[] { 40, 47 }) Note(s, 0, bar * 4 + e * 0.5, 0.3, k);
-            if (run) for (var e = 0; e < 8; e++) Note(s, 0, bar * 4 + 2 + e * 0.25, 0.23, new[] { 52, 50, 48, 47, 45, 43, 42, 40 }[e]);
+            var c = st16.Keys.Where(k => cls(k % 16) && st16.ContainsKey(k - 128) && st16.ContainsKey(k + 128)).ToList();
+            return c.Count(k => st16[k] < Median(new[] { -128, -64, 64, 128 }.Select(d => st16[k + d])) - 7) / (double)c.Count;
         }
-    });
+        var (offLow, eighthLow, beatLow) = (Low(s => s % 2 == 1), Low(s => s % 4 == 2), Low(s => s % 4 == 0));
+        var stats = (LineDb: Std(db), StrumDb: Std(strokes.Select(s => s.Db)), Steps: Std(ml.Select(m => (double)m.Out.D2)),
+            Ms: Std(off), Early: off.Min(), BarDb: BarCorr(db), BarMs: BarCorr(off));
+        output.WriteLine($"{feel}: level std line {stats.LineDb:F2} dB ({stats.Steps:F1} steps) / strum strokes {stats.StrumDb:F2} dB; onset std {stats.Ms:F1} ms " +
+            $"(earliest {stats.Early:F1}, look-ahead {style.LookMs}); lag-1 {lag1:F2}; DFA short {dfaS:F2} long {dfaL:F2}; bar corr level {stats.BarDb:F2} " +
+            $"timing {stats.BarMs:F2}; strum down {down:F1} up {up:F1} ms, largest gap {strokes.Max(s => s.Gap):F1}; ghosts {ghost:P1} (set {style.Ghost:P0}); low strokes on 16th offbeats {offLow:P1}, 8th offbeats {eighthLow:P1}, beats {beatLow:P1}");
 
-    private static List<Ev> Arpeggio() => Song(27, s =>
-    {
-        int[][] bars = [[57, 60, 64, 69, 64, 60, 64, 60], [48, 55, 60, 64, 67, 64, 60, 55], [43, 50, 55, 59, 62, 59, 55, 50], [40, 47, 52, 55, 59, 55, 52, 47]];
-        for (var bar = 0; bar < 4; bar++) for (var e = 0; e < 8; e++) Note(s, 0, bar * 4 + e * 0.5, 0.95, bars[bar][e]);
-    });
-
-    private static List<Ev> Strum() => Song(25, s =>
-    {
-        int[][] chords = [[40, 47, 52, 56, 59, 64], [45, 52, 57, 61, 64], [50, 57, 62, 66], [43, 47, 50, 55, 59, 67]];
-        double[] rhythm = [0, 1, 1.5, 2.5, 3];
-        for (var bar = 0; bar < 4; bar++)
-            for (var i = 0; i < rhythm.Length; i++)
-                foreach (var k in chords[bar]) Note(s, 0, bar * 4 + rhythm[i], (i + 1 < rhythm.Length ? rhythm[i + 1] : 4) - rhythm[i] - 0.05, k);
-    });
-
-    private static List<Ev> Bass() => Song(33, s =>
-    {
-        int[][] bars = [[28, 28, 28, 28, 28, 28, 31, 33], [28, 28, 28, 28, 36, 36, 35, 35], [28, 28, 28, 28, 28, 28, 31, 33], [28, 28, 33, 33, 31, 31, 26, 26]];
-        for (var bar = 0; bar < 4; bar++) for (var e = 0; e < 8; e++) Note(s, 0, bar * 4 + e * 0.5, 0.45, bars[bar][e]);
-    });
-
-    // Written as a player would: velocities vary, onsets a few ms off the grid.
-    private static List<Ev> AlreadyHuman()
-    {
-        var r = new Random(7);
-        int[][] bars = [[57, 60, 64, 69, 64, 60, 64, 60], [48, 55, 60, 64, 67, 64, 60, 55], [43, 50, 55, 59, 62, 59, 55, 50], [40, 47, 52, 55, 59, 55, 52, 47]];
-        return Song(27, s =>
-        {
-            for (var bar = 0; bar < 4; bar++)
-                for (var e = 0; e < 8; e++) Note(s, 0, bar * 4 + e * 0.5, 0.95, bars[bar][e], (e % 4 == 0 ? 96 : 78) + r.Next(-11, 12), r.NextDouble() * 16 - 8);
-        });
-    }
-
-    // ---- the humanizer driven like Synthesizer does: add at the frame, commit, take what is due ------------------------------------
-
-    private static List<Ev> Run(List<Ev> song, SynthOptions o, Humanizer? h = null)
-    {
-        h ??= new Humanizer(Rate);
-        h.Reset();
-        var res = new List<Ev>();
-        long now = 0;
-        for (var i = 0; ;)
-        {
-            for (; i < song.Count && song[i].At == now; i++)
-                if (!h.Add(song[i].Status & 15, song[i].Status & 0xF0, song[i].D1, song[i].D2, o.Humanize)) res.Add(song[i]);
-            h.Commit(now, o);
-            while (h.Take(now, out var e)) res.Add(new(now, e.Command | e.Channel, e.Data1, e.Data2));
-            var next = Math.Min(i < song.Count ? song[i].At : long.MaxValue, h.NextDue);
-            if (next == long.MaxValue) return res;
-            now = next;
-        }
-    }
-
-    private static bool IsOn(Ev e) => (e.Status & 0xF0) == 0x90 && e.D2 > 0;
-    private static bool IsOff(Ev e) => (e.Status & 0xF0) == 0x80 || (e.Status & 0xF0) == 0x90 && e.D2 == 0;
-    private static double Std(IEnumerable<double> x) { var a = x.ToArray(); var m = a.Average(); return Math.Sqrt(a.Average(v => (v - m) * (v - m))); }
-
-    // Velocity std, onset offsets vs the input (mean, std, max ms) and the mean spread inside chords (ms).
-    private static (double VelStd, double MeanMs, double StdMs, double MaxMs, double SpreadMs) Stats(List<Ev> input, List<Ev> outp)
-    {
-        var a = input.Where(IsOn).ToList();
-        var b = outp.Where(IsOn).ToList();
-        var offs = new List<double>();
-        var used = new bool[b.Count];
-        foreach (var e in a)
-        {
-            var j = Enumerable.Range(0, b.Count).First(j => !used[j] && b[j].D1 == e.D1 && b[j].At >= e.At);
-            used[j] = true;
-            offs.Add((b[j].At - e.At) * 1000.0 / Rate);
-        }
-        var spreads = b.GroupBy(e => a.Where(x => x.At <= e.At).Max(x => x.At)).Where(g => g.Count() > 1).Select(g => (g.Max(e => e.At) - g.Min(e => e.At)) * 1000.0 / Rate).ToList();
-        return (Std(b.Select(e => (double)e.D2)), offs.Average(), Std(offs), offs.Max(), spreads.Count > 0 ? spreads.Average() : 0);
-    }
-
-    private static void AssertSound(List<Ev> input, List<Ev> outp)
-    {
-        Assert.Equal(input.Count, outp.Count);
-        Assert.All(outp.Where(IsOn), e => Assert.InRange(e.D2, 1, 127));
-        foreach (var key in input.Where(IsOn).Select(e => e.D1).Distinct())
-        {
-            var seq = outp.Where(e => e.D1 == key && (IsOn(e) || IsOff(e))).ToList();
-            Assert.Equal(input.Count(e => e.D1 == key && IsOn(e)), seq.Count(IsOn));
-            for (var i = 0; i < seq.Count; i += 2) { Assert.True(IsOn(seq[i]) && IsOff(seq[i + 1])); Assert.True(seq[i + 1].At > seq[i].At); }   // on, off, on, off...
-        }
+        Assert.InRange(stats.LineDb, dbLo, dbHi);
+        Assert.InRange(stats.StrumDb, dbLo, dbHi);
+        Assert.InRange(stats.Steps, stepLo, stepHi);
+        Assert.InRange(stats.Ms, msLo, msHi);
+        Assert.True(stats.Early >= -style.LookMs - 0.1);
+        Assert.InRange(lag1, -0.6, -0.3);
+        Assert.InRange(dfaS, 0, 0.5);
+        Assert.InRange(dfaL, 0.6, 0.9);
+        Assert.InRange(stats.BarDb, 0.7, 0.95);
+        Assert.InRange(stats.BarMs, 0.3, 0.7);
+        Assert.InRange(down, style.StrumMs * 0.75, style.StrumMs * 1.25 * (1 + HumanTable.BiasStrumPerMs * Math.Max(0, style.BiasMs)));
+        Assert.True(up < down);
+        Assert.True(strokes.Max(s => s.Gap) < 40);
+        Assert.InRange(ghost, style.Ghost - 0.03, style.Ghost + 0.03);
+        Assert.InRange(beatLow, 0, eighthLow + 0.05);
+        Assert.True(offLow > eighthLow + style.Ghost / 2);
     }
 
     [Fact]
-    public void FlatInputGetsHumanSpreadAndBoundedDelays()
+    public void FeelsGrowFromTightToLoose()
     {
-        var max = new Humanizer(Rate).MaxDelay * 1000.0 / Rate;
-        foreach (var (name, song) in Songs())
-        {
-            var outp = Run(song, On);
-            AssertSound(song, outp);
-            var s = Stats(song, outp);
-            output.WriteLine($"{name}: velocity std 0 -> {s.VelStd:F1}, onset delay mean {s.MeanMs:F1} ms, std {s.StdMs:F1}, max {s.MaxMs:F1} (bound {max:F1}), chord spread {s.SpreadMs:F1} ms");
-            Assert.InRange(s.VelStd, 2.5, 10);
-            Assert.InRange(s.MaxMs, 0, max);
-            var (ins, outs) = (song.Where(IsOn).ToList(), outp.Where(IsOn).ToList());
-            Assert.All(outs, e => Assert.InRange(e.D2, 90 - HumanTable.MaxDelta, 90 + HumanTable.MaxDelta));
-            Assert.Equal(Run(song, On), outp);   // deterministic
-        }
+        var line = Line();
+        var sd = new[] { Feel.Tight, Feel.Natural, Feel.Loose }.Select(f => Match(line, Run(line, With(f))).Skip(32).ToList())
+            .Select(m => (Db: Std(m.Select(x => Db(x.In, x.Out))), Ms: Std(m.Select(x => Ms(x.In, x.Out))))).ToArray();
+        Assert.True(sd[0].Db < sd[1].Db && sd[1].Db < sd[2].Db && sd[0].Ms < sd[1].Ms && sd[1].Ms < sd[2].Ms);
     }
 
-    private static IEnumerable<(string, List<Ev>)> Songs() => [("riff30", Riff()), ("arp27", Arpeggio()), ("strum25", Strum()), ("bass33", Bass())];
+    [Fact]
+    public void NoiseHasItsOneOverFExponent()
+    {
+        foreach (var (slope, target) in new[] { (HumanTable.PinkDbSlope, 0.65), (HumanTable.PinkMsSlope, 0.7) })
+        {
+            var (r, p) = (new Rng(), new Pink(slope));
+            r.Seed(11);
+            p.Reset(r);
+            var x = Enumerable.Range(0, 16384).Select(_ => p.Next(r)).ToArray();
+            var alpha = Dfa(x, 16, 256);
+            output.WriteLine($"pink slope {slope}: std {Std(x):F2}, DFA {alpha:F2} (spec {target})");
+            Assert.InRange(Std(x), 0.85, 1.15);
+            Assert.InRange(alpha, target - 0.07, target + 0.07);
+        }
+    }
 
     [Fact]
     public void HumanInputAndOptionsOffPassUnchanged()
     {
-        var human = AlreadyHuman();
-        Assert.Equal(human, Run(human, On));
-        Assert.Equal(Riff(), Run(Riff(), SynthOptions.Default));
-        Assert.Equal(Riff(), Run(Riff(), On with { HumanizeVelocity = false, HumanizeTiming = false }));
-        var drums = Riff().Select(e => e with { Status = e.Status | 9 }).ToList();
-        Assert.Equal(drums, Run(drums, On));   // the drum channel is left alone
+        foreach (var human in new[] { AlreadyHuman(), AlreadyHuman(wide: true) })
+            foreach (var f in new[] { Feel.Tight, Feel.Natural, Feel.Loose })
+                Assert.Equal(human, Run(human, With(f)));   // 0 steps, 0 ms (after the reported latency)
+        var flat = Riff();
+        Assert.Equal(flat, Run(flat, SynthOptions.Default));
+        Assert.Equal(flat, Run(flat, On with { HumanizeVelocity = false, HumanizeTiming = false }));
+        var drums = flat.Select(e => e with { Status = e.Status | 9 }).ToList();
+        Assert.Equal(drums, Run(drums, On));   // the drum channel only waits for the look-ahead
+        var h = new Humanizer(Rate);
+        Run(Arpeggio(), On, h);
+        Assert.True(h.Flatness(0).Velocity > 0.99 && h.Flatness(0).Timing > 0.99);
+        var tabDynamics = Arpeggio().Select((e, i) => IsOn(e) ? e with { D2 = new[] { 70, 90, 110, 127 }[i % 4] } : e).ToList();
+        Assert.NotEqual(tabDynamics.Where(IsOn).Select(e => e.D2), Run(tabDynamics, On).Where(IsOn).Select(e => e.D2));   // 4 levels = flat
+    }
+
+    [Fact]
+    public void EveryEventKeepsItsKeyOrderAndBoundsUnderFuzz()
+    {
+        var r = new Random(3);
+        var fuzz = new List<Ev>();
+        long t = 0;
+        for (var i = 0; i < 6000; i++)
+        {
+            t += r.Next(4) == 0 ? 0 : r.Next(1, 9000);
+            var ch = r.Next(4) == 0 ? 9 : r.Next(3);
+            var kind = r.Next(20);
+            fuzz.Add(kind == 0 ? new(t, 0xC0 | ch, new[] { 24, 25, 30, 33, 41, 0 }[r.Next(6)], 0)
+                : kind == 1 ? new(t, 0xB0 | ch, 64, r.Next(2) * 127)
+                : new(t, (r.Next(2) == 0 ? 0x90 : 0x80) | ch, 40 + r.Next(12), r.Next(3) == 0 ? 90 : r.Next(1, 128)));
+        }
+        foreach (var o in new[] { On, With(Feel.Loose), With(Feel.Tight) with { HumanizeDrift = false } })
+        {
+            var h = new Humanizer(Rate);
+            var lat = h.Latency(o);
+            var outp = Run(fuzz, o, h);
+            Assert.Equal(fuzz.Count, outp.Count);
+            Assert.Equal(outp, Run(fuzz, o, h));   // deterministic across Reset
+            foreach (var key in fuzz.GroupBy(e => (e.Status & 15) * 128 + e.D1))
+            {
+                var seq = outp.Where(e => (IsOn(e) || IsOff(e)) && (e.Status & 15) * 128 + e.D1 == key.Key).ToList();
+                Assert.Equal(key.Where(e => IsOn(e) || IsOff(e)).Select(IsOn), seq.Select(IsOn));   // in order per key: no note-off before its note-on
+                Assert.True(seq.Zip(seq.Skip(1)).All(p => p.Second.At >= p.First.At));
+            }
+            Assert.All(Match(fuzz, outp), m => Assert.InRange(m.Out.At - m.In.At, -lat, h.MaxDelay - lat));
+        }
+    }
+
+    [Fact]
+    public void LatencyIsReportedOnlyWhileOn()
+    {
+        var s = Synth(SynthOptions.Default);
+        Assert.Equal(0, s.Latency);
+        foreach (var f in new[] { Feel.Tight, Feel.Natural, Feel.Loose })
+        {
+            s.Options = With(f);
+            Assert.Equal((int)Math.Round(HumanTable.Styles[(int)f].LookMs * Rate / 1000), s.Latency);
+        }
+        s.Options = s.Options with { Humanize = false };
+        Assert.Equal(0, s.Latency);
     }
 
     private static Synthesizer Synth(SynthOptions o) =>
@@ -197,10 +196,16 @@ public sealed class HumanizerTests(ITestOutputHelper output)
         Assert.True(a.L.All(float.IsFinite) && a.L.Max(MathF.Abs) > 1e-3);
         Assert.False(a.L.SequenceEqual(Render(Synth(SynthOptions.Default), Strum()).L));
 
-        // Options flipped mid-song from another thread's point of view: nothing hangs.
+        // Options, feel, Reset and all-notes-off flipped mid-song: nothing hangs or keeps sounding.
         var t = Synth(On);
-        var flips = new[] { SynthOptions.Default, On with { HumanizeVoice = false }, On with { GuitarLayer = false }, On };
-        var (l, _) = Render(t, Riff(), 4, i => { if (i % 40 == 39) t.Options = flips[i / 40 % 4]; });
+        var flips = new[] { SynthOptions.Default, With(Feel.Loose) with { HumanizeVoice = false }, On with { GuitarLayer = false }, With(Feel.Tight) };
+        var song = Riff().Concat(Strum().Select(e => e with { At = e.At + 8L * Rate })).ToList();
+        var (l, _) = Render(t, song, 4, i =>
+        {
+            if (i % 40 == 39) t.Options = flips[i / 40 % 4];
+            if (i % 97 == 96) t.NoteOffAll(false);
+            if (i == 250) t.Reset();
+        });
         Assert.True(l.All(float.IsFinite));
         Assert.Equal(0, ((GuitarLayer)t.Layer!).ActiveStrings);
         Assert.Equal(0, t.ActiveVoices);
@@ -227,67 +232,38 @@ public sealed class HumanizerTests(ITestOutputHelper output)
         Assert.Equal(before, GC.GetAllocatedBytesForCurrentThread());
 
         var h = new Humanizer(Rate);
-        var big = Enumerable.Range(0, 50).SelectMany(k => song.Select(e => e with { At = e.At + k * 8L * Rate })).ToList();
+        var big = Strums(0.25, 16);
         Run(big, On, h);
         var watch = Stopwatch.StartNew();
         Run(big, On, h);
         var us = watch.Elapsed.TotalMilliseconds * 1000 / big.Count(IsOn);
-        var seconds = big[^1].At / (double)Rate;
-        output.WriteLine($"humanizer: {us:F2} us per note-on (test harness included), {watch.Elapsed.TotalMilliseconds / seconds / 10:F4} % of one core for this riff");
+        output.WriteLine($"humanizer: {us:F2} us per note-on (harness included), {watch.Elapsed.TotalMilliseconds / (big[^1].At / (double)Rate) / 10:F4} % of one core");
         Assert.True(us < 50);
-        var w = Stopwatch.StartNew();
-        Render(Synth(SynthOptions.Default), song);
-        var off = w.Elapsed.TotalMilliseconds;
-        w.Restart();
-        Render(Synth(On), song);
-        output.WriteLine($"render riff (layer, Debug): off {off:F0} ms, on {w.Elapsed.TotalMilliseconds:F0} ms");
     }
 
-    // ---- listening files -------------------------------------------------------------------------------------------------------------
+    // ---- listening files: the flat .mid of the earlier pair, humanizer off and each feel (output shifted back by the latency) ----------
 
     [Fact]
     public void WritesListeningFilesWhenAsked()
     {
         var dir = Environment.GetEnvironmentVariable("TABFORGE_SYNTH_WAV_DIR");
         if (string.IsNullOrEmpty(dir)) return;
-        Directory.CreateDirectory(dir);
-        foreach (var (name, song) in Songs().Append(("arp27_alreadyhuman", AlreadyHuman())))
+        foreach (var (name, song) in Songs())
         {
-            var human = name.EndsWith("alreadyhuman");
-            WriteMid(Path.Combine(dir, $"tfsynth4_{name}.mid"), song);
-            foreach (var on in human ? [true] : new[] { false, true })
+            var mid = Path.Combine(dir, $"tfsynth4_{name}.mid");
+            if (File.Exists(mid)) Assert.Equal(File.ReadAllBytes(mid), Mid(song));   // the very same flat file
+            else File.WriteAllBytes(mid, Mid(song));
+            foreach (var feel in new Feel?[] { null, Feel.Tight, Feel.Natural, Feel.Loose })
             {
-                var (l, r) = Render(Synth(on ? On : SynthOptions.Default), song);
-                TestSoundFont.WriteWav($"tfsynth4_{name}{(human ? "" : on ? "_human" : "_flat")}.wav", l, r, Rate);
+                var s = Synth(feel is { } f ? With(f) : SynthOptions.Default);
+                var (l, r) = Render(s, song);
+                TestSoundFont.WriteWav($"tfsynth6_{name}_{feel?.ToString().ToLowerInvariant() ?? "flat"}.wav", l[s.Latency..], r[s.Latency..], Rate);
+                if (feel is null) continue;
+                var m = Match(song, Run(song, s.Options));
+                var spread = Strokes(song, Run(song, s.Options)).Select(x => x.Spread).DefaultIfEmpty(0).ToList();
+                output.WriteLine($"{name} {feel}: level std {Std(m.Select(x => Db(x.In, x.Out))):F1} dB / {Std(m.Select(x => (double)x.Out.D2)):F1} steps, " +
+                    $"onset std {Std(m.Select(x => Ms(x.In, x.Out))):F1} ms, range {m.Min(x => Ms(x.In, x.Out)):F0}..{m.Max(x => Ms(x.In, x.Out)):F0} ms, strum median {Median(spread):F1} ms");
             }
-            var outp = Run(song, On);
-            var (a, b) = (Stats(song, song), Stats(song, outp));
-            var changed = song.Zip(outp).Count(p => p.First != p.Second);
-            output.WriteLine($"{name}: velocity std {a.VelStd:F1} -> {b.VelStd:F1}; onset delay mean {b.MeanMs:F1} ms, std {b.StdMs:F1}, max {b.MaxMs:F1}; chord spread {a.SpreadMs:F1} -> {b.SpreadMs:F1} ms; events changed {changed}/{song.Count}");
         }
-    }
-
-    // Standard MIDI file, format 0, 480 ticks per quarter, 120 bpm (960 ticks a second).
-    private static void WriteMid(string path, List<Ev> song)
-    {
-        var t = new List<byte> { 0, 0xFF, 0x51, 3, 0x07, 0xA1, 0x20 };
-        long last = 0;
-        foreach (var e in song)
-        {
-            var tick = (long)Math.Round(e.At * 960.0 / Rate);
-            var d = tick - last;
-            last = tick;
-            var v = new List<byte> { (byte)(d & 0x7F) };
-            while ((d >>= 7) > 0) v.Insert(0, (byte)(0x80 | (d & 0x7F)));
-            t.AddRange(v);
-            t.Add((byte)e.Status);
-            t.Add((byte)e.D1);
-            if ((e.Status & 0xF0) != 0xC0) t.Add((byte)e.D2);
-        }
-        t.AddRange([0, 0xFF, 0x2F, 0]);
-        using var w = new BinaryWriter(File.Create(path));
-        w.Write("MThd"u8); w.Write(new byte[] { 0, 0, 0, 6, 0, 0, 0, 1, 0x01, 0xE0 });
-        w.Write("MTrk"u8); w.Write(new[] { (byte)(t.Count >> 24), (byte)(t.Count >> 16), (byte)(t.Count >> 8), (byte)t.Count });
-        w.Write(t.ToArray());
     }
 }
