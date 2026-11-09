@@ -2,26 +2,24 @@ namespace TabForge.Sf2Synth.Guitar;
 
 // Owns: one string as a digital waveguide: integer delay + Thiran all-pass (exact tuning), two dispersion all-passes from the
 //   fretted string's stiffness (StringPhysics), loop low-pass + gain for a length-correct decay (highs die first); the pluck
-//   (triangle at the pick point + pick-combed, velocity-filtered noise, a short pick click), the pickup comb at its distance
-//   from the bridge, legato (hammer, pull, slide glide) on the same string, re-pluck, release damping, retune.
+//   (PluckedString.Attack), the pickup comb at its distance from the bridge (two taps for a humbucker or two pickups), legato
+//   (hammer, pull, slide glide) on the same string, re-pluck, release damping, retune.
 // Does not own: which note or when (GuitarLayer), values (Voicings, StringPhysics), anything after the pickup (GuitarBus).
 // Tests: GuitarLayerTests.
-internal sealed class PluckedString
+internal sealed partial class PluckedString
 {
     public const double LowestHz = 25;
-    private const float Silent = 1e-4f, RepluckKeep = 0.3f, Click = 0.06f;
-    private const double ReleaseDarken = 0.3, ClickSeconds = 0.0015, ShortNote = 0.12;
+    private const float Silent = 1e-4f, RepluckKeep = 0.3f;
+    private const double ReleaseDarken = 0.3, ShortNote = 0.12;
 
     private readonly float[] _buf;
     private readonly int _mask;
     private readonly double _rate;
-    private readonly float _clickFall;
-    private int _w, _d, _pickup, _glideLeft, _glideLen;
-    private float _eta, _apX, _apY, _c, _d1X, _d1Y, _d2X, _d2Y, _lpA, _lp, _g, _click, _clickX;
+    private int _w, _d, _pickup, _pickup2, _glideLeft;
+    private float _eta, _apX, _apY, _c, _d1X, _d1Y, _d2X, _d2Y, _lpA, _lp, _g;
     private StringSpec _spec = null!;
     private StringPhysics.Fretted _f;
     private double _hz, _dark, _t60, _glideSemis;
-    private uint _noise = 1;
     private long _age;
 
     public bool Active { get; private set; }
@@ -40,7 +38,6 @@ internal sealed class PluckedString
         while (size < rate / LowestHz + 8) size <<= 1;
         _buf = new float[size];
         _mask = size - 1;
-        _clickFall = (float)Math.Exp(-1 / (ClickSeconds * rate));
     }
 
     public void Pluck(int channel, int note, double hz, int velocity, StringSpec spec, long started, uint seed, float[] scratch)
@@ -52,14 +49,14 @@ internal sealed class PluckedString
         var v = Math.Clamp(velocity / 127.0, 0, 1);
         _dark = Math.Clamp(spec.Darkness * (1.25 - 0.5 * v), 0, 0.95);
         Fret(note, hz, -1);
-        Excite(v, (float)(0.5 * Math.Pow(v, 1.4)), seed, scratch);
+        Excite(v, (float)(0.5 * Math.Pow(v, spec.Vel)), seed, scratch);
     }
 
     // Same string, new note: hammer/pull (kick > 0 re-excites a little) or slide (glide seconds).
     public void Legato(int note, double hz, double glide, float kick, uint seed, float[] scratch)
     {
         _glideSemis = glide > 0 ? note - Note + _glideSemis : 0;
-        _glideLen = _glideLeft = (int)(glide * _rate);
+        _glideLeft = (int)(glide * _rate);
         (Released, Held) = (false, false);
         Fret(note, hz, _f.String);
         if (kick > 0) Excite(0.5, kick, seed, scratch);
@@ -72,33 +69,6 @@ internal sealed class PluckedString
         _c = (float)_f.Dispersion;
         _t60 = _spec.T60Ref * Math.Pow(Math.Max(hz, 1) / _spec.RefHz, Math.Log(_spec.T60At1k / _spec.T60Ref) / Math.Log(1000 / _spec.RefHz));
         Retune(hz);
-    }
-
-    private void Excite(double v, float amp, uint seed, float[] scratch)
-    {
-        var n = Math.Min(_d, scratch.Length);
-        var pick = Math.Clamp((int)Math.Round(Math.Min(0.5, _spec.PickMm / 1000 / _f.Length) * n), 1, n - 1);
-        var c = (float)(1 - Math.Exp(-2 * Math.PI * _spec.PluckHz * (0.25 + 0.75 * Math.Pow(v, 1.2)) / _rate));
-        var mix = (float)_spec.NoiseMix;
-        float y = 0, mean = 0;
-        var state = seed | 1;
-        for (var i = 0; i < n; i++)
-        {
-            state ^= state << 13; state ^= state >> 17; state ^= state << 5;   // xorshift32
-            y += c * ((state & 0xFFFFFF) / (float)0x800000 - 1 - y);
-            scratch[i] = y;
-        }
-        for (var i = 0; i < n; i++)
-        {
-            float e = _spec.Harmonic
-                ? MathF.Sin(2 * MathF.PI * i / n) + 0.15f * MathF.Sin(4 * MathF.PI * i / n)
-                : (1 - mix) * (i < pick ? (float)i / pick : (float)(n - i) / (n - pick)) + mix * 0.5f * (scratch[i] - scratch[(i + pick) % n]);
-            scratch[i] = e;
-            mean += e;
-        }
-        mean /= n;
-        for (var i = 0; i < n; i++) _buf[(_w - n + i) & _mask] += amp * (scratch[i] - mean);
-        (_click, _noise) = (_spec.Harmonic ? 0 : Click * amp * (float)v, state);
     }
 
     // Loop delay = D + Thiran fraction + 2 dispersion all-passes + loop low-pass, all as phase delays at f0.
@@ -117,8 +87,10 @@ internal sealed class PluckedString
         for (var i = 0; i < 3; i++) { eta = (1 - target) / (1 + target); target += frac - AllpassDelay(eta, w0); }
         (_d, _eta, _lpA) = (d, (float)eta, (float)a);
         _g = (float)Math.Min(0.99999, Math.Pow(10, -3 / (_t60 * hz)) / lpGain);
-        _pickup = _spec.PickupMm > 0 ? Math.Clamp((int)Math.Round(Math.Min(0.5, _spec.PickupMm / 1000 / _f.Length) * period), 1, d - 1) : 0;
+        (_pickup, _pickup2) = (Coil(_spec.PickupMm, period, d), Coil(_spec.Pickup2Mm, period, d));
     }
+
+    private int Coil(double mm, double period, int d) => mm > 0 ? Math.Clamp((int)Math.Round(Math.Min(0.5, mm / 1000 / _f.Length) * period), 1, d - 1) : 0;
 
     // Phase delay of (c + z⁻¹)/(1 + c·z⁻¹) at w.
     private static double AllpassDelay(double c, double w) =>
@@ -146,9 +118,11 @@ internal sealed class PluckedString
             _glideLeft -= step;
             Retune(_hz);
         }
+        if (_spec.Mwah > 0) Mwah();
         var buf = _buf;
-        int w = _w, d = _d, m = _mask, pickup = _pickup;
-        float eta = _eta, apX = _apX, apY = _apY, c = _c, d1X = _d1X, d1Y = _d1Y, d2X = _d2X, d2Y = _d2Y, a = _lpA, lp = _lp, g = _g, peak = 0;
+        var mf = _mw;
+        int w = _w, d = _d, m = _mask, pickup = _pickup, p2 = _pickup2;
+        float eta = _eta, apX = _apX, apY = _apY, c = _c, d1X = _d1X, d1Y = _d1Y, d2X = _d2X, d2Y = _d2Y, a = _lpA, lp = _lp, g = _g, mg = _mwGain, peak = 0;
         for (var i = 0; i < output.Length; i++)
         {
             var x = buf[(w - d) & m];
@@ -157,25 +131,16 @@ internal sealed class PluckedString
             var s2 = c * s1 + d2X - c * d2Y; d2X = s1; d2Y = s2;
             lp = s2 + a * (lp - s2);
             buf[w] = g * lp;
-            output[i] += pickup > 0 ? x - buf[(w - d + pickup) & m] : x;
+            var o = pickup == 0 ? x : p2 == 0 ? x - buf[(w - d + pickup) & m] : x - 0.5f * (buf[(w - d + pickup) & m] + buf[(w - d + p2) & m]);
+            if (mg > 0) o += mg * mf.Process(o);
+            output[i] += o;
             peak = MathF.Max(peak, MathF.Abs(x));
             w = (w + 1) & m;
         }
-        if (_click > 1e-6f) AddClick(output);
+        _mw = mf;
+        if (_click > 1e-6f || _tap > 1e-6f) AddTransients(output);
         (_w, _apX, _apY, _d1X, _d1Y, _d2X, _d2Y, _lp) = (w, apX, apY, d1X, d1Y, d2X, d2Y, lp);
         _age += output.Length;
         if (peak < (Released ? Silent : Silent * 0.1f)) Stop();
-    }
-
-    // Pick scrape: high-passed noise, 1.5 ms decay.
-    private void AddClick(Span<float> output)
-    {
-        for (var i = 0; i < output.Length; i++)
-        {
-            _noise ^= _noise << 13; _noise ^= _noise >> 17; _noise ^= _noise << 5;
-            var x = (_noise & 0xFFFFFF) / (float)0x800000 - 1;
-            output[i] += _click * (x - _clickX);
-            (_clickX, _click) = (x, _click * _clickFall);
-        }
     }
 }

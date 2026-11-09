@@ -1,6 +1,6 @@
 namespace TabForge.Sf2Synth.Guitar;
 
-// Owns: the physical strings of a standard-tuned guitar (6, 10-46 set) and bass (4, 45-105 set): which string plays a note
+// Owns: the physical strings of a standard-tuned guitar (6, 10-46 set) and five-string bass (B0-E1-A1-D1-G1, 45-130 set): which string plays a note
 //   (thinnest string at or below it), the fretted vibrating length, the stiffness (inharmonicity B = π³Ed⁴/64TL², core diameter)
 //   and the dispersion all-pass coefficient that gives it.
 // Does not own: the waveguide (PluckedString), sound values per program (Voicings).
@@ -13,7 +13,7 @@ internal static class StringPhysics
     // Open MIDI note, core diameter (inch), tension (N).
     private static readonly (int Open, double Core, double Tension)[] Guitar =
         [(40, .017, 78), (45, .016, 85), (50, .014, 82), (55, .017, 72), (59, .013, 71), (64, .010, 72)];
-    private static readonly (int Open, double Core, double Tension)[] Bass = [(28, .035, 190), (33, .030, 190), (38, .025, 180), (43, .020, 170)];
+    private static readonly (int Open, double Core, double Tension)[] Bass = [(23, .040, 165), (28, .035, 190), (33, .030, 190), (38, .025, 180), (43, .020, 170)];
 
     public readonly record struct Fretted(int String, double Length, double B)
     {

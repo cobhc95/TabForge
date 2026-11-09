@@ -40,9 +40,10 @@ public sealed class GuitarLayer : ILayer
         _rate = rate;
         var gCab = CabinetImpulse.Build(CabKind.Guitar, rate);
         var bCab = CabinetImpulse.Build(CabKind.Bass, rate);
+        var rCab = CabinetImpulse.Build(CabKind.Room, rate);
         _strings = Enumerable.Range(0, Strings).Select(_ => new PluckedString(rate)).ToArray();
         _scratch = new float[(int)(rate / PluckedString.LowestHz) + 8];
-        for (var i = 0; i < 16; i++) _ch[i] = new Ch { Bus = new GuitarBus(rate, Chunk, gCab, bCab), Mono = new float[Chunk] };
+        for (var i = 0; i < 16; i++) _ch[i] = new Ch { Bus = new GuitarBus(rate, Chunk, gCab, bCab, rCab), Mono = new float[Chunk] };
         _tail = (int)(TailSeconds * rate);
         Reset();
     }
@@ -127,8 +128,9 @@ public sealed class GuitarLayer : ILayer
         if (LegatoFrom(channel, c, note) is { } s)
         {
             var step = note - s.Note;
+            var glide = v.String.Glide > 0 ? v.String.Glide : Math.Abs(step) >= SlideFrom ? SlideSeconds : 0;   // fretless: every step glides
             (c.From, c.To, c.Vel, c.Moved, c.Due) = (s.Note, note, velocity, s, _clock + (long)(LegatoWindow * _rate));
-            s.Legato(note, Hz(c, note), Math.Abs(step) >= SlideFrom ? SlideSeconds : 0, Math.Abs(step) >= SlideFrom ? 0 : step > 0 ? Hammer : Pull, _seed, _scratch);
+            s.Legato(note, Hz(c, note), glide, glide > 0 ? 0 : step > 0 ? Hammer : Pull, _seed, _scratch);
             return;
         }
         Pick(channel, note, v.String.MaxStrings).Pluck(channel, note, Hz(c, note), velocity, v.String, ++_count, _seed, _scratch);

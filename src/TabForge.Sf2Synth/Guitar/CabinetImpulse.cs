@@ -4,12 +4,13 @@ using static TabForge.Sf2Synth.Dsp.EqKind;
 namespace TabForge.Sf2Synth.Guitar;
 
 // Owns: procedural cabinet impulse responses: an impulse through speaker resonances and roll-off, one close-mic reflection,
-//   a faded tail, normalised to 0 dB at 1 kHz. Built at construction, never in render.
+//   a faded tail, normalised to 0 dB at 1 kHz; Room adds a small room's early reflections (up to 17 ms) to the guitar cabinet. Built at construction, never in render.
 // Does not own: running it (Dsp/FftConvolver), a measured IR (Dsp/WavIr).
 // Tests: GuitarLayerTests.
 internal static class CabinetImpulse
 {
     private const double Seconds = 0.0107, ReflectionSeconds = 0.0006, ReflectionGain = 0.25, FadeShare = 0.3;
+    private static readonly (double Ms, double Gain)[] Room = [(2.9, .30), (4.7, -.22), (7.3, .17), (10.1, .13), (13.6, -.09), (17.2, .06)];
 
     private static readonly EqSpec[] GuitarSpeaker =
     [
@@ -39,6 +40,14 @@ internal static class CabinetImpulse
         {
             h[n] = raw[n] + (n >= lag ? ReflectionGain * raw[n - lag] : 0);
             if (n >= taps - fade) h[n] *= 0.5 * (1 + Math.Cos(Math.PI * (n - (taps - fade)) / fade));
+        }
+        if (kind == CabKind.Room)
+        {
+            var r = new double[taps + (int)(Room[^1].Ms * 0.001 * rate)];
+            h.CopyTo(r, 0);
+            foreach (var (ms, g) in Room)
+                for (int n = 0, at = (int)(ms * 0.001 * rate); n < taps; n++) r[at + n] += g * h[n];
+            h = r;
         }
         return WavIr.Normalise(h.Select(v => (float)v).ToArray(), rate);
     }
