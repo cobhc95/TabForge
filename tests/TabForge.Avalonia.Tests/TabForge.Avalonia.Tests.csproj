@@ -57,6 +57,10 @@
     <ProjectReference Include="..\..\src\TabForge.Avalonia\TabForge.Avalonia.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <!-- The engine's synthetic SoundFont helper, linked from the engine tests (not copied). -->
+    <Compile Include="..\TabForge.Sf2Synth.Tests\TestSoundFont.cs" Link="Audio\TestSoundFont.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <!-- Test-only: libmp3lame (LAME, LGPL) for the LameMp3Encoder round trip; only its build assets are used (the managed wrapper is not referenced and nothing ships). -->
     <PackageReference Include="NAudio.Lame" Version="2.1.0" ExcludeAssets="compile;runtime" />
     <!-- Test-only: the dev build of native/tfportable (miniaudio + RtMidi), when it was built (native/tfportable/bin/tfportable.dll); the portable backend tests skip without it. -->

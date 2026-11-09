@@ -11,9 +11,9 @@ namespace TabForge.Avalonia.Tests;
 
 // Owns: the checks of the app hook (SynthHumanizePass through PlaybackOptions.Humanizer): only TabForge Synth with the option on
 //   changes the timeline, only melodic tracks, nothing is lost, and a start mid-song plays the later bars exactly as the whole song.
-// Does not own: the model's checks (HumanizerTests.cs).
+// Does not own: the model's checks (the engine's HumanizerTests).
 // Tests: SynthHumanizePass, ITimelineHumanizer, ScoreToMidiCompiler hook.
-public sealed partial class HumanizerTests
+public sealed class HumanizerAppTests
 {
     private static SongProject AppSong(int bars = 8)
     {
