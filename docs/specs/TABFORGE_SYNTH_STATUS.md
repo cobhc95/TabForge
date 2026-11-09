@@ -81,8 +81,26 @@ The guitar layer (modelled string, stage amp, synthetic cab) sounded better than
 - WAVs `tfsynth4_<riff30|arp27|strum25|bass33>_<flat|human>.wav`, `tfsynth4_arp27_alreadyhuman.wav` and the flat `.mid` files in the agent scratch folder. Owner to listen; not checked in the running app.
 - Without a readable SoundFont (MeltySynth + layer) there is no humanizer (it lives in `Synthesizer`).
 
+## Captured amp, default for 29/30 (Nov 2026)
+- [x] The owner's approved capture (WaveNet lite, 48 kHz) is embedded as `Guitar/Amps/captured.nam` (metadata reduced to name "Captured amp",
+  gear type, loudness, gain). `SynthOptions.DistAmp` = Captured (default) | Stage | CleanOnly, `CapturedAmpCabinet` (off); a user `.nam` wins.
+  Live switching fades over two 64-frame blocks (test: no step beyond the playing's own, notes still end). Not checked in the running app.
+- Gain staging, riff `GuitarLayerTests.Riff` (bus output, playing part): DI rms -20.7 / -20.5 dBFS, peak 0.75 / 0.79 (29 / 30); trim 0.385 / 0.376
+  -> -29.0 dBFS rms, peak 0.29 / 0.30 (training DI -29, peak 0.31). Drive = `RigSpec.Drive` (1).
+- Stability, input -20..+12 dB around nominal (riff 30): finite, peak 0.36-0.41 (NamAmp out), output rms -18.8..-18.1 dBFS (the capture is
+  heavily compressed: 32 dB of input range moves the output 0.7 dB). Silence in = exactly 0 out after removing the model's rest output
+  (it was 0.014, a click when the bus stopped). The model makes DC while playing (-7..-10 % of rms): 15 Hz high-pass after it, bus DC < 1e-5 of rms.
+  Onset from silence: first 2 ms step 0.037-0.039 vs 0.068 in the next 48 ms; the end decays to 7e-10 before the bus stops.
+- Level: output trim 0.87 / 0.68 (29 / 30). Riff vs stage amp -1.8 / +0.4 dB; vs the bank at velocity 100 within 1 dB (`GeneralUserBankTests`).
+  With the cabinet added it is about 3.5 dB louder (the cabinet's gain was folded into the stage amp's level).
+- CPU, Release, 48 kHz, 256-frame blocks, program 30 six strings, % of one core per channel: captured 2.2, captured + cabinet 2.2 (the FFT cabinet
+  is under 0.1), stage 0.85, clean only 0.1. Debug about 15. Layer creation 51 ms (16 prewarmed captured amps, off the audio thread).
+  Settling a captured amp that played (switching back to it, or `Reset`) costs one prewarm, a few ms, on that thread.
+- A/B WAVs (humanizer off, riff of `tfsynth2`): `tfsynth5_riff<29|30>_<captured|stage>.wav`, `tfsynth5_riff30_cleanonly.wav`, agent scratch folder. Owner to listen.
+- Open: the adapter has no Settings row for DistAmp yet (the engine plays the default, Captured); status text still says "built-in amp".
+
 ## Architecture decision
-Clean pickup-style guitar DI, then a user-chosen Neural Amp Modeler `.nam` model as the amp, then an optional cabinet `.wav` IR. Built-in stage amp and synthetic cab stay as the default. NAM runtime is written from scratch from the public format spec (no copied code).
+Clean pickup-style guitar DI, then a user-chosen Neural Amp Modeler `.nam` model as the amp, then an optional cabinet `.wav` IR. Built-in defaults: the captured amp (no cabinet) on 29/30, the stage amp and synthetic cab on the other electric programs. NAM runtime is written from scratch from the public format spec (no copied code).
 
 ## To do next, in order
 1. [x] Build and the five test classes: nothing was broken; 62/62, now 63.
@@ -97,7 +115,7 @@ Clean pickup-style guitar DI, then a user-chosen Neural Amp Modeler `.nam` model
 
 ## Open questions for the owner
 - Real `.nam` files and cabinet IRs to test with (none downloaded; third-party captures have their own licences, so bundling needs clearly permissive ones or our own).
-- Whether to ship a default NAM model of our own (train from the stage amp, or capture a real amp).
+- A longer capture (the standard re-amp signal or several minutes of varied playing): the current one learned from 8.5 s of one take.
 
 ## Rules the agents followed
 Brief, small files with `Owns / Does not own / Tests` headers; no allocation in render; compile plus named test classes only; local commits, no push, no AI attribution.

@@ -8,13 +8,23 @@ Standalone SoundFont 2.04 synthesizer (no dependencies) with an optional modelle
 - `Humanize/` the MIDI pre-stage: `Humanizer` (batch per instant, sorted delay queue, order per key), `Evidence` (is the input flat?), `Phrase` (pulse, accents, arch, strokes, strum, laziness), `Nuance` (per-note voice variation), `HumanTable` (all values, per family).
 - `Effects/` `Reverb` (Freeverb), `Chorus`.
 - `Dsp/` shared: `Biquad`, `FirHistory` (SIMD FIR), `Oversampler2x`.
-- `Guitar/` the layer: `GuitarLayer` (MIDI, strings, mix), `PluckedString` (waveguide; `.Attack`: pluck, slap, tap noise, fretless mwah), `StringPhysics`, `GuitarBus` (rig), `BodyModes` (acoustic body), `Compressor`, `StageAmp` (IAmpModel), `CabinetImpulse` (guitar, bass, room), `Voicings` (all values), `VoicingSpecs` (their types).
+- `Guitar/` the layer: `GuitarLayer` (MIDI, strings, mix), `PluckedString` (waveguide; `.Attack`: pluck, slap, tap noise, fretless mwah), `StringPhysics`, `GuitarBus` (rig), `BodyModes` (acoustic body), `Compressor`, `StageAmp` (IAmpModel), `CabinetImpulse` (guitar, bass, room), `Voicings` (all values), `VoicingSpecs` (their types), `GuitarRig` (user files, the embedded captured amp), `Amps/captured.nam` (embedded resource).
 
 ## Signal flow
 MIDI -> `Synthesizer.ProcessMidiMessage` -> note-on on a channel the `Layer` owns goes to the layer, everything else starts SF2 voices.
 Voice: sample -> cubic Hermite -> resonant low-pass -> gain ramp (vol env, attenuation, modulators) -> pan -> mix + reverb/chorus sends.
 `Render` adds the layer to the SF2 mix, then writes the sum × `MasterVolume` (layer and bank guitars level-matched, `GeneralUserBankTests`).
 Guitar layer: strings (per channel) -> pickup resonance -> body modes (acoustic) -> compressor -> pre-EQ -> 2x oversampled amp stages -> tone stack -> cabinet FIR -> level -> volume/pan.
+
+## Distorted amp (`SynthOptions.DistAmp`)
+Programs 29/30 only (`RigSpec.Captured`); clean, acoustic, muted and bass programs never use it. A user `.nam` always wins.
+- `Captured` (default): the embedded WaveNet capture of a real amp (`Guitar/Amps/captured.nam`, one instance per channel, built at layer creation).
+  DI × `Trim` × `Drive` feeds it at the capture's training level (about -29 dBFS rms, peak ≤ 0.4), its silence output and DC are removed,
+  `Level` matches the old stage-amp loudness. No cabinet by default: the capture is a full amp output, cabinet path unknown;
+  `CapturedAmpCabinet` adds the built-in guitar cabinet. If the resource fails to load, the stage amp plays.
+- `Stage`: the modelled `StageAmp` and synthetic cabinet (the previous default).
+- `CleanOnly`: the trimmed pickup DI, no amp or cabinet, for an amp plug-in after the synth.
+Changes fade out one 64-frame block and in the next (`GuitarBus.Use`); notes keep sounding.
 
 ## Humanizer
 Off in the library (`Options.Humanize`). Evidence rule: per channel, over the last 16 notes, velocities with spread under ~5, few distinct values or long identical runs are flat, and onsets whose intervals match each other in simple ratios within 0.15 ms are a grid. Only what is flat changes, scaled by how flat (0 = untouched, bit for bit); the first 6 notes never change. Guitars/basses (24-39) and bowed (40-51) only; never channel 10. Velocity within ±12, 1..127; note-ons only delayed (≤ 21 ms, `HumanizeMaxDelay`), note-offs never before their note-on. Seeds: channel, key, per-channel count; `Reset` repeats a render bit for bit.
