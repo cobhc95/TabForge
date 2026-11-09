@@ -22,8 +22,8 @@ public sealed partial class HumanizerTests
 
     private static List<(Part Part, double Bpm)> DemoParts() =>
     [
-        (Riff(8, 120), 120), (Run(4, 140, 30), 140), (Run(4, 140, 27), 140),
-        (Strums(4, 27, 100, fill: true), 100), (Strums(4, 25, 100), 100), (Bass(6, 120), 120),
+        (Riff(6, 120), 120), (Run(4, 140, 30), 140), (Run(4, 140, 27), 140),
+        (Strums(4, 27, 110, fill: true), 110), (Strums(4, 25, 110), 110), (Bass(6, 120), 120),
     ];
 
     [Fact]
@@ -35,12 +35,15 @@ public sealed partial class HumanizerTests
         var watch = new Stopwatch();
         foreach (var (part, _) in DemoParts())
         {
-            var o = Play(part, On).Out;
+            var (o, lp) = Play(part, On);
+            var db = part.Notes.Select((n, i) => Db(n, o[i])).ToArray();
+            var rest = db.Select((d, i) => d - Dynamics.Total(lp[i] with { Residue = 0 }, HumanTable.Styles[1], HumanTable.Of(part.Program)!)).ToArray();
+            output.WriteLine($"program {part.Program}: level std {Std(db):F2} dB, explained {1 - Std(rest) * Std(rest) / (Std(db) * Std(db)):P0}, onset std {Std(part.Notes.Select((n, i) => o[i].OnMs - n.OnMs)):F1} ms");
             var ev = part.Notes.SelectMany((n, i) => new[] { (At: o[i].OnMs, On: true, n.Key, o[i].Velocity), (At: o[i].OffMs, On: false, n.Key, Velocity: 0) })
                 .OrderBy(e => e.At).ThenBy(e => e.On ? 1 : 0).ToList();
             var s = new Synthesizer(new SoundFont(TestSoundFont.Build()), Rate, 64, effects: true) { Layer = new GuitarLayer(Rate), MasterVolume = 0.3f, Options = On };
             s.ProcessMidiMessage(0, 0xC0, part.Program, 0);
-            var frames = (int)((ev[^1].At / 1000 + 1.5) * Rate);
+            var frames = (int)((ev[^1].At / 1000 + 0.8) * Rate);
             float[] l = new float[frames], r = new float[frames];
             var done = 0;
             watch.Start();
@@ -63,7 +66,7 @@ public sealed partial class HumanizerTests
         Assert.True(all.L.All(float.IsFinite));
     }
 
-    // Standard MIDI file, format 0, 480 ticks per quarter: per part its tempo, meter and program (channel = part), flat notes, then 2.5 s.
+    // Standard MIDI file, format 0, 480 ticks per quarter: per part its tempo, meter and program (channel = part), flat notes, then 1.8 s.
     private static byte[] DemoMid()
     {
         var ev = new List<(long Tick, byte[] Data)>();
@@ -82,7 +85,7 @@ public sealed partial class HumanizerTests
                 ev.Add((T(n.OnMs), [(byte)(0x90 | ch), (byte)n.Key, (byte)n.Velocity]));
                 ev.Add((T(n.OffMs), [(byte)(0x80 | ch), (byte)n.Key, 0]));
             }
-            at = T(part.Notes.Max(n => n.OffMs) + 2500);
+            at = T(part.Notes.Max(n => n.OffMs) + 1800);
             ch = ch + 1 == 9 ? 10 : ch + 1;
         }
         var t = new List<byte>();

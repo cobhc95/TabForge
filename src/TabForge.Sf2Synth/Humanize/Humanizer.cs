@@ -13,7 +13,7 @@ internal struct Ctx
 }
 
 // Owns: the humanizer as one pass over a track's WRITTEN notes (no streaming, no look-ahead): strokes, the window around each bar
-//   (Before bars back, After ahead) for energy and evidence, the motif of each beat (hash of its rhythm and intervals), neighbours,
+//   (Evidence.Window) for energy and evidence, the motif of each beat (hash of its rhythm and intervals), neighbours,
 //   fast runs, pick direction; then each stroke's level (Dynamics), onset (Timing) and strum (Strum), and the per-key order check
 //   (no stuck or colliding notes). Every value is a pure function of position and nearby content, so a start mid-song or an edit
 //   changes only the neighbourhood.
@@ -31,7 +31,7 @@ public static class Humanizer
         var a = notes.ToArray();
         var strokes = Strokes(a);
         var ctx = Contexts(a, strokes, seed);
-        Flatness(a, strokes, ctx);
+        Evidence.Window(a, strokes, ctx);
         double[] db = new double[16], ms = new double[16];
         for (var k = 0; k < strokes.Count; k++)
         {
@@ -120,36 +120,6 @@ public static class Humanizer
     }
 
     private static int Snap(double sub) => sub switch { < 1.5 => 1, < 2.5 => 2, < 3.5 => 3, < 5 => 4, < 7 => 6, _ => 8 };
-
-    // Energy (strokes per beat) and the evidence of flat input over the window around each stroke's bar.
-    private static void Flatness(HumanNote[] a, List<List<int>> st, Ctx[] c)
-    {
-        var bars = new SortedDictionary<int, (int From, int To, int Beats)>();
-        for (var k = 0; k < st.Count; k++)
-        {
-            ref readonly var x = ref a[st[k][0]];
-            bars[x.Bar] = bars.TryGetValue(x.Bar, out var b) ? (b.From, k + 1, b.Beats) : (k, k + 1, Math.Max(1, x.BeatsPerBar));
-        }
-        var done = new Dictionary<int, (double Npb, double Vf, double Tf)>();
-        for (var k = 0; k < st.Count; k++)
-        {
-            var bar = a[st[k][0]].Bar;
-            if (!done.TryGetValue(bar, out var v))
-            {
-                int strokes = 0, beats = 0;
-                var w = new List<HumanNote>();
-                foreach (var (key, b) in bars)
-                {
-                    if (key < bar - Before || key > bar + After) continue;
-                    (strokes, beats) = (strokes + b.To - b.From, beats + b.Beats);
-                    for (var j = b.From; j < b.To; j++) foreach (var i in st[j]) w.Add(a[i]);
-                }
-                var (vf, tf) = Evidence.Flatness(w);
-                done[bar] = v = (strokes / (double)beats, vf, tf);
-            }
-            (c[k].Npb, c[k].Vf, c[k].Tf) = v;
-        }
-    }
 
     // Per key: every note keeps its note-off after its note-on (at least the shorter of its length and MinKeepMs) and ends before the
     // same key starts again (the written gap kept, at most RetrigMs); onsets stay in order and never before 0.
