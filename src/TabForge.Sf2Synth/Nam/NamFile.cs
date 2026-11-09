@@ -19,8 +19,14 @@ internal static class NamFile
 {
     public static NamModel Load(string path)
     {
-        using var doc = JsonDocument.Parse(File.ReadAllBytes(path));
-        return Parse(doc.RootElement.Clone(), Path.GetFileNameWithoutExtension(path));
+        using var file = File.OpenRead(path);
+        return Load(file, Path.GetFileNameWithoutExtension(path));
+    }
+
+    public static NamModel Load(Stream json, string name)
+    {
+        using var doc = JsonDocument.Parse(json);
+        return Parse(doc.RootElement.Clone(), name);
     }
 
     public static NamModel Parse(JsonElement root, string name)
