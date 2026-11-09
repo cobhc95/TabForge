@@ -6,6 +6,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ### Added
 
+- TabForge Synth (experimental): new setting Humanize flat dynamics (on): where a track's guitar or bass notes all share one velocity and exact timing, they get a player's accents, phrasing, picking and strum, and no two notes sound quite alike; notes that already vary are left as they are (untested in app).
 - TabForge Synth (experimental): more realistic modelled clean, jazz and acoustic guitars (nylon and steel bodies, pickup character, a gentle amp with a small room) and basses (five strings down to low B, P and J pickups, compressor, fretless slides, slap and pop, upright body); each plays as loud as the SoundFont's own and now follows its velocity curve (untested in app).
 - TabForge Synth (experimental): two settings under Sound engine choose an amp (a Neural Amp Modeler .nam file, A2 included) and a cabinet (.wav impulse response) for its electric guitars; a missing or unreadable file keeps the built-in amp or cabinet and the status bar says why, and a change swaps in without stopping notes. Its modelled guitars and basses now play as loud as the SoundFont's own at the same velocity and follow the master volume (untested in app).
 - Sound engine: new choice TabForge Synth (experimental), not the default. TabForge's own SoundFont player plays GeneralUser GS when it is downloaded (else Windows GM plays as before), with modelled guitars and basses (plucked strings through an amp and cabinet) for the guitar and bass programs.

@@ -68,6 +68,19 @@ The guitar layer (modelled string, stage amp, synthetic cab) sounded better than
 - Open: 31 harmonics stay a sine-like tone (bank much brighter); 28 palm mute decays faster than the bank; squeak and sympathetic strings not built;
   nothing checked in the running app; no adapter or settings change was needed.
 
+## Humanizer (Nov 2026)
+- [x] `Humanize/` MIDI pre-stage in `Synthesizer` (off in the library; on for the Experimental engine via Settings `vst.synthhumanize`
+  "Humanize flat dynamics", default on, carried as `|off` in the engine sentinel). All switches in `SynthOptions` (live, any thread).
+- Evidence per channel (16 notes): flat velocities and grid timing are detected separately; human input passes unchanged (test: 0/65 events changed).
+- Flat test MIDI (velocity 90, grid, 120 bpm), humanizer on, velocity std 0 -> riff 30: 5.2, arpeggio 27: 4.4, strum 25: 3.8, bass 33: 4.4;
+  onset delay mean 2-5 ms, max 16 ms (bound 21 ms); strum spread 6.8-7.3 ms. Humanizer ~3 us per note-on (0.002 % of a core); render cost unchanged.
+- Voice variation: seed, pick position ±8 %, brightness, release ±15 %, detune 0.5-3 cents falling in 0.15 s, vibrato 4.5-6 Hz ~5 cents after 0.4 s
+  (strings; SF2 voices get detune, vibrato, filter brightness). Level drift is a slow velocity walk (±3). Drums untouched (no drum mode built).
+- Fixed on the way: a pluck reused the previous note's click history and the cabinet convolver kept its slot over `Reset`, so a render
+  after `Reset` was not bit-identical; now it is.
+- WAVs `tfsynth4_<riff30|arp27|strum25|bass33>_<flat|human>.wav`, `tfsynth4_arp27_alreadyhuman.wav` and the flat `.mid` files in the agent scratch folder. Owner to listen; not checked in the running app.
+- Without a readable SoundFont (MeltySynth + layer) there is no humanizer (it lives in `Synthesizer`).
+
 ## Architecture decision
 Clean pickup-style guitar DI, then a user-chosen Neural Amp Modeler `.nam` model as the amp, then an optional cabinet `.wav` IR. Built-in stage amp and synthetic cab stay as the default. NAM runtime is written from scratch from the public format spec (no copied code).
 
