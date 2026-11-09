@@ -152,6 +152,53 @@ fit of the 5 ms rms in dB over 200 ms from its peak; loudness range = p95 - p10 
   swell for ~40 ms after the strike (body modes; the bank's strum falls at once); the distorted programs keep the capture's squeeze.
   Options if 29/30 need more bite: a gentle expander ahead of the captured amp, or a little of the DI transient mixed after it.
 
+## Captured amp output EQ (Nov 2026)
+Owner: compared with the real amp recording the EQ could be better, maybe too high in the upper mids. Measured on the 8.5 s take
+(python, statistics only): our recovered notes (velocities fitted to the attack peaks, program 29, voice variation Natural) through the
+current DI and captured amp vs the same take through the real amp; long-term spectrum in 1/6 octaves, level-matched on 60 Hz-14 kHz;
+time slices = STFT frames 0-30 / 30-300 / 300+ ms after each onset; distance = RMS of the band differences 60 Hz-14 kHz.
+- Where the gaps come from:
+  - The capture itself (the owner's DI through it vs the real amp): within 0.4 dB up to 5 kHz, +1.6..+5.9 dB at 6.3-16 kHz (fizz); distance 1.6.
+  - Our DI vs the real DI: distance 2.85, 1-4 kHz +2.2 dB (rms 4.2). On the muted chugs (39 of 57 onsets) 1-4 kHz +7.6 (2.5-4.5 kHz
+    +13-15 dB: hard pick, no palm mute); on the single notes 1-4 kHz -0.6.
+  - Low mids: under the real single notes 110-400 Hz is 13-19 dB stronger (a low string keeps ringing, hum); our list cuts it. Not tone;
+    on the chugs alone ours was 3.9 dB low there.
+  - The built-in cabinet: far too dark (distance 9.2, 4-16 kHz -18 dB). DI tone changes ahead of the amp (3.4 kHz cut, low shelf): 3.4 at best.
+- Changed: four biquads after the captured amp (`Voicings.CapturedEq` in `CaptureSpec.Eq`): Peak 210 Hz +4 Q 0.9, Peak 830 Hz -6 Q 1.1,
+  Peak 2.55 kHz -3.5 Q 1, HighShelf 5.7 kHz -10 Q 0.7; fitted with a penalty on an attack brighter than the real one and a cap of +4 dB
+  on the low boost (an unconstrained fit wanted +8 dB at 200 Hz for the missing ringing string). `SynthOptions.CapturedAmpEq` (on), not
+  with a cabinet. Output `Level` 0.84 / 0.65 -> 0.94 / 0.73: riff 29/30 rms unchanged (-0.01 / +0.02 dB), captured - stage -1.1 / +1.2 dB.
+- Ours minus the real amp, dB (before -> after):
+
+| measure | before | after |
+|---|---|---|
+| distance 1/6 oct 60 Hz-14 kHz | 4.04 | 1.74 |
+| 1-4 kHz rms / mean | 1.75 / +1.5 | 1.01 / -0.5 |
+| 110-400 Hz / 600 Hz-1 kHz / 4-16 kHz mean | -5.0 / +3.4 / +4.8 | -0.5 / +0.3 / -0.7 |
+| attack 0-30 ms: 1-4 kHz / 4-16 kHz | +2.4 / +6.3 | +0.4 / +0.9 |
+| body 30-300 ms: 1-4 kHz / 4-16 kHz | +1.4 / +4.2 | -0.6 / -1.2 |
+| tail 300 ms+: 1-4 kHz / 4-16 kHz | -3.0 / 0.0 | -5.0 / -5.4 |
+| chugs only: distance, 1-4 kHz, 4-16 kHz | 4.83, +3.2, +6.7 | 2.34, -0.1, 0.0 |
+| single notes only: 1-4 kHz, 4-16 kHz | -0.6, +2.1 | -1.3, -2.1 |
+| octave bands 63/125/250/500/1k/2k/4k/8k (dB re sum; real -12.3/-7.2/-6.8/-6.8/-7.9/-9.7/-12.9/-20.4) | -14.7/-11.2/-10.2/-6.0/-5.3/-7.9/-11.1/-18.5 | -11.3/-7.4/-7.1/-6.5/-7.8/-9.9/-13.1/-20.6 |
+
+- Second material: the power-chord riff (1/3 oct) +2..+4 dB at 125-315 Hz, -4..-6 at 630 Hz-4 kHz, -6..-10 above 6 kHz relative to
+  before, same rms; demo parts v4 -> v5 rms: riff 30 -23.6 -> -23.9, run 30 -23.4 -> -24.5 dBFS, every other part identical.
+- CPU, Release, riff 30, % of one core per channel: 2.22-2.27 without the EQ, 2.29 with it. No allocation (fixed `Biquad[4]`).
+- Guard: `GuitarLayerTests.TheCapturedAmpMatchesTheRealAmp` (29/30): octave bands of the DI phrase through the captured amp within 2.5 dB of
+  the real amp's (now within 0.8; the take before the EQ was off by up to 4).
+- Clean programs and basses (no captured amp, unchanged): layer vs the bank sample, same notes, single note at 4 velocities and strums,
+  level-matched, power in <250 Hz / 250 Hz-2 kHz / 2-8 kHz / 8-14 kHz (dB): 24 +3.4/-6.6/-6.8/+8.6, 25 +3.8/-4.3/-5.1/-1.3,
+  26 +0.7/-2.8/0.0/+3.4, 27 +15.8/-1.4/-12.2/-45.7, 28 +0.1/-1.0/+16.4/-3.9, 31 +19.4/-10.9/-23.7/-14.9, 32 +0.6/-6.3/+12.7/+13.8,
+  33 +1.6/+1.3/+25.3/-6.5, 34 -0.8/-2.3/+11.5/+0.3, 35 +0.7/+0.2/+29.0/-17.3, 36 -2.4/+11.1/+14.7/-12.4, 37 -1.8/+4.1/+11.8/-1.6.
+  Two thirds of the 1/3-octave bands differ by more than 4 dB on every program (a modelled string vs one sample). Flagged, not changed:
+  27 is dark on purpose (fitted to the real DI), the basses are brighter on purpose (fresh strings, pick and slap), 31 is the open
+  harmonics item, 28's 2-8 kHz +16 dB and 35's +29 dB deserve a listen against a real muted guitar and fretless.
+- Still different: tails 1-4 kHz 5 dB under the real amp (its hiss and the ringing low string between notes; our notes end at the
+  note-off); the muted chugs' attack is still brighter in our DI (no palm mute) and the EQ only averages it out; the single notes are
+  now about 1-2 dB darker than the real ones above 1 kHz. Demo `tfsynth_FULL_DEMO_v5.wav` (same flat MIDI and path as v4, Natural, gain
+  +13.7 dB, peak 0.90). Listen first to the riff and the 16th runs on 30 against v4: less fizz and honk, fuller low mids.
+
 ## Captured amp, default for 29/30 (Nov 2026)
 - [x] The owner's approved capture (WaveNet lite, 48 kHz) is embedded as `Guitar/Amps/captured.nam` (metadata reduced to name "Captured amp",
   gear type, loudness, gain). `SynthOptions.DistAmp` = Captured (default) | Stage | CleanOnly, `CapturedAmpCabinet` (off); a user `.nam` wins.
@@ -162,7 +209,7 @@ fit of the 5 ms rms in dB over 200 ms from its peak; loudness range = p95 - p10 
   heavily compressed: 32 dB of input range moves the output 0.7 dB). Silence in = exactly 0 out after removing the model's rest output
   (it was 0.014, a click when the bus stopped). The model makes DC while playing (-7..-10 % of rms): 15 Hz high-pass after it, bus DC < 1e-5 of rms.
   Onset from silence: first 2 ms step 0.037-0.039 vs 0.068 in the next 48 ms; the end decays to 7e-10 before the bus stops.
-- Level: output trim 0.87 / 0.68 (29 / 30). Riff vs stage amp -1.8 / +0.4 dB; vs the bank at velocity 100 within 1 dB (`GeneralUserBankTests`).
+- Level: output trim 0.87 / 0.68 (29 / 30; 0.94 / 0.73 with the output EQ, above). Riff vs stage amp -1.8 / +0.4 dB; vs the bank at velocity 100 within 1 dB (`GeneralUserBankTests`).
   With the cabinet added it is about 3.5 dB louder (the cabinet's gain was folded into the stage amp's level).
 - CPU, Release, 48 kHz, 256-frame blocks, program 30 six strings, % of one core per channel: captured 2.2, captured + cabinet 2.2 (the FFT cabinet
   is under 0.1), stage 0.85, clean only 0.1. Debug about 15. Layer creation 51 ms (16 prewarmed captured amps, off the audio thread).
@@ -200,7 +247,7 @@ fit of the 5 ms rms in dB over 200 ms from its peak; loudness range = p95 - p10 
 - End to end, ours DI -> captured amp vs the real amp recording (same notes; real / before / after): 1/6-octave distance 8.4 -> 3.75 dB;
   centroid 0-30 / 30-300 ms single notes 1007 / 1112, 1836 / 1789, 1101 / 1226 Hz; chugs 855 / 539, 1877 / 1446, 1078 / 746 Hz;
   crest 10.9 / 11.2 / 11.4 dB. The amp's tone barely depends on input level here (distance 3.64-3.80 over -7..+3 dB of trim).
-- Still different: our amp output has 2-8 dB less at 110-400 Hz and 4-9 dB more fizz at 7-14 kHz; muted chugs ring brighter after the attack
+- Still different: our amp output has 2-8 dB less at 110-400 Hz and 4-9 dB more fizz at 7-14 kHz (now the output EQ, above); muted chugs ring brighter after the attack
   (no palm mute, only release damping); the real picking is 5 dB hotter per note than ours at velocity 100 and twice as varied; no hum or hiss.
 - Guard: `GuitarLayerTests.TheDiMatchesTheMeasuredGuitarDi` (27/29/30): octave bands within 3 dB of the curve above (a phrase in the same
   register, not the take), 2 kHz T60 of a held F3 within 0.76 s ×/÷ 1.6 (now 1.15 s).

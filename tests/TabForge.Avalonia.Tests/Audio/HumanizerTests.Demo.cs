@@ -65,7 +65,7 @@ public sealed partial class HumanizerTests
         var gap = new float[Rate];
         var all = (L: takes.SelectMany(t => t.L.Concat(gap)).ToArray(), R: takes.SelectMany(t => t.R.Concat(gap)).ToArray());
         var gain = 0.9 / all.L.Concat(all.R).Max(MathF.Abs);
-        TestSoundFont.WriteWav("tfsynth_FULL_DEMO_v4.wav", all.L.Select(v => (float)(v * gain)).ToArray(), all.R.Select(v => (float)(v * gain)).ToArray(), Rate);
+        TestSoundFont.WriteWav("tfsynth_FULL_DEMO_v5.wav", all.L.Select(v => (float)(v * gain)).ToArray(), all.R.Select(v => (float)(v * gain)).ToArray(), Rate);
         File.WriteAllBytes(Path.Combine(dir, "demo_v3_flat.mid"), DemoMid());
         output.WriteLine($"demo {all.L.Length / (double)Rate:F1} s, gain {20 * Math.Log10(gain):F1} dB, peak 0.90, render cpu {watch.Elapsed.TotalSeconds / (all.L.Length / (double)Rate) * 100:F1} % of one core (6 parts, one channel each)");
         Assert.True(all.L.All(float.IsFinite));

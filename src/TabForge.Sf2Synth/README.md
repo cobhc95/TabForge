@@ -15,6 +15,7 @@ MIDI -> `Synthesizer.ProcessMidiMessage` -> note-on on a channel the `Layer` own
 Voice: sample -> cubic Hermite -> resonant low-pass -> gain ramp (vol env, attenuation, modulators) -> pan -> mix + reverb/chorus sends.
 `Render` adds the layer to the SF2 mix, then writes the sum × `MasterVolume` (layer and bank guitars level-matched, `GeneralUserBankTests`).
 Guitar layer: strings (per channel) -> pickup resonance -> body modes (acoustic) -> compressor -> pre-EQ -> 2x oversampled amp stages -> tone stack -> cabinet FIR -> level -> volume/pan.
+Captured amp (29/30): pickup resonance -> trim -> captured amp -> DC blocker -> output EQ (or a cabinet) -> level -> volume/pan.
 
 ## Distorted amp (`SynthOptions.DistAmp`)
 Programs 29/30 only (`RigSpec.Captured`); clean, acoustic, muted and bass programs never use it. A user `.nam` always wins.
@@ -22,6 +23,10 @@ Programs 29/30 only (`RigSpec.Captured`); clean, acoustic, muted and bass progra
   DI × `Trim` × `Drive` feeds it at the capture's training level (about -29 dBFS rms, peak ≤ 0.4), its silence output and DC are removed,
   `Level` matches the old stage-amp loudness. No cabinet by default: the capture is a full amp output, cabinet path unknown;
   `CapturedAmpCabinet` adds the built-in guitar cabinet. If the resource fails to load, the stage amp plays.
+  Output EQ (`CaptureSpec.Eq`, `Voicings.CapturedEq`, `SynthOptions.CapturedAmpEq`, on; skipped when a cabinet follows): four biquads
+  fitted to the real amp's recording of the measured take (210 Hz +4, 830 Hz -6, 2.55 kHz -3.5 dB, shelf 5.7 kHz -10 dB). It corrects
+  the capture's own fizz above 6 kHz and what our DI does differently (bright pick on muted chugs, thin low mids); `Level` re-trimmed.
+  `GuitarLayerTests.TheCapturedAmpMatchesTheRealAmp` keeps the octave bands within 2.5 dB of the real amp's.
 - `Stage`: the modelled `StageAmp` and synthetic cabinet (the previous default).
 - `CleanOnly`: the trimmed pickup DI, no amp or cabinet, for an amp plug-in after the synth.
 Changes fade out one 64-frame block and in the next (`GuitarBus.Use`); notes keep sounding.
