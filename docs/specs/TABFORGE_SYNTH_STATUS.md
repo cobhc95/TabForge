@@ -29,19 +29,58 @@ The guitar layer (modelled string, stage amp, synthetic cab) sounded better than
 - A/B WAVs (`tfsynth2_*.wav`, scratch harness, not in the repo): DI alone (prog 27; palm mute on 28) peaks -10 to -21 dBFS, no NaN,
   max sample step <= 0.054; riff 29 amp vs SF2 rms -28.0 / -29.8 dBFS, riff 30 -31.7 / -32.3 dBFS; crest 10-11 dB (amp) vs 16-17 (SF2).
 
+## Clean, acoustic and bass programs (Nov 2026, commits `0493834`, `7a42e6f`)
+- [x] Acoustic 24/25: modal body (`BodyModes`: direct path + band-pass modes; nylon air 98 / top 195 / back 235 Hz + 4 higher, steel 102 / 210 / 300 Hz
+  + 5 higher and brighter), nylon fingertip tap (1.5 kHz) vs steel pick snap (3.5 kHz), frequency-dependent decay per string. No squeak, no sympathetic strings.
+- [x] Electric 26/27 (and 28/31): two-coil neck humbucker comb (155 + 173 mm, 2.8 kHz resonance) vs bright single coil (110 mm, 5 kHz Q 2.2); clean amp
+  drive lowered, gentle compressor (-6 dBFS, 1.6:1) ahead of it, cabinet with a small room (`CabKind.Room`, reflections to 17 ms). User .nam/.wav rig
+  applies to these as before (same slot, no new code).
+- [x] Basses 32-37: five strings (B0 30.9 Hz to G1), P pickup (33/34) and J pair (35-37), DI -> feed-forward compressor (-20 dBFS, 3.5:1, 3 ms; slap 12 ms)
+  -> tube stage -> bass cab. Finger noise tap, brighter picked click, fretless mwah (band-pass at 8 x f0, falling) and 0.12 s glide on every legato step,
+  slap = struck bump near the neck + thumb thump + fret click, pop brighter, mid scoop in the tone stack; upright body (60 / 105 / 150 Hz ...) + knock.
+- [x] Levels: every program 24-37 within 0.35 dB of the bank at velocity 100 (one test per program). Velocity exponent per program (1.47-2.1):
+  layer minus bank between velocity 40 and 127 spans 0.0-3.0 dB on the clean programs, 4.7 dB on 37 (the bank's slap 2 jumps a sample layer at 127).
+  29/30 unchanged (-0.02 / +0.02 dB).
+- Tuning (full bass rig, autocorrelation): B0 0.06, D1 0.04, E1 0.07, A1 0.00-0.07 cents; DC under 0.3 % of rms; slap above 16 kHz -113 dB of the transient.
+- CPU, Debug, % of one core per channel: acoustic 6 strings 0.6, clean electric 6 strings 3.4-3.5 (amp + room cab), bass 1 string 2.6-2.9, upright 0.3.
+- Timbre vs the bank sample, same note, velocity 100, dry (bank / layer; `GeneralUserBankTests.TimbreIsMeasuredAgainstTheBankSamples`):
+
+| prog | note | centroid 50 ms, 300 ms, 1 s (Hz) | T60 f0 (s) | T60 h5 (s) | attack (ms) | HNR (dB) |
+|---|---|---|---|---|---|---|
+| 24 | 52 | 1518 / 1089, 848 / 464, 560 / 295 | 10.0 / 4.1 | 6.9 / 3.5 | 7 / 7 | 18 / 45 |
+| 25 | 52 | 2556 / 2315, 1489 / 924, 1073 / 463 | 10.7 / 5.1 | 9.7 / 4.4 | 15 / 7 | 20 / 46 |
+| 26 | 52 | 591 / 642, 469 / 402, 420 / 260 | 8.8 / 4.3 | 9.2 / 3.4 | 12 / 11 | 43 / 49 |
+| 27 | 52 | 1637 / 2169, 868 / 1660, 750 / 876 | 13.8 / 5.8 | 11.1 / 5.2 | 6 / 11 | 34 / 47 |
+| 28 | 52 | 404 / 1072, 282 / 456, 282 / 36 | 1.6 / 0.7 | 0.4 / 0.7 | 5 / 5 | 31 / 42 |
+| 31 | 52 | 1519 / 392, 1863 / 360, 1840 / 302 | 0.4 / 3.5 | 6.5 / 3.3 | 45 / 11 | 26 / 50 |
+| 32 | 33 | 216 / 535, 150 / 191, 137 / 124 | 5.7 / 3.0 | 5.9 / 3.0 | 33 / 39 | 28 / 42 |
+| 33 | 33 | 214 / 610, 174 / 395, 162 / 217 | 20.4 / 7.4 | 21.2 / 8.2 | 19 / 21 | 43 / 43 |
+| 34 | 33 | 637 / 1089, 307 / 983, 179 / 680 | 18.4 / 7.4 | 31.8 / 7.4 | 32 / 20 | 39 / 44 |
+| 35 | 33 | 247 / 813, 241 / 452, 227 / 260 | 8.9 / 5.2 | 9.8 / 5.3 | 16 / 22 | 30 / 44 |
+| 36 | 33 | 649 / 1538, 435 / 1260, 182 / 913 | 31.5 / 4.5 | 25.5 / 4.5 | 7 / 23 | 43 / 46 |
+| 37 | 33 | 775 / 1354, 375 / 1139, 304 / 813 | 56.6 / 4.5 | 39.1 / 4.5 | 2 / 4 | 20 / 45 |
+
+  Reading it: the bank's T60s of 9-57 s are sample loops (a real string decays in 3-8 s), so the layer is shorter on purpose. Its HNR is higher because
+  the samples carry recording noise. The basses are 2-3x brighter at the attack than the bank's dull samples (fresh-string finger, pick and slap definition);
+  the acoustics are darker after 300 ms (highs decay first, as on a real string). 36 attack 23 ms: the 1 ms envelope peaks on a later slap pulse.
+- A/B phrases (single notes, strum or double stop, a line; fretless line overlaps so it glides): `tfsynth3_<24|25|26|27|32|33|34|35|36>_<sf2|layer>.wav`
+  in the agent scratch folder, not in the repo. Owner to listen.
+- Open: 31 harmonics stay a sine-like tone (bank much brighter); 28 palm mute decays faster than the bank; squeak and sympathetic strings not built;
+  nothing checked in the running app; no adapter or settings change was needed.
+
 ## Architecture decision
 Clean pickup-style guitar DI, then a user-chosen Neural Amp Modeler `.nam` model as the amp, then an optional cabinet `.wav` IR. Built-in stage amp and synthetic cab stay as the default. NAM runtime is written from scratch from the public format spec (no copied code).
 
 ## To do next, in order
 1. [x] Build and the five test classes: nothing was broken; 62/62, now 63.
-2. [x] Level calibration (see Measured). Open: a steeper layer velocity curve if the owner wants the bank's dynamics.
+2. [x] Level calibration (see Measured). Steeper per-program velocity curve done (clean section).
 3. [x] NAM A2 confirmed from NeuralAmpModelerCore (README section). Not supported (error -> built-in fallback): FiLM, groups, condition_dsp, post-stack head, `.namb`. Never run against a real A2 file.
 4. [x] Settings `vst.synthamp` / `vst.synthcab` (Text rows, shown with TabForge Synth). Path rides in the engine sentinel `tabforge:synth|<sf2>|<nam>|<ir>`;
    same SoundFont = `RigOnly` choice, `GmSynth` calls `GuitarLayer.LoadRig` (off the audio thread, fade out/in over two 64-frame chunks).
    Status bar text comes from `GuitarLayer.DescribeRig` on a worker thread. Cabinet already ran on `FftConvolver`. Not checked in the running app.
 5. [x] A/B WAVs rendered (numbers above). Owner to listen.
 6. [x] CPU per architecture (above).
-7. Later: palm-mute detection and pick attack, bass and clean guitar, drums, keys, then the other GM families (see the plan in the conversation: waveguide, modal, DDSP hybrids).
+7. Later: palm-mute detection, drums, keys, then the other GM families (see the plan in the conversation: waveguide, modal, DDSP hybrids).
 
 ## Open questions for the owner
 - Real `.nam` files and cabinet IRs to test with (none downloaded; third-party captures have their own licences, so bundling needs clearly permissive ones or our own).

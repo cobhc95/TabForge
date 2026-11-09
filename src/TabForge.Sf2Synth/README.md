@@ -7,13 +7,13 @@ Standalone SoundFont 2.04 synthesizer (no dependencies) with an optional modelle
 - `Synth/` playback: `Synthesizer` (public API, voice allocation), `Channel` (MIDI state, RPN), `Voice.Setup` (zones -> generators + modulators), `Voice` (render), `Envelope` (DAHDSR + LFO), `ILayer`.
 - `Effects/` `Reverb` (Freeverb), `Chorus`.
 - `Dsp/` shared: `Biquad`, `FirHistory` (SIMD FIR), `Oversampler2x`.
-- `Guitar/` the layer: `GuitarLayer` (MIDI, strings, mix), `PluckedString` (waveguide), `GuitarBus` (rig), `StageAmp` (IAmpModel), `CabinetImpulse`, `Voicings` (all values).
+- `Guitar/` the layer: `GuitarLayer` (MIDI, strings, mix), `PluckedString` (waveguide; `.Attack`: pluck, slap, tap noise, fretless mwah), `StringPhysics`, `GuitarBus` (rig), `BodyModes` (acoustic body), `Compressor`, `StageAmp` (IAmpModel), `CabinetImpulse` (guitar, bass, room), `Voicings` (all values), `VoicingSpecs` (their types).
 
 ## Signal flow
 MIDI -> `Synthesizer.ProcessMidiMessage` -> note-on on a channel the `Layer` owns goes to the layer, everything else starts SF2 voices.
 Voice: sample -> cubic Hermite -> resonant low-pass -> gain ramp (vol env, attenuation, modulators) -> pan -> mix + reverb/chorus sends.
 `Render` adds the layer to the SF2 mix, then writes the sum × `MasterVolume` (layer and bank guitars level-matched, `GeneralUserBankTests`).
-Guitar layer: strings (per channel) -> pre-EQ -> 2x oversampled amp stages -> tone stack -> cabinet FIR -> volume/pan.
+Guitar layer: strings (per channel) -> pickup resonance -> body modes (acoustic) -> compressor -> pre-EQ -> 2x oversampled amp stages -> tone stack -> cabinet FIR -> level -> volume/pan.
 
 ## API
 ```csharp
