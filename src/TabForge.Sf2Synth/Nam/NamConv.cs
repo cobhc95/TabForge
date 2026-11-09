@@ -23,7 +23,7 @@ internal sealed class NamConv
         _w = new float[k * inCh * ((outCh + 3) / 4 * 4)];
         _off = new int[k * inCh];
         _b = new float[bias ? outCh : 0];
-        _cap = k > 1 ? _hist + Keep : 0;
+        _cap = k > 1 ? _hist + Keep + Vc : 0;
         _buf = new float[inCh * _cap];
         _len = _hist;
     }
@@ -54,7 +54,7 @@ internal sealed class NamConv
             Mac(x, y, n);
             return;
         }
-        if (_len + n > _cap)
+        if (_len + n > _cap - Vc)
         {
             for (var j = 0; j < In; j++) Array.Copy(_buf, j * _cap + _len - _hist, _buf, j * _cap, _hist);
             _len = _hist;
@@ -68,21 +68,19 @@ internal sealed class NamConv
         _len += n;
     }
 
-    // y[o][t] += Σ_i w[o][i] · src[off[i] + t], four rows per pass.
+    // y[o][t] += Σ_i w[o][i] · src[off[i] + t], four rows per pass. A partial last vector adds only its first n % vc lanes
+    // (rows have stride Max and the history one vector of slack, so the wide read stays inside the arrays).
     private void Mac(float[] src, float[] y, int n)
     {
-        int taps = _off.Length, vc = Vector<float>.Count, whole = n / vc * vc;
+        var taps = _off.Length;
         ref var s0 = ref MemoryMarshal.GetArrayDataReference(src);
         ref var y0 = ref MemoryMarshal.GetArrayDataReference(y);
         for (var o = 0; o < Out; o += 4)
         {
             var rows = Math.Min(4, Out - o);
-            for (var t = 0; t < whole; t += vc)
+            for (var t = 0; t < n; t += Vc)
             {
-                Vector<float> a0 = Vector.LoadUnsafe(ref y0, (nuint)(o * Max + t)), a1 = default, a2 = default, a3 = default;
-                if (rows > 1) a1 = Vector.LoadUnsafe(ref y0, (nuint)((o + 1) * Max + t));
-                if (rows > 2) a2 = Vector.LoadUnsafe(ref y0, (nuint)((o + 2) * Max + t));
-                if (rows > 3) a3 = Vector.LoadUnsafe(ref y0, (nuint)((o + 3) * Max + t));
+                Vector<float> a0 = default, a1 = default, a2 = default, a3 = default;
                 for (var i = 0; i < taps; i++)
                 {
                     var xv = Vector.LoadUnsafe(ref s0, (nuint)(_off[i] + t));
@@ -91,16 +89,19 @@ internal sealed class NamConv
                     a2 += _w[(o + 2) * taps + i] * xv;
                     a3 += _w[(o + 3) * taps + i] * xv;
                 }
-                a0.StoreUnsafe(ref y0, (nuint)(o * Max + t));
-                if (rows > 1) a1.StoreUnsafe(ref y0, (nuint)((o + 1) * Max + t));
-                if (rows > 2) a2.StoreUnsafe(ref y0, (nuint)((o + 2) * Max + t));
-                if (rows > 3) a3.StoreUnsafe(ref y0, (nuint)((o + 3) * Max + t));
+                var mask = t + Vc <= n ? Vector<float>.AllBitsSet : Vector.AsVectorSingle(Vector.LessThan(Lane, new Vector<int>(n - t)));
+                Store(ref y0, o * Max + t, a0 & mask);
+                if (rows > 1) Store(ref y0, (o + 1) * Max + t, a1 & mask);
+                if (rows > 2) Store(ref y0, (o + 2) * Max + t, a2 & mask);
+                if (rows > 3) Store(ref y0, (o + 3) * Max + t, a3 & mask);
             }
-            for (var r = o; r < o + rows; r++)
-                for (var t = whole; t < n; t++)
-                    for (var i = 0; i < taps; i++) y[r * Max + t] += _w[r * taps + i] * src[_off[i] + t];
         }
     }
+
+    private static readonly int Vc = Vector<float>.Count;
+    private static readonly Vector<int> Lane = new(Enumerable.Range(0, Vector<int>.Count).ToArray());
+
+    private static void Store(ref float y0, int at, Vector<float> add) => (Vector.LoadUnsafe(ref y0, (nuint)at) + add).StoreUnsafe(ref y0, (nuint)at);
 
     private static void Add(Span<float> y, float a)
     {
