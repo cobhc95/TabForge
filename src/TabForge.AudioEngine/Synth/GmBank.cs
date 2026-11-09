@@ -20,6 +20,10 @@ public sealed class GmBank
     public sealed record Choice(SoundFont? Font, string Path, float MasterVolume, int Version, bool WindowsHost = true, bool Silent = false, TabForge.Sf2Synth.Sf2.SoundFont? Sf2 = null, bool Experimental = false)
     {
         // Experimental: the TabForge Synth's guitar layer plays; Sf2 (when readable) replaces MeltySynth for everything else.
+        // Amp/Cab: the user's .nam and cabinet .wav for that layer ("" = built-in); RigOnly: only they changed, so running synths swap them in place.
+        public string Amp { get; init; } = "";
+        public string Cab { get; init; } = "";
+        public bool RigOnly { get; init; }
         /// <summary>The font to play. Windows without a SoundFont: the converted gm.dls. Elsewhere without a SoundFont: a failure that says to download it (the synth then reports itself failed). Never read when <see cref="Silent"/>.</summary>
         public SoundFont Bank => Silent ? throw new InvalidOperationException("The silent sound bank has no font to play.") : Font ?? (WindowsHost ? DlsToSoundFont.LoadWindowsBank() : throw new FileNotFoundException(NoBankMessage));
     }
@@ -69,16 +73,20 @@ public sealed class GmBank
         }
     }
 
-    // "tabforge:synth|<sf2>" (no file: the bundled SoundFont). An unreadable file plays this OS's fallback bank, so the song always sounds.
-    private Choice Experimental(string path, int version, out string error)
+    // "tabforge:synth|<sf2>|<amp .nam>|<cab .wav>" (empty sf2: the bundled SoundFont). An unreadable SoundFont plays this OS's fallback bank,
+    // so the song always sounds; a new amp or cabinet with the same SoundFont keeps the loaded font and only swaps the rig.
+    private Choice Experimental(string path, Choice old, out string error)
     {
         error = "";
-        var file = path.IndexOf('|') is var bar and >= 0 && bar + 1 < path.Length ? path[(bar + 1)..] : _bundledPath;
-        try { return new Choice(null, path, SoundFontMasterVolume, version, _windowsHost, Sf2: new TabForge.Sf2Synth.Sf2.SoundFont(file), Experimental: true); }
+        var parts = (path + "|||").Split('|');
+        var (file, version) = (parts[1].Length > 0 ? parts[1] : _bundledPath, old.Version + 1);
+        if (old.Experimental && (old.Path + "|||").Split('|')[1] == parts[1])
+            return old with { Path = path, Version = version, Amp = parts[2], Cab = parts[3], RigOnly = true };
+        try { return new Choice(null, path, SoundFontMasterVolume, version, _windowsHost, Sf2: new TabForge.Sf2Synth.Sf2.SoundFont(file), Experimental: true) { Amp = parts[2], Cab = parts[3] }; }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException)
         {
             error = ex.Message;
-            return Fallback(version) with { Path = path, Experimental = true };
+            return Fallback(version) with { Path = path, Experimental = true, Amp = parts[2], Cab = parts[3] };
         }
     }
 
@@ -101,7 +109,7 @@ public sealed class GmBank
         if (string.Equals(old.Path, path, StringComparison.OrdinalIgnoreCase)) return true;
         if (path.Length == 0) { Publish(Fallback(old.Version + 1)); return true; }
         if (string.Equals(path, TabForge.Services.SoundEngines.None, StringComparison.Ordinal)) { Publish(new Choice(null, path, 0, old.Version + 1, _windowsHost, Silent: true)); return true; }
-        if (path.StartsWith(TabForge.Services.SoundEngines.TabForgeSynthPath, StringComparison.Ordinal)) { Publish(Experimental(path, old.Version + 1, out error)); return true; }
+        if (path.StartsWith(TabForge.Services.SoundEngines.TabForgeSynthPath, StringComparison.Ordinal)) { Publish(Experimental(path, old, out error)); return true; }
         var font = TryLoad(path, out error);
         if (font is null) return false;
         Publish(new Choice(font, path, SoundFontMasterVolume, old.Version + 1, _windowsHost));

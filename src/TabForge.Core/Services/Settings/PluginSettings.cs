@@ -25,6 +25,10 @@ public sealed class PluginSettings
     public bool PlayAllThroughEngine { get; set; } = true;
     /// <summary>The General MIDI sound engine: "Windows GM", "TabForge SoundFont", "None" (silence), or empty for the default of this operating system (see <see cref="SoundEngines"/>).</summary>
     public string SoundEngine { get; set; } = "";
+
+    /// <summary>TabForge Synth (experimental) only: the electric guitars' amp (.nam) and cabinet (.wav impulse response); empty = built-in.</summary>
+    public string SynthAmpPath { get; set; } = "";
+    public string SynthCabPath { get; set; } = "";
     /// <summary>The user's own .sf2 file chosen with "Open your own .sf2…": its path on this computer. TabForge never copies, alters or deletes it.</summary>
     public string UserSoundFont { get; set; } = "";
     /// <summary>True while "play the whole song through the engine" is on because the automatic rule turned it on (not the user): only then does removing the last plug-in (without ASIO) turn it off again.</summary>

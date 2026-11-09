@@ -44,14 +44,22 @@ public sealed class GmSynth : IPluginInstance
     // Does not own: channel state (only touched by the callback). Its replay happens after publication at the block boundary.
     private void PrepareBank(GmBank.Choice choice)
     {
+        // Only the amp or cabinet changed: the live layer loads them here and fades them in at a block boundary; voices keep ringing.
+        if (choice.RigOnly && (_tfs?.Layer as GuitarLayer ?? _layer) is { } live) { live.LoadRig(choice.Amp, choice.Cab); return; }
         Interlocked.Exchange(ref _pending, new Prepared(NewSynth(SampleRate, choice, out _), NewTfs(SampleRate, choice), NewLayer(SampleRate, choice), choice.Version));
     }
 
     private static Sf2Synthesizer? NewTfs(int sampleRate, GmBank.Choice bank) => bank.Sf2 is { } font
-        ? new Sf2Synthesizer(font, sampleRate, MaxVoices, GmSynthTuning.ReverbAndChorus) { MasterVolume = bank.MasterVolume, Layer = new GuitarLayer(sampleRate) }
+        ? new Sf2Synthesizer(font, sampleRate, MaxVoices, GmSynthTuning.ReverbAndChorus) { MasterVolume = bank.MasterVolume, Layer = Rigged(new GuitarLayer(sampleRate), bank) }
         : null;
 
-    private static GuitarLayer? NewLayer(int sampleRate, GmBank.Choice bank) => bank.Experimental && bank.Sf2 is null && !bank.Silent ? new GuitarLayer(sampleRate) { Gain = bank.MasterVolume } : null;
+    private static GuitarLayer? NewLayer(int sampleRate, GmBank.Choice bank) => bank.Experimental && bank.Sf2 is null && !bank.Silent ? Rigged(new GuitarLayer(sampleRate) { Gain = bank.MasterVolume }, bank) : null;
+
+    private static GuitarLayer Rigged(GuitarLayer layer, GmBank.Choice bank)
+    {
+        if (bank.Amp.Length + bank.Cab.Length > 0) layer.LoadRig(bank.Amp, bank.Cab);
+        return layer;
+    }
 
     /// <summary>
     /// Voices per track synth. One GM synth serves one track (a guitar's chords with let-ring, or a kit's hits and cymbal tails), so

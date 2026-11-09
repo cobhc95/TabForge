@@ -400,9 +400,9 @@ public static partial class SettingsCatalog
             dependsOnValue: dependsOnValue);
 
     private static SettingDescriptor Text(string category, string group, string key, string title, Action<string> set,
-        Func<string?> get, string description, string keywords = "") =>
+        Func<string?> get, string description, string keywords = "", string? dependsOn = null, string? dependsOnValue = null) =>
         Make(category, group, key, title, description, SettingKind.Text, () => get() ?? "",
-            v => set(v?.ToString() ?? ""), keywords);
+            v => set(v?.ToString() ?? ""), keywords, dependsOn, dependsOnValue: dependsOnValue);
 
     /// <summary>A row with a button (the editor is built by the Preferences window from the key); it stores nothing.</summary>
     private static SettingDescriptor Button(string category, string group, string key, string title, string description, string keywords,

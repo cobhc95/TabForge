@@ -151,6 +151,40 @@ public sealed class GuitarLayerTests(ITestOutputHelper output)
         Assert.Equal(before, GC.GetAllocatedBytesForCurrentThread());
     }
 
+    // The user's amp: a good .nam plays, a missing cabinet falls back with the reason, swapping back mid-note leaves no step,
+    // the settings reach the engine path, and a changed amp keeps the loaded SoundFont (only the rig swaps).
+    [Fact]
+    public void TheUsersAmpLoadsFallsBackAndSwapsWithoutAStep()
+    {
+        var nam = Path.Combine(Path.GetTempPath(), "tf-rig-test.nam");
+        NamTests.Arr[] arrays = [NamTests.A1(1, 4, 1, true, [1, 2, 4, 8])];
+        var (_, n) = NamReference.WaveNet(arrays, new float[10000], new float[1]);
+        File.WriteAllText(nam, NamTests.WaveNetJson(arrays, NamTests.Random(n, 3, 0.3f)).ToJsonString());
+        var g = Playing(30, 40, 47, 52);
+        var status = g.LoadRig(nam, "no-such-cab.wav");
+        output.WriteLine(status);
+        Assert.Contains("amp tf-rig-test", status);
+        Assert.Contains("built-in cabinet (no-such-cab.wav not usable: file not found)", status);
+        Assert.Contains("built-in amp (bad.nam not usable", GuitarLayer.DescribeRig(Path.Combine(Path.GetTempPath(), "bad.nam"), null));
+        var a = Render(g, Rate / 2);
+        g.LoadRig(null, null);
+        var b = Render(g, Rate / 2);
+        float Step(float[] x, int from, int to) => Enumerable.Range(from + 1, to - from - 1).Max(i => MathF.Abs(x[i] - x[i - 1]));
+        output.WriteLine($"user amp max step {Step(a, 0, a.Length):F4}, around the swap {Step(b, 0, 2048):F4}, built-in after {Step(b, 2048, b.Length):F4}");
+        Assert.True(a.All(float.IsFinite) && a.Max(MathF.Abs) > 1e-3);
+        Assert.True(Step(b, 0, 2048) <= 1.5f * Math.Max(Step(a, 0, a.Length), Step(b, 2048, b.Length)));
+
+        var plugins = new PluginSettings { SoundEngine = SoundEngines.TabForgeSynth, SynthAmpPath = nam };
+        Assert.EndsWith("|" + nam, SoundFontStore.ActivePath(plugins, windowsHost: false));
+        var sf2 = Path.Combine(Path.GetTempPath(), "tf-sf2synth-test.sf2");
+        File.WriteAllBytes(sf2, TestSoundFont.Build());
+        var bank = new GmBank(windowsHost: false, bundledPath: sf2);
+        Assert.True(bank.Select(SoundEngines.TabForgeSynthPath + "|" + sf2, out _));
+        var font = bank.Current.Sf2;
+        Assert.True(bank.Select(SoundEngines.TabForgeSynthPath + "|" + sf2 + "|" + nam, out _));
+        Assert.True(bank.Current.RigOnly && ReferenceEquals(font, bank.Current.Sf2) && bank.Current.Amp == nam);
+    }
+
     // ---- listening files -------------------------------------------------------------------------------------------------------------
 
     internal const double Eighth = 0.25;   // 120 bpm

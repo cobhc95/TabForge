@@ -67,6 +67,9 @@ public sealed class GuitarLayer : ILayer
         return status;
     }
 
+    // Any thread but the audio thread: the status LoadRig would report (loads and checks the files, keeps nothing).
+    public static string DescribeRig(string? namPath, string? irPath) => GuitarRig.Build(namPath, irPath, 48000, Chunk, 0).Status;
+
     public void Reset()
     {
         foreach (var s in _strings) s.Stop();
