@@ -3,7 +3,8 @@ using TabForge.Sf2Synth.Humanize;
 namespace TabForge.Sf2Synth.Guitar;
 
 // Owns: one string as a digital waveguide: integer delay + Thiran all-pass (exact tuning), two dispersion all-passes from the
-//   fretted string's stiffness (StringPhysics), loop low-pass + gain for a length-correct decay (highs die first); the pluck
+//   fretted string's stiffness (StringPhysics), loop low-pass + gain for a length-correct decay (highs die first) with a fast first
+//   stage (double decay: the loop loses Drop dB more over DropMs after a pluck that starts that much louder); the pluck
 //   (PluckedString.Attack), the pickup comb at its distance from the bridge (two taps for a humbucker or two pickups), legato
 //   (hammer, pull, slide glide) on the same string, re-pluck, release damping, retune, the note's Nuance (seed, pick position,
 //   brightness, release, pitch offset over its age).
@@ -22,7 +23,7 @@ internal sealed partial class PluckedString
     private float _eta, _apX, _apY, _c, _d1X, _d1Y, _d2X, _d2Y, _lpA, _lp, _g;
     private StringSpec _spec = null!;
     private StringPhysics.Fretted _f;
-    private double _hz, _dark, _t60, _glideSemis, _cents;
+    private double _hz, _dark, _t60, _glideSemis, _cents, _dropRate;
     private Nuance _nu;
     private long _age;
 
@@ -53,7 +54,9 @@ internal sealed partial class PluckedString
         var v = Math.Clamp(velocity / 127.0, 0, 1);
         _dark = Math.Clamp(spec.Darkness * (1.25 - 0.5 * v) + nu.Bright, 0, 0.95);
         Fret(note, hz, -1);
-        Excite(v, (float)(0.5 * Math.Pow(v, spec.Vel)), nu.Seed != 0 ? nu.Seed : seed, scratch);
+        var drop = spec.Drop * Math.Pow(v, spec.DropVel);
+        _dropRate = drop / (spec.DropMs * 0.001);
+        Excite(v, (float)(0.5 * Math.Pow(v, spec.Vel) * Math.Pow(10, drop / 20)), nu.Seed != 0 ? nu.Seed : seed, scratch);
     }
 
     // Same string, new note: hammer/pull (kick > 0 re-excites a little) or slide (glide seconds).
@@ -128,6 +131,12 @@ internal sealed partial class PluckedString
         var mf = _mw;
         int w = _w, d = _d, m = _mask, pickup = _pickup, p2 = _pickup2;
         float eta = _eta, apX = _apX, apY = _apY, c = _c, d1X = _d1X, d1Y = _d1Y, d2X = _d2X, d2Y = _d2Y, a = _lpA, lp = _lp, g = _g, mg = _mwGain, peak = 0;
+        if (_dropRate > 0)   // first stage of the double decay: an extra rate falling over DropMs
+        {
+            var r = _dropRate * Math.Exp(-Age / (_spec.DropMs * 0.001));
+            g *= (float)Math.Pow(10, -r / (20 * _hz));
+            if (r < 0.05) _dropRate = 0;
+        }
         for (var i = 0; i < output.Length; i++)
         {
             var x = buf[(w - d) & m];
