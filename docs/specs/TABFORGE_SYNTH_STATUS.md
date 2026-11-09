@@ -98,8 +98,8 @@ The guitar layer (modelled string, stage amp, synthetic cab) sounded better than
   0.4 s (strings; SF2 voices get detune, vibrato, filter brightness). `HumanizeDrift` now drives tempo drift and vibrato. Drums untouched (stage two).
 - WAVs `tfsynth6_<riff30|arp27|strum25|bass33>_<flat|tight|natural|loose>.wav` (output shifted back by the latency) from the same flat
   `tfsynth4_*.mid` (byte-compared), agent scratch folder. Owner to listen; not checked in the running app.
-- Open: `TrackChain.LatencySamples` (the engine's delay compensation) sums the effects only, not the track's `MidiSynth`, so the reported
-  look-ahead is not compensated yet (the humanized track would run 35 ms late against the others); not checked in the running app; no Settings row for Feel yet; meter assumed 4/4 (bar = 4 pulses);
+- Open: the humanizer becomes a whole-song pass over the note list (no look-ahead, so no latency to compensate); the streaming version
+  above is to be replaced. Not checked in the running app; no Settings row for Feel yet; meter assumed 4/4 (bar = 4 pulses);
   swing and score-marked strum directions not built; no render-level onset analysis yet.
 - Without a readable SoundFont (MeltySynth + layer) there is no humanizer (it lives in `Synthesizer`).
 
@@ -157,6 +157,19 @@ The guitar layer (modelled string, stage amp, synthetic cab) sounded better than
   register, not the take), 2 kHz T60 of a held F3 within 0.76 s ×/÷ 1.6 (now 1.15 s).
 - A/B WAVs, all at -22 dBFS rms (gain: real DI +7.4, real amp -8.3, ours DI +9.8 / +10.4, ours amp -1.4 / -1.4 dB):
   `tfsynth7_di_<owner|ours_before|ours_after>.wav`, `tfsynth7_amp_<owner_fx|ours_before|ours_after>.wav`, agent scratch folder. Owner to listen.
+
+## State after DI fit + humanizer v2 + captured amp (Nov 2026)
+- Combined tree builds with 0 warnings; Sf2SynthTests, GuitarLayerTests, HumanizerTests, NamTests, SoundEngineTests, GeneralUserBankTests: 122/122.
+- No interaction fix needed: the DI fit already re-trimmed the captured amp input (29/30 riff DI -29.1 dBFS rms, peak 0.27; limit 0.4).
+  The humanizer only moves velocities and times, which the amp's stability range (-20..+12 dB) covers.
+- Listening set `tfsynth8_<riff30|riff29|strum27|strum25|arp27|bass33>_<flat|tight|natural|loose>.wav` and the flat `tfsynth8_<name>.mid`
+  (`HumanizerTests.WritesListeningFilesWhenAsked`; riff30, strum25, arp27, bass33 byte-equal to `tfsynth4_*.mid`): new DI, captured amp on
+  29/30, streaming humanizer (output shifted back by its look-ahead), one gain per song (flat at -20 dBFS rms). After gain: rms -19.5..-21.8 dBFS,
+  peak -8.6..-0.4 dBFS (presets up to 3.9 dB higher peak than flat).
+- Humanizer per song, tight / natural / loose: level std riff 2.7 / 4.3 / 5.9 dB, arp 2.3 / 3.5 / 5.4, strum 3.9 / 6.1 / 9.6, bass 2.4 / 3.4 / 5.0;
+  onset std riff 6.4 / 10.8 / 18.2 ms, arp 7.6 / 12.8 / 20.8, strum 8.1 / 14.3 / 27.3, bass 5.9 / 10.0 / 17.7. Look-ahead 0 / 20 / 35 / 50 ms (off, feels).
+- CPU, Release, one channel, all layers on (DI, amp, humanizer, voice variation), % of one core: riff 29/30 1.7-2.0, arp 27 0.7, strum 27 0.8,
+  strum 25 0.3, bass 33 0.6; humanizer on or off makes no measurable difference.
 
 ## Architecture decision
 Clean pickup-style guitar DI, then a user-chosen Neural Amp Modeler `.nam` model as the amp, then an optional cabinet `.wav` IR. Built-in defaults: the captured amp (no cabinet) on 29/30, the stage amp and synthetic cab on the other electric programs. NAM runtime is written from scratch from the public format spec (no copied code).
