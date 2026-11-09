@@ -268,6 +268,9 @@ public sealed class AvaloniaPlaybackSession : IDisposable
         StateChanged?.Invoke();
     }
 
+    /// <summary>The pass every start compiles with (TabForge Synth's humanizer); null plays the notes as written.</summary>
+    public ITimelineHumanizer? Humanizer { get; set; }
+
     /// <summary>The relative playback speed of this document's playback; 1 is the song's own tempo.</summary>
     public double Speed => _transport.Speed;
 
@@ -322,6 +325,7 @@ public sealed class AvaloniaPlaybackSession : IDisposable
             options.NormalVibratoDepth = audio.NormalVibratoDepth;
             options.WideVibratoDepth = audio.WideVibratoDepth;
             options.VibratoSpeedHz = audio.VibratoSpeedHz;
+            options.Humanizer = Humanizer;
         });
     }
 

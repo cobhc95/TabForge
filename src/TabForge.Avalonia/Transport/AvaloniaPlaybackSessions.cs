@@ -53,7 +53,14 @@ public sealed class AvaloniaPlaybackSessions : IDisposable
     public int MasterPercent => _routing.MasterPercent;
 
     /// <summary>Attaches the shared audio and plug-in settings: every engine sync reads the master percent and plug-ins from them.</summary>
-    public void AttachSettings(TabForge.Services.AudioSettings audio, TabForge.Services.PluginSettings plugins) => _routing.Attach(audio, plugins);
+    public void AttachSettings(TabForge.Services.AudioSettings audio, TabForge.Services.PluginSettings plugins)
+    {
+        _routing.Attach(audio, plugins);
+        _humanizer = new SynthHumanizePass(plugins);
+        foreach (var session in _sessions.Values) session.Humanizer = _humanizer;
+    }
+
+    private SynthHumanizePass? _humanizer;   // plays flat notes like a player on TabForge Synth (reads the plug-in settings live)
 
     /// <summary>Brings the document's engine in line with its tracks (arm state, chains, levels, MIDI routes, transport); nothing without an engine.</summary>
     public void SyncEngine(SongDocument document, TabForge.Services.PluginSettings plugins)
@@ -105,6 +112,7 @@ public sealed class AvaloniaPlaybackSessions : IDisposable
         if (!_sessions.TryGetValue(document, out var session))
         {
             session = new AvaloniaPlaybackSession(_createEngine(), _ui, () => document.Project, new AnimationFrameSource(_ui, () => FrameWindow()));
+            session.Humanizer = _humanizer;
             session.SetMetronome(_metronomeOn);
             session.SetCountIn(_countInOn);
             if (_clickAudio is not null) session.ApplyClickOptions(_clickAudio);

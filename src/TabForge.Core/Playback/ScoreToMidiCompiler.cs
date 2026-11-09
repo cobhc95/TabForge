@@ -138,6 +138,7 @@ internal sealed partial class ScoreToMidiCompiler
         if (_clipChased) { _timeline.StartedAfterMixPoints = true; ApplyChase(); }   // the setup carries the mix values in force at the start
         EmitFadeInEnvelopes();
         SustainResolver.Resolve(_timeline, _channels, _opt.LetRingCapMs);
+        if (_opt.Humanizer is { Key: not null } human) { human.Apply(_timeline, _project); SustainResolver.SortEvents(_timeline); }
         return _timeline;
     }
 

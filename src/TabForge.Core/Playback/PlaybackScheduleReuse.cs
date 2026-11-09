@@ -129,6 +129,6 @@ internal sealed class PlaybackScheduleReuse
         options.MetronomeSubdivision, options.LiveMetronomeEvents,
         options.LetRingCapMs.ToString("R", CultureInfo.InvariantCulture),
         options.NormalVibratoDepth.ToString("R", CultureInfo.InvariantCulture), options.WideVibratoDepth.ToString("R", CultureInfo.InvariantCulture),
-        options.VibratoSpeedHz.ToString("R", CultureInfo.InvariantCulture));
+        options.VibratoSpeedHz.ToString("R", CultureInfo.InvariantCulture), options.Humanizer?.Key ?? "");
 
 }

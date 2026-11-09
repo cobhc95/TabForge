@@ -13,10 +13,11 @@ namespace TabForge.Rendering;
 /// <summary>Turns a song into a <see cref="RenderSpec"/> and its event file.</summary>
 public static class RenderSpecBuilder
 {
-    /// <summary>The song as MIDI, from bar 0, with no metronome, count-in or loop and ignoring mute/solo (the render applies those itself).</summary>
-    public static ScoreTimeline Compile(SongProject project) => MidiTimelineBuilder.Build(project, new PlaybackOptions
+    /// <summary>The song as MIDI, from bar 0, with no metronome, count-in or loop and ignoring mute/solo (the render applies those itself);
+    /// a render passes the app's <paramref name="humanizer"/>, an export none.</summary>
+    public static ScoreTimeline Compile(SongProject project, ITimelineHumanizer? humanizer = null) => MidiTimelineBuilder.Build(project, new PlaybackOptions
     {
-        Metronome = false, CountIn = false, Loop = false, RespectMuteSolo = false, Speed = 1.0, LiveMetronomeEvents = false,
+        Metronome = false, CountIn = false, Loop = false, RespectMuteSolo = false, Speed = 1.0, LiveMetronomeEvents = false, Humanizer = humanizer,
     });
 
     /// <summary>Range in song milliseconds for a bounds choice. Bars are source bar indices; cells are grid cells inside them (-1 = to the bar end).</summary>
