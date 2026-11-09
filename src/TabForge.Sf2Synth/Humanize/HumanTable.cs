@@ -1,6 +1,6 @@
 namespace TabForge.Sf2Synth.Humanize;
 
-// Owns: every value of the humanizer (docs/specs/HUMAN_FEEL_SPEC.md): window, evidence thresholds, the structural level parts (dB),
+// Owns: every value of the humanizer (docs/HUMAN_FEEL_SPEC.md): window, evidence thresholds, the structural level parts (dB),
 //   the timing parts (ms), the fast-run model, note lengths, strum, voice amounts, the three feel styles and the instrument families.
 // Does not own: the code reading them (Humanizer, Dynamics, Timing, Evidence, Strum, Noise, Nuance).
 // Tests: HumanizerTests.

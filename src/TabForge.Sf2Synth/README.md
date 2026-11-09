@@ -2,7 +2,7 @@
 
 Standalone SoundFont 2.04 synthesizer (no dependencies) with an optional modelled guitar/bass layer.
 
-Handover for a new agent (priorities, commands, the app seam, how to work with the owner): `HANDOVER.md`. Measurements log: `../../docs/specs/TABFORGE_SYNTH_STATUS.md`.
+Handover for a new agent (priorities, commands, the app seam, how to work with the owner): `HANDOVER.md`. Measurements log: `docs/MEASUREMENTS.md` and feel spec: `docs/HUMAN_FEEL_SPEC.md`.
 
 ## Files
 - `Sf2/` file model: `SoundFont` (RIFF, samples), `Sf2Reader` (pdta hydra), `Zone` (zones, presets, instruments, sample headers), `Gen` (generator numbers, defaults), `Mod` (modulator curves, default modulators).
@@ -101,5 +101,5 @@ A learned amp replaces `StageAmp` by implementing `IAmpModel`.
 - Core licence MIT, free; model files carry their creators' own terms.
 
 ## Test
-`dotnet test Source/tests/TabForge.Avalonia.Tests -c Debug --no-build --filter "FullyQualifiedName~Sf2SynthTests|FullyQualifiedName~GuitarLayerTests"`.
+`dotnet test Source/tests/TabForge.Sf2Synth.Tests -c Debug --filter "FullyQualifiedName~Sf2SynthTests|FullyQualifiedName~GuitarLayerTests"`. Adapter checks in the app project: `Source/tests/TabForge.Avalonia.Tests` (`SynthAdapterTests`, `HumanizerAppTests`, `SoundEngineTests`).
 Set `TABFORGE_SYNTH_WAV_DIR` to a folder to get listening WAVs from `GuitarLayerTests` and `Sf2SynthTests`.

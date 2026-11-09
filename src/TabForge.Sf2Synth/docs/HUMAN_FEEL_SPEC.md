@@ -99,7 +99,7 @@ Remove the ±12 velocity cap (MaxDelta); cap at ±10 dB instead.
 | Swing (only if the score asks) | ratio = clamp(2.8 - 0.009·(BPM-60), 1.2, 3.0); per-note σ 0.3 | falls with tempo |
 Target onset std vs grid: tight 6-8, natural 11-14 (owner 11.7), loose 18-24 ms.
 Since v3 the humanizer is a pass over the written notes before playback, so early notes are simply scheduled earlier (no look-ahead,
-no latency); v3's structural model and numbers are in `TABFORGE_SYNTH_STATUS.md` and the library README.
+no latency); v3's structural model and numbers are in `MEASUREMENTS.md` and the library README.
 
 ### Strum (chords of ≥ 3 notes arriving together)
 | Part | Natural value | Notes |
@@ -125,7 +125,7 @@ equal velocities ≤ 3, < 30 % of intervals within 0.5 ms of a simple ratio to a
 between these limits, separately for velocity and timing; a human part gets 0, never "added on top".
 
 ### What to test objectively (on a 64-bar flat 8th strum and a flat 16th single-note line, fixed seed)
-Status (`HumanizerTests`, Nov 2026; numbers in `TABFORGE_SYNTH_STATUS.md`):
+Status (`HumanizerTests`, Nov 2026; numbers in `MEASUREMENTS.md`):
 - [x] level std in dB and in velocity per preset hits the targets ±15 %; tight < natural < loose.
 - [x] onset std vs grid per preset; lag-1 interval correlation between -0.6 and -0.3; DFA α of offsets over 512+ notes: short < 0.5, long 0.6-0.9.
 - [x] bar-to-bar correlation of per-position level 0.7-0.95, of timing 0.3-0.7.
