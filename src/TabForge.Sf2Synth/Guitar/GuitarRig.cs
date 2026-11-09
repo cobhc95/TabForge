@@ -3,13 +3,26 @@ using TabForge.Sf2Synth.Nam;
 
 namespace TabForge.Sf2Synth.Guitar;
 
-// Owns: loading the user's amp (.nam) and cabinet (.wav IR) for the electric guitar programs into one slot per channel, and the
-//   status line saying what is in use. Any missing or broken file falls back to the built-in part with the reason. Off the audio thread.
-// Does not own: running them (GuitarBus), the swap (GuitarLayer.LoadRig).
+// Owns: loading the user's amp (.nam) and cabinet (.wav IR) for the electric guitar programs into one slot per channel, the
+//   built-in captured amp (embedded Amps/captured.nam, parsed once; null if unusable, then the stage amp plays), and the status
+//   line saying what is in use. Any missing or broken file falls back to the built-in part with the reason. Off the audio thread.
+// Does not own: running them (GuitarBus), the swap (GuitarLayer.LoadRig), when the captured amp plays (GuitarBus, SynthOptions.DistAmp).
 // Tests: GuitarLayerTests.
 internal static class GuitarRig
 {
     internal sealed record Slot(NamAmp? Amp, FftConvolver? Cab);
+
+    private static readonly Lazy<NamModel?> CapturedModel = new(() =>
+    {
+        try
+        {
+            using var s = typeof(GuitarRig).Assembly.GetManifestResourceStream("TabForge.Sf2Synth.Guitar.Amps.captured.nam");
+            return s is null ? null : NamFile.Load(s, "captured");
+        }
+        catch (Exception) { return null; }   // a broken resource: the stage amp plays
+    });
+
+    public static NamModel? Captured => CapturedModel.Value;
 
     public static (Slot[]? Slots, string Status) Build(string? namPath, string? irPath, double rate, int maxBlock, int channels)
     {

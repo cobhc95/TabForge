@@ -47,10 +47,10 @@ internal static class Voicings
             Clean(new EqSpec(HighShelf, 2500, 0.7, 3)) with { Level = 0.845f }),
         new(Gtr(1.2, 0.2, 0.45, 0.20, 65, 78, 0.06, 2500) with { Vel = 2 }, Clean(new EqSpec(LowShelf, 150, 0.7, 3)) with { Level = 2.56f }), // 28 muted
         new(Gtr(6.0, 2.0, 0.12, 0.35, 78, 45, 0.10, 7000),                                                                                      // 29 overdrive
-            new RigSpec(1, [new(HighPass, 90, 0.7), new(Peak, 750, 0.9, 5)], CrunchStages, 0.10f, [new(HighShelf, 3000, 0.7, 1)], CabKind.Guitar, 0.126f) { Pickup = Humbucker }),
+            new RigSpec(1, [new(HighPass, 90, 0.7), new(Peak, 750, 0.9, 5)], CrunchStages, 0.10f, [new(HighShelf, 3000, 0.7, 1)], CabKind.Guitar, 0.126f) { Pickup = Humbucker, Captured = new(0.385f, 0.87f) }),
         new(Gtr(7.0, 2.5, 0.10, 0.40, 71, 42, 0.10, 8000),                                                                                      // 30 distortion
             new RigSpec(1, [new(HighPass, 110, 0.7), new(Peak, 900, 0.8, 4)], LeadStages, 0.15f,
-                [new(LowShelf, 100, 0.7, 2), new(Peak, 650, 0.9, -5), new(HighShelf, 3000, 0.7, 2)], CabKind.Guitar, 0.057f) { Pickup = Humbucker }),
+                [new(LowShelf, 100, 0.7, 2), new(Peak, 650, 0.9, -5), new(HighShelf, 3000, 0.7, 2)], CabKind.Guitar, 0.057f) { Pickup = Humbucker, Captured = new(0.376f, 0.68f) }),
         new(Gtr(4.0, 2.5, 0.05, 0, 324, 110, 0.15, 4000, harmonic: true) with { Vel = 2 }, Clean(new EqSpec(HighShelf, 2500, 0.7, 2)) with { Level = 0.54f }), // 31 harmonics
         new(Bass(3.5, 0.8, 0.50, 0.10, 173, 0, 0.15, 1200) with { Vel = 1.75, Tap = new(2.5f, 90, 1.2, 25) },                                    // 32 upright
             Body(Upright, new(HighPass, 30, 0.7), new(HighShelf, 2000, 0.7, -6)) with { Level = 3.03f }),

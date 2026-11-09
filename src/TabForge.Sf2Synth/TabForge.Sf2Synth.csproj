@@ -6,5 +6,6 @@
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="TabForge.Avalonia.Tests" />
+    <EmbeddedResource Include="Guitar\Amps\captured.nam" LogicalName="TabForge.Sf2Synth.Guitar.Amps.captured.nam" />
   </ItemGroup>
 </Project>

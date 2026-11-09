@@ -38,6 +38,10 @@ internal sealed record RigSpec(float Drive, EqSpec[] PreEq, StageSpec[] Stages, 
     public EqSpec[] Pickup { get; init; } = [];
     public BodySpec? Body { get; init; }
     public CompSpec? Comp { get; init; }
+    public CaptureSpec? Captured { get; init; }
 }
+
+// A distorted program's captured amp: Trim brings the DI to the capture's training level (× Drive), Level sets the output.
+internal readonly record struct CaptureSpec(float Trim, float Level);
 
 internal sealed record Voicing(StringSpec String, RigSpec Rig);

@@ -1,11 +1,13 @@
 using TabForge.Sf2Synth.Humanize;
+using TabForge.Sf2Synth.Nam;
 
 namespace TabForge.Sf2Synth.Guitar;
 
 // Owns: the modelled guitar/bass layer (GM programs 24-37, never the drum channel): per-channel MIDI state, the string pool
 //   (six strings per channel, steal oldest), legato (a note starting while one other note of the channel is held within a few
 //   semitones moves that string: hammer, pull-off or slide; undone if the old note is not released within the window, CC68
-//   forces it), one GuitarBus per channel, the user's amp/cab swap (LoadRig), the next note's Nuance (Vary) and the stereo mix it adds.
+//   forces it), one GuitarBus per channel (each with its own captured amp), the user's amp/cab swap (LoadRig), the distorted amp
+//   choice from SynthOptions (Apply), the next note's Nuance (Vary) and the stereo mix it adds.
 // Does not own: the SoundFont sound of every other channel (Synthesizer), DSP (PluckedString, GuitarBus), values (Voicings), files (GuitarRig).
 // Tests: GuitarLayerTests.
 public sealed class GuitarLayer : ILayer
@@ -35,8 +37,9 @@ public sealed class GuitarLayer : ILayer
     private readonly int _tail, _rate;
     private long _count, _clock;
     private uint _seed;
-    private GuitarRig.Slot[]? _pending;
+    private GuitarRig.Slot[]? _pending, _slots;
     private bool _swapPending;
+    private SynthOptions _opt = SynthOptions.Default;
 
     public GuitarLayer(int rate)
     {
@@ -46,7 +49,9 @@ public sealed class GuitarLayer : ILayer
         var rCab = CabinetImpulse.Build(CabKind.Room, rate);
         _strings = Enumerable.Range(0, Strings).Select(_ => new PluckedString(rate)).ToArray();
         _scratch = new float[(int)(rate / PluckedString.LowestHz) + 8];
-        for (var i = 0; i < 16; i++) _ch[i] = new Ch { Bus = new GuitarBus(rate, Chunk, gCab, bCab, rCab), Mono = new float[Chunk] };
+        var captured = GuitarRig.Captured;
+        for (var i = 0; i < 16; i++)
+            _ch[i] = new Ch { Bus = new GuitarBus(rate, Chunk, gCab, bCab, rCab, captured is null ? null : new NamAmp(captured, rate, Chunk)), Mono = new float[Chunk] };
         _tail = (int)(TailSeconds * rate);
         Reset();
     }
@@ -76,10 +81,23 @@ public sealed class GuitarLayer : ILayer
 
     public void Vary(int channel, in Nuance nuance) => _ch[channel & 15].Nu = nuance;
 
+    // Audio thread (or before playing): a changed distorted amp choice; idle channels take it at once, playing ones fade like LoadRig.
+    public void Apply(SynthOptions options)
+    {
+        var changed = options.DistAmp != _opt.DistAmp || options.CapturedAmpCabinet != _opt.CapturedAmpCabinet;
+        _opt = options;
+        if (changed) UseRig();
+    }
+
+    private void UseRig()
+    {
+        for (var i = 0; i < 16; i++) _ch[i].Bus.Use(new(_slots?[i], _opt.DistAmp, _opt.CapturedAmpCabinet), now: _ch[i].Tail <= 0);
+    }
+
     public void Reset()
     {
         foreach (var s in _strings) s.Stop();
-        foreach (var c in _ch) { c.ResetControllers(); c.Program = 0; c.Tail = 0; c.Configured = -1; c.From = -1; c.Bus.Reset(); }
+        foreach (var c in _ch) { c.ResetControllers(); c.Program = 0; c.Tail = 0; c.Configured = -1; c.From = -1; c.Bus.ResetAll(); }
         (_count, _seed) = (0, 0x9E3779B9);
     }
 
@@ -204,14 +222,15 @@ public sealed class GuitarLayer : ILayer
     private void RenderChunk(Span<float> left, Span<float> right)
     {
         var n = left.Length;
-        var swap = Volatile.Read(ref _swapPending);
-        if (swap) _swapPending = false;
-        var slots = swap ? Volatile.Read(ref _pending) : null;
+        if (Volatile.Read(ref _swapPending))
+        {
+            (_swapPending, _slots) = (false, Volatile.Read(ref _pending));
+            UseRig();
+        }
         for (var i = 0; i < 16; i++)
         {
             var c = _ch[i];
             c.Marked = false;
-            if (swap) c.Bus.Use(slots?[i], now: c.Tail <= 0);
             Settle(i, c);
             if (!c.Retune) continue;
             c.Retune = false;

@@ -15,4 +15,6 @@ public interface ILayer
     void Reset();
     /// <summary>The voice variation of the channel's next note-on (sent just before it); default = none.</summary>
     void Vary(int channel, in Nuance nuance) { }
+    /// <summary>The live options, on the audio thread just before each Render; default = ignored.</summary>
+    void Apply(SynthOptions options) { }
 }
