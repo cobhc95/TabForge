@@ -14,11 +14,11 @@ using Xunit.Abstractions;
 
 namespace TabForge.Avalonia.Tests;
 
-// Owns: the checks of the modelled guitar/bass layer: finite, audible, unclipped output for programs 29/30/27/33, pitch within a few
-//   cents, no allocation, CPU per string, routing inside Synthesizer and inside the engine's GmSynth (experimental choice), and the
+// Owns: the checks of the modelled guitar/bass layer: finite, audible, unclipped output for every modelled family, pitch within a few
+//   cents (basses within 1 cent down to B0, no DC), no aliasing in the slap, no allocation, CPU per string and per channel, routing inside Synthesizer and inside the engine's GmSynth (experimental choice), and the
 //   listening WAVs (TABFORGE_SYNTH_WAV_DIR).
 // Does not own: the SoundFont player (Sf2SynthTests), the engine choice text (SoundEngineTests).
-// Tests: GuitarLayer, PluckedString, GuitarBus, StageAmp, Oversampler2x, CabinetImpulse, GmSynth, GmBank.
+// Tests: GuitarLayer, PluckedString, GuitarBus, StageAmp, BodyModes, Compressor, Oversampler2x, CabinetImpulse, GmSynth, GmBank.
 public sealed class GuitarLayerTests(ITestOutputHelper output)
 {
     private const int Rate = 48000;
@@ -44,6 +44,16 @@ public sealed class GuitarLayerTests(ITestOutputHelper output)
     [InlineData(30, new[] { 40, 47, 52 })]
     [InlineData(27, new[] { 45, 52, 57, 60, 64 })]
     [InlineData(33, new[] { 28 })]
+    [InlineData(24, new[] { 40, 47, 52, 55, 59, 64 })]
+    [InlineData(25, new[] { 40, 47, 52, 55, 59, 64 })]
+    [InlineData(26, new[] { 45, 52, 57, 60, 64 })]
+    [InlineData(28, new[] { 40, 47, 52 })]
+    [InlineData(31, new[] { 52, 57 })]
+    [InlineData(32, new[] { 28, 33 })]
+    [InlineData(34, new[] { 28 })]
+    [InlineData(35, new[] { 33 })]
+    [InlineData(36, new[] { 23, 35 })]
+    [InlineData(37, new[] { 40 })]
     public void ModelledProgramsAreFiniteAudibleAndUnclipped(int program, int[] notes)
     {
         var g = Playing(program, notes);
@@ -62,6 +72,11 @@ public sealed class GuitarLayerTests(ITestOutputHelper output)
     [InlineData(30, 40)]
     [InlineData(33, 33)]
     [InlineData(25, 64)]
+    [InlineData(24, 52)]
+    [InlineData(26, 52)]
+    [InlineData(32, 33)]
+    [InlineData(35, 33)]
+    [InlineData(36, 40)]
     public void APluckedNoteSoundsAtItsPitch(int program, int note)
     {
         var x = Render(Playing(program, note), Rate);
@@ -70,12 +85,49 @@ public sealed class GuitarLayerTests(ITestOutputHelper output)
         Assert.True(Math.Abs(cents) < 5, $"{cents:F1} cents");
     }
 
+    // Low B (30.9 Hz) to A1 through the full bass rig: within 1 cent, and the tail carries no DC.
+    [Theory]
+    [InlineData(33, 23)]
+    [InlineData(33, 26)]
+    [InlineData(34, 28)]
+    [InlineData(36, 33)]
+    public void BassNotesAreInTuneWithinACentWithoutDc(int program, int note)
+    {
+        var x = Render(Playing(program, note), 2 * Rate);
+        var hz = 440 * Math.Pow(2, (note - 69) / 12.0);
+        var cents = TestSoundFont.CentsOff(x, Rate, Rate / 2, 16384, hz);
+        var tail = x.AsSpan(Rate, Rate).ToArray();
+        var w = Enumerable.Range(0, Rate).Select(i => 0.5 - 0.5 * Math.Cos(2 * Math.PI * i / Rate)).ToArray();   // Hann: the partials leak nothing into DC
+        var (mean, rms) = (tail.Select((v, i) => v * w[i]).Sum() / w.Sum(), Math.Sqrt(tail.Average(v => (double)v * v)));
+        output.WriteLine($"program {program} note {note}: {cents:F2} cents, DC {mean / rms:E1} of rms");
+        Assert.True(Math.Abs(cents) < 1, $"{cents:F2} cents");
+        Assert.True(Math.Abs(mean) < 1e-3 * rms);
+    }
+
+    // A full-velocity slap: what lies above 16 kHz in the first 40 ms is far below the transient (nothing folds back).
+    [Theory]
+    [InlineData(36)]
+    [InlineData(37)]
+    public void TheSlapTransientDoesNotAlias(int program)
+    {
+        var g = new GuitarLayer(Rate);
+        g.ProcessMidi(0, 0xC0, program, 0);
+        g.ProcessMidi(0, 0x90, 28, 127);
+        var p = GeneralUserBankTests.Spectrum(Render(g, 4096), 0, 2048);
+        var bin = Rate / 2048.0;
+        double all = p.Sum(), high = p.Skip((int)(16000 / bin)).Sum();
+        output.WriteLine($"program {program}: above 16 kHz {10 * Math.Log10(high / all):F1} dB of the transient");
+        Assert.True(high < 1e-5 * all);
+    }
+
     [Fact]
     public void PlayingAllocatesNothing()
     {
         var g = Playing(30, 40, 47, 52);
         g.ProcessMidi(1, 0xC0, 33, 0);
         g.ProcessMidi(1, 0x90, 28, 100);
+        g.ProcessMidi(2, 0xC0, 35, 0);
+        g.ProcessMidi(3, 0xC0, 25, 0);
         var l = new float[512];
         var r = new float[512];
         for (var i = 0; i < 8; i++) g.Render(l, r);
@@ -88,6 +140,10 @@ public sealed class GuitarLayerTests(ITestOutputHelper output)
             g.ProcessMidi(0, 0x80, 40 + (i + 6) % 12, 0);
             g.ProcessMidi(1, 0xC0, i % 2 == 0 ? 34 : 33, 0);
             g.ProcessMidi(1, 0x90, 28 + i % 5, 100);
+            g.ProcessMidi(2, 0x90, 33 + i % 3, 90);   // overlapping: fretless glides
+            g.ProcessMidi(2, 0x80, 33 + (i + 2) % 3, 0);
+            g.ProcessMidi(2, 0xC0, i % 4 == 0 ? 36 : 35, 0);
+            g.ProcessMidi(3, 0x90, 40 + i % 24, 80);
             g.Render(l, r);
         }
         Assert.Equal(before, GC.GetAllocatedBytesForCurrentThread());
@@ -96,14 +152,15 @@ public sealed class GuitarLayerTests(ITestOutputHelper output)
     [Fact]
     public void RenderCostIsMeasuredPerString()
     {
-        foreach (var (program, notes) in new[] { (30, new[] { 40 }), (30, new[] { 40, 47, 52, 55, 59, 64 }), (27, new[] { 40, 47, 52, 55, 59, 64 }), (33, new[] { 28 }) })
+        int[] six = [40, 47, 52, 55, 59, 64];
+        foreach (var (program, notes) in new[] { (30, new[] { 40 }), (30, six), (27, six), (24, six), (25, six), (26, six), (33, new[] { 28 }), (32, new[] { 28 }), (35, new[] { 33 }), (36, new[] { 28 }) })
         {
             var g = Playing(program, notes);
             Render(g, Rate / 10);
             var watch = Stopwatch.StartNew();
             Render(g, 4 * Rate);
             var ms = watch.Elapsed.TotalMilliseconds / 4;
-            output.WriteLine($"program {program}, {notes.Length} string(s): {ms:F2} ms per second of audio, {ms / notes.Length:F2} ms per string (rig included)");
+            output.WriteLine($"program {program}, {notes.Length} string(s): {ms:F2} ms per second of audio ({ms / 10:F2} % of one core for the channel), {ms / notes.Length:F2} ms per string (rig included)");
             Assert.True(ms < 200);
         }
     }

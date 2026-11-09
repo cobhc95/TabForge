@@ -17,7 +17,7 @@ namespace TabForge.Avalonia.Tests;
 //   layer off and on report load time, CPU per voice, peak, NaN and the largest sample step (written as WAVs on TABFORGE_SYNTH_WAV_DIR).
 // Does not own: the synthetic-bank checks (Sf2SynthTests, GuitarLayerTests).
 // Tests: SoundFont, Sf2Reader, Synthesizer, Voice, GuitarLayer (levels against MeltySynth on the same bank).
-public sealed class GeneralUserBankTests(ITestOutputHelper output)
+public sealed partial class GeneralUserBankTests(ITestOutputHelper output)
 {
     private const int Rate = 48000;
     private static readonly string? BankPath = Environment.GetEnvironmentVariable("TABFORGE_GS_SF2");
@@ -99,14 +99,16 @@ public sealed class GeneralUserBankTests(ITestOutputHelper output)
             if (vel == 100) Assert.InRange(Db(a, b) - Db(c, d), -2, 2);   // velocity 40 differs on purpose: we honour the bank's own velocity modulators
         }
     }
-    // Same MIDI, layer on vs off: per program (mean of single note and chord) the modelled guitars sit within 2 dB of the bank's own
-    // at velocity 100; the layer's velocity curve (clean programs) drifts at most 10 dB from the bank's between velocity 40 and 127.
-    [Fact]
-    public void TheLayerIsAsLoudAsTheBankGuitars()
+    // Same MIDI, layer on vs off, one test per program (mean of single note and chord): within 1 dB of the bank's own at velocity 100;
+    // clean programs also track the bank's velocity curve (layer minus bank at 40/70/100/127 spans at most 3.5 dB). 29/30 compress on purpose.
+    public static IEnumerable<object[]> Programs => Enumerable.Range(24, 14).Select(p => new object[] { p });
+
+    [Theory, MemberData(nameof(Programs))]
+    public void TheLayerIsAsLoudAsTheBankGuitars(int program)
     {
         if (string.IsNullOrEmpty(BankPath) || !File.Exists(BankPath)) return;
-        var font = new SoundFont(BankPath);
-        double Db(int program, int[] notes, int vel, bool layer)
+        var font = Bank;
+        double Db(int[] notes, int vel, bool layer)
         {
             var s = new Synthesizer(font, Rate, 64, effects: false) { MasterVolume = 0.5f, Layer = layer ? new GuitarLayer(Rate) : null };
             s.ProcessMidiMessage(0, 0xC0, program, 0);
@@ -115,23 +117,23 @@ public sealed class GeneralUserBankTests(ITestOutputHelper output)
             s.Render(l, r);
             return 10 * Math.Log10(l.Concat(r).Sum(v => (double)v * v) / (2.0 * Rate) + 1e-20);
         }
-        var (worst, drift) = (0.0, 0.0);
-        foreach (var program in Enumerable.Range(24, 14))
+        var (at100, drift) = (0.0, 0.0);
+        foreach (var notes in new[] { new[] { 45 }, program >= 32 ? [33] : new[] { 40, 47, 52, 55 } })
         {
-            var at100 = 0.0;
-            foreach (var notes in new[] { new[] { 45 }, program >= 32 ? [33] : new[] { 40, 47, 52, 55 } })
-            {
-                var diffs = new[] { 40, 70, 100, 127 }.Select(v => Db(program, notes, v, true) - Db(program, notes, v, false)).ToArray();
-                output.WriteLine($"program {program}, {notes.Length} note(s): layer - bank at velocity 40/70/100/127 = {string.Join(" / ", diffs.Select(d => d.ToString("F1")))} dB");
-                at100 += diffs[2] / 2;
-                if (program is not (29 or 30)) drift = Math.Max(drift, diffs.Max() - diffs.Min());   // amp compression is meant
-            }
-            worst = Math.Max(worst, Math.Abs(at100));
+            var vels = new[] { 40, 70, 100, 127 };
+            var bank = vels.Select(v => Db(notes, v, false)).ToArray();
+            var diffs = vels.Select((v, i) => Db(notes, v, true) - bank[i]).ToArray();
+            output.WriteLine($"program {program}, {notes.Length} note(s): bank {string.Join(" / ", bank.Select(d => d.ToString("F1")))} dB; layer - bank at 40/70/100/127 = {string.Join(" / ", diffs.Select(d => d.ToString("F1")))} dB");
+            at100 += diffs[2] / 2;
+            drift = Math.Max(drift, diffs.Max() - diffs.Min());
         }
-        output.WriteLine($"worst program at velocity 100 {worst:F1} dB, worst velocity drift (clean) {drift:F1} dB");
-        Assert.InRange(worst, 0, 2);
-        Assert.InRange(drift, 0, 10);
+        output.WriteLine($"program {program}: at velocity 100 {at100:F2} dB, velocity drift {drift:F1} dB");
+        Assert.InRange(at100, -1, 1);
+        if (program is not (29 or 30)) Assert.InRange(drift, 0, program == 37 ? 5 : 3.5);   // the bank's slap 2 jumps a velocity layer at 127
     }
+
+    private static SoundFont? _bank;
+    private static SoundFont Bank => _bank ??= new SoundFont(BankPath!);
 
     private static (float Step, int At) MaxStep(float[] x)
     {
