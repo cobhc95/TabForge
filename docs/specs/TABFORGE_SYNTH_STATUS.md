@@ -1,21 +1,6 @@
-# TabForge Synth (experimental sound engine): status and next steps
+# TabForge Synth: measurements log
 
-Goal: an own, lightweight, very realistic GM engine. SF2-compatible library plus a modelled guitar layer. Selectable as the Sound engine "TabForge Synth (experimental)"; never the default.
-
-## Where things are
-- Library: `src/TabForge.Sf2Synth/` (standalone, no TabForge or MeltySynth dependency). Start at its `README.md`.
-- Adapter (thin): `SoundEngines.cs`, `SoundFontStore.ActivePath` (sentinel), `GmBank` (`Choice.Sf2`, `Experimental`), `GmSynth` hook, settings text; humanizer hook `PlaybackOptions.Humanizer` with the app's `Transport/SynthHumanizePass`.
-- Tests: `Sf2SynthTests`, `GuitarLayerTests`, `GeneralUserBankTests` (set `TABFORGE_GS_SF2` to a GeneralUser-GS.sf2), `NamTests`, `SoundEngineTests`.
-- Listening WAVs: set `TABFORGE_SYNTH_WAV_DIR`. Agents cannot listen; the owner judges by ear.
-
-## Commits (local, not pushed)
-- `beb93c4` engine, library, guitar layer, adapter. Tested, basic self-test 218/0.
-- `68f3fc5` initial-attenuation scale 0.4 (SF2 levels now within ~1 dB of MeltySynth at velocity 100).
-- `1f272b0` NAM runtime (`Nam/`), `FftConvolver`, `Resampler`, `WavIr`, `StringPhysics`, `GuitarRig`, reworked string/bus/layer. Verified afterwards: builds, all five classes pass.
-- `82f948b` layer inside `MasterVolume` (it was outside: +6 dB at master 0.5) and per-program `Level` in `Voicings`.
-- `a7ddd53` NAM: slimmable WaveNet arrays at full width, A2 notes in README.
-- `24dacf6` settings: amp `.nam` and cab `.wav` paths, rig-only swap, status line.
-- `bbeeaef` NamConv: masked last vector (odd blocks / 44.1 kHz had doubled the NAM cost).
+Measurements, method notes and the reasoning behind each tuning step, newest topics last. Priorities, commands, the app seam and how to work with the owner are in `src/TabForge.Sf2Synth/HANDOVER.md`; the library map is its `README.md`.
 
 ## Owner verdict so far
 The guitar layer (modelled string, stage amp, synthetic cab) sounded better than the plain SF2 guitars. Layer was ~10 dB louder: fixed, now matched (below).
@@ -269,21 +254,3 @@ time slices = STFT frames 0-30 / 30-300 / 300+ ms after each onset; distance = R
 
 ## Architecture decision
 Clean pickup-style guitar DI, then a user-chosen Neural Amp Modeler `.nam` model as the amp, then an optional cabinet `.wav` IR. Built-in defaults: the captured amp (no cabinet) on 29/30, the stage amp and synthetic cab on the other electric programs. NAM runtime is written from scratch from the public format spec (no copied code).
-
-## To do next, in order
-1. [x] Build and the five test classes: nothing was broken; 62/62, now 63.
-2. [x] Level calibration (see Measured). Steeper per-program velocity curve done (clean section).
-3. [x] NAM A2 confirmed from NeuralAmpModelerCore (README section). Not supported (error -> built-in fallback): FiLM, groups, condition_dsp, post-stack head, `.namb`. Never run against a real A2 file.
-4. [x] Settings `vst.synthamp` / `vst.synthcab` (Text rows, shown with TabForge Synth). Path rides in the engine sentinel `tabforge:synth|<sf2>|<nam>|<ir>`;
-   same SoundFont = `RigOnly` choice, `GmSynth` calls `GuitarLayer.LoadRig` (off the audio thread, fade out/in over two 64-frame chunks).
-   Status bar text comes from `GuitarLayer.DescribeRig` on a worker thread. Cabinet already ran on `FftConvolver`. Not checked in the running app.
-5. [x] A/B WAVs rendered (numbers above). Owner to listen.
-6. [x] CPU per architecture (above).
-7. Later: palm-mute detection, drums, keys, then the other GM families (see the plan in the conversation: waveguide, modal, DDSP hybrids).
-
-## Open questions for the owner
-- Real `.nam` files and cabinet IRs to test with (none downloaded; third-party captures have their own licences, so bundling needs clearly permissive ones or our own).
-- A longer capture (the standard re-amp signal or several minutes of varied playing): the current one learned from 8.5 s of one take.
-
-## Rules the agents followed
-Brief, small files with `Owns / Does not own / Tests` headers; no allocation in render; compile plus named test classes only; local commits, no push, no AI attribution.
