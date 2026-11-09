@@ -7,6 +7,8 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <!-- Test-only level reference on the real bank (LevelsMatchMeltySynth); no shipped code uses it. -->
+    <PackageReference Include="MeltySynth" Version="2.4.1" />
     <ProjectReference Include="..\..\src\TabForge.Sf2Synth\TabForge.Sf2Synth.csproj" />
   </ItemGroup>
 </Project>

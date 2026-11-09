@@ -10,7 +10,7 @@ using Xunit;
 using Xunit.Abstractions;
 using Song = System.Collections.Generic.List<(double At, int Status, int D1, int D2)>;
 
-namespace TabForge.Avalonia.Tests;
+namespace TabForge.Sf2Synth.Tests;
 
 // Owns: the real-bank checks of Sf2Synth, run only when TABFORGE_GS_SF2 names a GeneralUser GS file (never shipped in the repo):
 //   the hydra parses consistently (presets, zones, samples, loops, stereo links, modulators), and A/B renders with the guitar
@@ -192,3 +192,4 @@ public sealed partial class GeneralUserBankTests(ITestOutputHelper output)
         return song;
     }
 }
+

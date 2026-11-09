@@ -9,7 +9,7 @@ using TabForge.Sf2Synth.Sf2;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace TabForge.Avalonia.Tests;
+namespace TabForge.Sf2Synth.Tests;
 
 // Owns: the checks of the humanizer v3 (a pass over the written notes): levels follow the music (explained share, every change
 //   between neighbours explained, identical bars within 2.5 dB), fast runs (constant-ms correlated timing, group accents, picking and
@@ -182,3 +182,4 @@ public sealed partial class HumanizerTests(ITestOutputHelper output)
         Assert.True(l.All(float.IsFinite) && l.Max(MathF.Abs) > 1e-3);
     }
 }
+

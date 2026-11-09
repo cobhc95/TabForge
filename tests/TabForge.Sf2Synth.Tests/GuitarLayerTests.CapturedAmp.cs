@@ -10,7 +10,7 @@ using TabForge.Sf2Synth.Sf2;
 using Xunit;
 using Song = System.Collections.Generic.List<(double At, int Status, int D1, int D2)>;
 
-namespace TabForge.Avalonia.Tests;
+namespace TabForge.Sf2Synth.Tests;
 
 // Owns: the checks of the built-in captured amp of the distorted programs: embedded and used only on 29/30 (a user .nam wins),
 //   DI trimmed to the capture's training level, stable across input levels, no pop at note start/end, live DistAmp switching
@@ -207,3 +207,4 @@ public sealed partial class GuitarLayerTests
 
     private const int Chunk = GuitarLayer.Chunk;
 }
+

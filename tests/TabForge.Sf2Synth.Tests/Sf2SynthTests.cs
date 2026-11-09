@@ -6,7 +6,7 @@ using TabForge.Sf2Synth.Sf2;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace TabForge.Avalonia.Tests;
+namespace TabForge.Sf2Synth.Tests;
 
 // Owns: the standalone checks of the Sf2Synth SoundFont player on a synthetic SF2: loading and preset fallback, pitch through
 //   resampling and RPN bend, SF2 velocity/volume curves, click-free start and release, sustain, drums, no allocation, CPU cost.
@@ -157,3 +157,4 @@ public sealed class Sf2SynthTests(ITestOutputHelper output)
         }
     }
 }
+

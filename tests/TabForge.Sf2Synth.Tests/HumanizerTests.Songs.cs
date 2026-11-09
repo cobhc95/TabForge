@@ -4,7 +4,7 @@ using System.Linq;
 using TabForge.Sf2Synth;
 using TabForge.Sf2Synth.Humanize;
 
-namespace TabForge.Avalonia.Tests;
+namespace TabForge.Sf2Synth.Tests;
 
 // Owns: HumanizerTests' written songs (flat: one velocity, exact grid, real meter and tempo; and played-in ones), running the
 //   pass, and the statistics (level dB, offsets, strokes, correlation).
@@ -141,3 +141,4 @@ public sealed partial class HumanizerTests
     private static List<(HumanNote In, HumanOut Out)> Singles(Part p, HumanOut[] o) =>
         p.Notes.Select((n, i) => (n, o[i])).GroupBy(x => x.n.Stroke).Where(g => g.Count() == 1).Select(g => g.First()).OrderBy(x => x.n.OnMs).ToList();
 }
+

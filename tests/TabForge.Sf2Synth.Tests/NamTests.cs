@@ -8,7 +8,7 @@ using TabForge.Sf2Synth.Nam;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace TabForge.Avalonia.Tests;
+namespace TabForge.Sf2Synth.Tests;
 
 // Owns: the checks of the NAM runtime: the published single-layer vectors, synthetic WaveNet (first architecture and A2
 //   shapes) and LSTM files against a naive whole-signal reference, the tanh fit, CPU per architecture shape, the resampling
@@ -219,3 +219,4 @@ public sealed class NamTests(ITestOutputHelper output)
         Assert.True(err < 1e-4, $"{err}");
     }
 }
+

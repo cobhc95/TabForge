@@ -5,7 +5,7 @@ using TabForge.Sf2Synth.Guitar;
 using Xunit;
 using Song = System.Collections.Generic.List<(double At, int Status, int D1, int D2)>;
 
-namespace TabForge.Avalonia.Tests;
+namespace TabForge.Sf2Synth.Tests;
 
 // Owns: the attack guards of every modelled program (bus output, one note at velocity 110): attack-to-sustain (peak of the first
 //   15 ms over the rms of 100-300 ms), initial decay slope (5 ms rms in dB, fitted from its peak over 200 ms), the attack-peak range
@@ -89,3 +89,4 @@ public sealed partial class GuitarLayerTests
         Assert.InRange(a, attack - 2, attack + 2);
     }
 }
+

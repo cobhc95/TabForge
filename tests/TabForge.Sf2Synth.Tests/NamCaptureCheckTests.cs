@@ -5,7 +5,7 @@ using TabForge.Sf2Synth.Nam;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace TabForge.Avalonia.Tests;
+namespace TabForge.Sf2Synth.Tests;
 
 // Owns: the on-demand check that a freshly trained capture renders in our runtime as in the trainer. Set TABFORGE_NAM_CHECK
 //   to a folder holding model.nam, in.f32 (the input, raw little-endian float32 mono) and ref.f32 (the trainer's render of
@@ -37,3 +37,4 @@ public sealed class NamCaptureCheckTests(ITestOutputHelper output)
         Assert.True(err / sig < 1e-3, $"ESR {err / sig}");
     }
 }
+

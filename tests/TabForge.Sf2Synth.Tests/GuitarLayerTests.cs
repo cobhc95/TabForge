@@ -3,22 +3,19 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using TabForge.AudioEngine.Plugins;
-using TabForge.AudioEngine.Synth;
-using TabForge.Services;
 using TabForge.Sf2Synth;
 using TabForge.Sf2Synth.Guitar;
 using TabForge.Sf2Synth.Sf2;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace TabForge.Avalonia.Tests;
+namespace TabForge.Sf2Synth.Tests;
 
 // Owns: the checks of the modelled guitar/bass layer: finite, audible, unclipped output for every modelled family, pitch within a few
-//   cents (basses within 1 cent down to B0, no DC), no aliasing in the slap, no allocation, CPU per string and per channel, routing inside Synthesizer and inside the engine's GmSynth (experimental choice), and the
+//   cents (basses within 1 cent down to B0, no DC), no aliasing in the slap, no allocation, CPU per string and per channel, routing inside Synthesizer, and the
 //   listening WAVs (TABFORGE_SYNTH_WAV_DIR).
-// Does not own: the SoundFont player (Sf2SynthTests), the engine choice text (SoundEngineTests).
-// Tests: GuitarLayer, PluckedString, GuitarBus, StageAmp, BodyModes, Compressor, Oversampler2x, CabinetImpulse, GmSynth, GmBank.
+// Does not own: the SoundFont player (Sf2SynthTests).
+// Tests: GuitarLayer, PluckedString, GuitarBus, StageAmp, BodyModes, Compressor, Oversampler2x, CabinetImpulse.
 public sealed partial class GuitarLayerTests(ITestOutputHelper output)
 {
     private const int Rate = 48000;
@@ -188,28 +185,7 @@ public sealed partial class GuitarLayerTests(ITestOutputHelper output)
         public void Reset() => s.Reset();
     }
 
-    [Fact]
-    public void TheEngineChoicePlaysTheLayerAndItsSoundFont()
-    {
-        var sf2 = Path.Combine(Path.GetTempPath(), "tf-sf2synth-test.sf2");
-        File.WriteAllBytes(sf2, TestSoundFont.Build());
-        var bank = new GmBank(windowsHost: false, bundledPath: Path.Combine(Path.GetTempPath(), "tf-no-such-bank.sf2"));
-        Assert.True(bank.Select(SoundEngines.TabForgeSynthPath + "|" + sf2, out var error), error);
-        Assert.True(bank.Current.Experimental && bank.Current.Sf2 is not null);
-        using var synth = new GmSynth(Rate, 512, bank);
-        BlockMidi[] notes = [new() { Status = 0xC0, Data1 = 30 }, new() { Frame = 10, Status = 0x90, Data1 = 40, Data2 = 100 }, new() { Frame = 20, Status = 0x91, Data1 = 69, Data2 = 100 }];
-        var input = new[] { new float[4800], new float[4800] };
-        var outBuf = new[] { new float[4800], new float[4800] };
-        synth.Process(input, outBuf, 4800, notes, new TransportInfo());
-        Assert.True(outBuf[0].Max(MathF.Abs) > 1e-2);
-        synth.Process(input, outBuf, 4800, ReadOnlySpan<BlockMidi>.Empty, new TransportInfo());
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        synth.Process(input, outBuf, 4800, ReadOnlySpan<BlockMidi>.Empty, new TransportInfo());
-        Assert.Equal(before, GC.GetAllocatedBytesForCurrentThread());
-    }
-
-    // The user's amp: a good .nam plays, a missing cabinet falls back with the reason, swapping back mid-note leaves no step,
-    // the settings reach the engine path, and a changed amp keeps the loaded SoundFont (only the rig swaps).
+    // The user's amp: a good .nam plays, a missing cabinet falls back with the reason, swapping back mid-note leaves no step.
     [Fact]
     public void TheUsersAmpLoadsFallsBackAndSwapsWithoutAStep()
     {
@@ -230,16 +206,6 @@ public sealed partial class GuitarLayerTests(ITestOutputHelper output)
         output.WriteLine($"user amp max step {Step(a, 0, a.Length):F4}, around the swap {Step(b, 0, 2048):F4}, built-in after {Step(b, 2048, b.Length):F4}");
         Assert.True(a.All(float.IsFinite) && a.Max(MathF.Abs) > 1e-3);
         Assert.True(Step(b, 0, 2048) <= 1.5f * Math.Max(Step(a, 0, a.Length), Step(b, 2048, b.Length)));
-
-        var plugins = new PluginSettings { SoundEngine = SoundEngines.TabForgeSynth, SynthAmpPath = nam };
-        Assert.EndsWith("|" + nam, SoundFontStore.ActivePath(plugins, windowsHost: false));
-        var sf2 = Path.Combine(Path.GetTempPath(), "tf-sf2synth-test.sf2");
-        File.WriteAllBytes(sf2, TestSoundFont.Build());
-        var bank = new GmBank(windowsHost: false, bundledPath: sf2);
-        Assert.True(bank.Select(SoundEngines.TabForgeSynthPath + "|" + sf2, out _));
-        var font = bank.Current.Sf2;
-        Assert.True(bank.Select(SoundEngines.TabForgeSynthPath + "|" + sf2 + "|" + nam, out _));
-        Assert.True(bank.Current.RigOnly && ReferenceEquals(font, bank.Current.Sf2) && bank.Current.Amp == nam);
     }
 
     // ---- listening files -------------------------------------------------------------------------------------------------------------
@@ -316,3 +282,4 @@ public sealed partial class GuitarLayerTests(ITestOutputHelper output)
         return song;
     }
 }
+

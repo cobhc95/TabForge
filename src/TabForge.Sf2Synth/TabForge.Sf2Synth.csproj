@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
-    <InternalsVisibleTo Include="TabForge.Avalonia.Tests" />
+    <InternalsVisibleTo Include="TabForge.Sf2Synth.Tests" />
     <EmbeddedResource Include="Guitar\Amps\captured.nam" LogicalName="TabForge.Sf2Synth.Guitar.Amps.captured.nam" />
   </ItemGroup>
 </Project>

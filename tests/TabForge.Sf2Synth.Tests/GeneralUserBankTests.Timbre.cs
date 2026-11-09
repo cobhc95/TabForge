@@ -8,7 +8,7 @@ using TabForge.Sf2Synth.Guitar;
 using Xunit;
 using Song = System.Collections.Generic.List<(double At, int Status, int D1, int D2)>;
 
-namespace TabForge.Avalonia.Tests;
+namespace TabForge.Sf2Synth.Tests;
 
 // Owns: the objective realism table (bank sample vs layer, same note, velocity 100, dry): spectral centroid at 50 ms / 300 ms / 1 s,
 //   T60 of the fundamental and the 5th harmonic, attack (10 to 90 % of the 1 ms envelope peak), harmonic-to-noise ratio (0.1-0.27 s);
@@ -160,3 +160,4 @@ public sealed partial class GeneralUserBankTests
         return song;
     }
 }
+

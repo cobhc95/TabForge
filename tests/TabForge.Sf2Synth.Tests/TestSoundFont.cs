@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Text;
 
-namespace TabForge.Avalonia.Tests;
+namespace TabForge.Sf2Synth.Tests;
 
 // Owns: a tiny synthetic SoundFont 2 for the Sf2Synth tests: preset 0:0 "Sine" (looped 440 Hz sine at 44 kHz, root 69, release
 //   0.25 s) and 128:0 "Kit" (an unlooped noise burst), plus WAV writing for listening files.
@@ -107,3 +107,4 @@ internal static class TestSoundFont
         return true;
     }
 }
+

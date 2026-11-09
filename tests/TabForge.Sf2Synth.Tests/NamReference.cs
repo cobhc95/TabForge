@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 
-namespace TabForge.Avalonia.Tests;
+namespace TabForge.Sf2Synth.Tests;
 
 // Owns: a deliberately naive whole-signal reference of the .nam WaveNet and LSTM (double maths, explicit history indexing,
 //   weights consumed in file order) that returns the output and how many weights the shape takes.
@@ -89,3 +89,4 @@ internal static class NamReference
         return (y, at);
     }
 }
+

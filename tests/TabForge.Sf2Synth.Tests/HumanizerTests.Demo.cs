@@ -9,7 +9,7 @@ using TabForge.Sf2Synth.Humanize;
 using TabForge.Sf2Synth.Sf2;
 using Xunit;
 
-namespace TabForge.Avalonia.Tests;
+namespace TabForge.Sf2Synth.Tests;
 
 // Owns: the one listening demo (TABFORGE_SYNTH_WAV_DIR): six flat parts (palm-muted riff 30, fast 16th runs on 30 and 27, clean strums
 //   with a fill 27, acoustic strum 25, bass 33) humanized with Natural, rendered by the synth (DI, captured amp), then flat piano
@@ -149,3 +149,4 @@ public sealed partial class HumanizerTests
         return ms.ToArray();
     }
 }
+

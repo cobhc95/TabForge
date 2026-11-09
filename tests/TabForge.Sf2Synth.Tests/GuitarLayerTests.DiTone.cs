@@ -8,7 +8,7 @@ using TabForge.Sf2Synth.Guitar;
 using Xunit;
 using Song = System.Collections.Generic.List<(double At, int Status, int D1, int D2)>;
 
-namespace TabForge.Avalonia.Tests;
+namespace TabForge.Sf2Synth.Tests;
 
 // Owns: the DI tone guard (octave-band shape and 2 kHz decay of the pickup DI of 27/29/30 against a measured real guitar DI), the
 //   captured amp's output guard (29/30 octave bands against the same take through the real amp) and the
@@ -133,3 +133,4 @@ public sealed partial class GuitarLayerTests
         return 127;
     }
 }
+
