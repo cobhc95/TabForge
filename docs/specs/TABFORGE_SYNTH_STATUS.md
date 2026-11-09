@@ -11,21 +11,36 @@ Goal: an own, lightweight, very realistic GM engine. SF2-compatible library plus
 ## Commits (local, not pushed)
 - `beb93c4` engine, library, guitar layer, adapter. Tested, basic self-test 218/0.
 - `68f3fc5` initial-attenuation scale 0.4 (SF2 levels now within ~1 dB of MeltySynth at velocity 100).
-- `1f272b0` WIP, NOT verified as a whole: NAM runtime (`Nam/`), `FftConvolver`, `Resampler`, `WavIr`, `StringPhysics`, `GuitarRig`, reworked `PluckedString`/`GuitarBus`/`GuitarLayer`/`Voicings`. Last agent note: 27 tests passed, tuning within 0.3 cents, before it was stopped mid-way.
+- `1f272b0` NAM runtime (`Nam/`), `FftConvolver`, `Resampler`, `WavIr`, `StringPhysics`, `GuitarRig`, reworked string/bus/layer. Verified afterwards: builds, all five classes pass.
+- `82f948b` layer inside `MasterVolume` (it was outside: +6 dB at master 0.5) and per-program `Level` in `Voicings`.
+- `a7ddd53` NAM: slimmable WaveNet arrays at full width, A2 notes in README.
+- `24dacf6` settings: amp `.nam` and cab `.wav` paths, rig-only swap, status line.
+- `bbeeaef` NamConv: masked last vector (odd blocks / 44.1 kHz had doubled the NAM cost).
 
 ## Owner verdict so far
-The guitar layer (modelled string, stage amp, synthetic cab) sounded better than the plain SF2 guitars. Layer was ~10 dB louder than the SF2 guitars (calibration was in progress).
+The guitar layer (modelled string, stage amp, synthetic cab) sounded better than the plain SF2 guitars. Layer was ~10 dB louder: fixed, now matched (below).
+
+## Measured (Nov 2026)
+- Level vs GeneralUser GS guitar, same MIDI, velocity 100, programs 24-37 (mean of single note and chord): worst 0.5 dB.
+  Velocity drift (layer minus bank, 40 to 127): clean programs up to 8 dB (layer has a flatter velocity curve, e.g. 28 muted +6 dB at
+  vel 40, -1.5 at 127); 29/30 through the amp compress by design (30: +15.6 dB at vel 40, -0.1 at 127 single note). `GeneralUserBankTests`.
+- NAM CPU, Release, synthetic weights, 48 kHz, 256-frame blocks, % of one core per active guitar channel: A1 standard 2.8, lite 1.6,
+  feather 0.8, nano 0.35, A2 Full 2.2, A2 Lite 0.56, LSTM 1x16 2.1, 1x24 3.1. At 44.1 kHz (resampled) +0.3 to +0.4 points.
+- A/B WAVs (`tfsynth2_*.wav`, scratch harness, not in the repo): DI alone (prog 27; palm mute on 28) peaks -10 to -21 dBFS, no NaN,
+  max sample step <= 0.054; riff 29 amp vs SF2 rms -28.0 / -29.8 dBFS, riff 30 -31.7 / -32.3 dBFS; crest 10-11 dB (amp) vs 16-17 (SF2).
 
 ## Architecture decision
 Clean pickup-style guitar DI, then a user-chosen Neural Amp Modeler `.nam` model as the amp, then an optional cabinet `.wav` IR. Built-in stage amp and synthetic cab stay as the default. NAM runtime is written from scratch from the public format spec (no copied code).
 
 ## To do next, in order
-1. `dotnet build`, then run the five test classes above. Fix whatever the WIP commit broke.
-2. Finish level calibration: same velocity = comparable loudness to the SF2 guitar (add a test against the real bank).
-3. Confirm what "NAM A2" is from the official NAM sources; the research results were not written to the README before the stop. Check `Nam/` supports it.
-4. Settings: amp `.nam` path and cab `.wav` path for the Experimental engine only (next to the Sound engine entry). Bad or missing file falls back to the built-in amp with a status message; loading off the audio thread, glitch-free swap.
-5. Render A/B WAVs (clean DI alone; riff 29/30 through built-in amp). Report objective numbers only.
-6. Measure CPU per NAM architecture (standard, lite, feather, nano, LSTM) with synthetic weights.
+1. [x] Build and the five test classes: nothing was broken; 62/62, now 63.
+2. [x] Level calibration (see Measured). Open: a steeper layer velocity curve if the owner wants the bank's dynamics.
+3. [x] NAM A2 confirmed from NeuralAmpModelerCore (README section). Not supported (error -> built-in fallback): FiLM, groups, condition_dsp, post-stack head, `.namb`. Never run against a real A2 file.
+4. [x] Settings `vst.synthamp` / `vst.synthcab` (Text rows, shown with TabForge Synth). Path rides in the engine sentinel `tabforge:synth|<sf2>|<nam>|<ir>`;
+   same SoundFont = `RigOnly` choice, `GmSynth` calls `GuitarLayer.LoadRig` (off the audio thread, fade out/in over two 64-frame chunks).
+   Status bar text comes from `GuitarLayer.DescribeRig` on a worker thread. Cabinet already ran on `FftConvolver`. Not checked in the running app.
+5. [x] A/B WAVs rendered (numbers above). Owner to listen.
+6. [x] CPU per architecture (above).
 7. Later: palm-mute detection and pick attack, bass and clean guitar, drums, keys, then the other GM families (see the plan in the conversation: waveguide, modal, DDSP hybrids).
 
 ## Open questions for the owner
