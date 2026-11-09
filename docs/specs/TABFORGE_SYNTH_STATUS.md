@@ -71,14 +71,36 @@ The guitar layer (modelled string, stage amp, synthetic cab) sounded better than
 ## Humanizer (Nov 2026)
 - [x] `Humanize/` MIDI pre-stage in `Synthesizer` (off in the library; on for the Experimental engine via Settings `vst.synthhumanize`
   "Humanize flat dynamics", default on, carried as `|off` in the engine sentinel). All switches in `SynthOptions` (live, any thread).
-- Evidence per channel (16 notes): flat velocities and grid timing are detected separately; human input passes unchanged (test: 0/65 events changed).
-- Flat test MIDI (velocity 90, grid, 120 bpm), humanizer on, velocity std 0 -> riff 30: 5.2, arpeggio 27: 4.4, strum 25: 3.8, bass 33: 4.4;
-  onset delay mean 2-5 ms, max 16 ms (bound 21 ms); strum spread 6.8-7.3 ms. Humanizer ~3 us per note-on (0.002 % of a core); render cost unchanged.
-- Voice variation: seed, pick position ±8 %, brightness, release ±15 %, detune 0.5-3 cents falling in 0.15 s, vibrato 4.5-6 Hz ~5 cents after 0.4 s
-  (strings; SF2 voices get detune, vibrato, filter brightness). Level drift is a slow velocity walk (±3). Drums untouched (no drum mode built).
-- Fixed on the way: a pluck reused the previous note's click history and the cabinet convolver kept its slot over `Reset`, so a render
-  after `Reset` was not bit-identical; now it is.
-- WAVs `tfsynth4_<riff30|arp27|strum25|bass33>_<flat|human>.wav`, `tfsynth4_arp27_alreadyhuman.wav` and the flat `.mid` files in the agent scratch folder. Owner to listen; not checked in the running app.
+- v1 (`d0dbb5d`) was judged machine-like by the owner (velocity std 4-5 steps, delays only 0-21 ms, strums 4-15 ms). Rebuilt as v2 below.
+- [x] v2 (`b55d043`, tests `9f6301c`), the generative model of `HUMAN_FEEL_SPEC.md`: per stroke a level in dB (metric accent, bar pattern kept
+  bar to bar, 4-bar arch, 1/f noise, white, down/up, speed damping, ceiling 3:1 above +4 dB, cap ±10 dB, ghosts on 16th offbeats of strums,
+  steady palm-mute chugs), converted through the 40·log10 curve with no step cap; an onset offset (bar pattern, 1/f, jitter, tempo drift,
+  bias) placed around a look-ahead, so notes land early and late; strums by direction (low to high down, high to low up, up ×0.8),
+  written dynamics, tempo (≤ 30 % of the interval), gaps first ×1.3 to last ×0.8, graded string levels, soft or barely touched low strings on
+  upstrokes; note lengths ±12 % (≤ 30 ms, legato or gap). Bass 32-39: no strum, finger alternation, +3 ms. `SynthOptions.Feel` Tight / Natural (default) / Loose.
+- Look-ahead 20 / 35 / 50 ms: while on, every event of every channel waits that long (drums included, unchanged), `Synthesizer.Latency`
+  reports it and `GmSynth.LatencySamples` passes it on; 0 when off. Note-offs stay in order per key through switch-off, `NoteOffAll` and `Reset`.
+- Measured (tests, fixed seed; 64-bar flat 16th line on 27 and 8th strum on 25, velocity 90, 120 bpm), tight / natural / loose:
+  level std 2.5 / 3.9 / 5.0 dB (line), 2.9 / 4.3 / 5.8 dB (strum strokes); 12 / 18 / 22 velocity steps; onset std 6.8 / 11.7 / 19.2 ms,
+  earliest -20 / -35 / -50 ms; downstroke spread median 14 / 25 / 54 ms (loose is laid back ×1.2), upstroke 11 / 20 / 43 ms, largest
+  gap 4 / 8 / 16 ms; ghosts 4.3 / 7.0 / 14.5 % (set 4 / 8 / 15). All feels: lag-1 interval correlation -0.52, DFA of offsets 0.45 (4-16 notes)
+  and 0.71 (32-256), bar-to-bar correlation level 0.73-0.77, timing 0.38-0.39; 1/f sources DFA 0.66 / 0.70. Human input (two files,
+  velocity std 10 and 19, jitter ±8 / ±12 ms): 0 events changed. Fuzz (6000 random events, 3 feels): per-key order kept, offsets within bounds.
+- Listening songs (4 bars), natural: riff 30 4.3 dB / 21 steps, 10.8 ms; arpeggio 27 3.5 dB, 12.8 ms; strum 25 6.1 dB, 14.3 ms, spread 15 ms;
+  bass 33 3.4 dB, 10.0 ms. Humanizer 0.7 us per note-on (0.005 % of a core), no allocation.
+- Deviations from the spec, found by the tests: jitter is anticorrelated with the note before last (w_n - 0.6 w_(n-2)) and the bar pattern
+  with the slot before (0.6): with the spec's w_n - 0.5 w_(n-1) the lag-1 interval correlation and the short DFA could not both meet their
+  targets. Strum speed follows the written dynamic (the played level would make upstrokes slower than downstrokes). Pattern level σ 2.8 dB,
+  correlation 0.95 (spec 1.5, 0.85) to reach the level std and the bar correlation. A ghost is -12 dB after the ±10 dB cap.
+- Evidence tightened: velocity human = distinct values (> 4 levels, scaled to a full window) and (std ≥ 3-6 or runs ≤ 3-6); timing grid
+  within 0.1 ms, human below 30 % on the grid. The spec's 0.5 ms tolerance flagged jittered human timing as a grid, so it stays tighter.
+- Voice variation as in v1: seed, pick position ±8 %, brightness, release ±15 %, detune 0.5-3 cents falling in 0.15 s, vibrato 4.5-6 Hz ~5 cents after
+  0.4 s (strings; SF2 voices get detune, vibrato, filter brightness). `HumanizeDrift` now drives tempo drift and vibrato. Drums untouched (stage two).
+- WAVs `tfsynth6_<riff30|arp27|strum25|bass33>_<flat|tight|natural|loose>.wav` (output shifted back by the latency) from the same flat
+  `tfsynth4_*.mid` (byte-compared), agent scratch folder. Owner to listen; not checked in the running app.
+- Open: `TrackChain.LatencySamples` (the engine's delay compensation) sums the effects only, not the track's `MidiSynth`, so the reported
+  look-ahead is not compensated yet (the humanized track would run 35 ms late against the others); not checked in the running app; no Settings row for Feel yet; meter assumed 4/4 (bar = 4 pulses);
+  swing and score-marked strum directions not built; no render-level onset analysis yet.
 - Without a readable SoundFont (MeltySynth + layer) there is no humanizer (it lives in `Synthesizer`).
 
 ## Captured amp, default for 29/30 (Nov 2026)

@@ -125,14 +125,15 @@ equal velocities ≤ 3, < 30 % of intervals within 0.5 ms of a simple ratio to a
 between these limits, separately for velocity and timing; a human part gets 0, never "added on top".
 
 ### What to test objectively (on a 64-bar flat 8th strum and a flat 16th single-note line, fixed seed)
-- level std in dB and in velocity per preset hits the targets ±15 %; tight < natural < loose.
-- onset std vs grid per preset; lag-1 interval correlation between -0.6 and -0.3; DFA α of offsets over 512+ notes: short < 0.5, long 0.6-0.9.
-- bar-to-bar correlation of per-position level 0.7-0.95, of timing 0.3-0.7.
-- strum spread percentiles per direction and dynamic; no inter-string gap ≥ 40 ms; upstroke spread < downstroke.
-- ghost rate within ±3 % of the setting; no ghost on beats.
-- no note-on before allowed, delays ≤ budget, note-offs never before their note-on, determinism across Reset.
-- a human-played file (velocity std ≥ 15, jittered timing) passes through unchanged (0 steps, 0 ms).
-- render-level check: run the onset/level analysis above on rendered audio; level std 3-5 dB at natural.
+Status (`HumanizerTests`, Nov 2026; numbers in `TABFORGE_SYNTH_STATUS.md`):
+- [x] level std in dB and in velocity per preset hits the targets ±15 %; tight < natural < loose.
+- [x] onset std vs grid per preset; lag-1 interval correlation between -0.6 and -0.3; DFA α of offsets over 512+ notes: short < 0.5, long 0.6-0.9.
+- [x] bar-to-bar correlation of per-position level 0.7-0.95, of timing 0.3-0.7.
+- [x] strum spread per direction (median), no inter-string gap ≥ 40 ms, upstroke spread < downstroke. [ ] percentiles per dynamic.
+- [x] ghost rate within ±3 % of the setting; no ghost on beats (beats no lower than 8th offbeats in the output).
+- [x] no note-on before allowed, delays ≤ budget, note-offs never before their note-on (6000-event fuzz), determinism across Reset.
+- [x] a human-played file (velocity std ≥ 15, jittered timing) passes through unchanged (0 steps, 0 ms).
+- [ ] render-level check: run the onset/level analysis above on rendered audio; level std 3-5 dB at natural.
 
 ## 3. What the first version did wrong
 - Velocity std 4-5 steps (≈ 1 dB): about a quarter of the measured 19-25 steps (4-6 dB); the ±12 cap made it impossible to reach.

@@ -6,6 +6,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ### Added
 
+- TabForge Synth (experimental): Humanize flat dynamics plays much more like a person: dynamics vary about four times as much with a repeating accent pattern and the odd ghost stroke, notes come a little early as well as late, strums are slower, run down or up and hit the low strings softer on the way up, and note lengths vary; three feels (tight, natural, loose); the synth runs 20-50 ms behind while it is on (untested in app).
 - TabForge Synth (experimental): the clean, overdriven and distortion electric guitars sound like a real guitar's direct signal: much darker and warmer (the old tone was up to 30 dB too bright around 3 kHz), with less low rumble and treble that fades like a real string; the built-in captured amp gets the input it was made for (untested in app).
 - TabForge Synth (experimental): the overdriven and distortion guitars now play through a built-in captured amp (a learned model of a real amp, no cabinet added by default) at the same loudness as before; a chosen .nam amp file still takes its place (untested in app).
 - TabForge Synth (experimental): new setting Humanize flat dynamics (on): where a track's guitar or bass notes all share one velocity and exact timing, they get a player's accents, phrasing, picking and strum, and no two notes sound quite alike; notes that already vary are left as they are (untested in app).
