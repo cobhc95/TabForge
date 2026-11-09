@@ -31,6 +31,11 @@ The pickup DI of 27/29/30 (`Voicings.MeasuredDi`, `MeasuredString`) is fitted to
 trained on: low cut 135 Hz, pickup resonance near 900 Hz under a 2 kHz roll-off, a dark loop (2 kHz decays in about 1 s), a soft pluck and a
 two-coil bridge humbucker. `GuitarLayerTests.TheDiMatchesTheMeasuredGuitarDi` keeps its octave-band shape within 3 dB of the measured curve.
 
+## Attack
+Every string has a double decay (`StringSpec.Drop` dB over `DropMs`, × velocity^`DropVel`): the pluck starts that much louder and the
+loop loses it fast, then the normal decay follows, so each note and chord peaks above its sustain and harder notes peak harder.
+`GuitarLayerTests.Attack` guards attack-to-sustain, initial slope and the velocity range per program (real guitar DI: 17.7 dB, -58 dB/s).
+
 ## Humanizer
 A pass over a track's WRITTEN notes, run by the host before playback or render (TabForge: `SynthHumanizePass` through
 `PlaybackOptions.Humanizer`): `Humanizer.Apply(notes, output, program, options, seed)`. Early notes are simply scheduled earlier: no
@@ -46,7 +51,8 @@ look-ahead, no latency. Guitars/basses (24-39) and bowed (40-51) only; never dru
   signature; compound meters in threes), syncopation, note length, melodic peaks and rising lines, a 4-bar arch from the section start,
   energy, pick hand and string crossing, run grouping, motif memory (the hash of a beat's rhythm and intervals keys its offsets, so the
   same riff gets the same accents) and legato finger unevenness. The only free part, the residue, is slow, smooth and bounded to +-1 dB.
-  Ghost and dead notes keep half; palm-mute chugs half of motif and residue. Then the feel's scale, a 3:1 ceiling above +4 dB, +-10 dB cap.
+  Ghost and dead notes keep half; palm-mute chugs half of motif and residue. Then the feel's scale, a 3:1 ceiling above +8 dB, +-12 dB cap,
+  and a headroom (`HeadDb`): a flat loud input is lowered so its accents fit under velocity 127.
 - Timing (ms, `Timing`): bias, slow wander (1-8 bars), smooth pushes and pulls (1/8-1/2 bar), small jitter, the motif's own timing.
   Fast single-note runs (next note within 250 ms): first of each group of 2/3/4 early and louder, upstrokes late and softer (grid
   alternation unless marked), string crossing +1..4 ms, rush on rising and lean on falling lines, legato notes late, a rare smoothly early

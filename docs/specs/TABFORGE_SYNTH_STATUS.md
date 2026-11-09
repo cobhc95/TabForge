@@ -105,8 +105,52 @@ The guitar layer (modelled string, stage amp, synthetic cab) sounded better than
 - Open / uncertain: not checked in the running app. After a seek the first 2 bars lack the context before the start (energy, evidence,
   the previous note's string and pitch), so they can differ slightly from a play from the top. The pass number of a repeat started with
   "start on pass 2" is keyed as the first pass. Mid-bar program changes use the track's setup program. Tracks with a playing VST
-  instrument are never humanized, even when their GM sound is layered. The level spread (2.2 dB natural) is below the spec's 4 dB
-  target on purpose (no random dips); raise the structural amounts in `HumanTable` if the owner wants more. Drums untouched.
+  instrument are never humanized, even when their GM sound is layered. The level spread is now 4.5 dB natural (Attack and peaks). Drums untouched.
+
+## Attack and peaks (Nov 2026)
+Owner: every note and chord needs much more attack; the takes sounded like one velocity and sustain. Measured per onset (own detector,
+python, statistics only): attack-to-sustain = peak of the first 15 ms over the rms of 100-300 ms (cut at the next onset); initial slope =
+fit of the 5 ms rms in dB over 200 ms from its peak; loudness range = p95 - p10 of 50 ms rms. Same onsets for the real take and ours.
+- Real take (8.5 s, 57 onsets; ours = the recovered notes with velocities fitted to the attack peaks, program 29), real / before / after:
+
+| measure | DI real | DI before | DI after | amp real | amp before | amp after |
+|---|---|---|---|---|---|---|
+| attack-to-sustain (dB) | 17.7 | 13.8 | 18.3 (27: 17.0) | 7.7 | 8.6 | 8.5 |
+| initial slope (dB/s) | -58 | -48 | -65 (27: -58) | -0.4 | -3.6 | -3.8 |
+| crest per onset (dB) | 15.1 | 13.6 | 16.2 | 8.9 | 8.6 | 8.5 |
+| loudness range (dB) | 15.5 | 12.7 | 14.5 | 2.9 | 6.9 | 7.2 |
+| attack peak std (dB) | 6.9 | 3.1 | 4.5 | 1.2 | 1.0 | 0.9 |
+
+- Where the peaks were lost: (1) the string: one-stage decay, 4 dB too little attack over sustain, and at the capture's input level 40 of 57
+  real attacks were louder than our velocity 127; (2) the humanizer: level std 2.2 dB and no room above a flat velocity near 100 (a +4 dB
+  accent clipped at 127, so only the dips were heard); (3) the captured amp itself: velocity 50 -> 127 moves its attack peak by -1.5 dB
+  (32 dB of input -> 0.7 dB of output). The real amp does the same (attack peak std 1.2 dB, loudness range 2.9 dB), so it stays.
+  Not the cause: the clean compressor (0.3 dB), the clean tube stages (0.1 dB), the bass compressor (1.5 dB), the SF2 voice path.
+- Changed: double decay in `PluckedString` (`StringSpec.Drop` 4 dB over `DropMs` 12 ms, × velocity; the pluck starts that much louder,
+  sustain unchanged), every program but palm-muted 28 (already 25 dB); 27/29/30 string velocity exponent 1.85; levels re-trimmed (all
+  24-37 within 0.14 dB of the bank at velocity 100; 29/30 DI trim unchanged: riff -29.7 dBFS rms, peak 0.376 of the 0.4 limit).
+  Humanizer: structural amounts about ×2 (meter 6/3.5/2.5/-3.5/-6 dB, sync 3, peak 2.4, group 2.4, motif 1.8, arch 3), ceiling knee 8 dB,
+  headroom `HeadDb` 9 (a flat loud input is lowered so the accents fit under 127), strum first string +2 / last -2 dB.
+- Single note, velocities 50/80/110/127, bus output, attack-to-sustain before -> after (dB): 24 10.9 -> 13.0, 25 11.4 -> 13.6,
+  26 9.8 -> 11.7, 27 12.7 -> 15.6, 28 25.4 (same), 29/30 8.4 -> 8.5, 31 9.4 -> 11.5, 32 2.9 -> 6.1, 33 10.1 -> 12.8, 34 9.7 -> 12.2,
+  35 8.6 -> 11.4, 36 14.9 -> 18.1, 37 15.8 -> 19.2; 6-string strum 24 9.4 -> 11.4, 25 7.8 -> 10.3, 26 1.8 -> 4.3, 27 8.2 -> 11.0.
+  Attack peak 50 -> 127 on 27: 14.3 -> 16.6 dB. The bank's samples (same notes): 26 strum 6.7, 27 single 16.5, 33 5.6.
+- Humanizer (`HumanizerTests`): level std tight / natural / loose 3.0 / 4.5 / 6.4 dB (was 1.5 / 2.2 / 3.3), explained 99 %, group
+  accent 7.3 dB, identical bars 2.1 dB contour. Test ranges changed: level std 3.8-5.2 (was 2-5), group accent 4-9 (was 1-5), identical
+  bars <= 2.5 dB (was 2), tight 2.5-3.5 and loose 5.2-7 added.
+- Demo parts v3 -> v4 (attack-to-sustain / loudness range, dB): riff 30 6.4 / 1.6 -> 6.2 / 2.8, run 30 6.6 / 2.5 -> 6.8 / 2.3,
+  run 27 12.0 / 7.5 -> 11.7 / 11.9, strum 27 4.3 / 11.1 -> 13.0 / 16.1, strum 25 3.5 / 8.1 -> 7.5 / 10.7, bass 33 5.1 / 4.1 -> 8.3 / 8.5.
+- SF2 path (GeneralUser GS, ours / MeltySynth, single notes): attack-to-sustain piano 8.6 / 8.0, saw lead 7.4 / 5.2, drums 35.8 / 30.4,
+  strings both negative (slow attack); reverb on or off within 0.1 dB. Attack peak 50 -> 127: piano 11.6 / 14.0, strings 27 / 33 dB:
+  we apply the bank's own velocity modulators (spec), MeltySynth does not. No change.
+- Guards (`GuitarLayerTests.Attack`): per program 24-37 attack-to-sustain ±2 dB, initial slope ±8 dB/s, attack peak 50 -> 127; strums
+  24-27, 29, 30; the 29 DI within 2 dB of the real DI's 17.7.
+- Demo `tfsynth_FULL_DEMO_v4.wav` (88 s, scratch folder): the v3 parts (same flat `demo_v3_flat.mid`, Natural), then flat piano chords
+  (program 0) and a flat drum groove (channel 10) on GeneralUser GS; one gain (+13.7 dB), peak 0.90 (bass part).
+- Still different: the 29 DI initial slope is 7 dB/s steeper than the real one; attack peak std 4.5 vs 6.9 dB (29 still caps 24 of 57
+  real attacks at the capture's level); our amp output has the larger loudness range (no hiss or hum between notes); acoustic strums
+  swell for ~40 ms after the strike (body modes; the bank's strum falls at once); the distorted programs keep the capture's squeeze.
+  Options if 29/30 need more bite: a gentle expander ahead of the captured amp, or a little of the DI transient mixed after it.
 
 ## Captured amp, default for 29/30 (Nov 2026)
 - [x] The owner's approved capture (WaveNet lite, 48 kHz) is embedded as `Guitar/Amps/captured.nam` (metadata reduced to name "Captured amp",
