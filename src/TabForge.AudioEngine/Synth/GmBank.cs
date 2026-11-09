@@ -24,6 +24,7 @@ public sealed class GmBank
         public string Amp { get; init; } = "";
         public string Cab { get; init; } = "";
         public bool RigOnly { get; init; }
+        public bool Humanize { get; init; } = true;
         /// <summary>The font to play. Windows without a SoundFont: the converted gm.dls. Elsewhere without a SoundFont: a failure that says to download it (the synth then reports itself failed). Never read when <see cref="Silent"/>.</summary>
         public SoundFont Bank => Silent ? throw new InvalidOperationException("The silent sound bank has no font to play.") : Font ?? (WindowsHost ? DlsToSoundFont.LoadWindowsBank() : throw new FileNotFoundException(NoBankMessage));
     }
@@ -73,16 +74,17 @@ public sealed class GmBank
         }
     }
 
-    // "tabforge:synth|<sf2>|<amp .nam>|<cab .wav>" (empty sf2: the bundled SoundFont). An unreadable SoundFont plays this OS's fallback bank,
+    // "tabforge:synth|<sf2>|<amp .nam>|<cab .wav>|<off: no humanizer>" (empty sf2: the bundled SoundFont). An unreadable SoundFont plays this OS's fallback bank,
     // so the song always sounds; a new amp or cabinet with the same SoundFont keeps the loaded font and only swaps the rig.
     private Choice Experimental(string path, Choice old, out string error)
     {
         error = "";
-        var parts = (path + "|||").Split('|');
+        var parts = (path + "||||").Split('|');
+        var human = parts[4] != "off";
         var (file, version) = (parts[1].Length > 0 ? parts[1] : _bundledPath, old.Version + 1);
         if (old.Experimental && (old.Path + "|||").Split('|')[1] == parts[1])
-            return old with { Path = path, Version = version, Amp = parts[2], Cab = parts[3], RigOnly = true };
-        try { return new Choice(null, path, SoundFontMasterVolume, version, _windowsHost, Sf2: new TabForge.Sf2Synth.Sf2.SoundFont(file), Experimental: true) { Amp = parts[2], Cab = parts[3] }; }
+            return old with { Path = path, Version = version, Amp = parts[2], Cab = parts[3], RigOnly = true, Humanize = human };
+        try { return new Choice(null, path, SoundFontMasterVolume, version, _windowsHost, Sf2: new TabForge.Sf2Synth.Sf2.SoundFont(file), Experimental: true) { Amp = parts[2], Cab = parts[3], Humanize = human }; }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException)
         {
             error = ex.Message;

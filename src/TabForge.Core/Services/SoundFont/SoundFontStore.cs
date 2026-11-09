@@ -67,7 +67,7 @@ public static class SoundFontStore
         SoundEngines.WindowsGm => "",
         // Plays GeneralUser GS when it is downloaded (else the engine's bundled copy, else this OS's fallback bank); then the amp and cabinet files.
         SoundEngines.TabForgeSynth => string.Join('|', SoundEngines.TabForgeSynthPath, SoundBankCatalog.ForEngine(SoundEngines.SoundFont) is { } gs ? BankPath(gs, windowsHost) : "",
-            settings.SynthAmpPath.Trim(), settings.SynthCabPath.Trim()).TrimEnd('|'),
+            settings.SynthAmpPath.Trim(), settings.SynthCabPath.Trim(), settings.SynthHumanize ? "" : "off").TrimEnd('|'),
         SoundEngines.OwnFile => UserPath(settings),
         var engine when SoundBankCatalog.ForEngine(engine) is { } bank => BankPath(bank, windowsHost),
         _ => "",
