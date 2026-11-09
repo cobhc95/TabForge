@@ -2,11 +2,14 @@ using static TabForge.Sf2Synth.Humanize.HumanTable;
 
 namespace TabForge.Sf2Synth.Humanize;
 
+/// <summary>One strum's direction and the interval to the next stroke (ms).</summary>
+internal readonly record struct Stroke(bool Down, double IoiMs);
+
 // Owns: the strings of one strum (keys low to high): onset per string after the stroke (low to high on a downstroke, high to low
 //   up), total spread by style, family, written dynamics (slower when soft), direction, laid-back bias and at most a share of the
 //   interval; gaps first-longest to last-shortest with jitter, each under the fusion limit; level graded first to last, per-string
 //   scatter, upstrokes soft on the lowest two strings, the lowest sometimes barely touched, inner strings sometimes soft when fast.
-// Does not own: the stroke (Phrase), applying it (Humanizer), the values (HumanTable).
+// Does not own: the stroke (Humanizer), the values (HumanTable).
 // Tests: HumanizerTests.
 internal static class Strum
 {
@@ -25,7 +28,7 @@ internal static class Strum
         for (var h = 1; h < n; h++) sum += ms[h] = (GapFirst + (GapLast - GapFirst) * (n > 2 ? (h - 1.0) / (n - 2) : 0)) * (1 + GapJit * r.U());
         for (var h = 1; h < n; h++) ms[h] = t += Math.Min(ms[h] * total / sum, GapMaxMs);
         if (!st.Down) ms.Reverse();
-        var fast = st.IoiMs < SlowIoi * 1000;
+        var fast = st.IoiMs < FastMs;
         for (var i = 0; i < n; i++)
         {
             var h = st.Down ? i : n - 1 - i;

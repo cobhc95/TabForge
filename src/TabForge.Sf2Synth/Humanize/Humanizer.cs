@@ -2,165 +2,173 @@ using static TabForge.Sf2Synth.Humanize.HumanTable;
 
 namespace TabForge.Sf2Synth.Humanize;
 
-// Owns: the MIDI pre-stage of Synthesizer: collects the events that arrive at one instant (a batch, so a chord is known whole),
-//   plans each channel's stroke (Phrase, Strum; only families in HumanTable, never the drum channel) and schedules everything in a
-//   sorted queue. While on, every event of every channel is held for the style's look-ahead (reported as Latency), so a note-on
-//   can land early as well as late; note-ons never before an earlier event of their key or an earlier controller of their channel;
-//   note-offs follow their stroke's shift plus a length change, never before their note-on plus min(length, MinKeepMs), in order
-//   per key; controllers after everything earlier on their channel. Draws each note's Nuance. Allocation-free, deterministic.
-// Does not own: playing the events (Synthesizer), the player model (Phrase, Strum, Evidence), the values (HumanTable).
-// Tests: HumanizerTests.
-public sealed class Humanizer(double rate)
+/// <summary>One stroke (a note or the notes struck together) in its surroundings, as the level and timing parts read it.</summary>
+internal struct Ctx
 {
-    public struct Event { public long Due; public byte Channel, Command, Data1, Data2; }
+    public double IoiPrev, IoiNext, Npb, Vf, Tf;
+    public int Count, Key, PrevKey, NextKey, Prev2Key, String, PrevString, Sub, Group;
+    public bool Single, Fast, Down, Legato, Chug, Soft;
+    public uint Motif;
+    public int MotifIndex;
+}
 
-    private const int BatchCap = 512, QueueCap = 4096, Keys = 16 * 128;
-    private readonly Event[] _in = new Event[BatchCap], _q = new Event[QueueCap];
-    private readonly int[] _bd = new int[BatchCap], _bs = new int[BatchCap], _idx = new int[128], _keyShift = new int[Keys];
-    private readonly double[] _db = new double[128], _ms = new double[128];
-    private readonly long[] _keyDue = new long[Keys], _keyAt = Enumerable.Repeat(-1L, Keys).ToArray(), _keyLast = new long[Keys], _chMax = new long[16], _chCtl = new long[16];
-    private readonly int[] _pending = new int[16], _program = new int[16], _count = new int[16];
-    private readonly bool[] _expressive = new bool[16];
-    private readonly Phrase[] _ph = Enumerable.Range(0, 16).Select(_ => new Phrase()).ToArray();
-    private readonly long _minKeep = (long)(MinKeepMs * rate / 1000);
-    private int _nIn, _head, _tail;
-
-    /// <summary>The longest delay any event can get, in frames: two look-aheads (early budget, late cap) plus the longest strum.</summary>
-    public int MaxDelay { get; } = Frames(2 * MaxLookMs + StrumCapMs, rate);
-    public bool Busy => _nIn > 0 || _tail > _head;
-    public long NextDue => _tail > _head ? _q[_head].Due : long.MaxValue;
-    /// <summary>The look-ahead every event is held for while on (frames); a host shifts the output back by it.</summary>
-    public int Latency(SynthOptions o) => o.Humanize ? Frames(Styles[(int)o.Feel].LookMs, rate) : 0;
-    /// <summary>The channel's flatness (velocity, timing) 0..1 as last measured.</summary>
-    public (double Velocity, double Timing) Flatness(int channel) => (_ph[channel & 15].Evidence.VelFlat, _ph[channel & 15].Evidence.TimeFlat);
-    /// <summary>The channel's ghost strokes since Reset.</summary>
-    public int Ghosts(int channel) => _ph[channel & 15].Ghosts;
-
-    private static int Frames(double ms, double rate) => (int)Math.Round(ms * rate / 1000);
-
-    public void Reset()
+// Owns: the humanizer as one pass over a track's WRITTEN notes (no streaming, no look-ahead): strokes, the window around each bar
+//   (Before bars back, After ahead) for energy and evidence, the motif of each beat (hash of its rhythm and intervals), neighbours,
+//   fast runs, pick direction; then each stroke's level (Dynamics), onset (Timing) and strum (Strum), and the per-key order check
+//   (no stuck or colliding notes). Every value is a pure function of position and nearby content, so a start mid-song or an edit
+//   changes only the neighbourhood.
+// Does not own: the parts (Dynamics, Timing, Strum), evidence (Evidence), noise (Noise), values (HumanTable), building notes (host).
+// Tests: HumanizerTests.
+public static class Humanizer
+{
+    /// <summary>Plays <paramref name="notes"/> (one track, written; any order) into <paramref name="output"/> (same index).
+    /// Untouched (copied) when off or for a program outside the families. <paramref name="parts"/>: each note's level parts, if given.</summary>
+    public static void Apply(ReadOnlySpan<HumanNote> notes, Span<HumanOut> output, int program, SynthOptions o, uint seed, Span<LevelParts> parts = default)
     {
-        (_nIn, _head, _tail) = (0, 0, 0);
-        Array.Fill(_keyAt, -1);
-        Array.Clear(_keyDue); Array.Clear(_keyLast); Array.Clear(_keyShift); Array.Clear(_chMax); Array.Clear(_chCtl);
-        Array.Clear(_pending); Array.Clear(_program); Array.Clear(_count); Array.Clear(_expressive);
-        for (var i = 0; i < 16; i++) _ph[i].Reset(i);
-    }
-
-    /// <summary>True: queued (played later by Take). False: play it now (off, and nothing of its channel is waiting).</summary>
-    public bool Add(int channel, int command, int d1, int d2, bool on)
-    {
-        if (command == 0xC0) _program[channel] = d1 & 0x7F;
-        if (command == 0xB0 && d1 == 1 && d2 > 0 || command == 0xE0 && ((d1 & 0x7F) | (d2 & 0x7F) << 7) != 8192) _expressive[channel] = true;
-        if (!on && _pending[channel] == 0 || _nIn == BatchCap) return false;
-        _in[_nIn++] = new Event { Channel = (byte)channel, Command = (byte)command, Data1 = (byte)d1, Data2 = (byte)d2 };
-        _pending[channel]++;
-        return true;
-    }
-
-    /// <summary>Plans and schedules the batch that arrived at frame <paramref name="now"/>.</summary>
-    public void Commit(long now, SynthOptions o)
-    {
-        if (_nIn == 0) return;
-        var lat = Latency(o);
-        Array.Clear(_bd, 0, _nIn);
-        Array.Clear(_bs, 0, _nIn);
-        for (var ch = 0; ch < 16; ch++) Plan(ch, now, o, lat);
-        for (var i = 0; i < _nIn; i++) Schedule(_in[i], now, lat, i, o);
-        _nIn = 0;
-    }
-
-    private void Plan(int ch, long now, SynthOptions o, int lat)
-    {
-        var n = 0;
-        for (var i = 0; i < _nIn && n < 128; i++) if (_in[i].Channel == ch && _in[i].Command == 0x90 && _in[i].Data2 > 0) _idx[n++] = i;
-        if (n == 0 || lat == 0 || ch == 9 || Of(_program[ch]) is not { } f) return;
-        for (var i = 1; i < n; i++)
-            for (var j = i; j > 0 && _in[_idx[j]].Data1 < _in[_idx[j - 1]].Data1; j--) (_idx[j], _idx[j - 1]) = (_idx[j - 1], _idx[j]);
-        var ph = _ph[ch];
+        for (var i = 0; i < notes.Length; i++) output[i] = new(notes[i].OnMs, notes[i].OffMs, notes[i].Velocity);
+        if (!o.Humanize || Of(program) is not { } f || notes.Length == 0 || !o.HumanizeVelocity && !o.HumanizeTiming) return;
         var s = Styles[(int)o.Feel];
-        ph.Evidence.AddOnset(now);
-        var top = 1;
-        for (var i = 0; i < n; i++) { ph.Evidence.AddNote(_in[_idx[i]].Data2); top = Math.Max(top, _in[_idx[i]].Data2); }
-        ph.Evidence.Update(rate);
-        var vf = o.HumanizeVelocity ? ph.Evidence.VelFlat : 0;
-        var tf = o.HumanizeTiming ? ph.Evidence.TimeFlat : 0;
-        var st = ph.Plan(f, s, now, rate, n, _in[_idx[0]].Data1, o.HumanizeDrift, lat * 1000.0 / rate);
-        Strum.Spread(f, s, st, 40 * Math.Log10(top / 127.0), _db.AsSpan(0, n), _ms.AsSpan(0, n), ph.Rng);
-        var shift = (int)Math.Round(tf * st.Ms * rate / 1000);
-        for (var i = 0; i < n; i++)
+        var a = notes.ToArray();
+        var strokes = Strokes(a);
+        var ctx = Contexts(a, strokes, seed);
+        Flatness(a, strokes, ctx);
+        double[] db = new double[16], ms = new double[16];
+        for (var k = 0; k < strokes.Count; k++)
         {
-            ref var e = ref _in[_idx[i]];
-            if (vf > 0) e.Data2 = (byte)Math.Clamp((int)Math.Round(e.Data2 * Math.Pow(10, vf * (st.Db + _db[i]) / 40)), 1, 127);
-            _bs[_idx[i]] = shift;
-            _bd[_idx[i]] = shift + (int)Math.Round(tf * _ms[i] * rate / 1000);
-        }
-    }
-
-    private void Schedule(Event e, long now, int lat, int i, SynthOptions o)
-    {
-        int ch = e.Channel, k = ch * 128 + (e.Data1 & 0x7F);
-        long due;
-        if (e.Command == 0x90 && e.Data2 > 0)
-        {
-            due = Math.Max(now + Math.Max(0, lat + _bd[i]), Math.Max(_keyLast[k], _chCtl[ch]));
-            (_keyDue[k], _keyAt[k], _keyLast[k], _keyShift[k]) = (due, now, due, _bs[i]);
-        }
-        else if (e.Command is 0x90 or 0x80)
-        {
-            due = now + lat;
-            if (_keyAt[k] >= 0)
+            var c = ctx[k];
+            var st = strokes[k];
+            var n = a[st[0]];
+            var lp = Dynamics.Parts(c, n, f, seed);
+            var level = o.HumanizeVelocity ? Dynamics.Total(lp, s, f) * c.Vf : 0;
+            var shift = o.HumanizeTiming ? Timing.Shift(c, n, s, f, seed, o.HumanizeDrift) * c.Tf : 0;
+            var len = o.HumanizeTiming ? Timing.Length(c, n, s) * c.Tf : 0;
+            var m = Math.Min(st.Count, db.Length);
+            db.AsSpan(0, m).Clear();
+            ms.AsSpan(0, m).Clear();
+            if (m >= 3 && f.Strum > 0 && st.TrueForAll(i => a[i].OnMs == a[st[0]].OnMs))
+                Strum.Spread(f, s, new(c.Down, Math.Min(c.IoiNext, 10000)), 40 * Math.Log10(st.Max(i => a[i].Velocity) / 127.0), db.AsSpan(0, m), ms.AsSpan(0, m),
+                    new Rng(Hash.Of(seed, n.Bar, (int)Math.Round(n.Beat * Grid), 5)));
+            for (var j = 0; j < st.Count; j++)
             {
-                var len = now - _keyAt[k];
-                if (lat > 0) due += _keyShift[k] + Stretch(ch, len, now, o);
-                due = Math.Max(due, _keyDue[k] + Math.Min(len, _minKeep));
-                _ph[ch].Ended(len);
-                _keyAt[k] = -1;
+                var i = st[j];
+                var d = level + (j < m && o.HumanizeVelocity ? db[j] * c.Vf : 0);
+                var t = shift + (j < m && o.HumanizeTiming ? ms[j] * c.Tf : 0);
+                output[i] = new(a[i].OnMs + t, a[i].OffMs + shift + len, Math.Clamp((int)Math.Round(a[i].Velocity * Math.Pow(10, d / 40)), 1, 127));
+                if (i < parts.Length) parts[i] = lp;
             }
-            _keyLast[k] = due = Math.Max(Math.Max(due, now), Math.Max(_keyLast[k], _chCtl[ch]));
         }
-        else _chCtl[ch] = due = Math.Max(now + lat, _chMax[ch]);
-        _chMax[ch] = Math.Max(_chMax[ch], due);
-        e.Due = due;
-        Insert(e);
+        KeepOrder(a, output);
     }
 
-    // A note's length change in frames: legato overlap or a gap, the same for every key the channel releases at this instant.
-    private long Stretch(int ch, long len, long now, SynthOptions o)
+    // Strokes in time order; within one, notes low to high.
+    private static List<List<int>> Strokes(HumanNote[] a)
     {
-        if (!o.HumanizeTiming || ch == 9 || Of(_program[ch]) is null) return 0;
-        var h = (uint)(now * 0x9E3779B1L) ^ (uint)(ch + 1) * 0x85EBCA6Bu;
-        h ^= h >> 15; h *= 0x2C1B3C6Du; h ^= h >> 12;
-        var u = (h & 0xFFFFFF) / (double)0x800000 - 1;
-        var ms = Math.Min(len * 1000.0 / rate * LenFrac, LenMaxMs) * Styles[(int)o.Feel].KMs * _ph[ch].Evidence.TimeFlat * u;
-        return (long)Math.Round(ms * rate / 1000);
+        var order = Enumerable.Range(0, a.Length).OrderBy(i => a[i].OnMs).ThenBy(i => a[i].Key).ToArray();
+        var map = new Dictionary<long, int>();
+        var list = new List<List<int>>();
+        foreach (var i in order)
+        {
+            if (!map.TryGetValue(a[i].Stroke, out var g)) { map[a[i].Stroke] = g = list.Count; list.Add([]); }
+            list[g].Add(i);
+        }
+        foreach (var st in list) st.Sort((x, y) => a[x].Key.CompareTo(a[y].Key));
+        return list;
     }
 
-    private void Insert(Event e)
+    private static Ctx[] Contexts(HumanNote[] a, List<List<int>> st, uint seed)
     {
-        if (_tail == QueueCap && _head > 0) { Array.Copy(_q, _head, _q, 0, _tail - _head); (_tail, _head) = (_tail - _head, 0); }
-        if (_tail == QueueCap) { _pending[e.Channel]--; return; }
-        var j = _tail++;
-        for (; j > _head && _q[j - 1].Due > e.Due; j--) _q[j] = _q[j - 1];
-        _q[j] = e;
+        var n = st.Count;
+        var c = new Ctx[n];
+        double On(int k) => a[st[k][0]].OnMs;
+        bool Has(Marks m, int k) => st[k].Exists(i => (a[i].Marks & m) != 0);
+        int Near(int k, int from) => k >= 0 && k < n && st[k].Count == 1 && Math.Abs(On(k) - On(from)) < 2 * a[st[from][0]].BeatMs ? a[st[k][0]].Key : -1;
+        var beatStart = 0;
+        for (var k = 0; k < n; k++)
+        {
+            ref readonly var x = ref a[st[k][0]];
+            ref var q = ref c[k];
+            (q.Count, q.Key, q.String) = (st[k].Count, x.Key, x.String);
+            q.IoiPrev = k > 0 ? x.OnMs - On(k - 1) : double.PositiveInfinity;
+            q.IoiNext = k + 1 < n ? On(k + 1) - x.OnMs : double.PositiveInfinity;
+            (q.PrevKey, q.NextKey, q.Prev2Key) = (Near(k - 1, k), Near(k + 1, k), Near(k - 2, k));
+            q.PrevString = k > 0 && st[k - 1].Count == 1 && q.IoiPrev < FastMs ? a[st[k - 1][0]].String : -1;
+            q.Single = q.Count == 1;
+            q.Fast = q.Single && q.IoiNext < FastMs;
+            q.Sub = q.IoiNext < x.BeatMs * 0.75 ? Snap(x.BeatMs / q.IoiNext) : 1;
+            q.Group = q.Sub % 3 == 0 ? 3 : q.Sub >= 4 ? 4 : 2;
+            (q.Legato, q.Chug, q.Soft) = (Has(Marks.Legato, k), Has(Marks.PalmMute, k), Has(Marks.Ghost | Marks.Dead, k));
+            var pos = (int)Math.Round(x.Beat * q.Sub);
+            q.Down = Has(Marks.Down, k) || !Has(Marks.Up, k) && (q.Sub < 2 || q.Chug && q.Sub == 2 || pos % 2 == 0);
+            // Motif: the beat's content (rhythm, intervals to its first note, chord size, palm mute) keys its accent memory.
+            if (k == 0 || x.Bar != a[st[k - 1][0]].Bar || (int)Math.Floor(x.Beat + 1e-6) != (int)Math.Floor(a[st[k - 1][0]].Beat + 1e-6)) beatStart = k;
+            q.MotifIndex = k - beatStart;
+        }
+        for (var k = 0; k < n;)
+        {
+            var e = k + 1;
+            while (e < n && c[e].MotifIndex > 0) e++;
+            var h = Hash.Of(seed, 0x51);
+            for (var j = k; j < e; j++)
+            {
+                ref readonly var x = ref a[st[j][0]];
+                h = Hash.Of(h, (int)Math.Round((x.Beat - Math.Floor(x.Beat + 1e-6)) * Grid), x.Key - a[st[k][0]].Key, c[j].Count * 2 + (c[j].Chug ? 1 : 0));
+            }
+            for (var j = k; j < e; j++) c[j].Motif = h;
+            k = e;
+        }
+        return c;
     }
 
-    /// <summary>The next event due at or before <paramref name="now"/>, in order.</summary>
-    public bool Take(long now, out Event e)
+    private static int Snap(double sub) => sub switch { < 1.5 => 1, < 2.5 => 2, < 3.5 => 3, < 5 => 4, < 7 => 6, _ => 8 };
+
+    // Energy (strokes per beat) and the evidence of flat input over the window around each stroke's bar.
+    private static void Flatness(HumanNote[] a, List<List<int>> st, Ctx[] c)
     {
-        e = default;
-        if (_tail == _head || _q[_head].Due > now) return false;
-        e = _q[_head++];
-        _pending[e.Channel]--;
-        if (_head == _tail) _head = _tail = 0;
-        return true;
+        var bars = new SortedDictionary<int, (int From, int To, int Beats)>();
+        for (var k = 0; k < st.Count; k++)
+        {
+            ref readonly var x = ref a[st[k][0]];
+            bars[x.Bar] = bars.TryGetValue(x.Bar, out var b) ? (b.From, k + 1, b.Beats) : (k, k + 1, Math.Max(1, x.BeatsPerBar));
+        }
+        var done = new Dictionary<int, (double Npb, double Vf, double Tf)>();
+        for (var k = 0; k < st.Count; k++)
+        {
+            var bar = a[st[k][0]].Bar;
+            if (!done.TryGetValue(bar, out var v))
+            {
+                int strokes = 0, beats = 0;
+                var w = new List<HumanNote>();
+                foreach (var (key, b) in bars)
+                {
+                    if (key < bar - Before || key > bar + After) continue;
+                    (strokes, beats) = (strokes + b.To - b.From, beats + b.Beats);
+                    for (var j = b.From; j < b.To; j++) foreach (var i in st[j]) w.Add(a[i]);
+                }
+                var (vf, tf) = Evidence.Flatness(w);
+                done[bar] = v = (strokes / (double)beats, vf, tf);
+            }
+            (c[k].Npb, c[k].Vf, c[k].Tf) = v;
+        }
     }
 
-    /// <summary>This note's voice variation (default when off, on the drum channel or for an untouched family).</summary>
-    public Nuance Vary(int channel, int key, SynthOptions o)
+    // Per key: every note keeps its note-off after its note-on (at least the shorter of its length and MinKeepMs) and ends before the
+    // same key starts again (the written gap kept, at most RetrigMs); onsets stay in order and never before 0.
+    private static void KeepOrder(HumanNote[] a, Span<HumanOut> o)
     {
-        if (!o.Humanize || channel == 9 || Of(_program[channel]) is not { } f) return default;
-        var vib = o.HumanizeDrift && !_expressive[channel] && f.VibCents > 0;
-        return o.HumanizeVoice || vib ? Nuance.Of(f, channel, key, _count[channel]++, o.HumanizeVoice, vib) : default;
+        foreach (var key in Enumerable.Range(0, a.Length).GroupBy(i => a[i].Key))
+        {
+            var seq = key.OrderBy(i => a[i].OnMs).ToArray();
+            for (var j = 0; j < seq.Length; j++)
+            {
+                int i = seq[j];
+                var on = Math.Max(0, j > 0 ? Math.Max(o[i].OnMs, o[seq[j - 1]].OnMs + 1) : o[i].OnMs);
+                var off = Math.Max(o[i].OffMs, on + Math.Min(MinKeepMs, a[i].OffMs - a[i].OnMs));
+                o[i] = o[i] with { OnMs = on, OffMs = off };
+                if (j == 0) continue;
+                var p = seq[j - 1];
+                var gap = Math.Clamp(a[i].OnMs - a[p].OffMs, 0, RetrigMs);
+                o[p] = o[p] with { OffMs = Math.Max(o[p].OnMs + 1, Math.Min(o[p].OffMs, on - gap)) };
+            }
+        }
     }
 }

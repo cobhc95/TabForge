@@ -125,8 +125,7 @@ public sealed class GmSynth : IPluginInstance
     public string Path => "General MIDI synth";
     public bool IsInstrument => true;
     public bool HasEditor => false;
-    /// <summary>The TabForge Synth humanizer's look-ahead while it is on, else 0.</summary>
-    public int LatencySamples => _tfs?.Latency ?? 0;
+    public int LatencySamples => 0;
 
     /// <summary>Offline render start: a clean synth (no voices, default channels, block phase 0), so a render never depends on what played before and repeats bit for bit. The song's own events set programs and controllers again.</summary>
     public void SetOfflineMode(bool offline)

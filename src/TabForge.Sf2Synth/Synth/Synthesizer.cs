@@ -6,8 +6,8 @@ namespace TabForge.Sf2Synth;
 
 // Owns: the public synth: MIDI in (MeltySynth-shaped: ProcessMidiMessage, Render, NoteOffAll, Reset), zone matching, voice
 //   allocation (free, else quietest released, else oldest), exclusive class, sustain, the optional ILayer, reverb/chorus, master
-//   volume, the live Options and the humanizer pre-stage (events it holds play inside Render at their frame; Latency).
-// Does not own: a voice's DSP (Voice), file parsing (Sf2), the layer's sound (e.g. Guitar/GuitarLayer), humanizing (Humanize/).
+//   volume, the live Options and each note-on's voice variation (Humanize/VoiceVariation). Events play when they arrive.
+// Does not own: a voice's DSP (Voice), file parsing (Sf2), the layer's sound (e.g. Guitar/GuitarLayer), the note pass (Humanize/Humanizer, run by the host).
 // Tests: Sf2SynthTests, GuitarLayerTests, HumanizerTests.
 public sealed class Synthesizer
 {
@@ -18,9 +18,9 @@ public sealed class Synthesizer
     private readonly float[] _l = new float[Chunk], _r = new float[Chunk], _rev = new float[Chunk], _cho = new float[Chunk];
     private readonly Reverb? _reverb;
     private readonly Chorus? _chorus;
-    private readonly Humanizer _hum;
+    private readonly VoiceVariation _vary = new();
     private volatile SynthOptions _opt = SynthOptions.Default;
-    private long _count, _frame;
+    private long _count;
 
     public int SampleRate { get; }
     public int MaximumPolyphony => _voices.Length;
@@ -30,16 +30,12 @@ public sealed class Synthesizer
     public int ActiveVoices => _voices.Count(v => v.Active);
     /// <summary>The optional stages; swap the whole set from any thread, during playback too.</summary>
     public SynthOptions Options { get => _opt; set => _opt = value ?? SynthOptions.Default; }
-    /// <summary>Frames the output runs behind the MIDI input: the humanizer's look-ahead while it is on, else 0. A host reports it as latency.</summary>
-    public int Latency => _hum.Latency(_opt);
-    public Humanizer Humanizer => _hum;
 
     public Synthesizer(SoundFont font, int sampleRate, int maxVoices = 64, bool effects = true)
     {
         (_font, SampleRate) = (font, sampleRate);
         _voices = Enumerable.Range(0, maxVoices).Select(_ => new Voice(sampleRate)).ToArray();
         if (effects) (_reverb, _chorus) = (new Reverb(sampleRate), new Chorus(sampleRate));
-        _hum = new Humanizer(sampleRate);
         Reset();
     }
 
@@ -50,29 +46,21 @@ public sealed class Synthesizer
         _reverb?.Reset();
         _chorus?.Reset();
         Layer?.Reset();
-        _hum.Reset();
-        _frame = 0;
+        _vary.Reset();
     }
 
-    /// <summary>Also drops note-ons the humanizer still holds (everything else it holds applies now), so nothing starts afterwards.</summary>
     public void NoteOffAll(bool immediate)
     {
-        _hum.Commit(_frame, _opt);
-        while (_hum.Take(long.MaxValue, out var e)) if (e.Command != 0x90 || e.Data2 == 0) Apply(e.Channel, e.Command, e.Data1, e.Data2);
         foreach (var v in _voices) if (v.Active) { if (immediate) v.Stop(); else v.Release(); }
     }
 
     public void ProcessMidiMessage(int channel, int command, int data1, int data2)
     {
         channel &= 15;
-        if (!_hum.Add(channel, command, data1, data2, _opt.Humanize)) Apply(channel, command, data1, data2);
-    }
-
-    private void Apply(int channel, int command, int data1, int data2)
-    {
         var c = _ch[channel];
         var o = _opt;
-        var nu = command == 0x90 && data2 > 0 ? _hum.Vary(channel, data1, o) : default;
+        _vary.Hear(channel, command, data1, data2);
+        var nu = command == 0x90 && data2 > 0 ? _vary.Draw(channel, data1, o) : default;
         if (command == 0x90 && data2 > 0 && o.GuitarLayer && Layer?.Owns(channel) == true) { Layer.Vary(channel, nu); Layer.ProcessMidi(channel, command, data1, data2); return; }
         Layer?.ProcessMidi(channel, command, data1, data2);
         switch (command)
@@ -133,20 +121,13 @@ public sealed class Synthesizer
         return quiet ?? old!;
     }
 
-    /// <summary>Overwrites both spans with the next frames (any length). No allocation. Delayed events start at their frame.</summary>
+    /// <summary>Overwrites both spans with the next frames (any length). No allocation.</summary>
     public void Render(Span<float> left, Span<float> right)
     {
-        for (var at = 0; at < left.Length;)
+        for (var at = 0; at < left.Length; at += Chunk)
         {
             var n = Math.Min(Chunk, left.Length - at);
-            if (_hum.Busy)
-            {
-                _hum.Commit(_frame, _opt);
-                while (_hum.Take(_frame, out var e)) Apply(e.Channel, e.Command, e.Data1, e.Data2);
-                n = (int)Math.Min(n, Math.Max(1, _hum.NextDue - _frame));
-            }
             RenderChunk(left.Slice(at, n), right.Slice(at, n));
-            (at, _frame) = (at + n, _frame + n);
         }
     }
 

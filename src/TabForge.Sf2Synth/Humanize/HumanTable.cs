@@ -1,12 +1,12 @@
 namespace TabForge.Sf2Synth.Humanize;
 
-// Owns: every value of the humanizer (docs/specs/HUMAN_FEEL_SPEC.md): evidence thresholds, pulse search, the level parts (dB),
-//   timing parts (ms), strum, note lengths and voice amounts, the three feel styles and the instrument families.
-// Does not own: the code reading them (Evidence, Phrase, Strum, Noise, Nuance, Humanizer).
+// Owns: every value of the humanizer (docs/specs/HUMAN_FEEL_SPEC.md): window, evidence thresholds, the structural level parts (dB),
+//   the timing parts (ms), the fast-run model, note lengths, strum, voice amounts, the three feel styles and the instrument families.
+// Does not own: the code reading them (Humanizer, Dynamics, Timing, Evidence, Strum, Noise, Nuance).
 // Tests: HumanizerTests.
 
-/// <summary>A feel preset: scale of level (KDb) and timing (KMs) parts, ghost rate, upstroke dB, strum ms, look-ahead ms, bias ms (+ = late).</summary>
-public sealed record Style(double KDb, double KMs, double Ghost, double UpDb, double StrumMs, double LookMs, double BiasMs);
+/// <summary>A feel preset: scale of level (KDb) and timing (KMs) parts, strum ms, bias ms (+ = late), share of smoothly odd notes.</summary>
+public sealed record Style(double KDb, double KMs, double StrumMs, double BiasMs, double OddRate);
 
 /// <summary>An instrument family: strum factor (0 = none), timing and level scale, own bias, finger alternation dB, voice amounts.</summary>
 public sealed record Family(double Strum, double TimeK, double LevelK, double BiasMs, double AltDb,
@@ -14,26 +14,26 @@ public sealed record Family(double Strum, double TimeK, double LevelK, double Bi
 
 public static class HumanTable
 {
-    // Evidence over 16 notes: velocity human = distinct AND (spread OR short runs); timing human = few intervals in exact ratios.
-    public const int Window = 16, MinNotes = 6;
-    public const double StdLo = 3, StdHi = 6, DistinctLo = 4, DistinctHi = 7, RunLo = 3, RunHi = 6;
-    public const double SameMs = 0.1, GridLo = 0.3, GridHi = 0.6, Follow = 0.5, Snap = 0.03;
+    // Window in bars around the bar being played (features never look further), and the motif grid (positions per beat).
+    public const int Before = 2, After = 4, Grid = 48;
 
-    // Pulse 0.12-1.5 s, preferred near 0.5 s; a bar = 16 slots of a quarter pulse; a phrase restarts after a gap.
-    public const double PulseMin = 0.12, PulseMax = 1.5, PulsePref = 0.5, UnitTol = 0.03, PhraseGap = 0.6, ShortRatio = 0.7;
-    public const int Slots = 16, PinkStages = 9;
+    // Evidence over the window: velocity human = distinct AND (spread OR short runs); timing human = few onsets on the written grid.
+    public const int MinNotes = 6, FullWindow = 16;
+    public const double StdLo = 3, StdHi = 6, DistinctLo = 4, DistinctHi = 7, RunLo = 3, RunHi = 6, GridMs = 0.5, GridLo = 0.3, GridHi = 0.6;
 
-    // Level (dB): metric accent, bar pattern (unit draw x PatDb, kept bar to bar with PatDbRho), arch, 1/f, white, speed, ceiling.
-    public const double DownDb = 2.5, BeatDb = 1, EighthDb = -1.5, SixteenthDb = -3;
-    public const double PatDb = 2.8, PatDbRho = 0.95, ArchDb = 1.75, ArchBars = 4, PinkDb = 1.6, PinkDbSlope = 1.2, WhiteDb = 1.1;
-    public const double FastIoi = 0.09, SlowIoi = 0.25, GapIoi = 0.4, FastDb = -2, GapDb = 1;
-    public const double KneeDb = 4, Ratio = 3, CapDb = 10, GhostDb = -12, ChugDb = 0.8, BiasDbPerMs = -0.125;
+    // Level (dB), all structural: meter, syncopation, length, melodic contour, phrase arch, energy, hand, run group, motif memory.
+    public const double DownDb = 2.5, MidDb = 1.5, BeatDb = 1, EighthDb = -1.5, SixteenthDb = -3, RunMeterK = 0.35, SyncDb = 1.5;
+    public const double LenDbPerOct = 0.6, PeakDb = 1.2, RiseDb = 1, ArchDb = 1.5, ArchBars = 4, EnergyDb = 0.8, EnergyRef = 2;
+    public const double CrossDb = -0.3, UpDb = -0.8, GroupDb = 1, MotifDb = 1, LegatoDb = 1, SoftK = 0.5, ChugK = 0.5;
+    // Residue: the only free part, slow and smooth (octaves of value noise over bars), bounded to +-ResidueDb.
+    public const double ResidueDb = 1, KneeDb = 4, Ratio = 3, CapDb = 10;
 
-    // Timing (ms): bar pattern, 1/f, anticorrelated jitter, tempo drift (fraction, bounded error), note-length change.
-    public const double PatMs = 8, PatMsRho = 0.9, AntiPat = 0.6, PinkMs = 5, PinkMsSlope = 1, JitMs = 6.5, AntiJit = 0.6;
-    public const double FastJitIoi = 0.12, FastJit = 0.7, ChugJit = 0.8;
-    public const double TempoStep = 0.0006, TempoMax = 0.01, TempoSec = 8, DriftMs = 20, DriftSec = 2;
-    public const double LenFrac = 0.12, LenMaxMs = 30, MinKeepMs = 40;
+    // Timing (ms): wander (slow, bars 1..8), micro (smooth, 1/8..1/2 bar), jitter, motif; fast runs below FastMs.
+    public const double WanderMs = 6, MicroMs = 4, JitMs = 3, MotifMs = 3, FastMs = 250, ShiftCapMs = 30, IoiShare = 0.3;
+    public const double GroupMs = -2, UpMs = 1.5, CrossMs = 1, CrossStepMs = 1.5, RushMs = 3, LegatoMs = 2, OddMs = 9;
+
+    // Note lengths: change of the length (share, capped), shortest kept, gap before the same key again.
+    public const double LenFrac = 0.12, LenMaxMs = 15, MinKeepMs = 20, RetrigMs = 9;
 
     // Strum: spread x dynamics (pp / mf / ff in dB re 127), up x, at most a share of the interval; gaps first..last, jitter, cap.
     public const double PpDb = -24, MfDb = -6, FfDb = 0, PpX = 1.4, FfX = 0.7, UpX = 0.8, IoiFrac = 0.3, StrumCapMs = 100;
@@ -46,9 +46,9 @@ public static class HumanTable
     /// <summary>Tight, Natural, Loose (index = <see cref="Feel"/>).</summary>
     public static readonly Style[] Styles =
     [
-        new(KDb: 0.62, KMs: 0.58, Ghost: 0.04, UpDb: -0.5, StrumMs: 14, LookMs: 20, BiasMs: -3),
-        new(KDb: 1, KMs: 1, Ghost: 0.08, UpDb: -1, StrumMs: 25, LookMs: 35, BiasMs: 0),
-        new(KDb: 1.65, KMs: 1.65, Ghost: 0.15, UpDb: -2, StrumMs: 45, LookMs: 50, BiasMs: 8),
+        new(KDb: 0.65, KMs: 0.6, StrumMs: 14, BiasMs: -2, OddRate: 0.005),
+        new(KDb: 1, KMs: 1, StrumMs: 25, BiasMs: 0, OddRate: 0.015),
+        new(KDb: 1.5, KMs: 1.5, StrumMs: 45, BiasMs: 8, OddRate: 0.02),
     ];
 
     public static readonly Family Guitar = new(Strum: 1, TimeK: 1, LevelK: 1, BiasMs: 0, AltDb: 0,
@@ -56,8 +56,6 @@ public static class HumanTable
     public static readonly Family Nylon = Guitar with { Strum = 1.5, LevelK = 1.2 };
     public static readonly Family Bass = Guitar with { Strum = 0, TimeK = 0.8, BiasMs = 3, AltDb = 0.5 };
     public static readonly Family Bowed = Guitar with { Strum = 0.25, Pick = 0, VibCents = 0 };
-
-    public static double MaxLookMs => Styles.Max(s => s.LookMs);
 
     /// <summary>The family of a GM program; null = left untouched.</summary>
     public static Family? Of(int program) => program switch
