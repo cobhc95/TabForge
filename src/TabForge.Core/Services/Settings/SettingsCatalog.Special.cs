@@ -84,12 +84,12 @@ public static partial class SettingsCatalog
         ActionEntry(ActionCancel, Home, HomeFooter, "Cancel", "Discards unapplied changes and closes settings.", "Discard unapplied changes and close settings.", "cancel close discard"),
         ActionEntry(ActionApply, Home, HomeFooter, "Apply", "Commits changes and keeps this window open.", "Commit changes and keep this window open.", "apply save keep"),
         ActionEntry(ActionOk, Home, HomeFooter, "OK", "Commits changes and closes settings.", "Commit changes and close settings.", "ok apply save close"),
-        ActionEntry(BankViewLicence, AudioVst, "Sound banks", "View licence", "Shows the licence of a Sound bank.", "Open Settings > Audio & Plug-ins > Sound banks", "sound bank soundfont sf2 licence license view"),
-        ActionEntry(BankDownload, AudioVst, "Sound banks", "Download", "Downloads a Sound bank and checks it against a stored checksum.", "Open Settings > Audio & Plug-ins > Sound banks", "sound bank soundfont sf2 download install get"),
-        ActionEntry(BankDownloadAgain, AudioVst, "Sound banks", "Download again", "Downloads a Sound bank again and checks it against a stored checksum.", "Open Settings > Audio & Plug-ins > Sound banks", "sound bank soundfont sf2 download again install"),
-        ActionEntry(BankDelete, AudioVst, "Sound banks", "Delete", "Deletes a downloaded Sound bank after asking.", "Open Settings > Audio & Plug-ins > Sound banks", "sound bank soundfont sf2 delete remove erase uninstall"),
-        ActionEntry(BankUse, AudioVst, "Sound banks", "Use", "Plays this Sound bank with the built-in synth.", "Open Settings > Audio & Plug-ins > Sound banks", "sound bank soundfont sf2 use play select"),
-        ActionEntry(BankChooseFile, AudioVst, "Sound banks", "Choose file…", "Plays your own .sf2 file in place; TabForge never copies or deletes it.", "Open Settings > Audio & Plug-ins > Sound banks", "sound bank soundfont sf2 choose file browse open own"),
+        ActionEntry(BankViewLicence, AudioVst, "Playback engine", "View licence", "Shows the licence of a Sound bank.", "Open Settings > Audio & Plug-ins > Playback engine", "sound bank soundfont sf2 licence license view"),
+        ActionEntry(BankDownload, AudioVst, "Playback engine", "Download", "Downloads a Sound bank and checks it against a stored checksum.", "Open Settings > Audio & Plug-ins > Playback engine", "sound bank soundfont sf2 download install get"),
+        ActionEntry(BankDownloadAgain, AudioVst, "Playback engine", "Download again", "Downloads a Sound bank again and checks it against a stored checksum.", "Open Settings > Audio & Plug-ins > Playback engine", "sound bank soundfont sf2 download again install"),
+        ActionEntry(BankDelete, AudioVst, "Playback engine", "Delete", "Deletes a downloaded Sound bank after asking.", "Open Settings > Audio & Plug-ins > Playback engine", "sound bank soundfont sf2 delete remove erase uninstall"),
+        ActionEntry(BankUse, AudioVst, "Playback engine", "Use", "Plays this Sound bank with the built-in synth.", "Open Settings > Audio & Plug-ins > Playback engine", "sound bank soundfont sf2 use play select"),
+        ActionEntry(BankChooseFile, AudioVst, "Playback engine", "Choose file…", "Plays your own .sf2 file in place; TabForge never copies or deletes it.", "Open Settings > Audio & Plug-ins > Playback engine", "sound bank soundfont sf2 choose file browse open own"),
     };
 
     private static SettingsEntry LinkEntry(string id, string section, string label, string target, string keywords = "") =>

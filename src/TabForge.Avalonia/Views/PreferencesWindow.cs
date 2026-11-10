@@ -238,7 +238,6 @@ public sealed partial class PreferencesWindow : Window, IPreferencesChangesHost
             foreach (var card in PreferencesPagePresenter.Cards(shown, searching: false))
             {
                 _cards.Children.Add(RowCard(card, searching: false));
-                if (_page == SettingsCatalog.AudioVst && card.Group == "Playback engine") _cards.Children.Add(SoundBanksCard());
             }
         }
         RefreshEnabled();

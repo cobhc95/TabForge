@@ -101,8 +101,8 @@ public sealed class AvaloniaEngineEvents : IDisposable
     {
         if (SoundFontStore.ChosenButMissing(_host.Plugins))
             _host.ShowStatus(OperatingSystem.IsWindows()
-                ? "The chosen Sound bank is not downloaded yet, so Windows GM plays. Settings > Audio & Plug-ins > Sound banks."
-                : "The chosen Sound bank is not downloaded yet, so there is no General MIDI sound. Settings > Audio & Plug-ins > Sound banks.");
+                ? "The chosen Sound bank is not downloaded yet, so Windows GM plays. Settings > Audio & Plug-ins > Playback engine."
+                : "The chosen Sound bank is not downloaded yet, so there is no General MIDI sound. Settings > Audio & Plug-ins > Playback engine.");
     }
 
     /// <summary>The audio route settings changed: when one of them differs, the song shown is synced to the engine at once.

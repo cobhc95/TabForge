@@ -36,6 +36,9 @@ public sealed partial class PreferencesWindow
             // The Theme combo's card is the Interface group in the catalogue, so the reset follows the combo row itself.
             if (!searching && _page == SettingsCatalog.Appearance && row.Key == "appearance.thememode")
                 stack.Children.Add(PreferencesSpecialPages.Part(SettingsCatalog.Special(SettingsCatalog.ActionResetTheme), SpecialActions())!);
+            // Playback engine: the engine list (banks + own file) lives in the same card as the Sound engine row.
+            if (!searching && _page == SettingsCatalog.AudioVst && card.Group == "Playback engine" && row.Key == "vst.soundengine")
+                stack.Children.Add(SoundBanksList());
         }
         if (card.More.Count > 0) stack.Children.Add(MoreOptions(card.Category(), card.Group, card.More, searching));
         return PreferencesSpecialPages.Card(card.Title, stack);

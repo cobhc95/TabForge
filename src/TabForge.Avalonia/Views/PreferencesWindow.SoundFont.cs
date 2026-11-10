@@ -32,13 +32,33 @@ public sealed partial class PreferencesWindow
     /// <summary>The downloader a bank's button uses (a test swaps in one with a fake HTTP handler).</summary>
     internal Func<SoundBank, SoundFontDownloader> SoundBankDownloaderFactory { get; set; } = bank => new SoundFontDownloader(bank);
 
-    /// <summary>The card the Sound banks list lives in, added below the Playback engine card.</summary>
-    private Control SoundBanksCard()
+    private Control SoundBanksList()
     {
         var list = new StackPanel { Spacing = 10 };
+        list.Children.Add(EngineRow(SoundEngines.WindowsGm, "Microsoft GS Wavetable bank — built-in, no download"));
         foreach (var bank in SoundBankCatalog.All) list.Children.Add(BankRow(bank));
         list.Children.Add(OwnRow());
-        return PreferencesSpecialPages.Card("Sound banks", list);
+        list.Children.Add(EngineRow(SoundEngines.None, "Built-in synth stays silent; use when every track has its own instrument"));
+        return list;
+    }
+
+    /// <summary>One built-in/off engine: its name, In use badge and Use button.</summary>
+    private Control EngineRow(string engine, string detail)
+    {
+        var inUse = SoundEngines.Resolve(Working.Plugins.SoundEngine) == engine;
+        var text = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
+        var title = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        title.Children.Add(new TextBlock { Text = engine, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center });
+        title.Children.Add(Badge(inUse ? "In use" : (engine == SoundEngines.None ? "Silence" : "Built-in"), inUse));
+        text.Children.Add(title);
+        text.Children.Add(ToolWindowParts.Small(detail));
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center };
+        if (!inUse) buttons.Children.Add(BankButton("Use", () => UseBank(engine)));
+        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
+        grid.Children.Add(text);
+        Grid.SetColumn(buttons, 1);
+        grid.Children.Add(buttons);
+        return grid;
     }
 
     /// <summary>One bank: its details on the left and its buttons on the right.</summary>
