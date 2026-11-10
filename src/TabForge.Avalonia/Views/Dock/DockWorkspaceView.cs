@@ -15,7 +15,7 @@ using TabForge.Presenters;
 namespace TabForge.Avalonia.Views.Docking;
 
 // Owns: turning a DockNodeState tree into controls (splits, tab groups, the editor node), the host lookup by host id and by point,
-//   and the drop preview.
+//   the drop preview, and the left and right rails (LeftRail / RightRail: full-height columns beside the panes above the timeline row, filled by the left strip).
 // Does not own: moving panels (DockWorkspaceController), floating windows, saving or restoring layouts, the pane content (the factory).
 // Tests: TabForge.Avalonia.Tests.DockWorkspaceViewTests.
 /// <summary>Renders a dock layout. The state is shown as given and edited in place by splitter drags and tab clicks.</summary>
@@ -40,6 +40,9 @@ public sealed class DockWorkspaceView : Grid
     private readonly Border _preview;
     private readonly Canvas _overlay = new() { Name = "DockOverlay", IsHitTestVisible = false };
     private readonly Border _tree = new() { Name = "DockTree" };
+    private DockPanel? _leftRail, _rightRail;
+    private DockNodeState? _shownRoot;
+    private bool _railsPlaced;
 
     /// <param name="contentOf">Makes the control of a pane id; called once for each pane per <see cref="Show"/>.</param>
     public DockWorkspaceView(Func<string, Control> contentOf)
@@ -53,6 +56,16 @@ public sealed class DockWorkspaceView : Grid
         Children.Add(_tree);
         Children.Add(_overlay);
     }
+
+    /// <summary>
+    /// The rail along the left edge of the panes above the timeline (the whole workspace when the timeline is not alone along the bottom): it runs
+    /// from the top of the workspace to the top of the timeline row, so the fretboard, the score and the side panels sit to its right.
+    /// Created on first use; only the main workspace asks for one.
+    /// </summary>
+    public DockPanel LeftRail => _leftRail ??= new DockPanel { LastChildFill = false };
+
+    /// <summary>The same along the right edge, right of the side panels.</summary>
+    public DockPanel RightRail => _rightRail ??= new DockPanel { LastChildFill = false };
 
     /// <summary>The rectangle the drop preview covers, in this view's coordinates; null while hidden.</summary>
     public UiRect? DropPreviewRect => _preview.IsVisible ? new UiRect(Canvas.GetLeft(_preview), Canvas.GetTop(_preview), _preview.Width, _preview.Height) : null;
@@ -107,7 +120,35 @@ public sealed class DockWorkspaceView : Grid
         foreach (var subscription in _limitSubscriptions) subscription.Dispose();
         _limitSubscriptions.Clear();
         HideDropPreview();
-        _tree.Child = state.Root is null ? null : Build(state.Root);
+        // The rails are rebuilt into the new tree: they leave the old one first (a control has one parent).
+        foreach (var rail in new[] { _leftRail, _rightRail }) if (rail?.Parent is Panel old) old.Children.Remove(rail);
+        _shownRoot = state.Root;
+        _railsPlaced = false;
+        var built = state.Root is null ? null : Build(state.Root);
+        _tree.Child = built is not null && !_railsPlaced && (_leftRail is not null || _rightRail is not null) ? Railed(built) : built;
+    }
+
+    /// <summary>The content between the rails: the rails take the left and right edges and the content fills the rest.</summary>
+    private Control Railed(Control content)
+    {
+        var row = new DockPanel { LastChildFill = true };
+        if (_leftRail is not null) { DockPanel.SetDock(_leftRail, Dock.Left); row.Children.Add(_leftRail); }
+        if (_rightRail is not null) { DockPanel.SetDock(_rightRail, Dock.Right); row.Children.Add(_rightRail); }
+        row.Children.Add(content);
+        _railsPlaced = true;
+        return row;
+    }
+
+    /// <summary>True for the root split that stacks the panes over a row holding the timeline alone: the rails run beside its upper half only.</summary>
+    private bool RailsBesideUpperHalf(DockNodeState node) =>
+        ReferenceEquals(node, _shownRoot) && node.Orientation == "Vertical" && (_leftRail is not null || _rightRail is not null)
+        && DockLayoutTree.EnumeratePanels(node.Second).SequenceEqual(new[] { TimelinePanelId });
+
+    /// <summary>The half a tab group fills in its split, and that split: the group itself, or the rails' row around it.</summary>
+    private static (Control Half, DockSplitPanel? Split) HalfOf(Control host)
+    {
+        var half = host.GetVisualParent() is DockPanel row && row.Children.Count > 0 && ReferenceEquals(row.Children[^1], host) ? row : host;
+        return (half, half.GetVisualParent() as DockSplitPanel);
     }
 
     private Control Build(DockNodeState node)
@@ -118,7 +159,7 @@ public sealed class DockWorkspaceView : Grid
             case "split":
                 var first = Build(node.First ?? throw Invalid(node));
                 var second = Build(node.Second ?? throw Invalid(node));
-                control = new DockSplitPanel(node, first, second, () => Edited?.Invoke(), _lockedHeights.GetValueOrDefault(first, double.NaN), _lockedHeights.GetValueOrDefault(second, double.NaN),
+                control = new DockSplitPanel(node, RailsBesideUpperHalf(node) ? Railed(first) : first, second, () => Edited?.Invoke(), _lockedHeights.GetValueOrDefault(first, double.NaN), _lockedHeights.GetValueOrDefault(second, double.NaN),
                     () => MinimumHeightOf(first) + ScoreSideMinimum(node.First), () => MinimumHeightOf(second) + ScoreSideMinimum(node.Second), () => MaximumHeightOf(first), () => MaximumHeightOf(second));
                 break;
             case "editor":
@@ -157,7 +198,8 @@ public sealed class DockWorkspaceView : Grid
         {
             host.InvalidateMeasure();
             // The split above the host lays out again too: a changed limit changes the split's own shares, not only the host's size.
-            if (host.GetVisualParent() is DockSplitPanel split) split.InvalidateMeasure();        }
+            HalfOf(host).Split?.InvalidateMeasure();
+        }
         _limitSubscriptions.Add(pane.GetObservable(Layoutable.MinHeightProperty).Subscribe(new AnonymousObserver<double>(Changed)));
         _limitSubscriptions.Add(pane.GetObservable(Layoutable.MaxHeightProperty).Subscribe(new AnonymousObserver<double>(Changed)));
     }
@@ -171,7 +213,8 @@ public sealed class DockWorkspaceView : Grid
             var lockedHeight = locked ? LockedHeightOf(surface.Node, content) : null;
             if (lockedHeight is { } height) _lockedHeights[surface] = height;
             else _lockedHeights.Remove(surface);
-            if (surface.Parent is DockSplitPanel split) split.SetLockedHeight(surface, lockedHeight ?? double.NaN);
+            var (half, split) = HalfOf(surface);
+            split?.SetLockedHeight(half, lockedHeight ?? double.NaN);
             return;
         }
     }

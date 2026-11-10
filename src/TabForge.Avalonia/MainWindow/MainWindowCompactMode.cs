@@ -94,9 +94,11 @@ public sealed class MainWindowCompactMode
         _dock.HoldPanelHeight(InstrumentPanelId, null);
         _header.Leave(HeaderMode.Compact);
         _menu.Restore();
+        var hidden = _header.SidePanelsHiddenByModes.ToList();
         _header.SidePanelsHiddenByModes.Clear();
         // The panels, their places and sizes come back exactly as entered, not rebuilt from the defaults.
         if (!_header.AnyOn) _dock.ApplyLayout(layoutBeforeFirstMode);
+        else foreach (var id in hidden) _dock.SetPanelVisible(id, true);   // the Band view stays on and does not hold them hidden
     }
 
     /// <summary>The song the strip shows: the shown arrangement's.</summary>

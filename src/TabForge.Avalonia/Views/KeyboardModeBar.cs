@@ -88,8 +88,25 @@ public sealed class KeyboardModeBar
     public double Speed
     {
         get => _speed.SelectedItem is ComboBoxItem { Tag: double s } ? s : 1.0;
-        set { _syncing = true; _speed.SelectedIndex = Array.FindIndex(SpeedPresets, p => Math.Abs(p - value) < 0.001); _syncing = false; }
+        set
+        {
+            _syncing = true;
+            // A speed between the presets (set in the View and tempo bar's fine-tune) shows as its own last row, so the box never reads blank and
+            // never reports a different speed back.
+            if (_custom is not null) { _speed.Items.Remove(_custom); _custom = null; }
+            var at = Array.FindIndex(SpeedPresets, p => Math.Abs(p - value) < 0.001);
+            if (at < 0)
+            {
+                _custom = new ComboBoxItem { Content = Percent(value), Tag = value };
+                _speed.Items.Add(_custom);
+                _speed.SelectedItem = _custom;
+            }
+            else _speed.SelectedIndex = at;
+            _syncing = false;
+        }
     }
+
+    private ComboBoxItem? _custom;
 
     /// <summary>The index of the chosen track, or -1 when none is chosen.</summary>
     public int TrackIndex => _track.SelectedIndex;

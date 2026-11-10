@@ -29,6 +29,85 @@ public sealed class AppearanceSettings
         if (!IsOverridden(colour)) OverriddenColours = string.Join(',', OverriddenColours.Split(',', StringSplitOptions.RemoveEmptyEntries).Append(colour));
         return value;
     }
+
+    /// <summary>Runs a reset <paramref name="write"/> through the rows' setters and leaves every colour it wrote unmarked: a reset hands the colour back to the theme preset,
+    /// so the next Dark/Light switch repaints it (the setters mark what they write as the user's own).</summary>
+    public void WriteUnowned(Action write)
+    {
+        var before = OverriddenColours;
+        OverriddenColours = "";
+        write();
+        var written = OverriddenColours.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        OverriddenColours = string.Join(',', before.Split(',', StringSplitOptions.RemoveEmptyEntries).Except(written));
+    }
+
+    private void Disown(string colour) =>
+        OverriddenColours = string.Join(',', OverriddenColours.Split(',', StringSplitOptions.RemoveEmptyEntries).Where(c => c != colour));
+
+    /// <summary>1 once <see cref="DropPresetOverrides"/> has repaired the file (see SettingsMigration); new files start repaired.</summary>
+    public int OverrideRepairVersion { get; set; } = 1;
+
+    /// <summary>Repairs files where a reset marked every colour as the user's own at a preset value (light mode then kept the dark colours):
+    /// a marked colour that equals the Dark or the Light preset's value loses its mark and takes the current theme's preset value.
+    /// Only for the Dark and Light themes; a colour that differs from both presets stays the user's. Run once per file.</summary>
+    public void DropPresetOverrides()
+    {
+        var light = string.Equals(ThemeMode, "Light", StringComparison.OrdinalIgnoreCase);
+        if (!light && !string.Equals(ThemeMode, "Dark", StringComparison.OrdinalIgnoreCase)) return;
+        foreach (var field in ThemeColours.PresetFields)
+        {
+            if (!IsOverridden(field)) continue;
+            var value = ColourField(field);
+            if (!ThemeColours.IsPresetValue(field, value, false) && !ThemeColours.IsPresetValue(field, value, true)) continue;
+            Disown(field);
+            if (ThemeColours.PresetValue(field, light) is not { } preset || ThemeColours.IsPresetValue(field, value, light)) continue;
+            // The light theme lifts a too-dark accent, as switching to Light does (ThemeColours.SwitchTheme).
+            if (light && field == nameof(Accent) && TabForge.Models.ColourHex.TryParse(preset, out var c))
+            {
+                var lifted = ThemeColours.LightenForLightTheme(new TabForge.Platform.UiColor(0xFF, c.R, c.G, c.B));
+                preset = $"#{lifted.R:X2}{lifted.G:X2}{lifted.B:X2}";
+            }
+            SetColourField(field, preset);
+        }
+    }
+
+    /// <summary>The value of the appearance field <paramref name="field"/> (a name in <see cref="ThemeColours.PresetFields"/>); null for any other name.</summary>
+    public string? ColourField(string field) => field switch
+    {
+        nameof(Background) => Background, nameof(Panel) => Panel, nameof(TitleBarColour) => TitleBarColour, nameof(ActiveTabColour) => ActiveTabColour,
+        nameof(TabHoverColour) => TabHoverColour, nameof(Text) => Text, nameof(Muted) => Muted, nameof(Accent) => Accent, nameof(SelectionColour) => SelectionColour,
+        nameof(HoverColour) => HoverColour, nameof(PlayheadColour) => PlayheadColour, nameof(CursorColour) => CursorColour, nameof(ScorePaper) => ScorePaper,
+        nameof(LightScorePaperColour) => LightScorePaperColour, nameof(LightScoreInkColour) => LightScoreInkColour, nameof(LightScoreLinesColour) => LightScoreLinesColour,
+        nameof(DarkScorePaperColour) => DarkScorePaperColour, nameof(DarkScoreInkColour) => DarkScoreInkColour, nameof(DarkScoreLinesColour) => DarkScoreLinesColour,
+        _ => null,
+    };
+
+    /// <summary>Writes the appearance field <paramref name="field"/> without marking it (the preset path); an unknown name is ignored.</summary>
+    public void SetColourField(string field, string value)
+    {
+        switch (field)
+        {
+            case nameof(Background): Background = value; break;
+            case nameof(Panel): Panel = value; break;
+            case nameof(TitleBarColour): TitleBarColour = value; break;
+            case nameof(ActiveTabColour): ActiveTabColour = value; break;
+            case nameof(TabHoverColour): TabHoverColour = value; break;
+            case nameof(Text): Text = value; break;
+            case nameof(Muted): Muted = value; break;
+            case nameof(Accent): Accent = value; break;
+            case nameof(SelectionColour): SelectionColour = value; break;
+            case nameof(HoverColour): HoverColour = value; break;
+            case nameof(PlayheadColour): PlayheadColour = value; break;
+            case nameof(CursorColour): CursorColour = value; break;
+            case nameof(ScorePaper): ScorePaper = value; break;
+            case nameof(LightScorePaperColour): LightScorePaperColour = value; break;
+            case nameof(LightScoreInkColour): LightScoreInkColour = value; break;
+            case nameof(LightScoreLinesColour): LightScoreLinesColour = value; break;
+            case nameof(DarkScorePaperColour): DarkScorePaperColour = value; break;
+            case nameof(DarkScoreInkColour): DarkScoreInkColour = value; break;
+            case nameof(DarkScoreLinesColour): DarkScoreLinesColour = value; break;
+        }
+    }
     public double UiScale { get; set; } = 1.0;
     /// <summary>True once the user chose the interface size; while false the size follows the monitor (UiScaleRecommendation) and nothing asks about it.</summary>
     public bool UiScaleUserOverridden { get; set; }

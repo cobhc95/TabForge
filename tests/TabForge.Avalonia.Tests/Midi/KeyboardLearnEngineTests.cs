@@ -146,4 +146,20 @@ public class KeyboardLearnEngineTests
 
         Assert.True(engine.SkipWait() == false); // nothing awaited while stopped
     }
+
+    [AvaloniaFact]
+    public void ASpeedBetweenThePresetsIsKeptByTheSpeedBoxAndReadBackUnchanged()
+    {
+        var bar = new KeyboardModeBar(new WrapPanel());
+        var changes = 0;
+        bar.Changed += () => changes++;
+
+        bar.Speed = 0.95;   // set in the View and tempo bar's fine-tune
+        Assert.Equal(0.95, bar.Speed, 6);
+        bar.Speed = 0.75;
+        Assert.Equal(0.75, bar.Speed, 6);
+        bar.Speed = 1.0;
+        Assert.Equal(1.0, bar.Speed, 6);
+        Assert.Equal(0, changes);   // setting it from outside never reads as the user's choice (no feedback loop)
+    }
 }

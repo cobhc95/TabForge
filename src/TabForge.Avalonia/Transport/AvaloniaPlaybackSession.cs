@@ -277,8 +277,13 @@ public sealed class AvaloniaPlaybackSession : IDisposable
         ThrowIfDisposed();
         // The restart plays on from the pass playing now: that second is the new timeline's pass hint (a loop enters by bar and cell instead).
         if (_transport.IsPlaying) _performedSeekSec = _transport.Loop ? null : EngineSongSec();
+        var before = _transport.Speed;
         _transport.SetSpeed(_project(), speed);
+        if (!_transport.Speed.Equals(before)) SpeedChanged?.Invoke();
     }
+
+    /// <summary>Raised on the UI thread when the playback speed changed, whoever set it (a speed control, a hotkey, the saved start speed): every speed control follows it.</summary>
+    public event Action? SpeedChanged;
 
     /// <summary>
     /// Writes the click volumes, click notes, subdivision and count-in bars into the engine's options, and the loop behaviour (number of loops,

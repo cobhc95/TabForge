@@ -149,7 +149,9 @@ public sealed class MainWindowBandView
                 // The current panels as they are (the first-start layout has no name), not the named layout rebuilt.
                 _layoutBeforeBand = IsBandLayoutChosen ? null : (LastLayout, _dock.State);
                 layoutBeforeBand = _dock.SnapshotLayout();
+                var sidePanels = ShownSidePanels();
                 SwitchTo(BandLayoutName);
+                KeepSidePanels(sidePanels);
                 _header.HideSidePanelsHeldByModes();
             }
         }
@@ -184,6 +186,7 @@ public sealed class MainWindowBandView
     private void LeaveBandLayoutBatched()
     {
         _chrome.Leave();
+        var sidePanels = ShownSidePanels();
         if (_layoutBeforeBand is { } before)
         {
             _layoutBeforeBand = null;
@@ -199,8 +202,23 @@ public sealed class MainWindowBandView
             _dock.ApplyLayout(DockLayoutCatalog.InstrumentTopLayout());
             _settings?.SaveSettings();
         }
+        KeepSidePanels(sidePanels);
         _header.HideSidePanelsHeldByModes();
         if (_header.AnyOn) _header.RefitTimeline();
+    }
+
+    /// <summary>The side panels showing now: the Band view neither shows nor hides them, so the layout it applies keeps exactly these.</summary>
+    private List<string> ShownSidePanels() => DockPaneTable.SideIds.Where(_dock.IsPanelVisible).ToList();
+
+    /// <summary>After a layout was applied, shows exactly the side panels in <paramref name="keep"/> and hides the rest.</summary>
+    private void KeepSidePanels(List<string> keep)
+    {
+        if (keep.Count > 0 && ShownSidePanels().Count == 0) _dock.ShowSidePanels();
+        foreach (var id in DockPaneTable.SideIds)
+        {
+            var want = keep.Contains(id);
+            if (_dock.IsPanelVisible(id) != want) _dock.SetPanelVisible(id, want);
+        }
     }
 
     // The Band view's own follow (when it does not follow like the score), reused every frame so a frame allocates nothing; UI thread only.

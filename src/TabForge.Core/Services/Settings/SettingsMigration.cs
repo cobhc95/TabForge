@@ -46,6 +46,9 @@ public static class SettingsMigration
         MigrateLegacySections(root, settings);
         MigrateVersionedDefaults(root, settings);
         ClampCatalogValues(root, settings);
+        // Resets before 0.9.3 marked every preset colour as the user's, so light mode kept the dark colours: repaired once per file.
+        if (!Has(Find(root, "Appearance"), nameof(AppearanceSettings.OverrideRepairVersion))) settings.Appearance.DropPresetOverrides();
+        settings.Appearance.OverrideRepairVersion = 1;
         return SettingsValidator.Normalize(settings);
     }
 
@@ -257,7 +260,7 @@ public static class SettingsMigration
             else if (descriptor.Kind == SettingKind.Colour && !SettingsColor.IsValid(descriptor.Get()?.ToString()) &&
                      defaults.TryGetValue(descriptor.Key, out var defaultColour))
             {
-                descriptor.Set(defaultColour.Get());
+                settings.Appearance.WriteUnowned(() => descriptor.Set(defaultColour.Get()));   // a default, not the user's pick
             }
         }
     }

@@ -156,7 +156,7 @@ internal sealed class CaptureSession
     {
         // The app's own path (palette, variant, application variant), so a capture matches the theme the app shows; the scale root is a throwaway so the window keeps its size.
         var appearance = JsonSerializer.Deserialize<AppearanceSettings>(JsonSerializer.Serialize(WindowUiScale.CurrentAppearance))!;
-        appearance.ThemeMode = light ? "Light" : "Dark";
+        TabForge.Platform.Theme.ThemeColours.SwitchTheme(appearance, light ? "Light" : "Dark");   // as the Theme row does: the preset colours come with the mode
         ThemeSettingsBinding.ApplyWindow(Window, new LayoutTransformControl(), appearance);
         Theme = light ? "light" : "dark";
     }

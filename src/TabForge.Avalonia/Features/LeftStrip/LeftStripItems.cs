@@ -73,8 +73,14 @@ public static class LeftStripItems
         new(LeftStripFeature.ToggleComposerId, "Composer", "App", Composer, IsToggle: true),
     };
 
-    /// <summary>The strip as it comes: Open, Save, Save as, Render, a separator, Composer.</summary>
-    public static readonly IReadOnlyList<string> Default = new[] { "File.Open", "File.Save", "File.SaveAs", "File.Render", SeparatorId, LeftStripFeature.ToggleComposerId };
+    /// <summary>The strip as it comes: New, Open, Save, Save as, Render | Undo, Redo | Play | Composer.</summary>
+    public static readonly IReadOnlyList<string> Default = new[]
+    {
+        "File.New", "File.Open", "File.Save", "File.SaveAs", "File.Render", SeparatorId,
+        "Edit.Undo", "Edit.Redo", SeparatorId,
+        "Transport.PlayPause", SeparatorId,
+        LeftStripFeature.ToggleComposerId,
+    };
 
     /// <summary>The catalog item for <paramref name="id"/>, or null (a separator, or an id no longer in the catalog).</summary>
     public static Item? Find(string id) => All.FirstOrDefault(i => i.Id == id);

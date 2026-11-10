@@ -43,6 +43,9 @@ public sealed class AvaloniaPlaybackSessions : IDisposable
 
     /// <summary>Raised when any session's play, pause or loop state changes.</summary>
     public event Action? AnyStateChanged;
+
+    /// <summary>Raised when a document's playback speed changed (any session): the speed controls of the View and tempo bar and the Keyboard bar follow it.</summary>
+    public event Action<SongDocument>? SpeedChanged;
     /// <summary>The audio engine client Transport Record records through; null without an engine host.</summary>
     public TabForge.Audio.AudioEngineClient? Engine { get; init; }
 
@@ -122,6 +125,7 @@ public sealed class AvaloniaPlaybackSessions : IDisposable
                 if (Engine is { } engine) engine.SetPosition(playing, sec, Stopwatch.GetTimestamp(), engine.OwnerIdOf(document), speed);
             };
             session.StateChanged += OnSessionStateChanged;
+            session.SpeedChanged += () => SpeedChanged?.Invoke(document);
             _sessions[document] = session;
             _editWatches[document] = new PlaybackEditWatch(_ui, document, session);
             SyncEngine(document, _routing.Plugins);

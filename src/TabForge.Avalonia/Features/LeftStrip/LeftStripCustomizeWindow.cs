@@ -8,6 +8,7 @@ using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.VisualTree;
+using TabForge.Avalonia.Views;
 using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Features.LeftStrip;
 using TabForge.Platform.Theme;
@@ -15,13 +16,14 @@ using TabForge.Platform.Theme;
 namespace TabForge.Avalonia.Features.LeftStrip;
 
 // Owns: the Customize strip window: the Available icons list with its search box, the add / remove / move up / move down buttons, the On the strip
-//   list (reordered by the buttons or by dragging), Position (Left vertical / Beside menus / Right vertical), Size (Normal / Large), Tooltips and
+//   list (reordered by the buttons or by dragging, LeftStripListDrag), each row with its glyph, Position (Left vertical / Beside menus / Right vertical), Size (Normal / Large), Tooltips and
 //   Show labels, and the footer (Reset to default, Cancel, Apply). Apply writes the choices into the saved state and rebuilds the live strip.
-// Does not own: the catalog (LeftStripItems), the strip itself (LeftStripFeature), saving the settings file (LeftStripFeature through MainWindowSettings).
+// Does not own: the drag behaviour (LeftStripListDrag), the catalog (LeftStripItems), the strip itself (LeftStripFeature), saving the settings file (LeftStripFeature through MainWindowSettings).
 // Tests: TabForge.Avalonia.Tests.LeftStripSettingsTests.
 public sealed class LeftStripCustomizeWindow : Window
 {
-    private const double WindowWidth = 720, WindowHeight = 480, ListWidth = 220, Gap = 6, ColumnGap = 12;
+    private const double WindowWidth = 720, WindowHeight = 480, ListWidth = 220, Gap = 6, ColumnGap = 12, GlyphSize = 16;
+    private const string SeparatorGlyph = "M3,12 H21";
 
     private readonly LeftStripSettings _state;
     private readonly Action _applied;
@@ -49,13 +51,12 @@ public sealed class LeftStripCustomizeWindow : Window
         this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
         FontSize = ChromeMetrics.TextDialog;
 
-        _available.ItemTemplate = new global::Avalonia.Controls.Templates.FuncDataTemplate<string>((id, _) => new TextBlock { Text = Label(id) });
+        _available.ItemTemplate = new global::Avalonia.Controls.Templates.FuncDataTemplate<string>((id, _) => Row(id));
         _strip.ItemTemplate = _available.ItemTemplate;
         _strip.ItemsSource = _on;
         _search.TextChanged += (_, _) => FillAvailable();
         _available.DoubleTapped += (_, _) => Add();
         _strip.DoubleTapped += (_, _) => Remove();
-        AttachDrag();
 
         var add = Action("Add >", Add);
         var remove = Action("< Remove", Remove);
@@ -88,11 +89,30 @@ public sealed class LeftStripCustomizeWindow : Window
         DockPanel.SetDock(footer, Dock.Bottom);
         dock.Children.Add(footer);
         dock.Children.Add(body);
-        Content = dock;
+        // Drag and drop: the overlay above the content holds the ghost row and the insertion line.
+        var root = new Grid();
+        var drag = new LeftStripListDrag(root, _strip, _available, _on, Row, at =>
+        {
+            FillAvailable();
+            _strip.SelectedIndex = at;
+        });
+        root.Children.Add(dock);
+        root.Children.Add(drag.Overlay);
+        Content = root;
         Load(state);
     }
 
     private static string Label(string id) => id == LeftStripItems.SeparatorId ? "Separator" : LeftStripItems.Find(id) is { } item ? $"{item.Label}  ({item.Group})" : id;
+
+    /// <summary>A list row: the item's glyph as the strip draws it (the Separator as a thin line), then its name.</summary>
+    private static Control Row(string id)
+    {
+        var glyph = id == LeftStripItems.SeparatorId ? SeparatorGlyph : LeftStripItems.Find(id)?.Icon ?? SeparatorGlyph;
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = Gap + 2 };
+        row.Children.Add(MenuRowToggles.Icon(glyph, GlyphSize));
+        row.Children.Add(new TextBlock { Text = Label(id), VerticalAlignment = VerticalAlignment.Center });
+        return row;
+    }
 
     private static Button Action(string text, Action run)
     {
@@ -167,30 +187,6 @@ public sealed class LeftStripCustomizeWindow : Window
         if (i < 0 || to < 0 || to >= _on.Count) return;
         _on.Move(i, to);
         _strip.SelectedIndex = to;
-    }
-
-    // Dragging a row of the On the strip list drops it where the pointer is released.
-    private void AttachDrag()
-    {
-        int? from = null;
-        _strip.AddHandler(PointerPressedEvent, (_, e) => from = _strip.SelectedIndex >= 0 && e.GetCurrentPoint(_strip).Properties.IsLeftButtonPressed ? IndexAt(e) : null,
-            global::Avalonia.Interactivity.RoutingStrategies.Tunnel);
-        _strip.AddHandler(PointerReleasedEvent, (_, e) =>
-        {
-            if (from is not { } start) return;
-            from = null;
-            var end = IndexAt(e);
-            if (end is not { } to || to == start || start < 0 || start >= _on.Count) return;
-            _on.Move(start, to);
-            _strip.SelectedIndex = to;
-        }, global::Avalonia.Interactivity.RoutingStrategies.Tunnel);
-    }
-
-    private int? IndexAt(PointerEventArgs e)
-    {
-        var hit = _strip.InputHitTest(e.GetPosition(_strip)) as Visual;
-        while (hit is not null && hit is not ListBoxItem) hit = hit.GetVisualParent();
-        return hit is ListBoxItem item ? _strip.IndexFromContainer(item) : null;
     }
 
     private void Apply()

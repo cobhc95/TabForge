@@ -288,6 +288,9 @@ public sealed partial class DockWorkspaceController : IDockPaneDragHost, IDispos
         LayoutChanged?.Invoke(DockWorkspaceRules.Capture(State));
     }
 
+    /// <summary>Rebuilds the shown tree from the current layout (the workspace's rails were filled after the first show).</summary>
+    public void Refresh() => Changed();
+
     private void Changed()
     {
         // Perf E2b (H4/H5): batch sequential Changed calls (band/compact entry hides N side panels) into one Show.

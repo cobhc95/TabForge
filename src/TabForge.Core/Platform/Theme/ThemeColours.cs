@@ -80,30 +80,44 @@ public static class ThemeColours
     /// explicitly (<see cref="AppearanceSettings.IsOverridden"/>) is left as it is: the preset is the base, the user's choices layer on top.</summary>
     public static void ApplyPreset(AppearanceSettings a, bool light)
     {
-        string Pick(string field, string token, string current) => a.IsOverridden(field) ? current : Palette.Hex(token, light);
-        a.Background = Pick(nameof(a.Background), "WindowBackground", a.Background); a.Panel = Pick(nameof(a.Panel), "PanelBackground", a.Panel);
-        a.TitleBarColour = Pick(nameof(a.TitleBarColour), "ChromeStrip", a.TitleBarColour);
-        a.ActiveTabColour = Pick(nameof(a.ActiveTabColour), "TabActive", a.ActiveTabColour); a.TabHoverColour = Pick(nameof(a.TabHoverColour), "TabHover", a.TabHoverColour);
-        a.Text = Pick(nameof(a.Text), "TextPrimary", a.Text); a.Muted = Pick(nameof(a.Muted), "TextMuted", a.Muted);
-        a.Accent = Pick(nameof(a.Accent), "Accent", a.Accent); a.SelectionColour = Pick(nameof(a.SelectionColour), "Selection", a.SelectionColour);
-        a.HoverColour = Pick(nameof(a.HoverColour), "HoverOutline", a.HoverColour);
-        a.PlayheadColour = Pick(nameof(a.PlayheadColour), "Playhead", a.PlayheadColour); a.CursorColour = Pick(nameof(a.CursorColour), "ScoreCursor", a.CursorColour);
-        // Symmetric: each preset writes its own paper, ink and staff-line colours (the other paper's colours stay as the user set them).
-        if (light)
-        {
-            if (!a.IsOverridden(nameof(a.ScorePaper))) a.ScorePaper = "Light";
-            a.LightScorePaperColour = Pick(nameof(a.LightScorePaperColour), "ScoreLightPaperDefault", a.LightScorePaperColour);
-            a.LightScoreInkColour = Pick(nameof(a.LightScoreInkColour), "ScoreLightInkDefault", a.LightScoreInkColour);
-            a.LightScoreLinesColour = Pick(nameof(a.LightScoreLinesColour), "ScoreLightStaffLineDefault", a.LightScoreLinesColour);
-        }
-        else
-        {
-            if (!a.IsOverridden(nameof(a.ScorePaper))) a.ScorePaper = "Dark";
-            a.DarkScorePaperColour = Pick(nameof(a.DarkScorePaperColour), "ScoreDarkPaperDefault", a.DarkScorePaperColour);
-            a.DarkScoreInkColour = Pick(nameof(a.DarkScoreInkColour), "ScoreDarkInkDefault", a.DarkScoreInkColour);
-            a.DarkScoreLinesColour = Pick(nameof(a.DarkScoreLinesColour), "ScoreDarkStaffLineDefault", a.DarkScoreLinesColour);
-        }
+        foreach (var field in PresetFields)
+            if (!a.IsOverridden(field) && PresetWrites(field, light) && PresetValue(field, light) is { } value) a.SetColourField(field, value);
     }
+
+    /// <summary>The appearance fields a theme preset writes, by their settings name (the names <see cref="AppearanceSettings.Own"/> marks).</summary>
+    public static IReadOnlyList<string> PresetFields { get; } = new[]
+    {
+        "Background", "Panel", "TitleBarColour", "ActiveTabColour", "TabHoverColour", "Text", "Muted", "Accent", "SelectionColour", "HoverColour",
+        "PlayheadColour", "CursorColour", "ScorePaper", "LightScorePaperColour", "LightScoreInkColour", "LightScoreLinesColour",
+        "DarkScorePaperColour", "DarkScoreInkColour", "DarkScoreLinesColour",
+    };
+
+    // Symmetric: each preset writes its own paper, ink and staff-line colours (the other paper's colours stay as the user set them).
+    private static bool PresetWrites(string field, bool light) =>
+        !(field.StartsWith("LightScore", StringComparison.Ordinal) && !light) && !(field.StartsWith("DarkScore", StringComparison.Ordinal) && light);
+
+    /// <summary>The value the Dark or Light preset gives the appearance field <paramref name="field"/> (a name in <see cref="PresetFields"/>); null for any other field.
+    /// The score paper colours have one default each, the same in both themes.</summary>
+    public static string? PresetValue(string field, bool light) => field switch
+    {
+        "ScorePaper" => light ? "Light" : "Dark",
+        _ => PresetToken(field) is { } token ? Palette.Hex(token, light) : null,
+    };
+
+    private static string? PresetToken(string field) => field switch
+    {
+        "Background" => "WindowBackground", "Panel" => "PanelBackground", "TitleBarColour" => "ChromeStrip", "ActiveTabColour" => "TabActive",
+        "TabHoverColour" => "TabHover", "Text" => "TextPrimary", "Muted" => "TextMuted", "Accent" => "Accent", "SelectionColour" => "Selection",
+        "HoverColour" => "HoverOutline", "PlayheadColour" => "Playhead", "CursorColour" => "ScoreCursor",
+        "LightScorePaperColour" => "ScoreLightPaperDefault", "LightScoreInkColour" => "ScoreLightInkDefault", "LightScoreLinesColour" => "ScoreLightStaffLineDefault",
+        "DarkScorePaperColour" => "ScoreDarkPaperDefault", "DarkScoreInkColour" => "ScoreDarkInkDefault", "DarkScoreLinesColour" => "ScoreDarkStaffLineDefault",
+        _ => null,
+    };
+
+    /// <summary>True when <paramref name="value"/> is the value the Dark or the Light preset gives <paramref name="field"/> (colours compared by channel, so "#4c9aff" and "#FF4C9AFF" match).</summary>
+    public static bool IsPresetValue(string field, string? value, bool light) =>
+        PresetValue(field, light) is { } preset && value is not null && (string.Equals(preset, value, StringComparison.OrdinalIgnoreCase)
+            || (TabForge.Models.ColourHex.TryParse(preset, out var p) && TabForge.Models.ColourHex.TryParse(value, out var v) && p == v));
 
     /// <summary>Drops every colour the user set explicitly and writes the preset again: the "reset to preset" action.</summary>
     public static void ResetToPreset(AppearanceSettings a, bool light)

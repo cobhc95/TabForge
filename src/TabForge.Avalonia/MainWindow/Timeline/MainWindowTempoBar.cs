@@ -74,6 +74,7 @@ public sealed class MainWindowTempoBar : System.IDisposable
     public void FollowPlayback(TabForge.Avalonia.Transport.AvaloniaPlaybackSessions playback)
     {
         _playback = playback;
+        playback.SpeedChanged += document => { if (ReferenceEquals(document, _tabs.Active)) Refresh(); };   // from the Keyboard bar, a hotkey or the menu alike
         _bar.SetPressed(ViewTempoBarPresenter.Speed, () => ShowMenu(ViewTempoBarPresenter.Speed, ViewTempoMenus.Speed(CurrentSpeed(), SetSpeed)));
         _bar.SetFineTune(ViewTempoBarPresenter.Speed, () => ViewTempoPopups.Speed(() => CurrentSpeed() * 100, percent => SetSpeed(percent / 100)));
         _bar.SetWheel(ViewTempoBarPresenter.Speed, up => SetSpeed(Math.Clamp(CurrentSpeed() * 100 + (up ? ViewTempoPopups.WheelSpeedStep : -ViewTempoPopups.WheelSpeedStep), ViewTempoPopups.MinimumSpeedPercent, ViewTempoPopups.MaximumSpeedPercent) / 100));
@@ -93,8 +94,7 @@ public sealed class MainWindowTempoBar : System.IDisposable
 
     private void SetSpeed(double speed)
     {
-        _playback?.For(_tabs.Active)?.SetSpeed(speed);
-        Refresh();
+        _playback?.For(_tabs.Active)?.SetSpeed(speed);   // the readout follows through SpeedChanged
     }
 
     /// <summary>Shows the shown song's readout and watches that song's timeline for edits.</summary>

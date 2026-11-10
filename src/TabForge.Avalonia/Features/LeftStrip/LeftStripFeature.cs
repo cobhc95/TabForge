@@ -59,10 +59,10 @@ public sealed class LeftStripFeature
         commands.AddCheckState(ShowOnStartId, () => _state.ShowOnStart);
     }
 
-    /// <summary>The left region (the vertical strip when at the left, and the Composer panel); the window docks it left of the score pane, above the timeline.</summary>
+    /// <summary>The left region (the vertical strip when at the left, and the Composer panel); the window puts it in the workspace's left rail: under the menu or mode bar, beside the fretboard row too, down to the top of the timeline.</summary>
     public DockPanel Left { get; } = new() { LastChildFill = false };
 
-    /// <summary>The right region (the vertical strip when at the right); the window docks it right of the score pane.</summary>
+    /// <summary>The right region (the vertical strip when at the right); the window puts it in the workspace's right rail.</summary>
     public DockPanel Right { get; } = new() { LastChildFill = false };
 
     /// <summary>The saved state the customise window edits.</summary>

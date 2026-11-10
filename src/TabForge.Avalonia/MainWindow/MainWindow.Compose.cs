@@ -148,11 +148,13 @@ public sealed partial class MainWindow
             Closed += (_, _) => iconSettings.SettingsChanged -= SizeIcons;
         }
         leftStrip.Attach(menu, (Platform.Controls.CompactTrackStrip)state.CompactStrip);
-        // Beside the score pane only, so the timeline and track list below keep the full width.
+        // The workspace's rails run from its top edge (under the menu or mode bar) to the top of the timeline, beside the fretboard row too,
+        // so the timeline and track list below keep the full width.
         DockPanel.SetDock(leftStrip.Left, Dock.Left);
         DockPanel.SetDock(leftStrip.Right, Dock.Right);
-        state.EditorPane.Area.Children.Insert(0, leftStrip.Left);
-        state.EditorPane.Area.Children.Insert(1, leftStrip.Right);
+        state.Workspace.LeftRail.Children.Add(leftStrip.Left);
+        state.Workspace.RightRail.Children.Add(leftStrip.Right);
+        state.Dock.Refresh();
         var titleRow = TitleBarView.For(this, state.Tabs, state.Commands);
         state.LiveVideo.RecordingChanged += titleRow.ShowRecording;
         state.LiveVideo.RecordingChanged += on => state.StatusBar.Activity.VideoRecording = on;   // the status bar's state word reads Recording

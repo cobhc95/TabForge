@@ -108,7 +108,8 @@ public sealed partial class PreferencesWindow
         var prompt = PreferencesPagePresenter.ResetPage(_page, changed);
         if (!await Confirm(prompt)) return;
         // The theme goes first: its preset rewrites the colours the rows after it then restore.
-        foreach (var row in page.OrderBy(r => r.Key == "appearance.thememode" ? 0 : 1)) row.Set(defaults[row.Key].Get());
+        // A reset colour is the preset's again, not the user's: the next Dark/Light switch repaints it.
+        Working.Appearance.WriteUnowned(() => { foreach (var row in page.OrderBy(r => r.Key == "appearance.thememode" ? 0 : 1)) row.Set(defaults[row.Key].Get()); });
         ResetUiScaleToMonitor(page.Select(r => r.Key));
         MarkChanged();
         Rebuild();
@@ -123,6 +124,7 @@ public sealed partial class PreferencesWindow
         // The theme goes first: its preset rewrites the colours the rows after it then restore.
         foreach (var row in Rows.Where(r => r.Kind != SettingKind.Button).OrderBy(r => r.Key == "appearance.thememode" ? 0 : 1))
             row.Set(defaults[row.Key].Get());
+        Working.Appearance.OverriddenColours = "";   // every colour is the preset's again: the next Dark/Light switch repaints them all
         ResetUiScaleToMonitor(new[] { UiScaleKey });
         ResetHotkeys(Working.Hotkeys);
         DropRows();   // the search registry holds the old shortcuts
@@ -147,11 +149,14 @@ public sealed partial class PreferencesWindow
         var prompt = new ResetPrompt("Reset theme", "Restore the built-in theme: palette, sizing, typography, motion and the score page look?");
         if (!await Confirm(prompt)) return;
         var defaults = DefaultsByKey();
-        foreach (var key in PreferencesPagePresenter.ThemeResetKeys)
+        Working.Appearance.WriteUnowned(() =>
         {
-            var row = Rows.FirstOrDefault(r => r.Key == key);
-            if (row is not null) row.Set(defaults[key].Get());
-        }
+            foreach (var key in PreferencesPagePresenter.ThemeResetKeys)
+            {
+                var row = Rows.FirstOrDefault(r => r.Key == key);
+                if (row is not null) row.Set(defaults[key].Get());
+            }
+        });
         ResetUiScaleToMonitor(PreferencesPagePresenter.ThemeResetKeys);
         MarkChanged();
         Rebuild();
