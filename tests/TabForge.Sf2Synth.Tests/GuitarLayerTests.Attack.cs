@@ -51,9 +51,9 @@ public sealed partial class GuitarLayerTests
     [InlineData(30, 52, 6.6, -1.1, -1.5)]
     [InlineData(31, 52, 11.8, -21.0, 17.1)]
     [InlineData(32, 33, 8.1, -37.5, 17.4)]
-    [InlineData(33, 33, 15.1, -8.7, 17.4)]
-    [InlineData(34, 33, 14.7, -11.4, 17.9)]
-    [InlineData(35, 33, 12.9, -18.6, 17.0)]
+    [InlineData(33, 33, 10.4, -8.7, 17.4)]
+    [InlineData(34, 33, 10.9, -11.4, 17.9)]
+    [InlineData(35, 33, 8.4, -18.6, 17.0)]
     [InlineData(36, 33, 16.6, -24.5, 14.0)]
     [InlineData(37, 33, 19.4, -30.9, 15.6)]
     public void EveryNotePeaksAboveItsSustain(int program, int note, double attack, double slope, double range)
