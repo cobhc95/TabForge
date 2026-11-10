@@ -269,5 +269,15 @@ Genuinely new, per program 32-37 (values in `Voicings`, DSP in `GuitarBus`, `Bod
 - `GuitarLayerTests.Attack` bass centers set to the new numbers (±2 dB / ±8 dB/s / range lower bounds kept); guitar/distorted guards unchanged. No bass octave-band guard existed (only the guitar DI and captured-amp guards), so nothing there to move.
 - Demo `tfsynth_BASS_HUMANIZED.wav` (Downloads, not in the repo): six programs 32-37, each the 6-bar 120 bpm `Bass` part flat-written then Humanizer Natural, via Synthesizer + GuitarLayer at 48000, MasterVolume 0.5, 1 s gaps, peak 0.90. Human listening still pending (no one has played it through the app).
 
+## Upright bass (program 32) rebuilt as an acoustic body (Nov 2026)
+Owner: the upright still sounded like a synthy electric bass after the electric restart (33-37 untouched, bit-identical). Fix is Voicings-only (program 32 only; no DSP change, no pickup, no amp, no cabinet — the body is the sound, as before):
+- String: T60 3.5 / 0.8 -> 4.0 / 0.9 s, Darkness 0.50 -> 0.35, NoiseMix 0.10 -> 0.16, PluckHz 1200 -> 1800 Hz. Longer sustain, less muffled, more flesh; peak/dynamics = Drop 4 / 12 -> 7 dB / 22 ms.
+- Finger attack: Tap 2.5 @ 90 Hz / 25 ms (an electric-style sub thump) -> 1.5 @ 300 Hz / 20 ms, TapVel 1.2: a low-mid finger thump with a short wooden knock decay, not a click; Click 1 -> 0.3 (less pick tink).
+- Body: Direct 0.62 -> 0.65; modes 60 / 105 / 150 / 230 / 400 / 700 Hz (Q 10-20, narrow) -> 60 / 110 / 155 / 215 / 360 / 600 Hz (Q 7-14, broader): strong air/f-hole at 60/110 Hz, top resonance at 215 Hz.
+- Pre-EQ: HighPass 18 kept; LowShelf 85 Hz +4 -> 100 Hz +3; HighShelf 2000 Hz -6 -> 2500 Hz -5. Level 2.30 -> 2.00.
+- Measured (note 33, vel 100, layer only, 48 kHz): rms100 1 s -18.92 -> -18.94 dBFS (-0.02 dB; Level retrimmed). Tuning B0 / E1 / A1 / D1 / G1 before 0.32 / 0.60 / 0.59 / 0.01 / 0.39 -> after 0.24 / 0.28 / 0.47 / 0.15 / 0.35 cents (all within 1 cent).
+- Attack-to-sustain (vel 110, note 33, guard center 6.9 kept, no guard edit) 6.87 -> 7.22 dB; initial slope -32.64 -> -34.87 dB/s (target -32.6); attack-peak range 50 -> 127 17.4 -> 18.1 dB. Full suite 125 passing (Debug), electric basses unchanged.
+- Demo `tfsynth_BASS_UPRIGHT.wav` (Downloads, not in the repo): only program 32, the 6-bar 120 bpm `Bass` line flat-written then Humanizer Natural, via Synthesizer + GuitarLayer at 48000, MasterVolume 0.5, peak 0.90, 16-bit stereo. Human listening still pending (no one has played it through the app).
+
 ## Architecture decision
 Clean pickup-style guitar DI, then a user-chosen Neural Amp Modeler `.nam` model as the amp, then an optional cabinet `.wav` IR. Built-in defaults: the captured amp (no cabinet) on 29/30, the stage amp and synthetic cab on the other electric programs. NAM runtime is written from scratch from the public format spec (no copied code).

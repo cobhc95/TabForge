@@ -27,7 +27,8 @@ internal static class Voicings
     // Hz, Q, gain over the direct path: Helmholtz air, top, back, then higher plate modes.
     private static readonly BodySpec Nylon = new(0.72f, [new(98, 14, 1.5f), new(195, 18, 1.3f), new(235, 20, 0.6f), new(390, 22, 0.5f), new(550, 24, 0.35f), new(780, 25, 0.25f), new(1050, 25, 0.15f)]);
     private static readonly BodySpec Steel = new(0.72f, [new(102, 15, 1.2f), new(210, 20, 1.5f), new(300, 20, 0.9f), new(420, 25, 0.6f), new(620, 25, 0.5f), new(900, 28, 0.4f), new(1500, 25, 0.35f), new(2600, 20, 0.3f)]);
-    private static readonly BodySpec Upright = new(0.62f, [new(60, 10, 1.6f), new(105, 14, 1.4f), new(150, 15, 0.8f), new(230, 18, 0.6f), new(400, 20, 0.4f), new(700, 20, 0.3f)]);
+    // Upright body: air/f-hole energy at 60/110 Hz and top resonance at 215 Hz, broad and wooden under the string.
+    private static readonly BodySpec Upright = new(0.65f, [new(60, 7, 1.4f), new(110, 8, 1.1f), new(155, 9, 0.6f), new(215, 11, 0.9f), new(360, 12, 0.5f), new(600, 14, 0.3f)]);
     // Electric bass body: lower and broader than the upright (wood thump under the low strings).
     private static readonly BodySpec BassBody = new(1f, [new(48, 7, 0.7f), new(92, 9, 0.9f), new(155, 11, 0.6f), new(240, 13, 0.35f), new(380, 15, 0.2f)]);
 
@@ -65,8 +66,8 @@ internal static class Voicings
             new RigSpec(1, [new(HighPass, 110, 0.7), new(Peak, 900, 0.8, 4)], LeadStages, 0.15f,
                 [new(LowShelf, 100, 0.7, 2), new(Peak, 650, 0.9, -5), new(HighShelf, 3000, 0.7, 2)], CabKind.Guitar, 0.057f) { Pickup = MeasuredDi, Captured = new(0.30f, 0.73f, CapturedEq) }),
         new(Gtr(4.0, 2.5, 0.05, 0, 324, 110, 0.15, 4000, harmonic: true) with { Vel = 2 }, Clean(new EqSpec(HighShelf, 2500, 0.7, 2)) with { Level = 0.54f }), // 31 harmonics
-        new(Bass(3.5, 0.8, 0.50, 0.10, 173, 0, 0.15, 1200) with { Vel = 1.75, Tap = new(2.5f, 90, 1.2, 25) },                                    // 32 upright
-            Body(Upright, new(HighPass, 18, 0.7), new(LowShelf, 85, 0.7, 4), new(HighShelf, 2000, 0.7, -6)) with { Level = 2.30f }),
+        new(Bass(4.0, 0.9, 0.35, 0.16, 173, 0, 0.15, 1800) with { Vel = 1.75, Drop = 7, DropMs = 22, Tap = new(1.5f, 300, 1.0, 20), TapVel = 1.2, Click = 0.3f },                            // 32 upright
+            Body(Upright, new(HighPass, 18, 0.7), new(LowShelf, 100, 0.7, 3), new(HighShelf, 2500, 0.7, -5)) with { Level = 2.00f }),
         new(Bass(8.0, 1.5, 0.45, 0.15, 173, 150, 0.12, 2500) with { Vel = 2, Tap = new(0.45f, 650, 0.7, 6), TapVel = 1.3, Click = 0.4f, ClickVel = 1.2 },     // 33 finger (P)
             BassRig(PBass, new EqSpec(Peak, 800, 1, 1)) with { Level = 0.68f }),
         new(Bass(8.0, 1.8, 0.20, 0.35, 104, 150, 0.10, 5000) with { Vel = 2, Tap = new(0.5f, 2800, 0.9, 3), TapVel = 1.6, Click = 2.5f, ClickVel = 1.6 },   // 34 pick (P)
