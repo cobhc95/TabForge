@@ -218,6 +218,8 @@ public static class MainMenuTable
                 Toggle("Show the notes in each track lane", "View.ArrangementIndividualNotes"),
                 Toggle("Show one continuous line per track lane", "View.ArrangementContinuousBlocks")),
             Toggle("Highlight playing bar", "View.PlayingBar"),
+            Toggle("Show strip button", "View.ShowStripButton", checkedAtStart: true),
+            Toggle("Show strip on start", "View.ShowStripOnStart", checkedAtStart: true),
             Separator),
         new("_View", "DockPanelsMenu",
             Item("Reset all panels to default positions", "View.ResetPanels"),

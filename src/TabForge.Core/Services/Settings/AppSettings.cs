@@ -79,6 +79,8 @@ public sealed class AppSettings
     public TabForge.Audio.Metering.TrackMeterSettings TrackMeter { get; set; } = new();
     /// <summary>Keyboard mode (experimental): look-ahead and note size.</summary>
     public KeyboardMode.KeyboardModeSettings Learn { get; set; } = new();
+    /// <summary>The left icon strip and its Composer panel (experimental).</summary>
+    public TabForge.Features.LeftStrip.LeftStripSettings LeftStrip { get; set; } = new();
     /// <summary>Dock tree, selected tabs, closed panels, and floating-window bounds.</summary>
     public DockWorkspaceState? Workspace { get; set; }
     /// <summary>The layout as it was when the side panel was hidden, so showing it again restores it exactly (even after a restart).</summary>

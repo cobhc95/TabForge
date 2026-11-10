@@ -392,6 +392,10 @@ These share keys with score commands on purpose: they act only while a clip is s
 | View | Horizontal score scrolling | Switch the score between wrapped lines (scroll down) and one line (scroll right). | `View.HorizontalScroll` | — |  |
 | View | Follow playback on / off | Turn the score and timeline following the playhead on or off. The same setting as Preferences > Playback > Follow > Follow playback. | `View.FollowPlayback` | Ctrl+Shift+F |  |
 | View | Smooth page-turn follow | Switch playback follow between instant and smooth (glided) page turns. | `View.SmoothFollow` | — |  |
+| View | Show / hide left strip | Show or hide the slim icon strip at the left of the window (and its Composer panel with it). | `View.ToggleLeftStrip` | — |  |
+| View | Show / hide Composer | Open or close the Composer panel beside the left strip (experimental placeholder). | `View.ToggleComposer` | — |  |
+| View | Show strip button | Show or hide the left strip's toggle icon at the left end of the menu bar (View > Show strip button). | `View.ShowStripButton` | — |  |
+| View | Show strip on start | Choose whether the left strip shows when TabForge starts (View > Show strip on start). | `View.ShowStripOnStart` | — |  |
 | View | Highlight playing bar | Shade the whole bar that is playing (staff and tab) with a translucent band behind the notes; on by default and subtle (10% opacity). Colour, opacity and "Also show the cursor's bar when stopped" are in Preferences > Appearance > Playback look (the "when stopped" option under More options). | `View.PlayingBar` | — |  |
 | View | Show notes in each track lane | Draw the notes of each track inside its lane in the arrangement overview (View > Show the notes in each track lane). | `View.ArrangementIndividualNotes` | — |  |
 | View | Show one line per track lane | Draw each track's lane as one continuous line in the arrangement overview (View > Show one continuous line per track lane). | `View.ArrangementContinuousBlocks` | — |  |

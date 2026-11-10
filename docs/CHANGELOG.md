@@ -2,6 +2,12 @@
 
 TabForge is actively developed; please report anything odd on the Issues page.
 
+## 0.9.3
+
+### Added
+
+- Experimental left strip: a slim icon strip at the window's left with Open, Save, Save as and Render, and a Composer button that opens a placeholder Composer panel beside it. A sidebar icon at the left of the menu bar (and of the compact / Band mode bar) shows or hides it; right-click the strip to place it beside the menus, keep it vertical or hide it. View > Show strip button and Show strip on start; both toggles can be given hotkeys. The state is saved with your settings.
+
 ## 0.9.2
 
 ### Added

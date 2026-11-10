@@ -92,6 +92,9 @@ public static class ChromeMetrics
     /// <summary>The selected track row's left-edge strip: its width and corner in DIPs.</summary>
     public const double SelectedStripWidth = 4, SelectedStripCorner = 2;
 
+    /// <summary>The experimental left strip: its width, the Composer panel's width, and the gap between the panel's rows, in DIPs.</summary>
+    public const double LeftStripWidth = 36, ComposerPanelWidth = 220, ComposerRowGap = 6;
+
     /// <summary>The family of the drawn text of custom-painted controls (track rows, mixer buttons, the timeline and the fretboard).</summary>
     public const string UiFontFamily = FontProvider.WindowsSans;
 

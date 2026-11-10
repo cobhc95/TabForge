@@ -7,10 +7,14 @@ Do not edit by hand: regenerate with
 python Source/tools/command-map.py
 ```
 
-**330 command ids** in 71 files (all distinct). Generated from the `Commands` arrays of `Source/src/TabForge.Avalonia/MainWindow/**/MainWindow*.cs` and from the inline `commands.Add` / `commands.AddWhen` registrations whose id is a literal or a constant. Not listed: the command table's own handler map (`File.Exit`, `View.ResetPanels`), ids built at run time from a prefix (`ContextMenuRows.ScoreLayoutIdPrefix` rows), and ids passed through a loop variable already covered by a `Commands` array.
+**334 command ids** in 72 files (all distinct). Generated from the `Commands` arrays of `Source/src/TabForge.Avalonia/MainWindow/**/MainWindow*.cs` and from the inline `commands.Add` / `commands.AddWhen` registrations whose id is a literal or a constant. Not listed: the command table's own handler map (`File.Exit`, `View.ResetPanels`), ids built at run time from a prefix (`ContextMenuRows.ScoreLayoutIdPrefix` rows), and ids passed through a loop variable already covered by a `Commands` array.
 
 | Command id | Registered in |
 |---|---|
+| `View.ShowStripButton` | `Features/LeftStrip/LeftStripFeature.cs` |
+| `View.ShowStripOnStart` | `Features/LeftStrip/LeftStripFeature.cs` |
+| `View.ToggleComposer` | `Features/LeftStrip/LeftStripFeature.cs` |
+| `View.ToggleLeftStrip` | `Features/LeftStrip/LeftStripFeature.cs` |
 | `Transport.Record` | `Features/Recording/Presenter/RecordingPresenter.cs` |
 | `View.HorizontalScroll` | `MainWindow/Band/MainWindowScoreRows.cs` |
 | `View.ZoomIn` | `MainWindow/Band/MainWindowScoreRows.cs` |

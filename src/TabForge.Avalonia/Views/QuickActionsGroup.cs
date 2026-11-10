@@ -46,7 +46,7 @@ public static class QuickActionsGroup
     public static Border? In(Control menuRow) =>
         (menuRow as Border)?.Child is DockPanel panel ? panel.Children.OfType<Border>().FirstOrDefault(b => b.Name == GroupName) : null;
 
-    private static Button Button(Func<MainWindowCommands?> commands, string commandId, string name, string iconData)
+    internal static Button Button(Func<MainWindowCommands?> commands, string commandId, string name, string iconData)
     {
         var button = new Button
         {

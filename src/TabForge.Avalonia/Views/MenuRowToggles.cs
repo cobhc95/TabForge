@@ -99,7 +99,7 @@ public static class MenuRowToggles
         return new Viewbox { Width = size, Height = size, Stretch = Stretch.Uniform, Child = path };
     }
 
-    private static Control Button(Toggle toggle, MainWindowCommands commands)
+    internal static ToggleButton Button(Toggle toggle, MainWindowCommands commands)
     {
         var icon = Icon(toggle.IconData, IconSizing.Current);
         // A toggle button, so the mode's state shows on it: SetRowChecks sets IsChecked (the menu row and the toolbar follow the same command), and
