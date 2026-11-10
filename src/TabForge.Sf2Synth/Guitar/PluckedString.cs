@@ -14,7 +14,7 @@ internal sealed partial class PluckedString
 {
     public const double LowestHz = 25;
     private const float Silent = 1e-4f, RepluckKeep = 0.3f;
-    private const double ShortNote = 0.12;
+    private const double ShortNote = 0.12, ChugSeconds = 0.25, ChugT60 = 0.25;
 
     private readonly float[] _buf;
     private readonly int _mask;
@@ -118,14 +118,16 @@ internal sealed partial class PluckedString
     private static double AllpassDelay(double c, double w) =>
         -(Math.Atan2(-Math.Sin(w), c + Math.Cos(w)) - Math.Atan2(-c * Math.Sin(w), 1 + c * Math.Cos(w))) / w;
 
-    // Finger damping: short notes (palm-mute style) damp harder.
+    // Finger damping: short notes (palm-mute style) damp harder; on the distorted programs a chug (under a quarter second,
+    // the shortened written length a palm mute arrives as) damps much harder still, so muted notes are clearly shorter than open ones.
     public void Release()
     {
         if (!Active || Released) return;
         (Released, Held) = (true, false);
+        var chug = _spec.PalmMute && Age < ChugSeconds;
         var shortNote = Age < ShortNote;
-        _t60 = _spec.ReleaseT60 * (shortNote ? 0.5 : 1) * (1 + _nu.Release);
-        _dark = Math.Min(0.95, _dark + _spec.ReleaseDarken * (shortNote ? 1.5 : 1));
+        _t60 = _spec.ReleaseT60 * (chug ? ChugT60 : shortNote ? 0.5 : 1) * (1 + _nu.Release);
+        _dark = Math.Min(0.95, _dark + _spec.ReleaseDarken * (chug ? 3 : shortNote ? 1.5 : 1));
         Retune(_hz);
     }
 

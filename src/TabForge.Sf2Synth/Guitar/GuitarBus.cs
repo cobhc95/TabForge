@@ -4,7 +4,7 @@ using TabForge.Sf2Synth.Nam;
 namespace TabForge.Sf2Synth.Guitar;
 
 // Owns: one channel's rig behind the strings: pickup resonance (the DI), the acoustic body (BodyModes), then the user's NAM amp,
-//   or on the distorted programs the captured amp (trimmed DI, DC blocker, cabinet or output EQ) or the clean DI alone, else the built-in compressor,
+//   or on the distorted programs the captured amp (trimmed DI, DC blocker, transient expander, cabinet or output EQ) or the clean DI alone, else the built-in compressor,
 //   pre-EQ, 2x-oversampled StageAmp and tone stack; then the cabinet (user IR or synthetic, FFT convolution), level. Electric
 //   programs take the user's files; a new Setup fades out one block and in the next. Mono, in place, no allocation.
 // Does not own: the strings (PluckedString), values (Voicings), loading files (GuitarRig), volume/pan and options (GuitarLayer).
@@ -21,6 +21,7 @@ internal sealed class GuitarBus(double rate, int maxBlock, float[] guitarCab, fl
     private readonly IAmpModel _amp = new StageAmp();
     private readonly BodyModes _body = new();
     private readonly Compressor _comp = new();
+    private readonly TransientExpander _expander = new();
     private bool _hasAmp, _electric, _swap, _fadeIn, _capturedPlayed;
     private readonly Oversampler2x _os = new();
     private readonly float[] _doubled = new float[2 * maxBlock];
@@ -35,6 +36,7 @@ internal sealed class GuitarBus(double rate, int maxBlock, float[] guitarCab, fl
 
     public void Configure(RigSpec rig)
     {
+        _expander.Configure(rate);
         static int Set(Biquad[] f, EqSpec[] s, double rate) { var n = Math.Min(s.Length, f.Length); for (var i = 0; i < n; i++) f[i].C = BiquadCoefs.Of(s[i], rate); return n; }
         (_diN, _preN, _toneN, _postN) = (Set(_di, rig.Pickup, rate), Set(_pre, rig.PreEq, rate), Set(_tone, rig.Tone, rate), Set(_post, rig.Captured?.Eq ?? [], rate));
         _hasAmp = rig.Stages.Length > 0;
@@ -78,6 +80,7 @@ internal sealed class GuitarBus(double rate, int maxBlock, float[] guitarCab, fl
         _dc.Reset();
         _body.Reset();
         _comp.Reset();
+        _expander.Reset();
         _os.Reset();
         _cab?.Reset();
         _now.User?.Cab?.Reset();
@@ -128,6 +131,7 @@ internal sealed class GuitarBus(double rate, int maxBlock, float[] guitarCab, fl
             if (_now.Amp == DistAmp.CleanOnly) return 1;
             captured!.Process(mono);
             for (var n = 0; n < mono.Length; n++) mono[n] = _dc.Process(mono[n]);
+            _expander.Process(mono);   // after the capture: make the onset obvious through the amp's squeeze
             _capturedPlayed = true;
             if ((user?.Cab ?? (_now.CapturedCab ? _cab : null)) is { } cab) cab.Process(mono);
             else if (_now.CapturedEq)

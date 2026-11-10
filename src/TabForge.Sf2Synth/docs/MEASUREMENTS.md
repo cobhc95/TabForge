@@ -332,5 +332,28 @@ softened to +12.5 dB so it dominates instead of doubling, PreEq peaks softened t
   octave guards and the trim guard unchanged. Demo `tfsynth_DISTORTED.wav` (Downloads): program 29 then 30, 1 s gap, flat-written
   then Humanizer Natural, MasterVolume 0.5, peak 0.90. Human listening still pending.
 
+## Distorted attack through the amp, and palm mutes (Nov 2026)
+Owner: the 29/30 attack still was not obvious through the amp; plus a bit more palm mutes to make it pop. Finding: the
+bus waveform after the capture is flat (attack RMS within 0.3 dB of the sustain RMS), because the capture's squeeze
+equalises a harder DI transient (see the input-stack section above: input stays fixed), so no level-domain expander can
+win here — the attack has to be boosted in time, not level. Fix is a new stage AFTER the captured amp (29/30 only), plus
+the string's short-note damping on the same programs; DI (peak +12.5, trim -30.4), input Drop (5/8 ms), output EQ
+(830/2550/shelf) and every other program bit-identical.
+- Post-amp transient expander (`Guitar/TransientExpander`, mono, in place, no allocation): two energy envelopes of the
+  amp output (fast 2 ms, slow 100 ms; the capture's output takes tens of ms to build, so the slow one must lag well
+  behind it). When the fast one outruns the slow one (an onset) the gain gets a bump of up to +4 dB (dead 0.5 dB) that
+  holds then dies in ~50 ms; fixed make-up -0.5 dB so the phrase rms does not move. It sits after the DC blocker,
+  before the output EQ, so the fitted EQ still finishes the sound.
+- Palm mutes (29/30 only): the synth cannot see Marks, but a palm-muted note arrives as a shortened written note, so the
+  chug is what the string damps at its note-off. On 29/30 a note released under 0.25 s now damps at a quarter of the
+  release T60 (was the shared half) with three times the release darkening (velocity-scaled, deterministic), and the
+  distorted string gets a touch more pick noise on the attack (Tap 0.15 @ 4 kHz, 2 ms). Open (held) notes are untouched.
+- Measured (note 52, vel 110, bus output): attack-to-sustain 6.3 -> 9.6 dB (real amp 7.7), initial slope +2.0 ->
+  -18.7 dB/s, attack peak 127-50 -1.3 -> -1.1 dB, strum 7.9 -> 10.2 dB. Muted (0.18 s note) vs open: 100-300 ms
+  sustain rms -25.7 vs -23.0 dBFS (2.7 dB shorter), same attack peak. DI 29 still 19.1 dB (real 17.7); trimmed DI riff
+  -30.4 dBFS rms, peak 0.394 (limit 0.40); tuning note 52 vel 100 within 1 cent; amp octaves within 0.6 dB of the real
+  amp (1 kHz +0.2); phrase rms unchanged within 0.5 dB. Demo `tfsynth_DISTORTED.wav` (Downloads): program 29 then 30,
+  Riff(6, 120) Humanizer Natural, MasterVolume 0.5, peak 0.90. Human listening still pending.
+
 ## Architecture decision
 Clean pickup-style guitar DI, then a user-chosen Neural Amp Modeler `.nam` model as the amp, then an optional cabinet `.wav` IR. Built-in defaults: the captured amp (no cabinet) on 29/30, the stage amp and synthetic cab on the other electric programs. NAM runtime is written from scratch from the public format spec (no copied code).

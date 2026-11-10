@@ -32,6 +32,8 @@ internal sealed record StringSpec(double RefHz, double T60Ref, double T60At1k, d
     public double Mwah { get; init; }
     public double Glide { get; init; }
     public bool Wobble { get; init; }
+    // Palm-mute chugs (distorted programs only): a short note damps much harder than the shared short-note step (see PluckedString.Release).
+    public bool PalmMute { get; init; }
 }
 
 // Attack noise through a band-pass: amount (× pluck amplitude × velocity), centre Hz, Q, decay ms.

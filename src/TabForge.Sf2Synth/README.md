@@ -10,7 +10,7 @@ Handover for a new agent (priorities, commands, the app seam, how to work with t
 - `Humanize/` the note pass a host runs on the written notes: `Humanizer` (strokes, window, motifs, neighbours, per-key order), `Notes` (input, output, level parts), `Dynamics` (level parts), `Timing` (onset parts, fast runs, lengths), `Strum` (strings of a stroke), `Evidence` (is the input flat?), `Noise` (position-keyed hashes and value noise), `HumanTable` (all values: feel styles, families); in the synth `VoiceVariation` draws each note's `Nuance` (voice variation).
 - `Effects/` `Reverb` (Freeverb), `Chorus`.
 - `Dsp/` shared: `Biquad`, `FirHistory` (SIMD FIR), `Oversampler2x`.
-- `Guitar/` the layer: `GuitarLayer` (MIDI, strings, mix), `PluckedString` (waveguide; `.Attack`: pluck, slap, tap noise, fretless mwah), `StringPhysics`, `GuitarBus` (rig), `BodyModes` (acoustic body), `Compressor`, `StageAmp` (IAmpModel), `CabinetImpulse` (guitar, bass, room), `Voicings` (all values), `VoicingSpecs` (their types), `GuitarRig` (user files, the embedded captured amp), `Amps/captured.nam` (embedded resource).
+- `Guitar/` the layer: `GuitarLayer` (MIDI, strings, mix), `PluckedString` (waveguide; `.Attack`: pluck, slap, tap noise, fretless mwah), `StringPhysics`, `GuitarBus` (rig), `BodyModes` (acoustic body), `Compressor`, `TransientExpander` (post-amp attack boost, distorted programs only), `StageAmp` (IAmpModel), `CabinetImpulse` (guitar, bass, room), `Voicings` (all values), `VoicingSpecs` (their types), `GuitarRig` (user files, the embedded captured amp), `Amps/captured.nam` (embedded resource).
 
 ## Signal flow
 MIDI -> `Synthesizer.ProcessMidiMessage` -> note-on on a channel the `Layer` owns goes to the layer, everything else starts SF2 voices.

@@ -43,7 +43,8 @@ internal static class Voicings
     // 29/30 only: the 900 Hz peak softened 1 dB so it dominates the 750/900 Hz stack instead of doubling it; the string wobbles and
     // its attack peaks harder and faster (DropVel concentrates it on loud notes so the riff peak stays under the 0.4 training limit).
     private static readonly EqSpec[] DistortedDi = [new(HighPass, 135, 0.7), new(Peak, 900, 1, 12.5), new(LowPass, 2070, 0.4)];
-    private static readonly StringSpec DistortedString = MeasuredString with { Wobble = true, Drop = 5.0, DropMs = 8, DropVel = 1.5 };
+    // Palm-mute chugs on 29/30: the short-damping step at the note-off plus a touch more pick noise on the muted attack.
+    private static readonly StringSpec DistortedString = MeasuredString with { Wobble = true, Drop = 5.0, DropMs = 8, DropVel = 1.5, PalmMute = true, Tap = new(0.15f, 4000, 0.8, 2) };
 
     // Captured amp output EQ, fitted to the real amp recording of the measured take (status doc): low mids up, the 830 Hz bump and
     // upper mids down, the capture's fizz above 6 kHz down. The 830 Hz cut is 0.5 dB shallower than the first fit to re-balance the
