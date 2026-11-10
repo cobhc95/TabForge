@@ -184,18 +184,52 @@ public sealed partial class PreferencesWindow
         await new SoundBankLicenceWindow(bank, text).ShowDialog(this);
     }
 
-    /// <summary>Lets the user pick any .sf2 and plays it in place, without copying it.</summary>
-    private async Task ChooseOwnFileAsync()
+    private bool _ownPickerOpen;
+
+    /// <summary>Lets the user pick any .sf2 and plays it in place, without copying it. When the call
+    /// comes from choosing "Open your own .sf2…" in the Sound engine list, <paramref name="returnTo"/>
+    /// is the engine before the pick: cancelling with no usable file reverts to it, so the app is
+    /// never left on "own file" with nothing to play.</summary>
+    private async Task ChooseOwnFileAsync(string? returnTo = null)
     {
-        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        if (_ownPickerOpen) return;
+        _ownPickerOpen = true;
+        try
         {
-            Title = "Choose your own .sf2 SoundFont", AllowMultiple = false,
-            FileTypeFilter = new[] { new FilePickerFileType("SoundFont") { Patterns = new[] { "*.sf2" } } },
-        });
-        var path = files.Select(file => file.TryGetLocalPath()).FirstOrDefault(p => p is { Length: > 0 } && File.Exists(p));
-        if (path is null) return;
-        Working.Plugins.UserSoundFont = path;
-        UseBank(SoundEngines.OwnFile);
-        _status.Text = $"Using {Path.GetFileName(path)}.";
+            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Choose your own .sf2 SoundFont", AllowMultiple = false,
+                FileTypeFilter = new[] { new FilePickerFileType("SoundFont") { Patterns = new[] { "*.sf2" } } },
+            });
+            var path = files.Select(file => file.TryGetLocalPath()).FirstOrDefault(p => p is { Length: > 0 } && File.Exists(p));
+            if (path is not null)
+            {
+                Working.Plugins.UserSoundFont = path;
+                UseBank(SoundEngines.OwnFile);
+                _status.Text = $"Using {Path.GetFileName(path)}.";
+                return;
+            }
+            if (returnTo is not null && SoundFontStore.UserPath(Working.Plugins).Length == 0)
+            {
+                var fallback = string.IsNullOrEmpty(returnTo) ? SoundEngines.Default : returnTo;
+                Working.Plugins.SoundEngine = fallback;
+                Write("vst.soundengine", fallback);
+                _status.Text = "No file chosen — Sound engine unchanged.";
+                Rebuild();
+            }
+        }
+        catch (Exception) when (returnTo is not null && SoundFontStore.UserPath(Working.Plugins).Length == 0)
+        {
+            // The picker cannot open (e.g. no UI in a test): same revert as a cancel.
+            var fallback = string.IsNullOrEmpty(returnTo) ? SoundEngines.Default : returnTo;
+            Working.Plugins.SoundEngine = fallback;
+            Write("vst.soundengine", fallback);
+            _status.Text = "No file chosen — Sound engine unchanged.";
+            Rebuild();
+        }
+        finally
+        {
+            _ownPickerOpen = false;
+        }
     }
 }

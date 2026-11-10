@@ -360,7 +360,17 @@ public sealed partial class PreferencesWindow : Window, IPreferencesChangesHost
                 return box;
             case SettingKind.Choice:
                 var combo = new ComboBox { ItemsSource = row.Choices, SelectedItem = row.Get()?.ToString(), MinWidth = 200, Classes = { AvaloniaFormControlStyles.PrefsFieldClass } };
-                combo.SelectionChanged += (_, _) => { if (combo.SelectedItem is string v && v != row.Get()?.ToString()) Changed(row, v); };
+                combo.SelectionChanged += (_, _) =>
+                {
+                    if (combo.SelectedItem is not string v || v == row.Get()?.ToString()) return;
+                    var previous = row.Get()?.ToString();
+                    Changed(row, v);
+                    // "Open your own .sf2…" is an action, not a finished choice: open the file chooser
+                    // at once so the user can load an external .sf2 (see PreferencesWindow.SoundFont.cs).
+                    // Ctrl is never the modifier here: these rows have no DependsOn on sound engine.
+                    if (row.Key == "vst.soundengine" && v == SoundEngines.OwnFile)
+                        _ = ChooseOwnFileAsync(previous);
+                };
                 RedrawWhenAnswered(row.Choices);
                 return combo;
             case SettingKind.Number:
