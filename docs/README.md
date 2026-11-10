@@ -1,4 +1,4 @@
-# TabForge 0.9.3
+# TabForge 0.9.4
 
 **A keyboard-driven tablature and notation editor for Windows, with experimental Linux packages.** Opens .gp3, .gp4, .gp5, .gpx, .gp and TuxGuitar (.tg) files, and saves .gp, .tg and its own .tforge projects. Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard or keyboard, a piano roll, an arrangement timeline, audio and MIDI recording, a mixer, built-in effects, VST2, VST3 and CLAP plug-ins (32-bit and 64-bit VST), and offline audio and video rendering.
 
@@ -7,15 +7,15 @@
 ## Download
 
 > [!TIP]
-> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.9.3/TabForge-0.9.3-win-setup.exe)** · no administrator rights needed
+> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.9.4/TabForge-0.9.4-win-setup.exe)** · no administrator rights needed
 >
-> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.9.3/TabForge-0.9.3-win-x64-portable.zip)** · extract and run `TabForge.exe`
+> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.9.4/TabForge-0.9.4-win-x64-portable.zip)** · extract and run `TabForge.exe`
 
 Windows 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify your download](#verify-your-download). Older versions: [Releases](https://github.com/cobhc95/TabForge/releases).
 
 ### Linux packages (experimental)
 
-The main Linux download is the AppImage ([`TabForge-0.9.3-linux-x86_64.AppImage`](https://github.com/cobhc95/TabForge/releases/download/v0.9.3/TabForge-0.9.3-linux-x86_64.AppImage)). The archive ([`TabForge-0.9.3-linux-x64.tar.gz`](https://github.com/cobhc95/TabForge/releases/download/v0.9.3/TabForge-0.9.3-linux-x64.tar.gz)) is the fallback. Both include Wine 9.21 for Windows plug-ins, FFmpeg for video export and a General MIDI SoundFont, so sound works on first run.
+The main Linux download is the AppImage ([`TabForge-0.9.4-linux-x86_64.AppImage`](https://github.com/cobhc95/TabForge/releases/download/v0.9.4/TabForge-0.9.4-linux-x86_64.AppImage)). The archive ([`TabForge-0.9.4-linux-x64.tar.gz`](https://github.com/cobhc95/TabForge/releases/download/v0.9.4/TabForge-0.9.4-linux-x64.tar.gz)) is the fallback. Both include Wine 9.21 for Windows plug-ins, FFmpeg for video export and a General MIDI SoundFont, so sound works on first run.
 
 ```bash
 chmod +x TabForge-*-linux-x86_64.AppImage
@@ -36,22 +36,30 @@ chmod +x TabForge-*-linux-x86_64.AppImage
 </tr>
 </table>
 
-**Contents:** [Download](#download) · [What's new in 0.9.3](#whats-new-in-093) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Piano roll](#piano-roll) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Plug-ins](#plug-ins) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
+**Contents:** [Download](#download) · [What's new in 0.9.4](#whats-new-in-094) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Piano roll](#piano-roll) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Plug-ins](#plug-ins) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
 
-## What's new in 0.9.3
+## What's new in 0.9.4
 
-0.9.3 is a stable release. ✨
+0.9.4 is a stable release. ✨
 
-- **Left strip and Composer:** a customizable icon strip beside the score (41 icons, large by default) with New, Open, Save, Save as, Render, Undo, Redo and Composer, plus a Composer panel with Drums, Bass, Guitar and Keyboard cards, search and style rows — more patterns coming soon in the Composer tab.
+- **Composer drum grooves:** six starter grooves (Straight 8ths, Half-time chug, Blast 16ths, Gallop fill, D-beat, Breakbeat) in the Composer panel. Audition at the song's tempo, drag onto a track at the bar to start from, and choose the tab lane (notation on the track) or the MIDI lane (a clip on a take lane). Timing stays on the 16th grid with fixed pattern accents in dynamics (mp/mf/f/ff) — quarters strongest, 16th off-beats as ghosts, the snare backbeats and bar-opening kick on top, and the last bar of a multi-bar groove lifted into the repeat.
+- **Ctrl+Tab tab switching:** Ctrl+Tab shows the next tab and Ctrl+Shift+Tab the previous one, wrapping at both ends, as in a browser. Both are bindable commands (Next tab / Previous tab).
+- **Fixes:** a groove dropped on the tab lane no longer leaves its bars short (drawn red) — a hit now lasts until the next hit, so every bar adds up to its time signature.
 
-  <img src="https://raw.githubusercontent.com/cobhc95/TabForge/main/docs/media/screenshots/0.9.3/left-strip-composer.png" alt="Left strip with Composer panel: Drums, Bass, Guitar and Keyboard cards under the score" width="560">
-- **F1 Help:** fourteen chapters with a forgiving local search that follows everyday words and symptom phrases like “no sound”, plus step badges, key-cap chips and Tip / Note / Warning boxes.
-- **TuxGuitar (.tg) open and save:** open and save as a further file type (`.tforge` stays the default) — if you keep your songs in TuxGuitar, they now open here and come back intact. A file holds song details, tracks, tunings, bars, repeats, tempo changes, notes, ties, effects, drum parts, lyrics and section markers.
-- **Scale highlight:** one shared On/Off everywhere, an On/Off switch beside the SCALE title, an opacity slider, larger outlined note names and degrees, and a Colour picker with named and custom colours.
+Full list: the [changelog](CHANGELOG.md#094).
+
+<details><summary>Earlier in 0.9.3: left strip, help, TuxGuitar</summary>
+
+- **Left strip and Composer:** an icon strip beside the score (41 icons) with New, Open, Save, Save as, Render, Undo, Redo and Composer, plus a Composer panel with Drums, Bass, Guitar and Keyboard cards, search and style rows — more patterns coming soon.
+- **F1 Help:** fourteen chapters with a forgiving local search, plus step badges, key-cap chips and Tip / Note / Warning boxes.
+- **TuxGuitar (.tg) open and save:** a further file type (`.tforge` stays the default) — songs carry details, tracks, tunings, bars, repeats, notes, effects and markers.
+- **Scale highlight:** one shared On/Off, an On/Off switch beside the SCALE title, an opacity slider, larger outlined note names and degrees, and a Colour picker with named and custom colours.
 - **Light theme:** outlined with little fill. Selected chips, rows and tabs get a pale tint with accent text, and every shade comes from your accent colour.
-- **Fixes:** Band mode keeps its right panel, keyboard and side-panel speed controls are in sync again, the playhead no longer freezes after clicking bar 1 or a loop wrap, the duplicate Tab.New command and the F12 clash are gone, and panels no longer stay dark in light mode.
+- **Fixes:** Band mode keeps its right panel, speed controls are in sync again, the playhead no longer freezes after clicking bar 1 or a loop wrap, the duplicate Tab.New command and the F12 clash are gone, and panels no longer stay dark in light mode.
 
 Full list: the [changelog](CHANGELOG.md#093).
+
+</details>
 
 <details><summary>Earlier in 0.9.2: fretboard legend tiles, look-ahead in notes</summary>
 

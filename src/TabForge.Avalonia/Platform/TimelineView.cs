@@ -111,7 +111,21 @@ public sealed partial class TimelineView : Control
     public (TrackModel Track, int Lane)? ClipDropLane { get; set; }
     /// <summary>An audio-file drag over the timeline or the Add track strip: the planned landing (the track or a new one, the lane and the span),
     /// drawn as a track-coloured block (see <see cref="TimelineAudioClips"/>); null when no file drag is over. Set by the audio drop handler.</summary>
-    public AudioFileDropPreview? FileDropPreview { get; set; }
+    public AudioFileDropPreview? FileDropPreview
+    {
+        get => _fileDropPreview;
+        set
+        {
+            if (ReferenceEquals(value, _fileDropPreview)) return;
+            // A preview in a lane the track does not lay out yet grows the row by that lane (see LaidOutLaneCountOf), so the ghost shows
+            // inside the timeline at the length it will land with, instead of below its bounds; moving it to another track or lane re-lays out.
+            var lane = (_fileDropPreview?.Track, _fileDropPreview?.Lane);
+            _fileDropPreview = value;
+            if ((value?.Track, value?.Lane) != lane) { RefreshRowScroll(); InvalidateMeasure(); }
+            InvalidateVisual();
+        }
+    }
+    private AudioFileDropPreview? _fileDropPreview;
     private readonly AvaloniaDrawContext _draw = new();
     private SongProject _song;
     private double[] _boundaries = Array.Empty<double>();

@@ -2,6 +2,16 @@
 
 TabForge is actively developed; please report anything odd on the Issues page.
 
+## 0.9.4
+
+### Added
+
+- Composer drum grooves: six starter grooves (Straight 8ths, Half-time chug, Blast 16ths, Gallop fill, D-beat, Breakbeat) in the Composer panel, with audition, drag onto a track at a bar, and a tab lane (notation on the track) or MIDI lane (a clip) to land on. Timing stays exactly on the 16th grid, and a fixed accent pattern gives the hits dynamics from the shared table (mp/mf/f/ff): quarter-note positions strongest, 8th positions a step below, 16th off-beats ghosts, with the bar-opening kick and the snare backbeats on top and the last bar of a multi-bar groove lifted into the repeat.
+- Ctrl+Tab shows the next tab and Ctrl+Shift+Tab the previous one, wrapping at both ends, as in a browser. Both are ordinary bindable commands (Next tab / Previous tab) and run ahead of focus navigation.
+
+### Fixed
+
+- Composer grooves dropped on the tab lane no longer land in red (short) bars: a hit now lasts until the next hit, so every bar adds up to its time signature.
 ## 0.9.3
 
 ### Added

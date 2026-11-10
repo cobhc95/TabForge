@@ -33,6 +33,8 @@ public static partial class HotkeyCatalog
         new("File.Render", CategoryFile, "Render to audio file", "Ctrl+Alt+R", "Render the song to WAV / MP3 (master mix and / or stems) faster than realtime."),
         new("Tab.Close", CategoryFile, "Close tab", "Ctrl+W", "Close the active tab."),
         new("Tab.Duplicate", CategoryFile, "Duplicate tab", "Ctrl+Shift+D", "Duplicate the active tab as an unsaved copy."),
+        new("Tab.Next", CategoryFile, "Next tab", "Ctrl+Tab", "Show the next tab, wrapping from the last to the first (as in a browser)."),
+        new("Tab.Previous", CategoryFile, "Previous tab", "Ctrl+Shift+Tab", "Show the previous tab, wrapping from the first to the last (as in a browser)."),
         new("App.Preferences", CategoryFile, "Preferences", "Ctrl+OemComma", "Open this settings window.", "F12"),
 
         new("Edit.Undo", CategoryEdit, "Undo", "Ctrl+Z", "Undo the last edit."),

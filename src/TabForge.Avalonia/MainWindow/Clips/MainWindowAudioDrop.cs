@@ -290,7 +290,10 @@ internal sealed class MainWindowAudioDrop
     {
         var timeline = arrangement.Timeline;
         var first = preview.Parts is { Count: > 0 } parts ? parts[0] : null;
-        var (x1, x2) = (timeline.XOfSeconds(preview.StartSec), timeline.XOfSeconds(first?.EndSec ?? preview.EndSec));
+        // A bar-anchored ghost (a drum groove) spans its written bars, as the landed groove does; a file ghost spans its seconds.
+        var (x1, x2) = preview.BarSpan is { } bars
+            ? timeline.BarSpanX(bars.StartBar, bars.Bars)
+            : (timeline.XOfSeconds(preview.StartSec), timeline.XOfSeconds(first?.EndSec ?? preview.EndSec));
         if (timeline.TranslatePoint(new Point(x1, 0), arrangement.AddTrackBar) is not { } left) return null;
         return (left.X, left.X + Math.Max(3, x2 - x1), first?.Name ?? preview.Label, preview.Readout);
     }

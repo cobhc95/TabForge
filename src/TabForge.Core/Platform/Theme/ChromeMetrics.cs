@@ -103,6 +103,10 @@ public static class ChromeMetrics
     /// <summary>The Composer panel's category cards: the instrument badge edge, the accent dot edge, and the least card height, in DIPs.</summary>
     public const double ComposerBadgeSize = 40, ComposerAccentSize = 10, ComposerCardMinHeight = 96;
 
+    /// <summary>The Composer drum-sample rows: a step cell's height, the gap between steps and the wider gap between beats, the voice-label column,
+    /// the audition button's edge and its icon size, in DIPs.</summary>
+    public const double ComposerStepHeight = 6, ComposerStepGap = 1, ComposerBeatGap = 3, ComposerVoiceLabelWidth = 18, ComposerPlaySize = 26, ComposerPlayIcon = 12;
+
     /// <summary>The Customize strip window: its size, the width of each list, the gap between rows and the gap between columns, in DIPs.</summary>
     public const double LeftStripWindowWidth = 720, LeftStripWindowHeight = 480, LeftStripListWidth = 220, LeftStripGap = 6, LeftStripColumnGap = 12, LeftStripGlyphSize = 16;
 

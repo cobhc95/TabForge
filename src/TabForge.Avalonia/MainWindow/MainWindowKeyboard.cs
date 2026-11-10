@@ -113,6 +113,10 @@ public sealed class MainWindowKeyboard
     /// </summary>
     public bool RouteBeforeControls(Key key, KeyModifiers modifiers, object? focused)
     {
+        // Ctrl+Tab / Ctrl+Shift+Tab switch tabs as in a browser: they run here, on the way down, before focus navigation
+        // or the focused editor can take the Tab key for itself. Rebound gestures keep their new keys (the lookup decides).
+        if (key == Key.Tab && modifiers.HasFlag(KeyModifiers.Control) && CommandFor(key, modifiers) is "Tab.Next" or "Tab.Previous")
+            return Route(key, modifiers, focused);
         if (key != Key.Space || modifiers is not (KeyModifiers.None or KeyModifiers.Shift)) return false;
         // A text box keeps its own space; the transport command's EndRecording stays for Stop, Escape and the menu.
         if (!MainWindowEditingFocus.IsTextInput(focused) && _stopRecording?.Invoke() == true) return true;

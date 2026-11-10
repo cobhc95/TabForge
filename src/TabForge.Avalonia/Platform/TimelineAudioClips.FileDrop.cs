@@ -7,7 +7,7 @@ using TabForge.Platform;
 namespace TabForge.Avalonia.Platform;
 
 // Owns: the ghost clips of a file drag from outside (one per file, on the lane they land on, folded over a repeat like a landed clip), their labels, the thin time line at the
-//   drop start and its "Bar 17.3 · 0:32.4" readout.
+//   drop start and its "Bar 17.3 · 0:32.4" readout. A drum groove carries a bar span instead: one bar-exact block with no fold.
 // Does not own: choosing the landing (AudioDropLanding, AudioDropPreviewPlanner), the lane shade and slot (DrawFileDropPreview) or the drag events (MainWindowAudioDrop).
 // Tests: TabForge.Avalonia.Tests.AudioDropPreviewTests, TabForge.Avalonia.Tests.AudioDropLandingTests.
 internal static partial class TimelineAudioClips
@@ -19,16 +19,23 @@ internal static partial class TimelineAudioClips
 
     /// <summary>Draws the file ghosts at their landing, then the time line and readout. A ghost over a repeat draws through the clip fold (<see cref="FoldOf"/>), so it shows the
     /// slices the landed clip will have.</summary>
-    private static void DrawFileDropParts(IDrawContext d, Func<string, UiColor> ink, TimelineView view, AudioFileDropPreview preview, UiColor colour, double laneTop, UiColor accent)
+    private static void DrawFileDropParts(IDrawContext d, Func<string, UiColor> ink, TimelineView view, AudioFileDropPreview preview, UiColor colour, double laneTop, double band, UiColor accent)
     {
         var parts = preview.Parts is { Count: > 0 } given ? given : new[] { new AudioClip { Name = preview.Label, StartSec = preview.StartSec, SourceLengthSec = preview.EndSec - preview.StartSec } };
         var textInk = ink("TextPrimary");
-        var boxHeight = ClipLanes.AudioLaneHeight - 2 * LanePadding;
+        var boxHeight = Math.Max(0, band - 2 * LanePadding);   // the band: a lane, or a drum groove's row height (see DrawFileDropPreview)
         foreach (var part in parts)
         {
             // The ghost box is the landed clip's box (BoundsOf / SliceRect): the same lane padding, height and minimum width, so the drop shows what lands.
+            // A bar-anchored ghost (a drum groove) spans the written bars instead, with no repeat fold.
             Rect[] boxes;
-            if (FoldOf(view, part) is { } slices) boxes = slices.Select(slice => SliceRect(view, slice, laneTop, fullHeight: true)).ToArray();
+            if (preview.BarSpan is { } span)
+            {
+                // The written bar widths, continued past the song's end at the last bar's width: the landed groove appends bars there, so the ghost spans its full length.
+                var (x1, x2) = view.BarSpanX(span.StartBar, span.Bars);
+                boxes = new[] { new Rect(x1, laneTop + LanePadding, Math.Max(x1 + MinClipWidth, x2) - x1, boxHeight) };
+            }
+            else if (FoldOf(view, part) is { } slices) boxes = slices.Select(slice => SliceRect(view, slice, laneTop, fullHeight: true)).ToArray();
             else
             {
                 var x1 = view.XOfSeconds(part.StartSec);
@@ -49,7 +56,8 @@ internal static partial class TimelineAudioClips
         if (box.Width <= 2 * FileDropTextInset || string.IsNullOrEmpty(label)) return;
         d.PushClip(box.X, box.Y, box.Width, box.Height);
         d.DrawText(d.Text(label, TimelineView.Font, FileDropLabelFontSize, textInk, d.PixelsPerDip, weight: 600), box.X + FileDropTextInset, box.Y + LanePadding);
-        if (box.Width > 4 * FileDropTextInset && detail.Length > 0)
+        // A box as short as a compact row shows the name alone.
+        if (box.Width > 4 * FileDropTextInset && detail.Length > 0 && FileDropLabelFontSize + FileDropDetailTop + FileDropDetailFontSize <= box.Height)
         {
             // The length (and "new lane") only when it fits: a cut-off number would read as a different length.
             var pieces = detail.Split(" · ");
@@ -67,7 +75,8 @@ internal static partial class TimelineAudioClips
     /// <summary>The thin vertical line at the drop start and, beside it, the bar/beat and time of that second (kept inside the visible span).</summary>
     private static void DrawFileDropTimeLine(IDrawContext d, Func<string, UiColor> ink, TimelineView view, AudioFileDropPreview preview, double laneTop, UiColor accent)
     {
-        var x = view.XOfSeconds(preview.StartSec);
+        // A bar-anchored ghost's line sits on its written bar (the seconds-derived first performance can fold to another bar under a repeat).
+        var x = preview.BarSpan is { } barSpan ? view.BarX(barSpan.StartBar) : view.XOfSeconds(preview.StartSec);
         d.Rect(accent, null, x - FileDropLineWidth / 2, 0, FileDropLineWidth, Math.Max(0, view.Bounds.Height));
         if (string.IsNullOrEmpty(preview.Readout)) return;
         var text = d.Text(preview.Readout, TimelineView.Font, FileDropDetailFontSize, ink("TextPrimary"), d.PixelsPerDip);

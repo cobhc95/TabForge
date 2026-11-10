@@ -89,7 +89,43 @@ public sealed class MainWindowTabSettingsTests : IDisposable
         settings.Dispose();
     }
 
+        [Fact]
+    public void NextAndPreviousTabWrapAtBothEnds()
+    {
+        var tabs = new MainWindowTabs(MainWindowTabs.NewSong(), NoAnswer, NoSave, settings: new AppSettings());
+        tabs.Open(MainWindowTabs.NewSong());
+        tabs.Open(MainWindowTabs.NewSong());   // three tabs, the last one shown
+        Assert.Equal(2, tabs.ActiveIndex);
+
+        tabs.SwitchNext();
+        Assert.Equal(0, tabs.ActiveIndex);   // wraps from the last to the first
+        tabs.SwitchNext();
+        Assert.Equal(1, tabs.ActiveIndex);
+        tabs.SwitchPrevious();
+        Assert.Equal(0, tabs.ActiveIndex);
+        tabs.SwitchPrevious();
+        Assert.Equal(2, tabs.ActiveIndex);   // wraps from the first to the last
+    }
+
     [Fact]
+    public void TabSwitchingWithOneTabStaysPut()
+    {
+        var tabs = new MainWindowTabs(MainWindowTabs.NewSong(), NoAnswer, NoSave, settings: new AppSettings());
+        tabs.SwitchNext();
+        tabs.SwitchPrevious();
+        Assert.Equal(0, tabs.ActiveIndex);
+    }
+
+    [Fact]
+    public void NextAndPreviousTabDefaultToCtrlTab()
+    {
+        Assert.Equal("Ctrl+Tab", HotkeyCatalog.ById("Tab.Next")!.DefaultGesture);
+        Assert.Equal("Ctrl+Shift+Tab", HotkeyCatalog.ById("Tab.Previous")!.DefaultGesture);
+        var map = HotkeyCatalog.BuildMap(new HotkeySettings());
+        Assert.Equal("Tab.Next", map["Ctrl+Tab"]);
+        Assert.Equal("Tab.Previous", map["Ctrl+Shift+Tab"]);
+    }
+[Fact]
     public async Task ClosingTheLastTabOpensAFreshTabByDefault()
     {
         var only = MainWindowTabs.NewSong();

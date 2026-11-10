@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using TabForge.Services;
 using Xunit;
 
@@ -27,6 +27,8 @@ public sealed class MenuHotkeysUnchangedTests
             "File.Render|Ctrl+Alt+R|",
             "Tab.Close|Ctrl+W|",
             "Tab.Duplicate|Ctrl+Shift+D|",
+            "Tab.Next|Ctrl+Tab|",
+            "Tab.Previous|Ctrl+Shift+Tab|",
             "App.Preferences|Ctrl+OemComma|F12",
             "Edit.Undo|Ctrl+Z|",
             "Edit.Redo|Ctrl+Y|",

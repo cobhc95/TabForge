@@ -31,9 +31,6 @@ public sealed partial class TimelineView
         }
     }
 
-    /// <summary>The width of one ghost bar: the last bar's.</summary>
-    private double BarWidthAtEnd => BarCount > 0 ? _boundaries[^1] - _boundaries[^2] : BarUnitWidth * _zoomFactor;
-
     private double GhostWidth => _ghostBars * BarWidthAtEnd;
 
     /// <summary>True while a clip drag may run past the end (<see cref="PastEnd"/>) and time past the song's end continues as bars of the last bar's length: the performed order reaches the last written bar.</summary>

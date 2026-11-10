@@ -9,10 +9,11 @@ namespace TabForge.Avalonia;
 
 // Owns: the landing a file drop previews on the arrangement timeline (the track or a new track, the lane, the span from the
 //   measured lengths or the one-bar estimate, one ghost clip per file, the block's label and the "Bar 17.3 · 0:32.4" readout), so the timeline draws where the files would land before the drop.
+//   A drum groove adds an optional bar span so its ghost draws as one bar-exact block instead of repeat-folded slices.
 // Does not own: the drag events and the measuring (MainWindowAudioDrop), the drawing (TimelineAudioClips), or the landed edit (AudioDropPlanner).
 // Tests: TabForge.Avalonia.Tests.AudioDropPreviewTests.
 public sealed record AudioFileDropPreview(TrackModel? Track, int Lane, double StartSec, double EndSec, bool Estimated, string Label, bool NewTrack,
-    IReadOnlyList<AudioClip>? Parts = null, string Readout = "");
+    IReadOnlyList<AudioClip>? Parts = null, string Readout = "", (int StartBar, int Bars)? BarSpan = null);
 
 /// <summary>Plans the landing an audio-file drag previews: the same target and lane rule as the landed plan, with an estimated span until the files are measured.</summary>
 internal static class AudioDropPreviewPlanner

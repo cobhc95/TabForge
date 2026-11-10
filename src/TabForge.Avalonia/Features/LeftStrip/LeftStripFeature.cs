@@ -73,6 +73,9 @@ public sealed class LeftStripFeature
     /// <summary>The saved state the customise window edits.</summary>
     internal LeftStripSettings State => _state;
 
+    /// <summary>The window's drum-sample hooks for the Composer panel (set before Attach); null leaves samples silent and undraggable.</summary>
+    public ComposerDrumHooks? ComposerHooks { get; set; }
+
     /// <summary>Builds the strip's parts and places the toggle icon in the menu row, or in the mode bar while the menu row is hidden.</summary>
     public void Attach(Control menuRow, CompactTrackStrip modeBar)
     {
@@ -81,7 +84,7 @@ public sealed class LeftStripFeature
         _vertical[!Border.BorderBrushProperty] = new DynamicResourceExtension("SoftBorder");
         _vertical.ContextMenu = StripMenu();
         _vertical.AttachedToVisualTree += (_, _) => { if (TopLevel.GetTopLevel(_vertical) is Window w) { w.Deactivated -= OnDeactivated; w.Deactivated += OnDeactivated; } };
-        _composer = ComposerPanel.Build();
+        _composer = ComposerPanel.Build(ComposerHooks);
         DockPanel.SetDock(_vertical, Dock.Left);
         DockPanel.SetDock(_composer, Dock.Left);
         Left.Children.Add(_composer);

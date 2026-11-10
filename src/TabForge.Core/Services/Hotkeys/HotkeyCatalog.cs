@@ -89,7 +89,7 @@ public static partial class HotkeyCatalog
     private static readonly HashSet<string> TextBoxSafe = new(StringComparer.OrdinalIgnoreCase)
     {
         "File.New", "File.Open", "File.OpenInNewTab", "File.Save", "File.SaveAs", "File.Print", "File.PrintPreview",
-        "Tab.Close", "Tab.Duplicate", "App.Preferences", "App.CommandPalette",
+        "Tab.Close", "Tab.Duplicate", "Tab.Next", "Tab.Previous", "App.Preferences", "App.CommandPalette",
         "FxChain.Save", "FxChain.Load"
     };
 

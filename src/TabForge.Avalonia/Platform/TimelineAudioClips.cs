@@ -205,6 +205,7 @@ internal static partial class TimelineAudioClips
         var accent = ink("Accent");
         UiColor colour;
         double laneTop;
+        var band = laneHeight;
         if (preview.Track is null)
         {
             // A strip drop makes a new audio track below the last row: its slot opens there (below the rows when they fill the pane, the strip shade covers it then).
@@ -218,16 +219,20 @@ internal static partial class TimelineAudioClips
         {
             var row = view.Song.Tracks.IndexOf(preview.Track);
             if (row < 0) return;
-            laneTop = view.LaneBandTopOf(row, preview.Lane);
+            // A drum groove lies over the row as the track list shows it (its lane is chosen at the prompt, so the row does not grow): no taller than the row.
+            // A file lands on its planned lane.
+            var groove = preview.BarSpan is not null;
+            laneTop = groove ? view.RowTop(row) : view.LaneBandTopOf(row, preview.Lane);
+            if (groove) band = Math.Min(laneHeight, view.RowHeightOf(row));
             // A lane that does not exist yet opens below the laid-out lanes: it still previews (its slot opens under the block).
-            var newLane = preview.Lane >= ClipLanes.Count(preview.Track);
+            var newLane = !groove && preview.Lane >= ClipLanes.Count(preview.Track);
             var bottom = view.TrackRowsBottom + (newLane ? laneHeight : 0);
             if (laneTop + laneHeight <= view.TrackRowsTop || laneTop >= bottom) return;
             colour = view.TrackColourOf(preview.Track, accent);
-            d.Rect(colour.WithOpacity(FileDropLaneShadeOpacity), null, 0, laneTop, width, laneHeight);
+            d.Rect(colour.WithOpacity(FileDropLaneShadeOpacity), null, 0, laneTop, width, band);
             if (newLane) DrawFileDropSlot(d, accent, width, laneTop, laneHeight);
         }
-        DrawFileDropParts(d, ink, view, preview, colour, laneTop, accent);
+        DrawFileDropParts(d, ink, view, preview, colour, laneTop, band, accent);
     }
 
     private static void DrawFileDropSlot(IDrawContext d, UiColor accent, double width, double top, double height) =>

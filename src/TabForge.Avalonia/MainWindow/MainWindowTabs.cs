@@ -204,6 +204,12 @@ public sealed class MainWindowTabs : IDisposable
         ActiveChanged?.Invoke();
     }
 
+    /// <summary>Shows the next tab, wrapping from the last to the first (Ctrl+Tab, as in a browser); with one tab nothing changes.</summary>
+    public void SwitchNext() => Switch((ActiveIndex + 1) % _songs.Count);
+
+    /// <summary>Shows the previous tab, wrapping from the first to the last (Ctrl+Shift+Tab, as in a browser); with one tab nothing changes.</summary>
+    public void SwitchPrevious() => Switch((ActiveIndex + _songs.Count - 1) % _songs.Count);
+
     /// <summary>
     /// Closes the shown tab after the save question; false when the person kept it. When the last tab closes, the last-tab setting decides:
     /// the window closes, or a new empty tab replaces it.

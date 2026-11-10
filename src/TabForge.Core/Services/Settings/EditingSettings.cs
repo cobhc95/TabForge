@@ -158,6 +158,8 @@ public sealed class EditingSettings
     public string SectionStretchBack { get; set; } = SectionStretchBackChoice.Ask;
     /// <summary>What a click on an empty take lane of a tab track shows: "Tab" (default, the score) or "Piano roll" (the roll on that lane; the first note written creates a MIDI take). See <see cref="EmptyLaneChoice"/>.</summary>
     public string EmptyLaneClick { get; set; } = EmptyLaneChoice.Tab;
+    /// <summary>Where a Composer drum sample lands when dropped: "Ask" (default, the lane prompt), "Tab" (drum notation) or "Midi" (a MIDI clip). See <see cref="DrumSampleDropChoice"/>.</summary>
+    public string ComposerDrumDropLane { get; set; } = DrumSampleDropChoice.Ask;
     /// <summary>Paste Special on the timeline: when true the window starts from <see cref="PasteSpecialRange"/>, the choices of the last paste ("Remember these options").</summary>
     public bool RememberPasteSpecial { get; set; }
     public RangePasteOptions PasteSpecialRange { get; set; } = new();

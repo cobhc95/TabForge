@@ -135,6 +135,17 @@ public sealed partial class TimelineView
     public int SectionCount => _sections.Count;
     public double BarX(int bar) => TimelineGeometryRules.XOfBar(_boundaries, bar);
 
+    /// <summary>The written-bar grid the bar-span file ghost continues past the song's end at: the last bar's width (the timeline's own ghost-bar rule), so a groove that appends bars there previews at its full length.</summary>
+    internal double BarWidthAtEnd => BarCount > 0 ? _boundaries[^1] - _boundaries[^2] : BarUnitWidth * _zoomFactor;
+
+    /// <summary>The x span of <paramref name="bars"/> written bars from <paramref name="startBar"/>, continued past the song's end at the last bar's width.</summary>
+    internal (double X1, double X2) BarSpanX(int startBar, int bars)
+    {
+        var endBar = startBar + Math.Max(1, bars);
+        var x2 = endBar <= BarCount ? BarX(endBar) : BarX(BarCount) + (endBar - BarCount) * BarWidthAtEnd;
+        return (BarX(startBar), x2);
+    }
+
     /// <summary>The x of a song time in seconds: the bar that holds it, at the same fraction of the bar's width as the playhead uses.</summary>
     public double XOfSeconds(double seconds)
     {
@@ -279,7 +290,11 @@ public sealed partial class TimelineView
     {
         var laidOut = ClipLanes.LaidOutCount(track);
         // A live recording take grows its lane before it lands, and keeps it after a mid-take disarm until the global stop.
-        return Math.Max(laidOut, LiveTakes.LaneCountOf(track));
+        // A file-drag preview grows it the same way, so its ghost draws inside the row (over a tab track's notation band the new lane sits
+        // under it, below the old bounds) at the span it will land with; the landed clip then keeps the lane, so nothing jumps on the drop.
+        // A drum groove (a bar span) grows nothing: its lane is only chosen at the Tab/MIDI prompt, so its ghost lies over the row as it is.
+        var previewLane = _fileDropPreview is { Track: { } previewTrack, BarSpan: null } preview && ReferenceEquals(previewTrack, track) ? preview.Lane + 1 : 0;
+        return Math.Max(Math.Max(laidOut, LiveTakes.LaneCountOf(track)), previewLane);
     }
 
     /// <summary>

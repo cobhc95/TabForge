@@ -171,6 +171,36 @@ public class AudioDropLandingTests
     }
 
     [AvaloniaFact]
+    public void ABarSpanGhostIsAsWideAsTheWrittenBarsOnATrackAndOnTheStrip()
+    {
+        var document = new SongDocument(() => null) { Project = SongDocument.BlankProject() };
+        var track = NewTrackFactory.CreateTrack(document.Project, TrackKind.Audio);
+        document.Project.Tracks.Add(track);
+        var arrangement = new ArrangementView(document.Project, document);
+        var window = new Window { Width = 1800, Height = 900, Content = arrangement };
+        window.Show();
+        window.UpdateLayout();
+        var timeline = arrangement.Timeline;
+        var start = AudioClipTimelineRules.SecondsAtBar(document.Project, 1, 0);
+        var onTrack = AudioDropPreviewPlanner.Plan(document.Project, AudioDropTarget.On(track), start, Files(("Groove", 0.2)))! with { BarSpan = (1, 4) };
+
+        var draw = Draw(timeline, onTrack);
+        var fill = timeline.TrackColourOf(track, Fallback).WithOpacity(0.38);
+        var box = Assert.Single(draw.Rects, r => r.Fill == fill);
+        // A blank song is shorter than the groove: the ghost continues past its end at the last bar's width, as the landed groove appends bars there.
+        var (x1, x2) = timeline.BarSpanX(1, 4);
+        Assert.True(timeline.BarCount < 5);
+        Assert.Equal(x1, box.X, 6);
+        Assert.Equal(x2 - x1, box.Width, 6);
+
+        var onStrip = AudioDropPreviewPlanner.Plan(document.Project, AudioDropTarget.NewTrack, start, Files(("Groove", 0.2)))! with { BarSpan = (1, 4) };
+        var ghost = MainWindowAudioDrop.StripGhost(arrangement, onStrip);
+        Assert.NotNull(ghost);
+        Assert.Equal(x2 - x1, ghost!.Value.X2 - ghost.Value.X1, 6);
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public void ADropThatAddedATrackReloadsTheRowsAtOnce()
     {
         var document = new SongDocument(() => null) { Project = SongDocument.BlankProject() };

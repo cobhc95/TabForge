@@ -84,7 +84,7 @@ internal static class DialogMetrics
     /// search box and the results box, the gap under a badge, and the gap beside a card's accent dot.</summary>
     public static readonly Thickness ComposerPanelInset = new(10, 8), ComposerCardInset = new(8, 6), ComposerCardMargin = new(2),
         ComposerOutline = new(1), ComposerSearchGap = new(0, 8, 0, 0), ComposerResultsGap = new(0, 8, 0, 0), ComposerBadgeGap = new(0, 0, 0, 4),
-        ComposerDotGap = new(0, 0, 4, 0), ComposerEdge = new(0, 0, 1, 0);
+        ComposerDotGap = new(0, 0, 4, 0), ComposerEdge = new(0, 0, 1, 0), ComposerPatternGap = new(0, 6, 0, 0), ComposerGripGap = new(0, 0, 6, 0);
 
     /// <summary>The colour picker popup: its width, the square and hue strip sizes, a colour cell, the corner, the position marker (radius and line) and the code box width.</summary>
     public const double ColourPopupWidth = 272, ColourSquareWidth = 200, ColourSquareHeight = 140, HueStripWidth = 22, ColourCellSize = 22, ColourPopupCorner = 6, MarkerRadius = 6, MarkerLine = 2, CodeBoxWidth = 120;

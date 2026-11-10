@@ -33,6 +33,7 @@ public sealed partial class MainWindow : Window
 {
     private readonly MainWindowFile _files;
     private readonly NotificationBar _topBar;
+    private Features.LeftStrip.ComposerDrumHooks? _composerDrumHooks;
 
     public const string PreviewTitle = "TabForge";
     /// <summary>The smallest window size in DIPs, as the main window (MainWindow.xaml MinWidth and MinHeight).</summary>

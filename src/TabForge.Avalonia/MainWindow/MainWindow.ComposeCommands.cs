@@ -258,6 +258,7 @@ public sealed partial class MainWindow
         // The local files closure, not the _files field: the field is assigned after this method returns, so the drop
         // handler would capture null and every dropped song would fail inside its fire-and-forget open.
         // Background score/audio imports live on the top bar (sticky Info with Cancel); the footer keeps only its readouts.
+        _composerDrumHooks = MainWindowComposerDrums.Register(this, panes, songs, playback, settings, showStatus, scorePreview);
         var audioDrop = MainWindowAudioDrop.Register(panes, songs, showStatus, status =>
         {
             if (status.CancelVisible && status.StatusText is not null)
@@ -385,7 +386,9 @@ public sealed partial class MainWindow
         MainWindowTrackRowEdits.Register(commands, songs, panes, this, contextMenus, clipboard, showStatus, editRouting);
         MainWindowTrackRowOptions.Register(panes, songs, this, instrumentPicker, playback);
         MainWindowConvertToInstrument.Register(commands, songs, this, contextMenus, () => settings?.Settings ?? new TabForge.Services.AppSettings(), () => settings?.SaveSettings());
-        commands.Add("Tab.Close", () => Platform.UiTasks.Forget(songs.CloseActive(), "Closing the tab", showStatus));
+        commands.Add("Tab.Close", () => Platform.UiTasks.Forget(songs.CloseActive(), "Closing the tab", showStatus));
+        commands.Add("Tab.Next", () => songs.SwitchNext());
+        commands.Add("Tab.Previous", () => songs.SwitchPrevious());
         commands.Add("File.Save", () => _ = saving.Save(songs.Active));
         commands.Add("File.SaveAs", () => _ = saving.SaveAs(songs.Active));
         var keyboard = new MainWindowKeyboard(settings?.Settings.Hotkeys ?? new TabForge.Services.HotkeySettings(), commands, recordingHooks.StopRecording, () => editTargets.Focus, editRouting);

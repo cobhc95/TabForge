@@ -227,7 +227,7 @@ public static partial class SettingsCatalog
         (Editing, "Note entry", "editing.duration editing.advance editing.reverseplusminus editing.preventoverflow* editing.fillrests* editing.deleteleaves*"),
         (Editing, "Mouse and scrolling", "editing.scorewheel*"),
         (Editing, "Converting tracks", "editing.convertmidi"),
-        (Editing, "Clips", "editing.trimemptybars editing.sectionaudio editing.clipoverlap editing.emptylane"),
+        (Editing, "Clips", "editing.trimemptybars editing.sectionaudio editing.clipoverlap editing.emptylane editing.composerdrumdrop"),
         (Editing, "Sections", "editing.sectionstretch editing.sectionstretchback"),
         (Editing, "Copy and paste", "editing.paste.beats* editing.paste.octave* editing.paste.bars* editing.paste.barsettings* editing.paste.drums*"),
         (Editing, "Piano roll", "editing.pianoroll.needle"),
