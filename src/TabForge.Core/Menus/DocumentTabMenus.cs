@@ -11,7 +11,7 @@ namespace TabForge.Menus;
 /// <summary>The document tab's right-click menu as plain data. UI-free.</summary>
 public static class DocumentTabMenus
 {
-    public const string NewTab = "Tab.New";
+    public const string NewTab = "File.New";
     public const string Duplicate = "TabMenu.Duplicate", Close = "TabMenu.Close", CloseOthers = "TabMenu.CloseOthers",
         CloseToTheRight = "TabMenu.CloseToTheRight", MoveToNewWindow = "TabMenu.MoveToNewWindow";
 

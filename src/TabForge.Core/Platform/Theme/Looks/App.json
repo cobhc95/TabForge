@@ -55,7 +55,7 @@
     "name": "TrackPill", "kind": "ToggleButton",
     "rules": [
       { "name": "Checked", "when": [ { "property": "IsChecked", "value": "True" } ],
-        "set": [ { "property": "Background", "brush": "SelectedTintBrush" }, { "property": "BorderBrush", "brush": "SelectedOutlineBrush" }, { "property": "Foreground", "brush": "TextStrongBrush" } ] },
+        "set": [ { "property": "Background", "brush": "SelectedTintBrush" }, { "property": "BorderBrush", "brush": "SelectedOutlineBrush" }, { "property": "Foreground", "brush": "SelectedInkBrush" } ] },
       { "name": "HoverUnchecked", "when": [ { "property": "IsMouseOver", "value": "True" }, { "property": "IsChecked", "value": "False" } ],
         "set": [ { "property": "Background", "brush": "HoverBrush" }, { "property": "BorderBrush", "brush": "AccentBrush" }, { "property": "Foreground", "brush": "TextBrush" } ] },
       { "name": "HoverChecked", "when": [ { "property": "IsMouseOver", "value": "True" }, { "property": "IsChecked", "value": "True" } ],
@@ -111,7 +111,8 @@
     "name": "CheckBox", "kind": "CheckBox",
     "rules": [
       { "name": "Checked", "when": [ { "property": "IsChecked", "value": "True" } ],
-        "set": [ { "part": "check", "property": "Path.Visibility", "literal": "Visible" } ] },
+        "set": [ { "part": "check", "property": "Path.Visibility", "literal": "Visible" }, { "part": "check", "property": "Path.Stroke", "brush": "CheckTickBrush" },
+                 { "part": "box", "property": "Border.Background", "brush": "CheckFillBrush" }, { "part": "box", "property": "Border.BorderBrush", "brush": "CheckFillBorderBrush" } ] },
       { "name": "Hover", "when": [ { "property": "IsMouseOver", "value": "True" } ],
         "set": [ { "part": "box", "property": "Border.BorderBrush", "brush": "AccentBrush" } ] },
       { "name": "Pressed", "when": [ { "property": "IsPressed", "value": "True" } ],

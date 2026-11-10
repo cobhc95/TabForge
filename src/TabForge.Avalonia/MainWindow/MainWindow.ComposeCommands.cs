@@ -56,7 +56,8 @@ public sealed partial class MainWindow
         // A new menu feature class adds exactly one Register line here (own line, any position) and exposes
         // `public static readonly IReadOnlyList<string> Commands`; the menu test discovers that field by reflection.
         TabForge.Avalonia.Platform.Controls.HotkeyTip.SetSource(this, () => settings?.Settings.Hotkeys ?? new TabForge.Services.HotkeySettings());
-        MainWindowHelpMenu.Register(commands, this, () => settings?.Settings.Hotkeys ?? new TabForge.Services.HotkeySettings());
+        MainWindowHelpMenu.Register(commands, this);
+        TabForge.Avalonia.Features.Help.HelpFeature.Register(commands, this, settings);
         MainWindowCommandPalette.Register(commands, this, () => settings?.Settings.Hotkeys ?? new TabForge.Services.HotkeySettings());
         MainWindowUpdateCheck.Register(commands, this, settings, showStatus);
         MainWindowTrackListRows.Register(commands, songs, panes, settings, this, showStatus, () => trackListFit?.Fit());
@@ -249,7 +250,6 @@ public sealed partial class MainWindow
         compose.File = files;
         compose.Media.Bind(songs, panes);
         compose.Media.Register(commands, compose.ContextMenus);
-        commands.Add("Tab.New", songs.New);
         commands.Add("Tab.Duplicate", () => songs.Duplicate(songs.ActiveIndex));
         MainWindowTabMenu.Register(commands, this, showStatus);
         commands.Add("File.New", songs.New);

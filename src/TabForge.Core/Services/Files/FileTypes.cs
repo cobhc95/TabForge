@@ -16,13 +16,16 @@ public static class FileTypes
     public static readonly string[] MusicXml = { ".musicxml", ".mxl", ".xml" };
     /// <summary>Standard MIDI files, read by SmfReader. Not in <see cref="AllOpenable"/> either: no Explorer association is added for them.</summary>
     public static readonly string[] Midi = { ".mid", ".midi" };
+    /// <summary>TuxGuitar files; read by its own reader in Core, not by the worker. Not in <see cref="AllOpenable"/> and not in <see cref="Importable"/>: no Explorer association is added for them.</summary>
+    public static readonly string[] TuxGuitar = { ".tg" };
     /// <summary>Everything the import worker reads (Guitar Pro, MusicXML and MIDI).</summary>
     public static readonly string[] Importable = GuitarPro.Concat(MusicXml).Concat(Midi).ToArray();
     /// <summary>Everything File &gt; Open, drag-drop and the command line accept.</summary>
-    public static readonly string[] OpenInApp = AllOpenable.Concat(MusicXml).Concat(Midi).ToArray();
+    public static readonly string[] OpenInApp = AllOpenable.Concat(MusicXml).Concat(Midi).Concat(TuxGuitar).ToArray();
 
     public static bool IsOpenable(string extension) => Array.Exists(OpenInApp, e => e.Equals(extension, StringComparison.OrdinalIgnoreCase));
     public static bool IsMusicXml(string extension) => Array.Exists(MusicXml, e => e.Equals(extension, StringComparison.OrdinalIgnoreCase));
     public static bool IsMidi(string extension) => Array.Exists(Midi, e => e.Equals(extension, StringComparison.OrdinalIgnoreCase));
     public static bool IsTuxGuitarGtp(string extension) => TuxGuitarGtp.Equals(extension, StringComparison.OrdinalIgnoreCase);
+    public static bool IsTuxGuitar(string extension) => Array.Exists(TuxGuitar, e => e.Equals(extension, StringComparison.OrdinalIgnoreCase));
 }

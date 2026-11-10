@@ -21,12 +21,11 @@ A document tab holds one open song.
 
 | Action | Keys | Menu path |
 |---|---|---|
-| New song | `Ctrl+N` | **File > New** |
+| New song, in a new document tab | `Ctrl+N` | **File > New** |
 | Open | `Ctrl+O` | **File > Open…** |
 | Open in a new document tab | `Ctrl+Shift+O` | **File > Open in new tab…** |
 | Save | `Ctrl+S` | **File > Save** |
 | Save under a new name | `Ctrl+Shift+S` | **File > Save As…** |
-| New document tab | `Ctrl+Alt+T` | **File > New tab** |
 | Close the document tab | `Ctrl+W` | **File > Close tab** |
 | Duplicate the document tab | `Ctrl+Shift+D` | Right-click the document tab |
 | Score information | `F5` | **File > Score information…** |

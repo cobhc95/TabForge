@@ -87,7 +87,7 @@ public sealed partial class TabStripView : UserControl
         var add = GlyphButton("NewTab", "TabBarPlusButton", NewTabButtonWidth, TabStripPresenter.CornerRadius(Settings), Glyph(IconGeometry.Plus, 14));
         _add = add;
         add.Margin = new Thickness(6, 0, 0, 0);
-        TabForge.Avalonia.Platform.Controls.HotkeyTip.Set(add, "Tab.New", "New tab");
+        TabForge.Avalonia.Platform.Controls.HotkeyTip.Set(add, "File.New", "New tab");
         AutomationProperties.SetName(add, "New tab");
         add.Click += (_, _) => NewTabRequested?.Invoke();
         // The strip is transparent so the title row's chrome colour shows behind it; tabs start 8 px in and hang from the top edge.

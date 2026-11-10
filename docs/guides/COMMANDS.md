@@ -7,10 +7,11 @@ Do not edit by hand: regenerate with
 python Source/tools/command-map.py
 ```
 
-**334 command ids** in 72 files (all distinct). Generated from the `Commands` arrays of `Source/src/TabForge.Avalonia/MainWindow/**/MainWindow*.cs` and from the inline `commands.Add` / `commands.AddWhen` registrations whose id is a literal or a constant. Not listed: the command table's own handler map (`File.Exit`, `View.ResetPanels`), ids built at run time from a prefix (`ContextMenuRows.ScoreLayoutIdPrefix` rows), and ids passed through a loop variable already covered by a `Commands` array.
+**333 command ids** in 73 files (all distinct). Generated from the `Commands` arrays of `Source/src/TabForge.Avalonia/MainWindow/**/MainWindow*.cs` and from the inline `commands.Add` / `commands.AddWhen` registrations whose id is a literal or a constant. Not listed: the command table's own handler map (`File.Exit`, `View.ResetPanels`), ids built at run time from a prefix (`ContextMenuRows.ScoreLayoutIdPrefix` rows), and ids passed through a loop variable already covered by a `Commands` array.
 
 | Command id | Registered in |
 |---|---|
+| `Help.Open` | `Features/Help/HelpFeature.cs` |
 | `View.ShowStripButton` | `Features/LeftStrip/LeftStripFeature.cs` |
 | `View.ShowStripOnStart` | `Features/LeftStrip/LeftStripFeature.cs` |
 | `View.ToggleComposer` | `Features/LeftStrip/LeftStripFeature.cs` |
@@ -57,7 +58,6 @@ python Source/tools/command-map.py
 | `Media.RetryWaveform` | `MainWindow/MainWindow.ComposeCommands.cs` |
 | `Tab.Close` | `MainWindow/MainWindow.ComposeCommands.cs` |
 | `Tab.Duplicate` | `MainWindow/MainWindow.ComposeCommands.cs` |
-| `Tab.New` | `MainWindow/MainWindow.ComposeCommands.cs` |
 | `View.InstrumentView` | `MainWindow/MainWindow.ComposeCommands.cs` |
 | `Transport.EscapeStop` | `MainWindow/Menus/MainWindowTransportMenu.cs` |
 | `Timeline.Snap` | `MainWindow/Timeline/MainWindowTimelineZoom.cs` |
@@ -204,7 +204,6 @@ python Source/tools/command-map.py
 | `File.ExportVideo` | `MainWindowFileExports.cs` |
 | `File.Render` | `MainWindowFileExports.cs` |
 | `Tools.GlobalTuning` | `MainWindowGlobalTuning.cs` |
-| `App.Shortcuts` | `MainWindowHelpMenu.cs` |
 | `Help.About` | `MainWindowHelpMenu.cs` |
 | `Bar.Append` | `MainWindowInsertMenu.cs` |
 | `Bar.InsertAfter` | `MainWindowInsertMenu.cs` |

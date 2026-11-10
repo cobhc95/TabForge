@@ -80,6 +80,12 @@ internal static class DialogMetrics
     public static readonly Thickness PickerHeaderPadding = new(8, 6), PickerHeaderGap = new(0, 6, 0, 2), PickerChevronGap = new(0, 0, 8, 0);
     public const double PickerHeaderCorner = 6, PickerChevronClosed = 0, PickerChevronOpen = 90;
 
+    /// <summary>The Composer panel: its content inset, a category card's inset and outer margin, the card and results outline, the gap above the
+    /// search box and the results box, the gap under a badge, and the gap beside a card's accent dot.</summary>
+    public static readonly Thickness ComposerPanelInset = new(10, 8), ComposerCardInset = new(8, 6), ComposerCardMargin = new(2),
+        ComposerOutline = new(1), ComposerSearchGap = new(0, 8, 0, 0), ComposerResultsGap = new(0, 8, 0, 0), ComposerBadgeGap = new(0, 0, 0, 4),
+        ComposerDotGap = new(0, 0, 4, 0), ComposerEdge = new(0, 0, 1, 0);
+
     /// <summary>The colour picker popup: its width, the square and hue strip sizes, a colour cell, the corner, the position marker (radius and line) and the code box width.</summary>
     public const double ColourPopupWidth = 272, ColourSquareWidth = 200, ColourSquareHeight = 140, HueStripWidth = 22, ColourCellSize = 22, ColourPopupCorner = 6, MarkerRadius = 6, MarkerLine = 2, CodeBoxWidth = 120;
 
@@ -414,4 +420,24 @@ internal static class DialogMetrics
         TrackStringStepButtonPadding = new(0), TrackCapoBorderThickness = new(1), TrackCapoTickPadding = new(0),
         TrackErrorGap = new(0, 0, 12, 0), TrackLeftColumnGap = new(0, 0, 10, 0), TrackColumnsInset = new(12, 8, 12, 0), TrackInstrumentCardGap = new(0, 0, 8, 6),
         TrackStringStepButtonGap = new(2, 0), TrackMidiLabelGap = new(0, 0, 0, 1);
+    /// <summary>Sets the margin of a control from named metrics (the same on every side) and returns it, so a window builds its layout without a literal margin.</summary>
+    public static T Spaced<T>(T control, double all) where T : Layoutable { control.Margin = new Thickness(all); return control; }
+
+    /// <summary>Sets the margin of a control: horizontal and vertical.</summary>
+    public static T Spaced<T>(T control, double horizontal, double vertical) where T : Layoutable { control.Margin = new Thickness(horizontal, vertical); return control; }
+
+    /// <summary>Sets the margin of a control: left, top, right, bottom.</summary>
+    public static T Spaced<T>(T control, double left, double top, double right, double bottom) where T : Layoutable { control.Margin = new Thickness(left, top, right, bottom); return control; }
+
+    /// <summary>Sets the padding of a border: the same on every side.</summary>
+    public static Border Padded(Border border, double all) { border.Padding = new Thickness(all); return border; }
+
+    /// <summary>Sets the padding of a border: horizontal and vertical.</summary>
+    public static Border Padded(Border border, double horizontal, double vertical) { border.Padding = new Thickness(horizontal, vertical); return border; }
+
+    /// <summary>Gives a border an edge line of this width.</summary>
+    public static Border Outlined(Border border, double width) { border.BorderThickness = new Thickness(width); return border; }
+
+    /// <summary>Gives a footer action button the standard padding and minimum width.</summary>
+    public static Button ActionButton(Button button) { button.Padding = ActionButtonPadding; button.MinWidth = DialogButtonMinWidth; return button; }
 }

@@ -29,7 +29,7 @@
     "name": "Tab", "kind": "TabItem",
     "rules": [
       { "name": "Selected", "when": [ { "property": "IsSelected", "value": "True" } ],
-        "set": [ { "part": "bd", "property": "Border.Background", "brush": "Panel2Brush" }, { "part": "bd", "property": "Border.BorderBrush", "brush": "AccentBrush" }, { "property": "Foreground", "brush": "TextStrongBrush" } ] },
+        "set": [ { "part": "bd", "property": "Border.Background", "brush": "Panel2Brush" }, { "part": "bd", "property": "Border.BorderBrush", "brush": "AccentBrush" }, { "property": "Foreground", "brush": "SelectedInkBrush" } ] },
       { "name": "HoverNotSelected", "when": [ { "property": "IsMouseOver", "value": "True" }, { "property": "IsSelected", "value": "False" } ],
         "set": [ { "part": "bd", "property": "Border.Background", "brush": "HoverBrush" } ] },
       { "name": "Pressed", "when": [ { "property": "IsPressed", "value": "True" } ],

@@ -30,6 +30,8 @@ internal abstract class ReadoutScaleHost : IScalePanelHost
 
     public virtual bool TwoColumns => false;
 
+    public ScaleHeaderSwitch? HeaderSwitch => new("On fretboard", "Show the scale on the fretboard", () => Readout.Shown, Readout.SetShown);
+
     public event Action? Refreshed
     {
         add => Readout.Refreshed += value;

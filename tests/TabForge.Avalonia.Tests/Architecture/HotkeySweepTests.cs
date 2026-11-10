@@ -81,21 +81,43 @@ public class HotkeySweepTests
     }
 
     [AvaloniaFact]
-    public void NoTwoIdsShareAGestureInOneContext()
+    public void NoTwoIdsShareAGestureInOneContextInAnyPreset()
     {
-        var settings = new HotkeySettings();
-        var owners = new Dictionary<(int, string), HashSet<string>>();
-        foreach (var action in HotkeyCatalog.All)
-            foreach (var slot in new[] { 1, 2 })
-            {
-                var gesture = HotkeyCatalog.GestureFor(settings, action.Id, slot);
-                if (string.IsNullOrWhiteSpace(gesture)) continue;
-                var slotKey = (HotkeyCatalog.ContextOf(action.Id), HotkeyCatalog.Canonical(gesture));
-                if (!owners.TryGetValue(slotKey, out var ids)) owners[slotKey] = ids = new HashSet<string>();
-                ids.Add(action.Id);
-            }
-        var shared = owners.Where(o => o.Value.Count > 1).Select(o => $"{o.Key.Item2}: {string.Join(", ", o.Value)}").ToList();
-        Assert.True(shared.Count == 0, string.Join("\n", shared));
+        var shared = new List<string>();
+        foreach (var preset in HotkeyPresets.Names)
+        {
+            var settings = new HotkeySettings { Preset = preset };
+            var owners = new Dictionary<(int, string), HashSet<string>>();
+            foreach (var action in HotkeyCatalog.All)
+                foreach (var slot in new[] { 1, 2 })
+                {
+                    var gesture = HotkeyCatalog.GestureFor(settings, action.Id, slot);
+                    if (string.IsNullOrWhiteSpace(gesture)) continue;
+                    var slotKey = (HotkeyCatalog.ContextOf(action.Id), HotkeyCatalog.Canonical(gesture));
+                    if (!owners.TryGetValue(slotKey, out var ids)) owners[slotKey] = ids = new HashSet<string>();
+                    ids.Add(action.Id);
+                }
+            shared.AddRange(owners.Where(o => o.Value.Count > 1).Select(o => $"[{preset}] {o.Key.Item2}: {string.Join(", ", o.Value)}"));
+        }
+        Assert.True(shared.Count == 0, string.Join(Environment.NewLine, shared));
+    }
+
+    [AvaloniaFact]
+    public void EveryPresetCoversTheCatalogueAndNamesOnlyRealActions()
+    {
+        foreach (var id in new[] { "File.New", "View.ToggleLeftStrip", "View.ToggleComposer" })
+            Assert.NotNull(HotkeyCatalog.ById(id));
+        Assert.Null(HotkeyCatalog.ById("Tab.New"));
+        var problems = new List<string>();
+        foreach (var preset in HotkeyPresets.Names)
+        {
+            var settings = new HotkeySettings { Preset = preset };
+            foreach (var action in HotkeyCatalog.All)
+                if (HotkeyCatalog.GestureFor(settings, action.Id, 1) is null) problems.Add($"[{preset}] {action.Id} has no resolved binding");
+            foreach (var id in HotkeyPresets.OverriddenIds(preset))
+                if (HotkeyCatalog.ById(id) is null) problems.Add($"[{preset}] overrides unknown action {id}");
+        }
+        Assert.True(problems.Count == 0, string.Join(Environment.NewLine, problems));
     }
 
     [AvaloniaFact]

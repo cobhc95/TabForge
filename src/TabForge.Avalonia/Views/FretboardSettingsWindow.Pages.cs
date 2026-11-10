@@ -7,6 +7,8 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Platform.Controls;
+using TabForge.Models;
+using TabForge.Platform.Theme;
 using TabForge.Services;
 
 namespace TabForge.Avalonia.Views;
@@ -83,13 +85,15 @@ public sealed partial class FretboardSettingsWindow
             default:
                 var highlight = Card("Highlight");
                 Chips(highlight, "STYLE", "ScaleStyle", ScaleHighlightStyles.All, () => ScaleHighlightStyles.Normalize(ed.ScaleHighlightStyle), v => ed.ScaleHighlightStyle = v);
+                ScaleColours(highlight);
+                Slide(highlight, "HIGHLIGHT OPACITY", "ScaleHighlightOpacity", ScaleHighlightStyles.MinOpacity, ScaleHighlightStyles.MaxOpacity, ScaleHighlightStyles.OpacityStep, e => e.ScaleHighlightOpacity, v => ed.ScaleHighlightOpacity = v, "%");
                 Switch(highlight, "ScaleEmphasiseRoot", "Emphasise the root", ed.ScaleEmphasiseRoot, v => ed.ScaleEmphasiseRoot = v);
                 Switch(highlight, "ScaleDimOutside", "Dim notes outside the scale", ed.ScaleDimOutside, v => ed.ScaleDimOutside = v);
                 Switch(highlight, "ScaleOnlyInView", "Only on the frets in view", ed.ScaleOnlyInView, v => ed.ScaleOnlyInView = v);
                 var clear = new Button { Name = "ScaleClearHighlight", Content = "Clear highlight" }.WithMargin(0, 12, 0, 0);
-                clear.Click += (_, _) => { ed.ScaleHighlight = null; Changed(); };
+                clear.Click += (_, _) => { ed.SetScaleShown(false); Changed(); };
                 highlight.Add(clear);
-                highlight.Add(new TextBlock { Text = "The scale itself and its colours are chosen with the Scales button on the fretboard.", FontSize = FretboardChromeMetrics.PreviewLabelSize }.WithMargin(0, 10, 0, 0));
+                highlight.Add(new TextBlock { Text = "The scale itself is chosen with the Scales button on the fretboard; its colours can also be chosen here.", FontSize = FretboardChromeMetrics.PreviewLabelSize }.WithMargin(0, 10, 0, 0));
                 break;
         }
         _page.Content = panel;
@@ -127,6 +131,57 @@ public sealed partial class FretboardSettingsWindow
     {
         var light = ActualThemeVariant == global::Avalonia.Styling.ThemeVariant.Light;
         foreach (var (role, button) in _noteColourButtons) button.Show(FretNoteColours.Shown(role, FretNoteColours.Get(_settings.Editing, role), light));
+    }
+
+    /// <summary>The scale highlight colours: the named colour chips and the shared colour picker for a custom one (the same picker as the Note colours card).</summary>
+    private void ScaleColours(global::Avalonia.Controls.Controls rows)
+    {
+        var ed = _settings.Editing;
+        Chips(rows, "COLOUR", "ScaleColour", ScaleHighlightStyles.Colours, () => ed.ScaleHighlightColour, v => SetScaleColour(ed, v));
+        rows.Add(ScalePopupLayout.SectionLabel("CUSTOM COLOUR"));
+        var light = ActualThemeVariant == global::Avalonia.Styling.ThemeVariant.Light;
+        var button = new ColourButton(ScaleColourDefault(ed, light), _settings.Appearance.RecentColours)
+        {
+            Name = "ScaleCustomColour", Width = global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.ColourSettingWidth,
+            HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Left,
+        };
+        AutomationProperties.SetName(button, "Scale highlight custom colour");
+        button.Show(ShownScaleCustom(ed, light));
+        button.Previewed += hex => { StoreScaleCustom(ed, hex); Changed(rebuild: false); };   // every popup click shows on the board at once
+        button.Picked += hex => { StoreScaleCustom(ed, hex); Changed(rebuild: false); };
+        _scaleCustomColourButton = button;
+        rows.Add(button);
+    }
+
+    /// <summary>The custom colour button shows the stored colour again (a colour picked in the Scales popup while this window is open).</summary>
+    internal void ShowScaleColour()
+    {
+        if (_scaleCustomColourButton is null) return;
+        var light = ActualThemeVariant == global::Avalonia.Styling.ThemeVariant.Light;
+        _scaleCustomColourButton.Show(ShownScaleCustom(_settings.Editing, light));
+    }
+
+    private static string ScaleColourDefault(EditingSettings ed, bool light) => Palette.Hex(FretboardSettingsBinding.ColourKey(ed.ScaleHighlightColour), light);
+
+    /// <summary>The colour the custom picker shows: the stored custom colour, else the colour the named choice gives now (so Custom never draws grey).</summary>
+    private static string ShownScaleCustom(EditingSettings ed, bool light) =>
+        ColourHex.TryParse(ed.ScaleHighlightCustomColour, out var colour) ? ColourHex.Format(colour.R, colour.G, colour.B) : ScaleColourDefault(ed, light);
+
+    private void SetScaleColour(EditingSettings ed, string value)
+    {
+        if (value == "Custom" && !ColourHex.TryParse(ed.ScaleHighlightCustomColour, out _))
+        {
+            var light = ActualThemeVariant == global::Avalonia.Styling.ThemeVariant.Light;
+            ed.ScaleHighlightCustomColour = ScaleColourDefault(ed, light);   // start from the colour on the board now
+        }
+        ed.ScaleHighlightColour = value;
+    }
+
+    private static void StoreScaleCustom(EditingSettings ed, string? picked)
+    {
+        if (!ColourHex.TryParse(picked, out var colour)) return;
+        ed.ScaleHighlightCustomColour = ColourHex.Format(colour.R, colour.G, colour.B);
+        ed.ScaleHighlightColour = "Custom";
     }
 
     private void Chips(global::Avalonia.Controls.Controls rows, string label, string prefix, IReadOnlyList<string> values, Func<string> get, Action<string> set, string? disabled = null)
@@ -204,7 +259,7 @@ public sealed partial class FretboardSettingsWindow
                     (d.FretboardFrets, d.LeftHanded, d.FretStringSpacing, da.FretboardPosition, da.FretboardAtBottom, da.LockInstrumentSize); break;
             case 3: (ed.FretboardStringLook, ed.FretboardCapoLook, ed.FretboardVibration, ed.FretboardVibrationSpeed, ed.FretboardStringNumbers) =
                     (d.FretboardStringLook, d.FretboardCapoLook, d.FretboardVibration, d.FretboardVibrationSpeed, d.FretboardStringNumbers); break;
-            default: (ed.ScaleHighlightStyle, ed.ScaleEmphasiseRoot, ed.ScaleDimOutside, ed.ScaleOnlyInView) = (d.ScaleHighlightStyle, d.ScaleEmphasiseRoot, d.ScaleDimOutside, d.ScaleOnlyInView); break;
+            default: (ed.ScaleHighlightStyle, ed.ScaleHighlightColour, ed.ScaleHighlightCustomColour, ed.ScaleHighlightOpacity, ed.ScaleEmphasiseRoot, ed.ScaleDimOutside, ed.ScaleOnlyInView) = (d.ScaleHighlightStyle, d.ScaleHighlightColour, d.ScaleHighlightCustomColour, d.ScaleHighlightOpacity, d.ScaleEmphasiseRoot, d.ScaleDimOutside, d.ScaleOnlyInView); break;
         }
     }
 }

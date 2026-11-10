@@ -73,6 +73,7 @@ internal sealed class StatusScaleReadout
     public void Show(SongProject song, int bar, TrackModel? track)
     {
         _bar = bar;
+        Hook(_editing());
         _trackId = track?.Id;
         // Drum tracks have no scale: the readout shows a dash and no detection runs for them.
         if (track is not null && (track.IsDrumTrack || track.MidiChannel == 9))
@@ -104,10 +105,10 @@ internal sealed class StatusScaleReadout
     {
         if (_result is null) return;
         var context = _result.Context;
-        if (fromFretboard && Settings is { ShowOnFretboard: false } link) { link.ShowOnFretboard = true; _saveDeferred(); }   // a pick made at the fretboard lights it at once
         if (keep) DocumentEdits.Run(_document(), project => _engine.KeepPick(project, context, scale.Highlight), label: "Keep scale");
         else _engine.PickForSession(context, scale.Highlight);
         Recompute();
+        if (fromFretboard && !Shown) SetShown(true);   // a pick made at the fretboard lights it at once
     }
 
     public void UseAuto()
@@ -158,13 +159,36 @@ internal sealed class StatusScaleReadout
 
     public void LookChanged() => _saveDeferred();
 
-    public void ClearHighlight()
+    public void ClearHighlight() => SetShown(false);
+
+    /// <summary>True when the scale is shown on the fretboard (the one state every on/off control reads).</summary>
+    public bool Shown => _editing()?.ScaleShown ?? Settings.ShowOnFretboard;
+
+    /// <summary>The one way to show or hide the scale on the fretboard: the panel switch, Clear highlight, the menu, hotkeys and the settings windows all end here, through the editing settings.</summary>
+    public void SetShown(bool on)
     {
-        if (_editing() is { } editing) editing.ScaleHighlight = null;
-        Settings.ShowOnFretboard = false;
+        Hook(_editing());
+        if (_editing() is { } editing) editing.SetScaleShown(on);
+        else { Settings.ShowOnFretboard = on; ScaleShownChanged(); }
+    }
+
+    private EditingSettings? _hooked;
+
+    private void Hook(EditingSettings? editing)
+    {
+        if (ReferenceEquals(editing, _hooked)) return;
+        if (_hooked is not null) _hooked.ScaleShownChanged -= ScaleShownChanged;
+        _hooked = editing;
+        if (editing is not null) editing.ScaleShownChanged += ScaleShownChanged;
+    }
+
+    // Whoever changed whether the scale is shown: apply the readout scale (or drop it), save, and tell the open panels.
+    private void ScaleShownChanged()
+    {
         _lastApplied = null;
         _saveDeferred();
         Recompute();
+        Refreshed?.Invoke();
     }
 
     private void Recompute(SongProject song, int bar) => Show(song, bar, song.Tracks.FirstOrDefault(t => t.Id == _trackId) ?? song.FirstNotationTrack);

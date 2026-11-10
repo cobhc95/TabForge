@@ -21,6 +21,9 @@ internal static class UiTiming
     /// <summary>How often a live settings preview reaches the score while a slider is dragged.</summary>
     public const double SettingsPreviewIntervalMs = 100;
 
+    /// <summary>How long the Help search box rests after a keystroke before the search runs, so typing never waits on it.</summary>
+    public const int HelpSearchDebounceMs = 120;
+
     /// <summary>The automatic update check's delay after start-up.</summary>
     public const double UpdateCheckStartDelayMs = 8_000;
 
@@ -35,6 +38,9 @@ internal static class UiTiming
 
     /// <summary>The margin after the registry's missing-song grace before the song is looked for again.</summary>
     public const double AutosaveRecheckDelayMs = 250;
+
+    /// <summary>Rest on a left-strip icon before its tip shows; short enough to answer, long enough that sweeping across the strip shows none.</summary>
+    public const int StripTooltipDelayMs = 450;
 
     /// <summary>How long the pointer rests on a submenu parent before its submenu opens.</summary>
     public const double MenuOpenDelayMs = 120;

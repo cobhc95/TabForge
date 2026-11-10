@@ -140,8 +140,8 @@ public sealed class PianoRollSharedScaleTests
         Dispatcher.UIThread.RunJobs();
         try
         {
-            var tick = panel.Frame.Rows.GetLogicalDescendants().OfType<CheckBox>().Single(c => c.Name == "ScaleShowOnFretboard");
-            Assert.Equal("Show on the fretboard (scale highlight)", global::Avalonia.Automation.AutomationProperties.GetName(tick));
+            var tick = panel.Frame.Panel.GetLogicalDescendants().OfType<TabForge.Avalonia.Platform.Controls.LargeSwitch>().Single();
+            Assert.Equal("Show the scale on the fretboard", global::Avalonia.Automation.AutomationProperties.GetName(tick));
             Assert.Equal(scale.Settings.ShowOnFretboard, tick.IsChecked);
             tick.IsChecked = !tick.IsChecked;
             Assert.Equal(tick.IsChecked, scale.Settings.ShowOnFretboard);   // the same setting the fretboard look's On / Off reads
@@ -151,8 +151,8 @@ public sealed class PianoRollSharedScaleTests
             var fret = new ScalePanel(scale.FretboardHost());
             fret.OpenAbove(window);
             Dispatcher.UIThread.RunJobs();
-            var on = fret.Frame.Rows.GetLogicalDescendants().OfType<Control>().Single(c => c.Name == "ScaleShowOn") as global::Avalonia.Controls.Primitives.ToggleButton;
-            Assert.Equal(scale.Settings.ShowOnFretboard, on!.IsChecked);
+            var on = fret.Frame.Rows.GetLogicalDescendants().OfType<TabForge.Avalonia.Platform.Controls.LargeSwitch>().Single();
+            Assert.Equal(scale.Settings.ShowOnFretboard, on.IsChecked);
             fret.Close();
         }
         finally { window.Close(); }

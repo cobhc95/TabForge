@@ -8,6 +8,8 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using TabForge.Avalonia.Platform;
+using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Features.LeftStrip;
 
@@ -26,9 +28,9 @@ internal sealed class LeftStripListDrag
     private readonly ObservableCollection<string> _on;
     private readonly Func<string, Control> _row;
     private readonly Action<int> _applied;
-    private readonly Border _ghost = new() { IsVisible = false, Padding = new Thickness(8, 3), CornerRadius = new CornerRadius(3), BorderThickness = new Thickness(1), IsHitTestVisible = false };
+    private readonly Border _ghost = new() { IsVisible = false, Padding = new Thickness(8, 3), CornerRadius = new CornerRadius(ChromeMetrics.RadiusSmall), BorderThickness = new Thickness(1), IsHitTestVisible = false };
     private readonly Border _line = new() { Height = LineHeight, IsVisible = false, IsHitTestVisible = false };
-    private readonly DispatcherTimer _scrollTimer = new() { Interval = TimeSpan.FromMilliseconds(16) };
+    private readonly DispatcherTimer _scrollTimer = new() { Interval = TimeSpan.FromMilliseconds(UiTiming.SectionDragFrameMs) };
 
     private (ListBox List, string Id, int Index, Point Start)? _press;
     private bool _dragging;

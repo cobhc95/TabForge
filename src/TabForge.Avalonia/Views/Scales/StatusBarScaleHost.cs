@@ -11,7 +11,7 @@ namespace TabForge.Avalonia.Views.TransportPopups;
 internal sealed class StatusBarScaleHost : ReadoutScaleHost
 {
     private const string OptionsTitle = "OPTIONS";
-    private const string PreferText = "Prefer common scales when it is close", KeepText = "Keep my choice for this section", MusicalText = "Use musical key names (E♭ instead of D#)", ShowText = "Show on the fretboard (scale highlight)";
+    private const string PreferText = "Prefer common scales when it is close", KeepText = "Keep my choice for this section", MusicalText = "Use musical key names (E♭ instead of D#)";
     public const string Footnote = "Your pick sticks to this section and track; Auto returns to detection.";
 
     public StatusBarScaleHost(StatusScaleReadout readout, ScaleHostLinks links) : base(readout, links) { }
@@ -25,13 +25,6 @@ internal sealed class StatusBarScaleHost : ReadoutScaleHost
     private Control Options()
     {
         var panel = new StackPanel();
-        // One setting with the fretboard look's "Show the scale on the fretboard: On / Off".
-        panel.Children.Add(ScalePanelParts.Check("ScaleShowOnFretboard", ShowText, Settings.ShowOnFretboard, v =>
-        {
-            Settings.ShowOnFretboard = v;
-            if (!v && Readout.Editing is { } editing) editing.ScaleHighlight = null;
-            SettingChanged();
-        }));
         panel.Children.Add(ScalePanelParts.Check("ScaleKeepChoice", KeepText, Readout.KeepChoice, v => Readout.KeepChoice = v));
         panel.Children.Add(ScalePanelParts.Check("ScaleMusicalNames", MusicalText, Settings.MusicalKeyNames, v => { Settings.MusicalKeyNames = v; SettingChanged(); }));
         panel.Children.Add(ScalePanelParts.Check("ScalePreferCommon", PreferText, Settings.PreferCommon, v => { Settings.PreferCommon = v; SettingChanged(); }));

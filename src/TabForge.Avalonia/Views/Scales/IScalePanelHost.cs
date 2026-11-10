@@ -18,9 +18,15 @@ public sealed record ScaleExtraSection(string Title, Func<Action, Control> Build
 /// <param name="Open">Opens the other host's panel.</param>
 public sealed record ScaleGreyedSection(string Id, string Title, string Description, string LinkText, string WaitText, Func<bool> CanOpen, Action Open);
 
+/// <summary>A large on/off switch a host puts in the panel header: its caption, its tooltip and accessible name, the current state and how a change is stored.</summary>
+public sealed record ScaleHeaderSwitch(string Caption, string Tip, Func<bool> Get, Action<bool> Set);
+
 /// <summary>What the master scale panel shows and changes. The status bar, the fretboard and the piano roll each implement it; they differ only in the extras and the greyed sections.</summary>
 public interface IScalePanelHost
 {
+    /// <summary>The on/off switch beside the title, or null for none.</summary>
+    ScaleHeaderSwitch? HeaderSwitch => null;
+
     /// <summary>The readout the panel shows now.</summary>
     ScaleReadoutResult Current { get; }
 

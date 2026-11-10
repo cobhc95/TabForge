@@ -6,7 +6,7 @@ Read in this order: README → ARCHITECTURE → AREA-MAP → COMMANDS.
 |---|---|
 | [ARCHITECTURE](architecture/ARCHITECTURE.md) | System layout and seams |
 | [AREA-MAP](../src/TabForge.Avalonia/AREA-MAP.md) | Which files own each area, and the test class for it |
-| [COMMANDS](guides/COMMANDS.md) | 334 main-window command ids and where they are registered (generated) |
+| [COMMANDS](guides/COMMANDS.md) | 333 main-window command ids and where they are registered (generated) |
 | [TOOLS_AND_HOTKEYS](guides/TOOLS_AND_HOTKEYS.md) | Palette tools, hotkeys, bindings |
 | [TESTING](guides/TESTING.md) | The two test suites and how to run them |
 | [RELEASING](guides/RELEASING.md) | One-command release and release conventions |

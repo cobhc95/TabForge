@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace TabForge.Features.LeftStrip;
 
-// Owns: the saved state of the experimental left strip: shown or hidden, the Composer panel open or closed, left / right / beside the menus, the
+// Owns: the saved state of the left strip: shown or hidden, the Composer panel open or closed, left / right / beside the menus, the
 //   icons on it, their size, tooltips and labels, the menu-bar toggle icon shown, and whether the strip shows on start; and the start rules read from them.
 // Does not own: loading and saving the settings file (AppSettingsStore), the strip's controls (Avalonia LeftStripFeature).
 // Tests: TabForge.Avalonia.Tests.LeftStripSettingsTests.
@@ -23,8 +23,8 @@ public sealed class LeftStripSettings
     /// <summary>The icon ids on the strip in order ("Separator" for a line); null is the default strip.</summary>
     public List<string>? Items { get; set; }
 
-    /// <summary>Large icons instead of the normal size.</summary>
-    public bool Large { get; set; }
+    /// <summary>Large icons (the default) instead of the normal size.</summary>
+    public bool Large { get; set; } = true;
 
     /// <summary>The icons show their tooltips.</summary>
     public bool Tooltips { get; set; } = true;

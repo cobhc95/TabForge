@@ -1,0 +1,107 @@
+# Help search intents: everyday words and symptom phrases -> the words the Help chapters use.
+# One rule per line:   phrase | another phrase => word word word !problem
+# A rule fires when any phrase on its left occurs in the query (word forms are matched: play, plays and playing are one word).
+# The words on the right are searched as well, at a lower weight than the words typed. "!problem" marks a symptom: Problem and Question entries rank higher.
+# To extend: add a line. No code change is needed.
+
+# ---- sound and audio ----
+no sound | cant hear anything | cannot hear | silent | silence | no audio | nothing plays | nothing is playing | no music | cant hear => audio device output volume mute solo sound engine driver !problem
+muted | mute | unmute | solo | soloed => mute solo track volume silent
+wrong speakers | wrong device | wrong output | headphones | speakers | output device => output device audio driver headphones
+crackle | crackling | crackles | pop | popping | glitch | glitches | stutter | stutters | stuttering | dropout | dropouts | distortion | distorted | clicks => crackling dropouts buffer latency driver !problem
+latency | delay | delayed | out of sync | out of time | lagging audio => latency buffer driver delay
+volume | louder | quieter | too loud | too quiet | gain => volume master track mixer
+mixer | pan | balance | fader => mixer volume pan track
+
+# ---- crashes, freezes, speed ----
+crash | crashed | crashes | freeze | freezes | frozen | hang | hangs | hung | not responding | stuck | unresponsive | closes by itself | quit unexpectedly => crash recovery freeze performance log autosave restart !problem
+slow | lag | laggy | sluggish | choppy | jerky | slow to open | takes forever | high cpu | cpu => performance slow cpu buffer lag !problem
+memory | ram | big file | large file => performance memory large song
+
+# ---- everyday symptom phrases ----
+wont play | wont start | song wont play | playback wont start | no playback | not playing | doesnt play => playback play transport stop !problem
+not working | doesnt work | does nothing | nothing happens | broken => troubleshooting problem fix !problem
+wont save | save wont work | error saving | cant save | cant save as => save file error !problem
+wont export | export error | export fails | render error => export render error audio !problem
+wrong notes | notes sound wrong | out of tune | guitar out of tune => tuning pitch note track !problem
+everything quiet | all silent | everything silent | all quiet => volume mute master mixer !problem
+text too small | letters too small | tiny text => size zoom font view
+want to learn | teach me | how to play guitar => getting started tutorial practice loop tempo
+beginner | first song | new song guitar => getting started help tutorial
+
+# ---- writing notes ----
+wrong string | wrong fret | change string | move string | different string | string selection | which string => string move higher lower string fret select
+wrong note | wrong pitch | transpose | semitone | octave => pitch transpose semitone octave note
+undo | redo | mistake | oops | revert | take back | go back => undo redo mistake
+delete | remove | erase | clear | get rid of | wipe => delete erase clear remove bar note
+copy | paste | cut | duplicate | clone | repeat bar => copy paste cut duplicate select
+select | selection | highlight | select all | marquee => select selection range
+note value | duration | quarter | eighth | sixteenth | whole note | half note | length => note value duration eighth quarter
+rest | silence in song | pause in song | tie | tied | dotted | dot | triplet | tuplet => rest tie dotted triplet tuplet rhythm
+chord | chords | chord name | chord diagram => chord name finder diagram
+scale | scales | mode | modes | key of => scale finder highlight fretboard
+tuning | tune | retune | drop d | open tuning | alternate tuning | detune | half step down => tuning global tuning tuner string
+capo => capo fret track properties
+bend | bends | slide | slides | vibrato | hammer | pull off | palm mute | harmonic | harmonics | tapping | slap | trill | tremolo => effects bend slide vibrato hammer harmonic technique
+dead note | ghost note | let ring | grace | grace note | staccato | accent => effects dead ghost ring grace staccato accent
+drum | drums | kick | snare | hi hat | cymbal => drums track drum map pads
+bass | bass guitar => bass track
+piano | keys | keyboard track | synth => keys track keyboard
+lyric | lyrics | words | singing | vocals | text => lyrics text insert
+
+# ---- bars, structure, layout ----
+bar | bars | measure | measures => bar insert delete duplicate
+time signature | meter | 3/4 | 6/8 | 4/4 | waltz => time signature bar
+key signature | sharps | flats | key change => key signature bar
+section | sections | verse | chorus | intro | outro | bridge | marker => section structure marker
+repeat | repeats | volta | ending | endings | coda | segno | simile => repeat ending bar
+tempo | bpm | beats per minute | faster | slower | speed up | slow down => tempo bpm speed playback
+voice | voices | second voice | polyphony => voice layout
+line break | page | pages | beaming | stem | stems => layout beaming stem line break
+zoom | bigger | smaller | too small | too big | cant see | hard to see | font size | magnify => zoom size fit width view
+score | notation | staff | standard notation | tab only | tablature => view notation tab staff score
+
+# ---- playing and practice ----
+play | playback | start playing | stop | pause | rewind => playback play pause stop transport
+loop | looping | practice | practise | rehearse | learn a part | learn a song => loop practice tempo speed metronome count
+metronome | click | click track | count in | count-in | countin => metronome count click tempo
+follow | scroll | auto scroll | follow playback => follow playback scroll
+record | recording | microphone | mic | input | interface | guitar input | arm | armed | take => recording input device armed take
+live input | monitor | monitoring | hear myself => live input monitor effects
+midi | controller | midi keyboard | midi device | midi input => midi input device controller
+plugin | plug-in | vst | vsti | vst3 | effect | effects chain | fx | amp sim => plug-in vst fx chain audio
+soundfont | patch | instrument sound | sound engine | gm | general midi | change sound | change instrument => instrument sound engine track patch
+fretboard | neck | frets | fingering => fretboard instrument view
+keyboard mode | falling notes | learn mode | piano roll => keyboard mode falling notes wait
+
+# ---- files and export ----
+save | saving | save as | autosave | backup | lose work | lost my work | lost work | recover | recovery => save recovery backup file
+open | load | import | opening => open import file song
+cant open | wont open | cannot open | corrupt | corrupted | broken file | file error | error opening | unsupported => open file import error format !problem
+export | render | bounce | mp3 | wav | audio file | pdf | midi file | musicxml | ascii => export render audio midi pdf musicxml
+print | printing | printer => print pdf
+share | send | email => export share file
+missing media | media | missing file | audio file missing | find media | collect => media missing collect find
+template | templates | new from template => template new song
+tab | tabs | tab bar | tab strip | tab page | tabs open | many songs => tab strip song new
+
+# ---- tracks ----
+track | tracks | add track | new track | instrument | instruments | track list => track add instrument list
+track properties | rename track | track name | track colour | track color => track properties name colour
+master | master track | arrangement | timeline | overview => master timeline arrangement
+band view | band => band view
+compact | compact mode | small screen | more room => compact mode room
+
+# ---- the window, settings, help ----
+left strip | sidebar | side bar | toolbar | icons | icon strip | customize strip | customise strip | strip => left strip customize icons
+composer | composer panel | riff | riffs => composer panel
+panel | panels | layout | layouts | missing panel | lost panel | reset layout | docking | dock => panels layout reset dock
+theme | dark | light | dark mode | light mode | colour | color | colours | accent | appearance | look => theme colour accent appearance light dark
+settings | preferences | options | reset | default | defaults | factory | export settings => preferences reset settings defaults
+hotkey | hotkeys | shortcut | shortcuts | keyboard shortcut | keybinding | key binding | rebind | keys | key | hot key => shortcuts hotkey command palette preferences
+command palette | find a command | where is | cant find | cannot find | search command => command palette find menu
+help | help window | f1 | how do i | tutorial | learn | beginner | getting started | first time | new user => getting started help
+update | updates | upgrade | version | new version | check for updates => updates version install
+install | installer | uninstall | portable | download | windows | smartscreen => install update windows
+bug | report | support | issue | issues | feedback | contact | github => reporting problem issues logs
+log | logs | diagnostics | error log => logs reporting problem diagnostics

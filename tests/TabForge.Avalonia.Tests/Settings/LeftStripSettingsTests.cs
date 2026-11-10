@@ -47,6 +47,7 @@ public sealed class LeftStripSettingsTests
         Assert.Equal(new[] { "Edit.Undo", "Separator", "File.Open" }, loaded.Items);
         Assert.True(loaded.RightSide && loaded.Large && loaded.Labels && !loaded.Tooltips);
         Assert.True(new LeftStripSettings().Tooltips);
+        Assert.True(new LeftStripSettings().Large);
     }
 
     [global::Avalonia.Headless.XUnit.AvaloniaFact]
@@ -57,7 +58,7 @@ public sealed class LeftStripSettingsTests
         Assert.Equal(all.Count, all.Select(i => i.Id).Distinct().Count());
         Assert.All(all, i => global::Avalonia.Media.Geometry.Parse(i.Icon));
         Assert.Equal(new[] { "File.New", "File.Open", "File.Save", "File.SaveAs", "File.Render", "Separator", "Edit.Undo", "Edit.Redo", "Separator",
-                "Transport.PlayPause", "Separator", "View.ToggleComposer" },
+                "View.ToggleComposer" },
             TabForge.Avalonia.Features.LeftStrip.LeftStripItems.Resolve(null));
         Assert.Equal(new[] { "File.Open" }, TabForge.Avalonia.Features.LeftStrip.LeftStripItems.Resolve(new[] { "Gone.Command", "File.Open" }));
     }

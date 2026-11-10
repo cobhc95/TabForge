@@ -121,7 +121,7 @@ public static partial class SettingsCatalog
                 "fretboard string spacing stretch compact natural wide tall portrait"),
             Int(Fretboard, "Preview", "editing.horizon", "Look-ahead notes", v => ed.PreviewHorizon = v, () => ed.PreviewHorizon, 1, 10,
                 "Number of upcoming notes to display (not on the drum map).", "horizon preview upcoming next notes shown ahead", dependsOn: "editing.horizon.enabled"),
-            Choice(Fretboard, "Preview", "editing.scale", "Scale highlight", v => ed.ScaleHighlight = v == "Off" ? null : v,
+            Choice(Fretboard, "Preview", "editing.scale", "Scale highlight", v => ed.ShowScale(v == "Off" ? null : v),
                 () => ed.ScaleHighlight ?? "Off", new[] { "Off" }.Concat(from root in MusicTheoryService.NoteNames from scale in new[] { "Major", "Natural Minor", "Minor Pentatonic", "Major Pentatonic", "Dorian", "Mixolydian", "Blues" } select $"{root} {scale}").ToArray(),
                 "Highlight scale tones on the fretboard.", "scale key root highlight notes clear off none"),
             Bool(Fretboard, "Playback", "follow.fretboard", "Update the fretboard during playback", v => fv.FollowFretboard = v, () => fv.FollowFretboard,

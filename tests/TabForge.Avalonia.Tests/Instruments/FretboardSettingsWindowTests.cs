@@ -134,6 +134,29 @@ public class FretboardSettingsWindowTests
     }
 
     [AvaloniaFact]
+    public void TheScalePageChoosesStyleColourCustomAndOpacity()
+    {
+        var (window, settings, doors) = Make();
+        window.Select(4);
+        Click(Find<ToggleButton>(window, "ScaleStyleRings"));
+        Assert.Equal(ScaleHighlightStyles.Rings, settings.Editing.ScaleHighlightStyle);
+        Click(Find<ToggleButton>(window, "ScaleColourRed"));
+        Assert.Equal("Red", settings.Editing.ScaleHighlightColour);
+        Dispatcher.UIThread.RunJobs();
+        var custom = Find<ColourButton>(window, "ScaleCustomColour");
+        custom.Chooser = _ => System.Threading.Tasks.Task.FromResult<string?>("#A0B0C0");
+        Click(custom);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal("Custom", settings.Editing.ScaleHighlightColour);
+        Assert.Equal("#A0B0C0", settings.Editing.ScaleHighlightCustomColour);
+        var opacity = Find<MiniSlider>(window, "ScaleHighlightOpacity");
+        Assert.Equal(settings.Editing.ScaleHighlightOpacity, opacity.Value);
+        opacity.SetByUser(35);
+        Assert.Equal(35, settings.Editing.ScaleHighlightOpacity);
+        Assert.True(doors.Saves >= 4);
+    }
+
+    [AvaloniaFact]
     public void ResetAllWritesEveryPagesDefaultsBack()
     {
         var (window, settings, _) = Make();

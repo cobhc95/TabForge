@@ -52,7 +52,6 @@ public class MainWindowMenuTests
         var ids = MainMenuTable.CommandRows(MainMenuTable.Groups).Select(r => r.CommandId!).ToList();
         Assert.All(ids, id => Assert.True(items.ContainsKey(id), $"no menu item for {id}"));
         var commands = new MainWindowCommands(main, () => { });
-        commands.Add("Tab.New", () => { });
         commands.Add("Tab.Close", () => { });
         commands.Add("File.Save", () => { });
         commands.Add("File.SaveAs", () => { });

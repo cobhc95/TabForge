@@ -122,6 +122,7 @@ public static class AvaloniaLooks
         ["Border.Background"] = (typeof(Border), Border.BackgroundProperty),
         ["Border.BorderBrush"] = (typeof(Border), Border.BorderBrushProperty),
         ["Path.Visibility"] = (typeof(global::Avalonia.Controls.Shapes.Path), Visual.IsVisibleProperty),
+        ["Path.Stroke"] = (typeof(global::Avalonia.Controls.Shapes.Path), global::Avalonia.Controls.Shapes.Shape.StrokeProperty),
         ["Border.Opacity"] = (typeof(Border), Visual.OpacityProperty),
         ["UIElement.Opacity"] = (typeof(Border), Visual.OpacityProperty),
         ["Track.IsDirectionReversed"] = (typeof(Track), Track.IsDirectionReversedProperty),

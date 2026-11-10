@@ -9,5 +9,5 @@
   { "name": "Red", "value": "#FFFF0000" },
   { "name": "DodgerBlue", "value": "#FF1E90FF" },
   { "name": "ClipOutline", "dark": "#59FFFFFF", "light": "#59000000" },
-  { "name": "FocusRing", "dark": "#65B5FF", "light": "#175BB0" }
+  { "name": "FocusRing", "dark": "#65B5FF", "light": "#2F7BE0" }
 ]

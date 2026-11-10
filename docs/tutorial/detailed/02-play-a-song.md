@@ -29,13 +29,14 @@ TabForge opens its own `.tforge` songs and the common tab-file types. This table
 | Extension | What it is |
 |---|---|
 | `.tforge` | TabForge's own song file |
+| `.tg` | The TuxGuitar file format |
 | `.gp` | The newer common tab-file format |
 | `.gpx` | An older tab-file format |
 | `.gp5` | An older tab-file format |
 | `.gp4` | An older tab-file format |
 | `.gp3` | An older tab-file format |
 
-TabForge does not open MIDI files, MusicXML files, PDF files, text tab, or the oldest tab-file types `.gtp` and `.tg`. It can write some of these as exports, which **Chapter 12: Saving, sharing and exporting** covers.
+TabForge does not open MIDI files, MusicXML files, PDF files, text tab, or the oldest tab-file type `.gtp`. It can write some of these as exports, which **Chapter 12: Saving, sharing and exporting** covers.
 
 The demo song is `TabForge Demo - Ashen Meridian.gp`. It lives in the `Samples` folder beside `TabForge.exe` and has ten tracks and 144 bars.
 

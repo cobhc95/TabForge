@@ -139,8 +139,8 @@ public sealed class FretboardContextMenu : IMenuCommandRunner
                     TrackViewChanged?.Invoke();
                 }
                 break;
-            case ScaleId: editing.ScaleHighlight = argument; break;
-            case ClearScaleId: editing.ScaleHighlight = null; break;
+            case ScaleId: editing.ShowScale(argument); break;
+            case ClearScaleId: editing.SetScaleShown(false); break;
             case FindScaleId: _findScale(); return;
             case SettingsId: _openSettings(); return;
             default: throw new InvalidOperationException($"No handler for command '{commandId}'.");

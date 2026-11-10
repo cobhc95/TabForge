@@ -46,6 +46,7 @@ public sealed partial class ScalePanel
     private readonly IScalePanelHost _host;
     private readonly TransportPopupFrame _frame;
     private readonly bool _wide;
+    private global::TabForge.Avalonia.Platform.Controls.LargeSwitch? _headerSwitch;
     private bool _building, _pickAnother;   // _pickAnother: the user chose the pick-another card, so it stays selected even when its pick equals a detected scale
 
     public ScalePanel(IScalePanelHost host)
@@ -55,6 +56,12 @@ public sealed partial class ScalePanel
         _frame = new(Title, CloseTip, _wide ? ScalePopupLayout.WidePanelSpan : ScalePopupLayout.PanelSpan);
         _host.Refreshed += Rebuild;
         _frame.Closed += () => _host.Refreshed -= Rebuild;
+        if (host.HeaderSwitch is { } header)
+        {
+            var toggle = _frame.AddHeaderSwitch(header.Caption, header.Tip, header.Get());
+            toggle.IsCheckedChanged += (_, _) => { if (!_building) header.Set(toggle.IsChecked == true); };
+            _headerSwitch = toggle;
+        }
         Rebuild();
     }
 
@@ -86,6 +93,7 @@ public sealed partial class ScalePanel
         _building = true;
         try
         {
+            if (_headerSwitch is not null && _host.HeaderSwitch is { } header) _headerSwitch.IsChecked = header.Get();   // follows the setting wherever else it changed
             var rows = _frame.Rows.Children;
             while (rows.Count > 1) rows.RemoveAt(rows.Count - 1);   // the first row is the title
             _results = null;

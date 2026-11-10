@@ -1,5 +1,6 @@
 using System.IO;
 using TabForge.Audio;
+using TabForge.Features.TuxGuitar;
 using TabForge.Models;
 using TabForge.Services;
 
@@ -37,7 +38,13 @@ public sealed class DocumentController
         // A save of the .gp + .tfaudio pair that was cut short is undone first, so the pair read below is consistent.
         if (RecoverInterruptedPairFor(path) is { } recovery) notices.Add(recovery);
         SongProject project;
-        if (importGuitarPro is null)
+        if (FileTypes.IsTuxGuitar(Path.GetExtension(path)))
+        {
+            context ??= new ImportContext();
+            project = TuxGuitarImporter.Import(path, context);
+            context.AddNoticesTo(notices);
+        }
+        else if (importGuitarPro is null)
         {
             context ??= new ImportContext();
             project = GuitarProImporter.Import(path, context);
@@ -260,17 +267,19 @@ public sealed class DocumentController
         return capture;
     }
 
-    /// <summary>Saves the song to <paramref name="path"/> (.gp with the project embedded, or .tforge): captured here, written on a worker, then the path and the clean baseline are set.</summary>
+    /// <summary>Saves the song to <paramref name="path"/> (.gp with the project embedded, .tforge, or TuxGuitar .tg): captured here, written on a worker, then the path and the clean baseline are set.</summary>
     public async Task SaveToFileAsync(SongDocument document, string path)
     {
         var asGuitarPro = path.EndsWith(".gp", StringComparison.OrdinalIgnoreCase);
-        path = asGuitarPro ? FilePathPolicy.OutputFile(path, "score file", ".gp") : FilePathPolicy.OutputFile(path, "TabForge project", ".tforge");
+        var asTux = FileTypes.IsTuxGuitar(Path.GetExtension(path));
+        path = asGuitarPro ? FilePathPolicy.OutputFile(path, "score file", ".gp") : asTux ? FilePathPolicy.OutputFile(path, "score file", Features.TuxGuitar.TuxGuitarImporter.Extension) : FilePathPolicy.OutputFile(path, "TabForge project", ".tforge");
         var oldBase = document.Media.BaseDirectory;   // see SaveCleanPairAsync
         var (capture, contentHash) = await WriteCapturedAsync(document, project => MediaStoredPaths.Write(project, oldBase, path, () =>
         {
             // .gp: Guitar Pro 7/8 file with the full TabForge project embedded (see GuitarProExporter).
             if (asGuitarPro) GuitarProExporter.Save(project, path);
-            return asGuitarPro ? ProjectService.ContentHash(project) : ProjectService.Save(path, project);
+            else if (asTux) Features.TuxGuitar.TuxGuitarExporter.Save(project, path);
+            return asGuitarPro || asTux ? ProjectService.ContentHash(project) : ProjectService.Save(path, project);
         }));
         MarkSaved(document, path, contentHash!, capture);
     }

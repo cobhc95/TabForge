@@ -272,8 +272,15 @@ public sealed partial class MainWindow
                     () => MainWindowSettings.ShowPreferencesPage(settings, this, TabForge.Services.SettingsCatalog.Fretboard));
                 // A colour picked on the fretboard's legend shows on the open window's Note colours card too.
                 void ShowNoteColours(TabForge.Services.AppSettings _) => window.ShowNoteColours();
+                // A colour picked in the Scales popup shows on the open window's Scale highlight page too.
+                void ShowScaleColour(TabForge.Services.AppSettings _) => window.ShowScaleColour();
                 settings.SettingsChanged += ShowNoteColours;
-                window.Closed += (_, _) => settings.SettingsChanged -= ShowNoteColours;
+                settings.SettingsChanged += ShowScaleColour;
+                window.Closed += (_, _) =>
+                {
+                    settings.SettingsChanged -= ShowNoteColours;
+                    settings.SettingsChanged -= ShowScaleColour;
+                };
                 return window;
             });
         }

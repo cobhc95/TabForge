@@ -15,7 +15,7 @@ public sealed partial class InstrumentPanelView
 {
     // Sizes in virtual DIPs / shares; the opacity setting is the alpha, these only shape the marks.
     private const double ScaleMarkMaxRadius = 11, ScaleRingWidth = 1.5, ScaleRootRingWidth = 2.4, ScaleDotShare = 0.7, ScaleRootDotShare = 0.85;
-    private const double ScaleCellShare = 0.6, ScaleLabelShare = 1.0, ScaleDimAlpha = 0.45, ScaleLabelFontShare = 1.15;
+    private const double ScaleCellShare = 0.6, ScaleDimAlpha = 0.45;
 
     private static string DegreeLabel(int degree) => degree switch { 1 => "1", 2 => "2", 3 => "3", 4 => "4", 5 => "5", 6 => "6", 7 => "7", 8 => "8", 9 => "9", _ => "·" };
 
@@ -69,17 +69,18 @@ public sealed partial class InstrumentPanelView
     {
         if (!ScaleActive || _look.ScaleStyle == ScaleHighlightStyles.CellTint) return;
         var colour = ScaleInk(ink);
+        var haloInk = ink("InstrumentBackground");
         for (var s = 0; s < layout.Strings && s < Tuning.Count; s++)
             for (var fret = layout.FirstFret; fret <= layout.LastFret; fret++)
             {
                 var pitchClass = (Tuning[s] + fret) % 12;
                 if (_look.ScalePitches[pitchClass] != '1' || !FretMarked(fret, layout)) continue;
                 var p = TabForge.Presenters.FretboardGeometryRules.PositionOf(layout, s, fret);
-                MarkScaleNote(d, colour, pitchClass, p.X, p.Y, radius);
+                MarkScaleNote(d, colour, haloInk, pitchClass, p.X, p.Y, radius);
             }
     }
 
-    private void MarkScaleNote(IDrawContext d, UiColor colour, int pitchClass, double x, double y, double radius)
+    private void MarkScaleNote(IDrawContext d, UiColor colour, UiColor haloInk, int pitchClass, double x, double y, double radius)
     {
         var root = pitchClass == _look.ScaleRoot && _look.ScaleEmphasiseRoot;
         var mark = colour.WithOpacity(ScaleAlpha(pitchClass));
@@ -91,7 +92,10 @@ public sealed partial class InstrumentPanelView
             case ScaleHighlightStyles.NoteNames:
             case ScaleHighlightStyles.Degrees:
                 var label = _look.ScaleStyle == ScaleHighlightStyles.Degrees ? DegreeLabel(DegreeOf(pitchClass)) : PitchName(60 + pitchClass);
-                var text = d.Text(label, Font, radius * ScaleLabelFontShare, mark, d.PixelsPerDip, weight: root ? 700 : 500);
+                // Larger, semi-bold, with a halo in the instrument background (opposite to the ink in both themes), so a name reads on any wood; shaped text is cached by the draw context.
+                var fontSize = Math.Min(radius * ChromeMetrics.ScaleLabelFontShare * _look.FretNumberScale, radius * 2 * ChromeMetrics.ScaleLabelMaxShareOfDiameter);
+                var halo = new UiStroke(haloInk.WithOpacity(ScaleAlpha(pitchClass)), ChromeMetrics.ScaleLabelHaloWidth, RoundCaps: true, RoundJoins: true);
+                var text = d.Text(label, Font, fontSize, mark, d.PixelsPerDip, weight: root ? ChromeMetrics.ScaleLabelRootWeight : ChromeMetrics.ScaleLabelWeight, outline: halo);
                 d.DrawText(text, x - text.Width / 2, y - text.Height / 2);
                 break;
             default:
@@ -117,6 +121,6 @@ public sealed partial class InstrumentPanelView
         var pitchClass = ((midi % 12) + 12) % 12;
         if (!InScale(pitchClass) || IsLit(midi) || _look.ScaleStyle == ScaleHighlightStyles.CellTint) return;
         var radius = Math.Clamp(key.Width * KeyMarkWidthShare, KeyMarkMinRadius, KeyMarkMaxRadius);
-        MarkScaleNote(d, ScaleInk(ink), pitchClass, key.X + key.Width / 2, key.Bottom - KeyMarkLift, radius);
+        MarkScaleNote(d, ScaleInk(ink), ink("InstrumentBackground"), pitchClass, key.X + key.Width / 2, key.Bottom - KeyMarkLift, radius);
     }
 }

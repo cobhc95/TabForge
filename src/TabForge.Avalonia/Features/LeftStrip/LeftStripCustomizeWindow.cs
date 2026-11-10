@@ -22,14 +22,14 @@ namespace TabForge.Avalonia.Features.LeftStrip;
 // Tests: TabForge.Avalonia.Tests.LeftStripSettingsTests.
 public sealed class LeftStripCustomizeWindow : Window
 {
-    private const double WindowWidth = 720, WindowHeight = 480, ListWidth = 220, Gap = 6, ColumnGap = 12, GlyphSize = 16;
+    private const double Gap = ChromeMetrics.LeftStripGap, ColumnGap = ChromeMetrics.LeftStripColumnGap, GlyphSize = ChromeMetrics.LeftStripGlyphSize;
     private const string SeparatorGlyph = "M3,12 H21";
 
     private readonly LeftStripSettings _state;
     private readonly Action _applied;
     private readonly ObservableCollection<string> _on = new();
-    private readonly ListBox _available = new() { Name = "AvailableList", Width = ListWidth };
-    private readonly ListBox _strip = new() { Name = "StripList", Width = ListWidth };
+    private readonly ListBox _available = new() { Name = "AvailableList", Width = ChromeMetrics.LeftStripListWidth };
+    private readonly ListBox _strip = new() { Name = "StripList", Width = ChromeMetrics.LeftStripListWidth };
     private readonly TextBox _search = new() { Name = "SearchBox", Watermark = "Search", Margin = new Thickness(0, 0, 0, Gap) };
     private readonly RadioButton _left = new() { Content = "Left vertical", GroupName = "StripPosition" };
     private readonly RadioButton _beside = new() { Content = "Beside menus", GroupName = "StripPosition" };
@@ -44,7 +44,7 @@ public sealed class LeftStripCustomizeWindow : Window
         _state = state;
         _applied = applied;
         Title = "Customize strip";
-        Width = WindowWidth; Height = WindowHeight;
+        Width = ChromeMetrics.LeftStripWindowWidth; Height = ChromeMetrics.LeftStripWindowHeight;
         ShowInTaskbar = false;
         DialogMetrics.CentreOnOwner(this);
         this[!BackgroundProperty] = new DynamicResourceExtension("WindowBackground");

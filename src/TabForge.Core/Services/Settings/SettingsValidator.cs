@@ -185,6 +185,9 @@ public static class SettingsValidator
         // The remembered Mixer window size: a floor small enough for small screens, the same upper bounds as the Settings window's.
         settings.MixerWindowWidth = InputLimits.ClampFinite(settings.MixerWindowWidth, 320, 7_680, defaults.MixerWindowWidth);
         settings.MixerWindowHeight = InputLimits.ClampFinite(settings.MixerWindowHeight, 240, 4_320, defaults.MixerWindowHeight);
+        // The remembered Help window size: a floor below the window's own minimum (the window raises it), the same upper bounds.
+        settings.HelpWindowWidth = InputLimits.ClampFinite(settings.HelpWindowWidth, 320, 7_680, defaults.HelpWindowWidth);
+        settings.HelpWindowHeight = InputLimits.ClampFinite(settings.HelpWindowHeight, 240, 4_320, defaults.HelpWindowHeight);
         // A position outside the range (or not a number) is dropped, so the OS places the window as on a first start.
         settings.WindowLeft = IsSanePixelCoordinate(settings.WindowLeft) ? settings.WindowLeft : null;
         settings.WindowTop = IsSanePixelCoordinate(settings.WindowTop) ? settings.WindowTop : null;

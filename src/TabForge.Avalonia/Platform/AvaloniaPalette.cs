@@ -29,6 +29,12 @@ public static class AvaloniaPalette
         // Selected / checked toggles: a pale accent tint (light) with an accent outline; the glyph keeps the normal ink.
         ["SelectedTintBrush"] = "SelectedTint",
         ["SelectedOutlineBrush"] = "SelectedOutline",
+        // The text of a selected chip, row or tab: the strong text in dark, the accent ink in light.
+        ["SelectedInkBrush"] = "SelectedInk",
+        // The one solid accent fill, the default (OK) button: the accent in dark, its light-theme primary shade in light.
+        ["PrimaryFillBrush"] = "PrimaryFill",
+        // A checked check box: the box fill, its edge and the tick (dark: the empty box with an accent tick; light: an accent box with a light tick).
+        ["CheckFillBrush"] = "CheckFill", ["CheckFillBorderBrush"] = "CheckFillBorder", ["PrefsCheckFillBrush"] = "PrefsCheckFill", ["CheckTickBrush"] = "CheckTick",
         ["AccentHoverBrush"] = "AccentHover",
         // The icon master tokens: a glyph at rest, a glyph that is on or selected, and a glyph that is disabled.
         ["IconDefaultBrush"] = "IconDefault",
@@ -288,6 +294,7 @@ public static class AvaloniaPalette
         // The hover and press surfaces are the one palette pair Avalonia paints stronger than Core, so a hovered control stands off the window
         // and the cards; the Core values (shared with the app) stay as they are.
         if (HoverSurfaces.IsOverridden(paletteName)) return HoverSurfaces.Value(paletteName, light);
+        if (!light && ThemeColours.DarkTwin(paletteName) is { } twin) return Get(twin, false);   // a light-only accent role keeps the dark theme's colour
         if (ThemeColours.DerivesFromAccent(paletteName))
             return State.Derived.GetOrAdd((paletteName, light), key => ThemeColours.FromAccent(key.Name, Get("Accent", key.Light), Get("AccentSoft", key.Light), Get("WindowBackground", key.Light), key.Light));
         if (light && LightThemeBrushOfPalette.TryGetValue(paletteName, out var brush) && State.Light.TryGetValue(brush, out var lightBrush)) return lightBrush;

@@ -2,7 +2,10 @@ using System.Collections.Generic;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Layout;
+using TabForge.Avalonia.Platform;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using TabForge.Avalonia.Platform.Controls;
 using TabForge.Avalonia.Views;
@@ -11,7 +14,7 @@ using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Features.LeftStrip;
 
-// Owns: the experimental strip: the slim vertical icon strip (the icons the owner picked, LeftStripItems; Open, Save, Save as, Render, then the Composer
+// Owns: the strip: the slim vertical icon strip (the icons the owner picked, LeftStripItems; Open, Save, Save as, Render, then the Composer
 //   toggle by default) left or right of the score pane, the same icons as a row beside the menus, their size, tooltips and labels, the sidebar toggle
 //   icon at the left end of the menu bar (moved into the compact / Band mode bar while that bar replaces the menus), the strip's right-click menu
 //   (Place beside menus, Keep vertical with the current one ticked, Customize strip…, Hide strip), the Composer panel's showing (on its own, strip
@@ -35,6 +38,8 @@ public sealed class LeftStripFeature
     private readonly MainWindowSettings? _settings;
     private readonly LeftStripSettings _state;
     private readonly List<ToggleButton> _composerToggles = new();
+    private readonly List<ContentControl> _tipButtons = new();
+    private void OnDeactivated(object? sender, System.EventArgs e) => CloseTips();
     private bool _visible, _composerOpen;
     private Border? _vertical;
     private StackPanel? _row, _host;
@@ -75,6 +80,7 @@ public sealed class LeftStripFeature
         _vertical[!Border.BackgroundProperty] = new DynamicResourceExtension("PanelBackground");
         _vertical[!Border.BorderBrushProperty] = new DynamicResourceExtension("SoftBorder");
         _vertical.ContextMenu = StripMenu();
+        _vertical.AttachedToVisualTree += (_, _) => { if (TopLevel.GetTopLevel(_vertical) is Window w) { w.Deactivated -= OnDeactivated; w.Deactivated += OnDeactivated; } };
         _composer = ComposerPanel.Build();
         DockPanel.SetDock(_vertical, Dock.Left);
         DockPanel.SetDock(_composer, Dock.Left);
@@ -101,6 +107,7 @@ public sealed class LeftStripFeature
     {
         if (_vertical is null || _row is null) return;
         _composerToggles.Clear();
+        _tipButtons.Clear();
         var column = new StackPanel { Orientation = Orientation.Vertical, Spacing = 2, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 6) };
         Fill(column, vertical: true);
         _vertical.Child = column;
@@ -125,8 +132,27 @@ public sealed class LeftStripFeature
             if (_state.Large || _state.Labels) button.Height = double.NaN;
             if (_state.Large) button.MinHeight = UiMetrics.QuickButtonHeight * LargeScale;
             ToolTip.SetServiceEnabled(button, _state.Tooltips);
+            ConfigureTip(button, vertical);
             panel.Children.Add(button);
         }
+    }
+
+    // The default tip opens at the pointer, over the icon below, and is dropped only by a pointer exit; so: a fixed side placement clear of the
+    // neighbours (right of a left strip, left of a right strip, under the beside-menus row), a short delay with none carried over from the last tip,
+    // and closed at once on press and when the window loses focus.
+    private void ConfigureTip(ContentControl button, bool vertical)
+    {
+        ToolTip.SetPlacement(button, !vertical ? PlacementMode.Bottom : _state.RightSide ? PlacementMode.Left : PlacementMode.Right);
+        ToolTip.SetShowDelay(button, UiTiming.StripTooltipDelayMs);
+        ToolTip.SetBetweenShowDelay(button, 0);
+        button.AddHandler(InputElement.PointerPressedEvent, (_, _) => ToolTip.SetIsOpen(button, false), RoutingStrategies.Tunnel, handledEventsToo: true);
+        button.PointerExited += (_, _) => ToolTip.SetIsOpen(button, false);
+        _tipButtons.Add(button);
+    }
+
+    private void CloseTips()
+    {
+        foreach (var button in _tipButtons) ToolTip.SetIsOpen(button, false);
     }
 
     private static Control Labelled(Control icon, string label, bool vertical)
@@ -142,7 +168,7 @@ public sealed class LeftStripFeature
     private static Control Line(bool vertical)
     {
         if (!vertical) return MenuRowToggles.Separator();
-        var line = new Border { Height = 1, Width = 18, Margin = new Thickness(0, 4), Opacity = 0.4, IsHitTestVisible = false };
+        var line = new Border { Height = ChromeMetrics.LeftStripSeparatorHeight, Width = ChromeMetrics.LeftStripSeparatorWidth, Margin = new Thickness(0, 4), Opacity = ChromeMetrics.LeftStripSeparatorOpacity, IsHitTestVisible = false };
         line[!Border.BackgroundProperty] = new DynamicResourceExtension("TextMuted");
         return line;
     }

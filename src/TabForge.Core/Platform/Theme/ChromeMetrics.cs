@@ -47,6 +47,11 @@ public static class ChromeMetrics
 
     /// <summary>The edge length of the glyph in a Settings rail row (25 DIP).</summary>
     public const double SettingsRailIconSize = 25;
+    /// <summary>The on/off switch (LargeSwitch): track width and height, and the round thumb inside it, sized like the popup close button's height.</summary>
+    public const double LargeSwitchTrackWidth = 48, LargeSwitchTrackHeight = 26, LargeSwitchThumbSize = 20;
+    /// <summary>Scale highlight labels (note names, degrees): the font as a share of the mark radius, its most (a share of the mark diameter, so it stays inside the cell), the halo width and the two weights.</summary>
+    public const double ScaleLabelFontShare = 1.5, ScaleLabelMaxShareOfDiameter = 0.95, ScaleLabelHaloWidth = 2.2;
+    public const int ScaleLabelWeight = 600, ScaleLabelRootWeight = 800;
     /// <summary>The folder-list editors of the Settings rows (Plug-in folders): the list's least width and tallest height before it scrolls.</summary>
     public const double FolderListMinWidth = 320, FolderListMaxHeight = 120;
     /// <summary>A dropdown is at most this wide (longer labels are cut); the chrome is a row's padding plus the scroll bar.</summary>
@@ -94,6 +99,27 @@ public static class ChromeMetrics
 
     /// <summary>The experimental left strip: its width, the Composer panel's width, and the gap between the panel's rows, in DIPs.</summary>
     public const double LeftStripWidth = 36, ComposerPanelWidth = 220, ComposerRowGap = 6;
+
+    /// <summary>The Composer panel's category cards: the instrument badge edge, the accent dot edge, and the least card height, in DIPs.</summary>
+    public const double ComposerBadgeSize = 40, ComposerAccentSize = 10, ComposerCardMinHeight = 96;
+
+    /// <summary>The Customize strip window: its size, the width of each list, the gap between rows and the gap between columns, in DIPs.</summary>
+    public const double LeftStripWindowWidth = 720, LeftStripWindowHeight = 480, LeftStripListWidth = 220, LeftStripGap = 6, LeftStripColumnGap = 12, LeftStripGlyphSize = 16;
+
+    /// <summary>The Help window: default and minimum size, the chapter list's width, the reading column's widest line, and the search results' most rows.</summary>
+    public const double HelpWindowWidth = 960, HelpWindowHeight = 680, HelpWindowMinWidth = 600, HelpWindowMinHeight = 420, HelpNavWidth = 248, HelpReadingWidth = 760;
+
+    /// <summary>The Help window's text: the chapter title, a section heading and the reading text (DIP), and the key-cap chips' text.</summary>
+    public const double HelpTitleSize = 28, HelpSectionSize = 18, HelpBodySize = 14, HelpKeyCapSize = 12;
+
+    /// <summary>The Help window's spacing (DIP): between blocks, between sections, round the reading column, a card's inner padding, and between a list row's lines.</summary>
+    public const double HelpBlockGap = 8, HelpSectionGap = 22, HelpPagePadding = 24, HelpCardPadding = 12, HelpRowGap = 2;
+
+    /// <summary>The Help window's accent marks: a callout's left bar, a step badge and a bullet dot (DIP), and the opacity of a callout's tint (the colour behind the text at this strength).</summary>
+    public const double HelpCalloutBar = 4, HelpBadgeSize = 20, HelpBulletDot = 6, HelpCalloutTint = 0.16, HelpNavRowHeight = 30, HelpNavBar = 3, HelpKeyCapPad = 6, HelpBulletTop = 8, HelpNavSize = 13, HelpIndent = 16, HelpNavIndent = 14, HelpPairGap = 4, HelpCalloutPadV = 6, HelpDivider = 1, HelpNavRowInset = 4, HelpBadgeCorner = 10;
+
+    /// <summary>The strip's Separator line in the vertical strip: its width and height in DIPs, and its opacity.</summary>
+    public const double LeftStripSeparatorWidth = 18, LeftStripSeparatorHeight = 1, LeftStripSeparatorOpacity = 0.4;
 
     /// <summary>The family of the drawn text of custom-painted controls (track rows, mixer buttons, the timeline and the fretboard).</summary>
     public const string UiFontFamily = FontProvider.WindowsSans;

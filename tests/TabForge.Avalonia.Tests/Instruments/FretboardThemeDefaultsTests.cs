@@ -61,6 +61,20 @@ public class FretboardThemeDefaultsTests
         Assert.Equal(90, lightPick.FretboardBrightness);
     }
 
+    [Fact]
+    public void NoteBrightnessIs90InLightAnd100InDarkUnlessChosen()
+    {
+        var e = new EditingSettings();
+        FretboardStyles.FollowTheme(e, light: true);
+        Assert.Equal(("Maple", 90, "Original"), (Preset(e), e.FretboardNoteBrightness, e.FretMarkerBrightness));
+        FretboardStyles.FollowTheme(e, light: false);
+        Assert.Equal(100, e.FretboardNoteBrightness);
+
+        e.FretboardNoteBrightness = 120;   // chosen in the dark theme: kept, and the board brightness with it
+        FretboardStyles.FollowTheme(e, light: true);
+        Assert.Equal((120, 75), (e.FretboardNoteBrightness, e.FretboardBrightness));
+    }
+
     // Palette names are case-sensitive: every material's token must be a real palette entry (a mismatch threw while drawing the board).
     [Theory]
     [InlineData(false)]

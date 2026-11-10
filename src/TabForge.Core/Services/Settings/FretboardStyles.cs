@@ -19,6 +19,9 @@ public static class FretboardStyles
     /// the defaults followed the theme (a stored value equal to it was never chosen).</summary>
     public const int DefaultBoardBrightness = 75, LightBoardBrightness = 90, LegacyBoardBrightness = 65, DefaultNoteBrightness = 100;
 
+    /// <summary>The note brightness the light theme starts with (the dark theme's is <see cref="DefaultNoteBrightness"/>): the note colours toned down a step on the pale maple.</summary>
+    public const int LightNoteBrightness = 90;
+
     /// <summary>The default preset of each theme: Rosewood in the dark theme, Maple in the light one.</summary>
     public const string DarkPreset = "Rosewood", LightPreset = "Maple";
 
@@ -26,9 +29,9 @@ public static class FretboardStyles
     /// brightness): the theme it was last set for, or Own once the person chose something else (it never follows the theme again).</summary>
     public const string DarkTheme = "Dark", LightTheme = "Light", Own = "Own";
 
-    /// <summary>The fretboard look and board brightness a theme starts with.</summary>
-    public static (Look Look, int Brightness) ThemeDefaults(bool light) =>
-        (OfPreset(light ? LightPreset : DarkPreset)!, light ? LightBoardBrightness : DefaultBoardBrightness);
+    /// <summary>The fretboard look, board brightness and note brightness a theme starts with.</summary>
+    public static (Look Look, int Brightness, int NoteBrightness) ThemeDefaults(bool light) =>
+        (OfPreset(light ? LightPreset : DarkPreset)!, light ? LightBoardBrightness : DefaultBoardBrightness, light ? LightNoteBrightness : DefaultNoteBrightness);
 
     /// <summary>
     /// Moves the fretboard's look and board brightness, each on its own, to the defaults of the theme shown now while it still holds the
@@ -38,7 +41,7 @@ public static class FretboardStyles
     public static bool FollowTheme(EditingSettings e, bool light)
     {
         var theme = light ? LightTheme : DarkTheme;
-        var (toLook, toBrightness) = ThemeDefaults(light);
+        var (toLook, toBrightness, toNotes) = ThemeDefaults(light);
         var changed = false;
         if (e.FretboardDefaultsTheme != Own && e.FretboardDefaultsTheme != theme)
         {
@@ -49,13 +52,14 @@ public static class FretboardStyles
         }
         if (e.FretboardBrightnessTheme != Own && e.FretboardBrightnessTheme != theme)
         {
+            // The board and note brightness follow together: both must still be the defaults of the theme they were last set for.
             var isDefault = e.FretboardBrightnessTheme switch
             {
-                LightTheme => e.FretboardBrightness == LightBoardBrightness,
-                DarkTheme => e.FretboardBrightness == DefaultBoardBrightness,
-                _ => e.FretboardBrightness is LegacyBoardBrightness or DefaultBoardBrightness,
+                LightTheme => e.FretboardBrightness == LightBoardBrightness && e.FretboardNoteBrightness == LightNoteBrightness,
+                DarkTheme => e.FretboardBrightness == DefaultBoardBrightness && e.FretboardNoteBrightness == DefaultNoteBrightness,
+                _ => e.FretboardBrightness is LegacyBoardBrightness or DefaultBoardBrightness && e.FretboardNoteBrightness == DefaultNoteBrightness,
             };
-            if (isDefault) { e.FretboardBrightness = toBrightness; e.FretboardBrightnessTheme = theme; }
+            if (isDefault) { e.FretboardBrightness = toBrightness; e.FretboardNoteBrightness = toNotes; e.FretboardBrightnessTheme = theme; }
             else e.FretboardBrightnessTheme = Own;
             changed = true;
         }
@@ -65,9 +69,10 @@ public static class FretboardStyles
     /// <summary>Writes the shown theme's look and brightness defaults and lets both follow the theme again (Reset section on the Look page).</summary>
     public static void ResetToTheme(EditingSettings e, bool light)
     {
-        var (look, brightness) = ThemeDefaults(light);
+        var (look, brightness, notes) = ThemeDefaults(light);
         Apply(e, look);
         e.FretboardBrightness = brightness;
+        e.FretboardNoteBrightness = notes;
         e.FretboardDefaultsTheme = e.FretboardBrightnessTheme = light ? LightTheme : DarkTheme;
     }
     public static int ClampBrightness(int value) => Math.Clamp(value, MinBrightness, MaxBrightness);

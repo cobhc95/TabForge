@@ -64,7 +64,7 @@ public sealed class DocumentSaveFlow
 
     /// <summary>Only .tforge and .gp can be written in place; a song opened from .gp3 / .gp4 / .gp5 / .gpx asks where to save.</summary>
     public static bool CanSaveInPlace(string? path) =>
-        !string.IsNullOrWhiteSpace(path) && (path.EndsWith(".tforge", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".gp", StringComparison.OrdinalIgnoreCase));
+        !string.IsNullOrWhiteSpace(path) && (path.EndsWith(".tforge", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".gp", StringComparison.OrdinalIgnoreCase) || path.EndsWith(Features.TuxGuitar.TuxGuitarImporter.Extension, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// Runs <paramref name="body"/> under a save claim taken now (the window takes it before its first dialog); when a save already runs the body does

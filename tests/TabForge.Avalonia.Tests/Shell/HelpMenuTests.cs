@@ -10,7 +10,7 @@ using Xunit;
 
 namespace TabForge.Avalonia.Tests;
 
-// Owns: the Help and App menu rows that open a dialog (About, Shortcuts, the Detailed tutorial) are handled by the window's command table,
+// Owns: the Help and App menu rows that open a dialog (About, Check for updates) are handled by the window's command table,
 //   and the About text starts with the version line; the About dialog has the Close and Third-party licences buttons and the licences
 //   target prefers the file next to the exe, then the folder, then the web copy.
 // Does not own: the dialogs' contents (AvaloniaDialogTests) or the menu rows (MainWindowMenuTests).
@@ -27,12 +27,11 @@ public class HelpMenuTests
     }
 
     [AvaloniaFact]
-    public void HelpAboutShortcutsAndDetailedTutorialAreHandledAndAboutStartsWithTheVersion()
+    public void HelpAboutIsHandledAndAboutStartsWithTheVersion()
     {
         var commands = new MainWindowCommands(new Window(), () => { });
-        MainWindowHelpMenu.Register(commands, new Window(), () => new HotkeySettings());
+        MainWindowHelpMenu.Register(commands, new Window());
         Assert.True(commands.Handles("Help.About"));
-        Assert.True(commands.Handles("App.Shortcuts"));
         Assert.StartsWith(AppInfo.VersionLine, AboutText.Body);
     }
 

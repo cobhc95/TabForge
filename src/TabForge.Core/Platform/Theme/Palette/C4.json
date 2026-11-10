@@ -4,7 +4,7 @@
   { "name": "TuningStringLight", "value": "#FFE8E0C8" },
   { "name": "TuningStringDark", "value": "#FF9A8C6A" },
   { "name": "TuningPillBackground", "dark": "#FF16181C", "light": "#FFD2D2D2" },
-  { "name": "SettingsNavIconSelected", "dark": "#FF38A9F5", "light": "#FF105EB0" },
+  { "name": "SettingsNavIconSelected", "dark": "#FF38A9F5", "light": "#FF1F5FBF" },
   { "name": "SettingsNavIcon", "dark": "#FF98A3AE", "light": "#FF3E444B" },
   { "name": "SvgIconFallbackStop", "value": "#FF222222" },
   { "name": "PlayheadLine", "dark": "#FF3FB950", "light": "#FF2E8B47" },

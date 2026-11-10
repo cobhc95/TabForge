@@ -1,21 +1,21 @@
-# TabForge 0.9.2
+# TabForge 0.9.3
 
-**A keyboard-driven tablature and notation editor for Windows, with experimental Linux packages.** Opens .gp3, .gp4, .gp5, .gpx and .gp files, and saves .gp and its own .tforge projects. Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard or keyboard, a piano roll, an arrangement timeline, audio and MIDI recording, a mixer, built-in effects, VST2, VST3 and CLAP plug-ins (32-bit and 64-bit VST), and offline audio and video rendering.
+**A keyboard-driven tablature and notation editor for Windows, with experimental Linux packages.** Opens .gp3, .gp4, .gp5, .gpx, .gp and TuxGuitar (.tg) files, and saves .gp, .tg and its own .tforge projects. Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard or keyboard, a piano roll, an arrangement timeline, audio and MIDI recording, a mixer, built-in effects, VST2, VST3 and CLAP plug-ins (32-bit and 64-bit VST), and offline audio and video rendering.
 
 [![TabForge with a drum plug-in](media/screenshots/github-main.jpg)](media/screenshots/github-main.jpg)
 
 ## Download
 
 > [!TIP]
-> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.9.2/TabForge-0.9.2-win-setup.exe)** · no administrator rights needed
+> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.9.3/TabForge-0.9.3-win-setup.exe)** · no administrator rights needed
 >
-> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.9.2/TabForge-0.9.2-win-x64-portable.zip)** · extract and run `TabForge.exe`
+> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.9.3/TabForge-0.9.3-win-x64-portable.zip)** · extract and run `TabForge.exe`
 
 Windows 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify your download](#verify-your-download). Older versions: [Releases](https://github.com/cobhc95/TabForge/releases).
 
 ### Linux packages (experimental)
 
-The main Linux download is the AppImage ([`TabForge-0.9.2-linux-x86_64.AppImage`](https://github.com/cobhc95/TabForge/releases/download/v0.9.2/TabForge-0.9.2-linux-x86_64.AppImage)). The archive ([`TabForge-0.9.2-linux-x64.tar.gz`](https://github.com/cobhc95/TabForge/releases/download/v0.9.2/TabForge-0.9.2-linux-x64.tar.gz)) is the fallback. Both include Wine 9.21 for Windows plug-ins, FFmpeg for video export and a General MIDI SoundFont, so sound works on first run.
+The main Linux download is the AppImage ([`TabForge-0.9.3-linux-x86_64.AppImage`](https://github.com/cobhc95/TabForge/releases/download/v0.9.3/TabForge-0.9.3-linux-x86_64.AppImage)). The archive ([`TabForge-0.9.3-linux-x64.tar.gz`](https://github.com/cobhc95/TabForge/releases/download/v0.9.3/TabForge-0.9.3-linux-x64.tar.gz)) is the fallback. Both include Wine 9.21 for Windows plug-ins, FFmpeg for video export and a General MIDI SoundFont, so sound works on first run.
 
 ```bash
 chmod +x TabForge-*-linux-x86_64.AppImage
@@ -36,11 +36,22 @@ chmod +x TabForge-*-linux-x86_64.AppImage
 </tr>
 </table>
 
-**Contents:** [Download](#download) · [What's new in 0.9.2](#whats-new-in-092) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Piano roll](#piano-roll) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Plug-ins](#plug-ins) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
+**Contents:** [Download](#download) · [What's new in 0.9.3](#whats-new-in-093) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Piano roll](#piano-roll) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Plug-ins](#plug-ins) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
 
-## What's new in 0.9.2
+## What's new in 0.9.3
 
-0.9.2 is a stable release.
+0.9.3 is a stable release. ✨
+
+- **Left strip and Composer:** a customizable icon strip beside the score (41 icons, large by default) with New, Open, Save, Save as, Render, Undo, Redo and Composer, plus a Composer panel with Drums, Bass, Guitar and Keyboard cards, search and style rows — more patterns coming soon in the Composer tab.
+- **F1 Help:** fourteen chapters with a forgiving local search that follows everyday words and symptom phrases like “no sound”, plus step badges, key-cap chips and Tip / Note / Warning boxes.
+- **TuxGuitar (.tg):** open and save as a further file type (`.tforge` stays the default), with song details, tracks, tunings, bars, repeats, tempo changes, notes, ties, effects, drum parts, lyrics and section markers.
+- **Scale highlight:** one shared On/Off everywhere, an On/Off switch beside the SCALE title, an opacity slider, larger outlined note names and degrees, and a Colour picker with named and custom colours.
+- **Light theme:** outlined with little fill. Selected chips, rows and tabs get a pale tint with accent text, and every shade comes from your accent colour.
+- **Fixes:** Band mode keeps its right panel, keyboard and side-panel speed controls are in sync again, the playhead no longer freezes after clicking bar 1 or a loop wrap, the duplicate Tab.New command and the F12 clash are gone, and panels no longer stay dark in light mode.
+
+Full list: the [changelog](CHANGELOG.md#093).
+
+<details><summary>Earlier in 0.9.2: fretboard legend tiles, look-ahead in notes</summary>
 
 - **Fretboard legend tiles:** Now, Next and Upcoming are three side-by-side tiles, each in its own colour, with Scales and Modify as two aligned tiles under them. The legend is always exactly as tall as the fretboard, and a chevron minimises it to a round button.
 - **Look-ahead in notes:** "Next notes shown ahead" now counts notes, not movements, shows while paused and stopped, and auditions live as you move the slider.
@@ -49,6 +60,8 @@ chmod +x TabForge-*-linux-x86_64.AppImage
 - **Preferences key:** Preferences now opens with Ctrl+, (F12 keeps working as a second key).
 
 Full list: the [changelog](CHANGELOG.md#092).
+
+</details>
 
 <details><summary>Earlier in 0.9.1: shortcuts, note colours, drag scrolling</summary>
 
@@ -529,6 +542,7 @@ This is experimental. The audio route has been measured on automated test machin
 | `.gpx` | ✔ | |
 | `.gp` | ✔ | ✔ (default) |
 | TabForge project (`.tforge`) | ✔ | ✔ |
+| TuxGuitar file (`.tg`) | ✔ | ✔ |
 | Standard MIDI (`.mid`) | ✔ | export |
 | ASCII tab (`.txt`), PDF, MusicXML (`.musicxml`) | | export |
 | Audio (WAV, MP3) and video (MP4) | | export |
@@ -541,7 +555,7 @@ This is experimental. The audio route has been measured on automated test machin
 
 <details><summary>More details</summary>
 
-Drum parts import from every format, including `.gpx` extended articulations and `.gp` drum kits. Known limit: .gp3/.gp4/.gp5 files open with up to 20,000 bars per track. `.gtp` and `.tg` files are not supported.
+Drum parts import from every format, including `.gpx` extended articulations and `.gp` drum kits. Known limit: .gp3/.gp4/.gp5 files open with up to 20,000 bars per track. A `.tg` file opens and saves as a further file type (never the default). `.gtp` files are not supported.
 
 A `.gp` saved by TabForge follows the `.gp` file format **and** carries the complete TabForge project inside it (an extra entry other readers can ignore), so reopening it in TabForge loses nothing: drum map, section sizes, score styles, mix points. Saved `.gp` files carry correct zip checksums and keep the album, copyright, tab author, music, words and instructions fields.
 
@@ -735,7 +749,7 @@ Every command can be found in the menus, the command palette and the shortcut se
 <details><summary>Show the full feature reference</summary>
 
 #### Files, tabs and export
-- **New**, **New tab**, **Open**, **Open in new tab**, **Save**, **Save as**, **Close tab**, **Duplicate tab**, Exit.
+- **New** (Ctrl+N, a new tab), **Open**, **Open in new tab**, **Save**, **Save as**, **Close tab**, **Duplicate tab**, Exit.
 - **Templates**: File > *New from template* (built-in and your own) and *Save as template* (your templates live in `%APPDATA%\TabForge\Templates`).
 
 - **Export**: Standard MIDI, ASCII tab, **PDF** (engraved notation and tab as A4 pages, no printer needed), **MusicXML** (`.musicxml`, one part per track with a tab staff), clean **`.gp`**, **Render to audio** (File > Export > Audio file…, WAV / MP3, master and stems), **video export** (MP4) and **record video** (Ctrl+Alt+V).
@@ -805,7 +819,7 @@ Every command can be found in the menus, the command palette and the shortcut se
 - Repeats up to x99, D.S./D.C./Coda/Fine, tempo changes (also mid-bar), mix-table fades, dynamics, technique playback; **score follow** with page turn or smooth page turn (stops only on a genuine manual scroll).
 
 #### Settings and help
-- Preferences (F12) with search, themes (Dark, Light, System), colours, fonts, interface scale, project settings, import/export of all settings, **Keyboard shortcuts** (F1) with TabForge, Classic and Alternative presets, **Check for updates**, About, Windows file-association option.
+- Preferences (F12) with search, themes (Dark, Light, System), colours, fonts, interface scale, project settings, import/export of all settings, **Keyboard shortcuts** with TabForge, Classic and Alternative presets, **Check for updates**, About, Windows file-association option.
 
 #### Menus, panels and windows in detail
 

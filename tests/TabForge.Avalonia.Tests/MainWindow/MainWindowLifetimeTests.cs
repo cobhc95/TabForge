@@ -154,15 +154,15 @@ public class MainWindowLifetimeTests
     {
         var ran = new List<string>();
         var commands = new MainWindowCommands(new Window(), () => { });
-        commands.Add("Tab.New", () => ran.Add("Tab.New"));
+        commands.Add("File.New", () => ran.Add("File.New"));
         commands.Add("Tab.Close", () => ran.Add("Tab.Close"));
         var keyboard = new MainWindowKeyboard(new HotkeySettings(), commands);
         Assert.Equal("File.Save", keyboard.CommandFor(Key.S, KeyModifiers.Control));
-        Assert.True(keyboard.Route(Key.T, KeyModifiers.Control | KeyModifiers.Alt, null));
+        Assert.True(keyboard.Route(Key.N, KeyModifiers.Control, null));
         Assert.True(keyboard.Route(Key.W, KeyModifiers.Control, null));
         Assert.False(keyboard.Route(Key.S, KeyModifiers.Control, null)); // Save is not ported: left to the focused control.
         Assert.True(keyboard.Route(Key.W, KeyModifiers.Control, new TextBox())); // Tab.Close is safe while typing
-        Assert.Equal(new[] { "Tab.New", "Tab.Close", "Tab.Close" }, ran);
+        Assert.Equal(new[] { "File.New", "Tab.Close", "Tab.Close" }, ran);
     }
 
     [AvaloniaFact]

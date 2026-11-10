@@ -21,7 +21,7 @@ internal sealed class FretboardScaleHost : ReadoutScaleHost
     public override void Pick(ScaleMatch scale) => Readout.PickFor(scale, keep: true, fromFretboard: true);
 
     public override IReadOnlyList<ScaleExtraSection> Extras => Readout.Editing is { } editing
-        ? new[] { new ScaleExtraSection(LookTitle, close => new FretboardLookSection(this, editing, close, Readout.ClearHighlight, Readout.LookChanged).Build()) }
+        ? new[] { new ScaleExtraSection(LookTitle, close => new FretboardLookSection(editing, close, Readout.ClearHighlight, Readout.LookChanged).Build()) }
         : System.Array.Empty<ScaleExtraSection>();
 
     public override IReadOnlyList<ScaleGreyedSection> Greyed => new[] { PianoRollLink() };

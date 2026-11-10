@@ -87,6 +87,8 @@ public sealed class ImportContext
     public MidiImportMode MidiMode { get; set; } = MidiImportMode.Tab;
     /// <summary>The report line of the last MIDI import (tracks, sections found, data a tab track cannot keep), or null.</summary>
     public string? MidiNotice { get; internal set; }
+    /// <summary>The open notice when a TuxGuitar import approximated or dropped file data (null when nothing was lost).</summary>
+    public string? TuxGuitarNotice { get; internal set; }
 
     /// <summary>True while a Guitar Pro 3-5 file is read (alphaTab names its tremolo speeds one step off there).</summary>
     internal bool Gp3To5 { get; set; }
@@ -108,6 +110,7 @@ public sealed class ImportContext
         if (DamageNotice is { } damaged) notices.Add(damaged);
         if (KeyswitchNotice is { } keyswitches) notices.Add(keyswitches);
         if (MidiNotice is { } midi) notices.Add(midi);
+        if (TuxGuitarNotice is { } tux) notices.Add(tux);
     }
 }
 

@@ -93,9 +93,9 @@ public sealed class HotkeyTipTests
     {
         var keys = new HotkeySettings();
         var top = new MenuItem { Header = "_File" };
-        var item = new MenuItem { Header = "New tab", Tag = "Tab.New" };
+        var item = new MenuItem { Header = "New", Tag = "File.New" };
         top.Items.Add(item);
-        keys.Set("Tab.New", 1, "Ctrl+Shift+F11");
+        keys.Set("File.New", 1, "Ctrl+Shift+F11");
         MainWindowMenu.RefreshGestures(top, keys);
         Assert.Equal("Ctrl+Shift+F11", item.InputGesture?.ToString());
     }

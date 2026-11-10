@@ -33,6 +33,8 @@
     <ProjectReference Include="..\TabForge.Core\TabForge.Core.csproj" />
     <!-- Inter and JetBrains Mono (SIL OFL): the optional bundled interface fonts, loaded from the app resources. -->
     <AvaloniaResource Include="Assets\Fonts\*.ttf" />
+    <!-- The Help chapters (one embedded file each) are read on demand by Features/Help. -->
+    <EmbeddedResource Include="Features\Help\Content\*.md" />
     <!-- Superseded artwork stays in source, not in the application (Assets/ASSETS.md). -->
     <AvaloniaResource Include="Assets\Fretboards\*.png" />
     <AvaloniaResource Include="Assets\Fretboards\*.jpg" />

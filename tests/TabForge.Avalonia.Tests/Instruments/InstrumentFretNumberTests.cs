@@ -89,7 +89,8 @@ public class InstrumentFretNumberTests
         public void Rect(UiColor? fill, UiStroke? stroke, double x, double y, double width, double height, double radius = 0) => Rects.Add((fill, x, y, width, height));
         public List<(double X1, double Y1, double X2, double Y2)> LineOps { get; } = new();
         public void Line(UiStroke stroke, double x1, double y1, double x2, double y2) { LineStrokes.Add(stroke); LineOps.Add((x1, y1, x2, y2)); }
-        public void Ellipse(UiColor? fill, UiStroke? stroke, double cx, double cy, double rx, double ry) => Ellipses.Add((fill, rx, cx, cy));
+        public List<UiStroke> EllipseStrokes { get; } = new();
+        public void Ellipse(UiColor? fill, UiStroke? stroke, double cx, double cy, double rx, double ry) { Ellipses.Add((fill, rx, cx, cy)); if (stroke is { } s) EllipseStrokes.Add(s); }
         public List<UiColor?> PathFills { get; } = new();
         public void Path(UiColor? fill, UiStroke? stroke, IUiPath path) => PathFills.Add(fill);
         public void Image(IUiImage image, double x, double y, double width, double height) => Images.Add((image, x, y, width, height));

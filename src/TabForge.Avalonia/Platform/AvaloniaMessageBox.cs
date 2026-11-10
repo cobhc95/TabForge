@@ -86,7 +86,7 @@ public sealed class AvaloniaMessageBox : Window
             if (isDefault)
             {
                 button.Classes.Add(AvaloniaDefaultLooks.AccentLook);
-                button[!Button.BackgroundProperty] = new DynamicResourceExtension("AccentBrush");
+                button[!Button.BackgroundProperty] = new DynamicResourceExtension("PrimaryFillBrush");
                 button[!Button.ForegroundProperty] = new DynamicResourceExtension("OnAccentBrush");
             }
             button.Click += (_, _) => { Answer = answer; Ticked = check?.IsChecked == true; Close(answer); };

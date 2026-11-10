@@ -47,7 +47,6 @@ public static class LeftStripItems
     private const string Transpose = "M7,20 V4 M3,8 L7,4 L11,8 M17,4 V20 M13,16 L17,20 L21,16";
     private const string Tuning = "M6,4 V20 M10,4 V20 M14,4 V20 M18,4 V20 M4,8 H8 M8,13 H12 M12,10 H16 M16,15 H20";
     private const string Lyrics = "M4,6 H20 M4,11 H20 M4,16 H14 M17,14 V20 A1.5,1.5 0 1 1 15.5,18.5";
-    private const string Keys = "M3,6 H21 V18 H3 Z M7,10 H8 M11,10 H13 M16,10 H17 M7,14 H17";
     private const string ChordFinder = "M5,3 V21 M10,3 V21 M15,3 V21 M5,7 H15 M5,11 H15 M10,9 A1,1 0 1 0 10.01,9 M19,15 A2.5,2.5 0 1 0 19.01,15 M20.8,16.8 L22.5,18.5";
     private const string About = "M12,3 A9,9 0 1 0 12.01,3 M12,11 V17 M12,7.5 V8";
 
@@ -67,18 +66,17 @@ public static class LeftStripItems
         new("Tools.GlobalTuning", "Tuning", "Song", Tuning), new("Insert.Lyrics", "Lyrics", "Song", Lyrics),
         new("View.ZoomIn", "Zoom in", "View", IconGeometry.ZoomIn), new("View.ZoomOut", "Zoom out", "View", IconGeometry.ZoomOut),
         new("View.BandView", "Band view", "View", IconGeometry.BandView), new("View.CompactMode", "Compact mode", "View", IconGeometry.CompactMode),
-        new("View.InstrumentPanel", "Fretboard", "View", IconGeometry.Fretboard), new("App.Shortcuts", "Hotkeys", "View", Keys),
+        new("View.InstrumentPanel", "Fretboard", "View", IconGeometry.Fretboard),
         new("Tools.ChordFinder", "Chord finder", "App", ChordFinder), new("Tools.ScaleFinder", "Scale finder", "App", IconGeometry.ScaleSteps),
         new("App.Preferences", "Preferences", "App", IconGeometry.Prefs), new("Help.About", "About", "App", About),
         new(LeftStripFeature.ToggleComposerId, "Composer", "App", Composer, IsToggle: true),
     };
 
-    /// <summary>The strip as it comes: New, Open, Save, Save as, Render | Undo, Redo | Play | Composer.</summary>
+    /// <summary>The strip as it comes: New, Open, Save, Save as, Render | Undo, Redo | Composer.</summary>
     public static readonly IReadOnlyList<string> Default = new[]
     {
         "File.New", "File.Open", "File.Save", "File.SaveAs", "File.Render", SeparatorId,
         "Edit.Undo", "Edit.Redo", SeparatorId,
-        "Transport.PlayPause", SeparatorId,
         LeftStripFeature.ToggleComposerId,
     };
 

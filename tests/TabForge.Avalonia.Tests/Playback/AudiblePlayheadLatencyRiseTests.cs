@@ -32,6 +32,29 @@ public class AudiblePlayheadLatencyRiseTests
     }
 
     [Fact]
+    public void ASeekBackToTheSameAnchorOnTheSameTimelineReleasesTheHold()
+    {
+        var timeline = new ScoreTimeline();
+        var hold = new AudiblePositionHold();
+        Assert.Equal(9000, hold.Hold(timeline, 0, 1, 0, 9000));
+        Assert.Equal(9000, hold.Hold(timeline, 0, 1, 0, 8990));   // a latency rise under one anchor holds
+        // Playing from bar 1, the owner clicks bar 1 again: anchor 0 on the same timeline, only the seek id differs.
+        Assert.Equal(40, hold.Hold(timeline, 0, 2, 0, 40));
+        Assert.Equal(55, hold.Hold(timeline, 0, 2, 0, 55));
+    }
+
+    [Fact]
+    public void ALoopWrapToTheSameLoopStartReleasesTheHold()
+    {
+        var timeline = new ScoreTimeline();
+        var hold = new AudiblePositionHold();
+        Assert.Equal(7990, hold.Hold(timeline, 0, 1, 0, 7990));
+        // The scheduler wraps: the anchor is the loop start again, only the loops done differ.
+        Assert.Equal(20, hold.Hold(timeline, 0, 1, 1, 20));
+        Assert.Equal(35, hold.Hold(timeline, 0, 1, 1, 35));
+    }
+
+    [Fact]
     public void ALatencyRiseAfterTheStartNeverMovesTheAudiblePlayheadBack()
     {
         var previousLatency = RoutedMidiOutput.WindowsMidiLatencyMs;

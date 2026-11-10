@@ -31,7 +31,6 @@ public class AccentDerivationTests
 
     [AvaloniaTheory]
     [InlineData(false, "Dark")]
-    [InlineData(true, "Light")]
     public void CrimsonDrivesEveryAccentRoleToken(bool light, string mode)
     {
         try
@@ -52,6 +51,31 @@ public class AccentDerivationTests
             Assert.Equal(AvaloniaPalette.Get("AccentHover", light), AvaloniaPalette.Get("FocusRing", light));
             foreach (var colour in new[] { bar, icon, AvaloniaPalette.Get("AccentSoft", light), AvaloniaPalette.Get("FocusRing", light) })
                 Assert.True(colour.R > colour.B, $"{colour} is not red-based");
+        }
+        finally { AvaloniaPalette.Publish(new AppearanceSettings()); }
+    }
+
+    // Light (outlined, minimal fill): every role is a shade of the picked accent, from ThemeColours.LightRole.
+    [AvaloniaFact]
+    public void CrimsonDrivesEveryLightAccentRoleToken()
+    {
+        try
+        {
+            var appearance = new AppearanceSettings { ThemeMode = "Light" };
+            ThemeColours.ApplyPreset(appearance, true);
+            appearance.Accent = Crimson;
+            AvaloniaPalette.Publish(appearance);
+            var accent = AvaloniaPalette.ThemeBrush("AccentBrush", true);
+            Assert.Equal(Colour(Crimson), accent);   // a pick that reads on the page is used as it is
+            Assert.Equal(ThemeColours.LightRole(ThemeColours.LightAccentRole.Fill, accent), AvaloniaPalette.Get("PrefsPrimary", true));
+            Assert.Equal(ThemeColours.LightRole(ThemeColours.LightAccentRole.Fill, accent), AvaloniaPalette.Get("PrimaryFill", true));
+            Assert.Equal(ThemeColours.LightRole(ThemeColours.LightAccentRole.Slider, accent), AvaloniaPalette.Get("SliderTrackFill", true));
+            Assert.Equal(ThemeColours.LightRole(ThemeColours.LightAccentRole.Ink, accent), AvaloniaPalette.Get("IconActive", true));
+            Assert.Equal(ThemeColours.LightRole(ThemeColours.LightAccentRole.Ink, accent), AvaloniaPalette.Get("SelectedInk", true));
+            Assert.Equal(ThemeColours.LightRole(ThemeColours.LightAccentRole.Tint, accent), AvaloniaPalette.Get("SelectedTint", true));
+            Assert.Equal(ThemeColours.LightRole(ThemeColours.LightAccentRole.Tint, accent), AvaloniaPalette.ThemeBrush("AccentSoftBrush", true));
+            Assert.Equal(accent, AvaloniaPalette.Get("FocusRing", true));
+            Assert.Equal(accent, AvaloniaPalette.Get("CheckFill", true));
         }
         finally { AvaloniaPalette.Publish(new AppearanceSettings()); }
     }
@@ -91,8 +115,12 @@ public class AccentDerivationTests
                 var accent = ThemeColours.AccentShades(Colour(hex), Window(light), light).Base;
                 var soft = ThemeColours.Blend(accent, Window(light), 0.55);
                 var ink = ThemeColours.FromAccent("PrefsPrimaryInk", accent, soft, Window(light), light);
-                foreach (var fill in new[] { accent, ThemeColours.FromAccent("AccentHover", accent, soft, Window(light), light), ThemeColours.FromAccent("AccentPress", accent, soft, Window(light), light) })
-                    Assert.True(ThemeColours.Contrast(ink, fill) >= MinimumTextContrast, $"{name} light={light} {fill}");
+                // Dark: the label on the accent and its hover and press steps; light: the light ink on the one solid fill (the primary button) and its steps.
+                var fills = light
+                    ? new[] { "PrefsPrimary", "PrefsPrimaryHover", "PrefsPrimaryPress" }.Select(n => ThemeColours.FromAccent(n, accent, soft, Window(light), light)).ToArray()
+                    : new[] { accent, ThemeColours.FromAccent("AccentHover", accent, soft, Window(light), light), ThemeColours.FromAccent("AccentPress", accent, soft, Window(light), light) };
+                foreach (var fill in fills)
+                    Assert.True(ThemeColours.Contrast(ink, fill) >= (light ? ThemeColours.LightFillInkContrast : MinimumTextContrast), $"{name} light={light} {fill}");
             }
     }
 

@@ -41,9 +41,11 @@ public sealed partial class PlaybackEngine
         if (timeline is null) return HeldForPendingStart(PlayheadMapper.Reset(frame));
         double ms;
         double anchorMs;
+        long seekId;
         lock (_gate)
         {
             anchorMs = _anchorMs;
+            seekId = _seekRequestId;
             if (_seekRebuild.IsPending)
             {
                 // A seek is compiling: the playhead holds at the requested bar and cell until the scheduler resumes there.
@@ -58,7 +60,7 @@ public sealed partial class PlaybackEngine
             if (!_running || _paused || _startSettling)
             {
                 var held = Volatile.Read(ref _currentStreamMs);
-                if (_startSettling) _audibleHold.Hold(timeline, anchorMs, held);
+                if (_startSettling) _audibleHold.Hold(timeline, anchorMs, seekId, _loopsDone, held);
                 return PlayheadMapper.MapInto(frame, timeline, held, CurrentBar, CurrentCell);
             }
             var latency = _output is Audio.RoutedMidiOutput routed ? routed.AudibleLatencyMs : 0;
@@ -68,7 +70,7 @@ public sealed partial class PlaybackEngine
         // After a seek the output latency would draw the playhead just before the target (the note there would not light up yet): hold it at the target.
         var floor = _loopsDone == 0 ? Math.Max(0, _startMs) : 0;
         ms = Math.Max(floor, Math.Min(ms, Volatile.Read(ref _currentStreamMs) + MaxSleepMs + PositionIntervalMs));
-        ms = _audibleHold.Hold(timeline, anchorMs, ms);
+        ms = _audibleHold.Hold(timeline, anchorMs, seekId, _loopsDone, ms);
         ms = _loopHold.Hold(ms, _options is { Loop: true }, _loopsDone > 0);   // inside the loop until the scheduler wraps
         return PlayheadMapper.MapInto(frame, timeline, ms, CurrentBar, CurrentCell);
     }

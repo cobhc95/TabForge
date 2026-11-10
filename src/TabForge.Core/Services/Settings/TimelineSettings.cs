@@ -97,8 +97,8 @@ public static class ScaleHighlightStyles
     /// <summary>The colours the popup shows as swatches.</summary>
     public static string[] Swatches => new[] { "Accent", "Green", "Amber", "Red", "Grey", "Custom" };
     public const int MinStrength = 10, MaxStrength = 150, DefaultStrength = 100, StrengthStep = 10;
-    public const int MinOpacity = 10, MaxOpacity = 100, DefaultOpacity = 60;
-    /// <summary>The opacity setting as 0.1 to 1.</summary>
+    public const int MinOpacity = 5, MaxOpacity = 100, DefaultOpacity = 60, OpacityStep = 5;
+    /// <summary>The opacity setting as 0.05 to 1.</summary>
     public static double OpacityFactor(int percent) => Math.Clamp(percent, MinOpacity, MaxOpacity) / 100.0;
     /// <summary>The root is drawn this much stronger than the other scale notes when it is emphasised.</summary>
     public const double RootBoost = 1.35;

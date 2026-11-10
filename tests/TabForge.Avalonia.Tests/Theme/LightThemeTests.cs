@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -36,7 +37,10 @@ public sealed class LightThemeTests
         ("MutedBrush", "PanelBrush", 3.0), ("SecondaryTextBrush", "PanelBrush", 3.0),
         ("TextBrush", "TabActiveBrush", 4.5), ("TextBrush", "SelectedTint", 4.5),
         ("IconDefault", "PanelBrush", 3.0), ("IconActive", "PanelBrush", 3.0), ("IconDefault", "SelectedTint", 3.0),   // a selected toggle keeps the normal glyph ink on its tint
-        ("OnAccentBrush", "AccentBrush", 4.5), ("IconDisabled", "PanelBrush", 1.5),
+        ("IconDisabled", "PanelBrush", 1.5),
+        // The selected text on the selected tints, and the ink on the solid fills (3.0: the owner's light primary shade with white text).
+        ("SelectedInk", "SelectedTint", 4.5), ("SelectedInk", "AccentSoftBrush", 4.5), ("ModePillOnText", "ModePillOn", 4.5),
+        ("OnAccentBrush", "PrimaryFill", 3.0), ("PrefsPrimaryInk", "PrefsPrimary", 3.0), ("CheckTick", "CheckFill", 3.0), ("AccentBrush", "WindowBrush", 3.0),
     };
 
     [Theory]
@@ -49,6 +53,7 @@ public sealed class LightThemeTests
         var brushes = ThemeColours.Brushes(appearance, light, Parse).ToDictionary(p => p.Key, p => p.Value);
         var accent = brushes["AccentBrush"];
         UiColor Colour(string name) => brushes.TryGetValue(name, out var c) ? c
+            : !light && ThemeColours.DarkTwin(name) is { } twin ? Colour(twin == "Accent" ? "AccentBrush" : twin == "TextStrong" ? "TextStrongBrush" : twin == "WindowBackground" ? "WindowBrush" : twin)
             : ThemeColours.DerivesFromAccent(name) ? ThemeColours.FromAccent(name, accent, brushes["AccentSoftBrush"], brushes["WindowBrush"], light)
             : Palette.Get(name, light);
         foreach (var (ink, surface, minimum) in Pairs)
@@ -118,6 +123,41 @@ public sealed class LightThemeTests
         a.Accent = a.Own("Accent", "#4C9AFF");
         var json = JsonSerializer.Serialize(new AppSettings { Appearance = a });
         Assert.True(SettingsMigration.Normalize(json, JsonSerializer.Deserialize<AppSettings>(json)!).Appearance.IsOverridden("Accent"));
+    }
+
+    // The default light accent and three picks of other hues: every derived light shade keeps its text readable.
+    [Theory]
+    [InlineData("#2F7BE0")]
+    [InlineData("#2E9E4F")]
+    [InlineData("#E07A1F")]
+    [InlineData("#8A4FD8")]
+    public void LightAccentShadesKeepTheirTextReadable(string pick)
+    {
+        var accent = Parse(pick)!.Value;
+        var tint = ThemeColours.LightRole(ThemeColours.LightAccentRole.Tint, accent);
+        Assert.True(ThemeColours.Contrast(ThemeColours.LightRole(ThemeColours.LightAccentRole.Ink, accent), tint) >= ThemeColours.SelectedInkContrast);
+        Assert.True(ThemeColours.Contrast(ThemeColours.InkLight, ThemeColours.LightRole(ThemeColours.LightAccentRole.Fill, accent)) >= ThemeColours.LightFillInkContrast);
+    }
+
+    [Fact]
+    public void TheDefaultLightAccentGivesTheOutlinedShades()
+    {
+        var appearance = new AppearanceSettings();
+        ThemeColours.SwitchTheme(appearance, "Light");
+        var accent = ThemeColours.Brushes(appearance, true, Parse).Single(p => p.Key == "AccentBrush").Value;
+        Near("#2F7BE0", accent);
+        Near("#EAF2FC", ThemeColours.LightRole(ThemeColours.LightAccentRole.Tint, accent));
+        Near("#9CC0F2", ThemeColours.LightRole(ThemeColours.LightAccentRole.Border, accent));
+        Near("#6FA6EE", ThemeColours.LightRole(ThemeColours.LightAccentRole.Slider, accent));
+        Near("#3A86E8", ThemeColours.LightRole(ThemeColours.LightAccentRole.Fill, accent), 16);
+        Near("#1F5FBF", ThemeColours.LightRole(ThemeColours.LightAccentRole.Ink, accent), 24);
+    }
+
+    private static void Near(string expected, UiColor actual, int tolerance = 6)
+    {
+        var e = Parse(expected)!.Value;
+        Assert.True(Math.Abs(e.R - actual.R) <= tolerance && Math.Abs(e.G - actual.G) <= tolerance && Math.Abs(e.B - actual.B) <= tolerance,
+            $"expected about {expected}, got #{actual.R:X2}{actual.G:X2}{actual.B:X2}");
     }
 
     private static UiColor? Parse(string? text) =>

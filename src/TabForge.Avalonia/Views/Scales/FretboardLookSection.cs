@@ -13,27 +13,26 @@ using TabForge.Avalonia.Views;
 
 namespace TabForge.Avalonia.Views.TransportPopups;
 
-// Owns: the FRETBOARD LOOK section of the fretboard popup: show the scale on / off, the style chips, the colour swatches (Custom… opens the colour picker),
+// Owns: the FRETBOARD LOOK section of the fretboard popup: the style chips, the colour swatches (Custom… opens the colour picker),
 //   the opacity slider, the extras and the Clear highlight / Done buttons. Every change is written to the editing settings and applies live to the fretboard and keyboard.
 // Does not own: the drawing (InstrumentPanelView), the settings types (EditingSettings, ScaleHighlightStyles).
 // Tests: TabForge.Avalonia.Tests.ScaleLookPopupTests.
 // Threads: UI thread only.
 public sealed class FretboardLookSection
 {
-    private readonly IScalePanelHost _host;
+
     private readonly EditingSettings _ed;
     private readonly Action _close, _clearHighlight, _lookChanged;
     private bool _building;
 
-    /// <param name="host">The host whose scale settings the look edits (the show on / off).</param>
     /// <param name="editing">The editing settings that hold the fretboard look.</param>
     /// <param name="close">Closes the panel (Done).</param>
     /// <param name="clearHighlight">Clears the highlight and switches the display off.</param>
     /// <param name="lookChanged">Saves after a look change; the fretboard redraws.</param>
-    public FretboardLookSection(IScalePanelHost host, EditingSettings editing, Action close, Action clearHighlight, Action lookChanged)
-        => (_host, _ed, _close, _clearHighlight, _lookChanged) = (host, editing, close, clearHighlight, lookChanged);
+    public FretboardLookSection(EditingSettings editing, Action close, Action clearHighlight, Action lookChanged)
+        => (_ed, _close, _clearHighlight, _lookChanged) = (editing, close, clearHighlight, lookChanged);
 
-    private const string ShowLabel = "SHOW THE SCALE", StyleLabel = "STYLE", ColourLabel = "COLOUR", OpacityLabel = "OPACITY", ExtrasLabel = "EXTRAS";
+    private const string StyleLabel = "STYLE", ColourLabel = "COLOUR", OpacityLabel = "OPACITY", ExtrasLabel = "EXTRAS";
     private const string ClearText = "Clear highlight", DoneText = "Done";
 
     /// <summary>Builds the look rows (the panel prints the FRETBOARD LOOK title above).</summary>
@@ -42,7 +41,6 @@ public sealed class FretboardLookSection
         var panel = new StackPanel();
         var rows = panel.Children;
         var ed = _ed;
-        AddShowToggle(rows, ed);
         AddExclusive(rows, StyleLabel, "ScaleStyle", ScaleHighlightStyles.All, ScaleHighlightStyles.Normalize(ed.ScaleHighlightStyle), v => ed.ScaleHighlightStyle = v, "Scale style: ");
         AddColours(rows, ed);
         AddOpacity(rows, ed);
@@ -60,29 +58,6 @@ public sealed class FretboardLookSection
         done.Click += (_, _) => _close();
         rows.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = ScalePopupLayout.ButtonGap, Children = { clear, done } }.WithMargin(ScalePopupLayout.ButtonRowMargin));
         return panel;
-    }
-
-    private void AddShowToggle(global::Avalonia.Controls.Controls rows, EditingSettings ed)
-    {
-        rows.Add(ScalePopupLayout.SectionLabel(ShowLabel));
-        var on = ScalePopupLayout.Segment("ScaleShowOn", "On", _host.Settings.ShowOnFretboard);
-        var off = ScalePopupLayout.Segment("ScaleShowOff", "Off", !_host.Settings.ShowOnFretboard);
-        AutomationProperties.SetName(on, "Show the scale on the fretboard: On");
-        AutomationProperties.SetName(off, "Show the scale on the fretboard: Off");
-        void Choose(ToggleButton picked, ToggleButton other, bool value)
-        {
-            if (_building) return;
-            if (picked.IsChecked != true) { picked.IsChecked = true; return; }
-            _building = true;
-            other.IsChecked = false;
-            _building = false;
-            _host.Settings.ShowOnFretboard = value;
-            if (!value) ed.ScaleHighlight = null;
-            _host.SettingChanged();
-        }
-        on.IsCheckedChanged += (_, _) => Choose(on, off, true);
-        off.IsCheckedChanged += (_, _) => Choose(off, on, false);
-        rows.Add(ScalePopupLayout.SegmentRow(new[] { on, off }));
     }
 
     /// <summary>A row of chips of which exactly one is on; picking one stores its value and turns the others off.</summary>
@@ -164,7 +139,9 @@ public sealed class FretboardLookSection
     private async System.Threading.Tasks.Task PickCustomColourAsync(EditingSettings ed, List<ToggleButton> buttons, string? previous = null)
     {
         var anchor = buttons.FirstOrDefault(b => b.Name == "ScaleColourCustom") ?? buttons.Last();
-        var start = ColourHex.TryParse(ed.ScaleHighlightCustomColour, out var rgba) ? rgba : default;
+        var light = anchor.ActualThemeVariant == global::Avalonia.Styling.ThemeVariant.Light;
+        var seed = previous is { } named && named != "Custom" ? TabForge.Platform.Theme.Palette.Hex(FretboardSettingsBinding.ColourKey(named), light) : ed.ScaleHighlightCustomColour;   // start from the colour on the board now
+        var start = ColourHex.TryParse(ed.ScaleHighlightCustomColour, out var rgba) ? rgba : ColourHex.TryParse(seed, out var shown) ? shown : default;
         var picked = await ColourPickerPopup.PickRgbaAsync(anchor, start, new List<string>());
         if (picked is not { } p)
         {
@@ -186,20 +163,21 @@ public sealed class FretboardLookSection
     {
         rows.Add(ScalePopupLayout.SectionLabel(OpacityLabel));
         var amount = new TextBlock { Text = ed.ScaleHighlightOpacity + "%", VerticalAlignment = VerticalAlignment.Center, MinWidth = ScalePopupLayout.PercentSpan };
-        var slider = new Slider
+        var slider = new MiniSlider(ScaleHighlightStyles.MinOpacity, ScaleHighlightStyles.MaxOpacity, ScaleHighlightStyles.DefaultOpacity,
+            DialogMetrics.FretboardSliderWidth, DialogMetrics.FretboardSliderHeight)
         {
-            Name = "ScaleOpacity", Minimum = ScaleHighlightStyles.MinOpacity, Maximum = ScaleHighlightStyles.MaxOpacity, Value = ed.ScaleHighlightOpacity,
-            VerticalAlignment = VerticalAlignment.Center,
+            Name = "ScaleOpacity", Step = ScaleHighlightStyles.OpacityStep, Focusable = true, Value = ed.ScaleHighlightOpacity,
+            VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Left,
         };
         AutomationProperties.SetName(slider, "Scale opacity");
         var coalesced = new SliderChangeCoalescer(() => _lookChanged());
-        slider.ValueChanged += (_, e) =>
+        slider.ValueChanged += value =>
         {
-            ed.ScaleHighlightOpacity = (int)Math.Round(e.NewValue);
-            amount.Text = ed.ScaleHighlightOpacity + "%";
+            ed.ScaleHighlightOpacity = value;
+            amount.Text = value + "%";
             coalesced.SliderChanged();
         };
-        slider.PointerReleased += (_, _) => coalesced.Flush();
+        slider.Released += () => coalesced.Flush();
         DockPanel.SetDock(amount, Dock.Right);
         rows.Add(new DockPanel { Children = { amount, slider } });
     }

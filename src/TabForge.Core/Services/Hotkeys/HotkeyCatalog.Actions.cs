@@ -19,7 +19,7 @@ public static partial class HotkeyCatalog
 
     private static HotkeyAction[] SliceA() => new HotkeyAction[]
     {
-        new("File.New", CategoryFile, "New score", "Ctrl+N", "Create a new score in a new tab."),
+        new("File.New", CategoryFile, "New score", "Ctrl+N", "Create a new untitled score in a new tab (File > New, the tab strip + button and the left strip New icon all run this)."),
         new("File.NewFromTemplate", CategoryFile, "New from template", "", "Create a new score from a built-in or saved template (File > New from template)."),
         new("File.Open", CategoryFile, "Open score", "Ctrl+O", "Open a .tforge or .gp file in the current tab."),
         new("File.OpenInNewTab", CategoryFile, "Open score in new tab", "Ctrl+Shift+O", "Open a .tforge or .gp file in a new tab."),
@@ -31,11 +31,9 @@ public static partial class HotkeyCatalog
         new("File.ProjectSettings", CategoryFile, "Project settings", "", "Open the project settings: song info, credits, tempo and key (the toolbar's Project settings button)."),
         new("App.CommandPalette", CategoryFile, "Command palette", "Ctrl+Shift+A", "Search every command by name, see its key and run it."),
         new("File.Render", CategoryFile, "Render to audio file", "Ctrl+Alt+R", "Render the song to WAV / MP3 (master mix and / or stems) faster than realtime."),
-        new("Tab.New", CategoryFile, "New tab", "Ctrl+Alt+T", "Open another score in a new tab."),
         new("Tab.Close", CategoryFile, "Close tab", "Ctrl+W", "Close the active tab."),
         new("Tab.Duplicate", CategoryFile, "Duplicate tab", "Ctrl+Shift+D", "Duplicate the active tab as an unsaved copy."),
         new("App.Preferences", CategoryFile, "Preferences", "Ctrl+OemComma", "Open this settings window.", "F12"),
-        new("App.Shortcuts", CategoryFile, "Keyboard shortcuts", "F1", "Show the shortcut reference."),
 
         new("Edit.Undo", CategoryEdit, "Undo", "Ctrl+Z", "Undo the last edit."),
         new("Edit.Redo", CategoryEdit, "Redo", "Ctrl+Y", "Redo the last undone edit."),
@@ -100,6 +98,7 @@ public static partial class HotkeyCatalog
         new("View.ArrangementIndividualNotes", CategoryView, "Show notes in each track lane", "", "Draw the notes of each track inside its lane in the arrangement overview (View > Show the notes in each track lane)."),
         new("View.ArrangementContinuousBlocks", CategoryView, "Show one line per track lane", "", "Draw each track's lane as one continuous line in the arrangement overview (View > Show one continuous line per track lane)."),
         new("View.InstrumentView",CategoryView, "Switch instrument view", "", "Cycle the instrument panel between fretboard, keyboard and drum pads (this session; the default is in Settings > Fretboard & Keyboard)."),
+        new("Help.Open", CategoryView, "Help", "F1", "Open the Help window: every chapter, with a search box (Help > Help). Pressing it again brings the open window to the front."),
         new("Help.CheckForUpdates", CategoryView, "Check for updates", "", "Ask GitHub whether a newer TabForge release exists (one anonymous HTTPS request)."),
         new("Transport.Record", CategoryTransport, "Record", "Ctrl+R", "Record every armed track while the song plays (press again to stop)."),
         new("Clip.Delete", CategoryClips, "Delete clip", "Delete", "Delete the selected clip."),
@@ -151,7 +150,7 @@ public static partial class HotkeyCatalog
         new("View.FretboardPosition", CategoryView, "Fretboard position: toggle top / bottom", "", "Move the fretboard / keyboard pane between above the score (default) and below it, above the timeline (same as the fretboard's right-click menu > Position)."),
         new("View.LockInstrumentSize", CategoryView, "Lock fretboard size", "", "Lock or unlock the fretboard / keyboard pane's height. Unlocked, dragging its edge resizes it and the drawing scales to fit; locked, it keeps its size."),
         new("View.ToggleLeftStrip", CategoryView, "Show / hide left strip", "", "Show or hide the slim icon strip at the left of the window (and its Composer panel with it)."),
-        new("View.ToggleComposer", CategoryView, "Show / hide Composer", "", "Open or close the Composer panel beside the left strip (experimental placeholder)."),
+        new("View.ToggleComposer", CategoryView, "Show / hide Composer", "", "Open or close the Composer panel beside the left strip."),
         new("View.ShowStripButton", CategoryView, "Show strip button", "", "Show or hide the left strip's toggle icon at the left end of the menu bar (View > Show strip button)."),
         new("View.ShowStripOnStart", CategoryView, "Show strip on start", "", "Choose whether the left strip shows when TabForge starts (View > Show strip on start)."),
         new(FretboardSettings, CategoryView, "Fretboard settings", "", "Open the Fretboard settings window: look, notes and markers (the note colours and dot style of the legend), layout, strings and capo, scale highlight (the fretboard's right-click Fretboard settings row)."),

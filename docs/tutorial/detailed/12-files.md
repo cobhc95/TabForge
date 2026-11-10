@@ -27,12 +27,13 @@ TabForge can save two kinds of file. A `.tforge` file is TabForge's own project,
 
 If another program saves the `.gp` file again, the extra part is lost. The notes survive, but TabForge-only settings, such as plug-ins and mixer groups, do not. Keep your own copy as your working file.
 
-TabForge opens `.tforge`, `.gp`, `.gpx`, `.gp5`, `.gp4` and `.gp3` files. Everything else leaves TabForge as an export, and exports are for sharing.
+TabForge opens `.tforge`, `.tg`, `.gp`, `.gpx`, `.gp5`, `.gp4` and `.gp3` files. Everything else leaves TabForge as an export, and exports are for sharing.
 
 | File | Opens in TabForge | Written by | What it keeps |
 |---|---|---|---|
 | `.tforge` | Yes | Save | Everything in the song |
 | `.gp` | Yes | Save | Everything, in an extra part |
+| `.tg` | Yes | Save | Notes, rhythm, tracks, sections, tempo and common marks |
 | `.gpx`, `.gp5`, `.gp4`, `.gp3` | Yes | Not written | What the file held |
 | `.mid` | No | Export MIDI | Notes and tempo, no sound |
 | `.musicxml` | No | Export MusicXML | Notation and tab, no sound |
@@ -49,7 +50,7 @@ A new song has no file name yet, so **Save** asks for one. A song you opened fro
 ![The Save song window with a file name box and a file type list offering the standard .gp type and the TabForge project type.](images/c12-s02.png)
 *Figure: the Save song window.*
 
-Only the `.gp` and `.tforge` types can be saved. If you type another extension, TabForge refuses and names the types it can write. The type listed first follows **Preferences > Files & Backups**, under **Opening and saving**, in the row **Default save format**. The standard `.gp` type is the default.
+Only the `.gp`, `.tforge` and `.tg` types can be saved. If you type another extension, TabForge refuses and names the types it can write. The type listed first follows **Preferences > Files & Backups**, under **Opening and saving**, in the row **Default save format**. The standard `.gp` type is the default.
 
 While a song has unsaved changes, the window title ends with an asterisk and its document tab shows a dot. Closing a song with unsaved changes opens a window that asks **Save changes to …?** with **Yes**, **No** and **Cancel**. **Yes** saves first, **No** discards the changes and **Cancel** keeps the song open. If you close a whole window that holds several songs with unsaved changes, TabForge asks about each of them in turn, and **Cancel** at any question keeps the window and every song as they were.
 
@@ -110,7 +111,7 @@ Choose **File > Open…** (`Ctrl+O`) to open a song. By default it replaces the 
 
 Opening never changes the file on disk. TabForge reads the file into its own song, and your original stays as it was unless you save over it.
 
-Files that **Open** cannot read include MIDI files, MusicXML files, PDFs, text tabs and files of the `.gtp` and `.tg` types. A MIDI file can still go onto a track as a clip, as **Chapter 11: Arranging and recording** describes.
+Files that **Open** cannot read include MIDI files, MusicXML files, PDFs, text tabs and files of the `.gtp` type. A MIDI file can still go onto a track as a clip, as **Chapter 11: Arranging and recording** describes.
 
 Large songs open in the background, so the window stays usable. The status bar shows that the song is loading, with a **Cancel** button for as long as it takes. Click **Cancel** and no half-opened song is left behind.
 

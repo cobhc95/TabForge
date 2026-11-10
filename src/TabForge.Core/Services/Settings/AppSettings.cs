@@ -51,6 +51,9 @@ public sealed class AppSettings
     // The Mixer window's size in DIPs, remembered the same way (its default is smaller than the first size it opened at).
     public double MixerWindowWidth { get; set; } = 720;
     public double MixerWindowHeight { get; set; } = 480;
+    // The Help window's size in DIPs, remembered the same way (the first open uses the ChromeMetrics defaults).
+    public double HelpWindowWidth { get; set; } = ChromeMetrics.HelpWindowWidth;
+    public double HelpWindowHeight { get; set; } = ChromeMetrics.HelpWindowHeight;
 
     // ---- categories ----
     /// <summary>App-wide mixer group rules: every song without its own rules uses these (null groups = Guitars, Basses, Drums, Other instruments).</summary>
@@ -79,7 +82,7 @@ public sealed class AppSettings
     public TabForge.Audio.Metering.TrackMeterSettings TrackMeter { get; set; } = new();
     /// <summary>Keyboard mode (experimental): look-ahead and note size.</summary>
     public KeyboardMode.KeyboardModeSettings Learn { get; set; } = new();
-    /// <summary>The left icon strip and its Composer panel (experimental).</summary>
+    /// <summary>The left icon strip and its Composer panel.</summary>
     public TabForge.Features.LeftStrip.LeftStripSettings LeftStrip { get; set; } = new();
     /// <summary>Dock tree, selected tabs, closed panels, and floating-window bounds.</summary>
     public DockWorkspaceState? Workspace { get; set; }

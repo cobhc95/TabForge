@@ -42,7 +42,7 @@ public sealed class SavePromptWindow : Window
         FontSize = DialogMetrics.FontSize;
 
         var icon = new Border { Width = 26, Height = 26, CornerRadius = new CornerRadius(13), VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 0, 12, 0) };
-        icon[!Border.BackgroundProperty] = new DynamicResourceExtension("Accent");
+        icon[!Border.BackgroundProperty] = new DynamicResourceExtension("PrimaryFill");
         icon.Child = new TextBlock { Name = "IconGlyph", Text = "?", FontSize = ChromeMetrics.TextTitle, FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
         icon.Child[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextLegible");
         DockPanel.SetDock(icon, Dock.Left);

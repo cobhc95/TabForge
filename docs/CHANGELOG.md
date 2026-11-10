@@ -4,14 +4,31 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ## 0.9.3
 
-### Fixed
-
-- Light mode: panels, dialogs and the track list stayed dark (with dark-blue text on selected tabs and faint icons) while the fretboard and timeline turned light. A settings reset had marked every theme colour as your own pick, so switching to Light kept the dark ones; resets now hand colours back to the theme, and settings saved that way are repaired once at start.
-
 ### Added
 
-- Left strip: the Open and Save icons left the top-right of the menu row (they live in the strip); the strip and Composer panel now sit beside the score only, above the full-width timeline; the strip's right-click menu ticks the current placement; View > Left strip and View > Composer show them, and the Composer opens on its own even with the strip hidden; right-click > Customize strip… picks from 41 icons, orders them with separators, and sets position (left, beside menus, right), size, tooltips and labels.
-- Experimental left strip: a slim icon strip at the window's left with New, Open, Save, Save as, Render, Undo, Redo and Play, and a Composer button that opens a placeholder Composer panel beside it. A sidebar icon at the left of the menu bar (and of the compact / Band mode bar) shows or hides it; right-click the strip to place it beside the menus, keep it vertical or hide it. View > Show strip button and Show strip on start; both toggles can be given hotkeys. The state is saved with your settings.
+- Left strip: an icon strip under the menu bar with a toggle icon, a right-click menu (Place beside menus, Keep vertical, Hide strip, Customize strip…), and a 41-icon catalog. Large icons are the default. The strip's defaults are New, Open, Save, Save as, Render, Undo, Redo and Composer; the Composer panel shows category cards, a search box and style rows (pattern browsing is coming soon), also reachable from the View menu. The strip and Composer panel sit beside the score only, above the full-width timeline; right-click > Customize strip… picks and orders icons with separators, and sets position (left, beside menus, right), size, tooltips and labels. Customizing uses smooth drag and drop. View > Left strip and View > Composer show them, and the Composer opens on its own even with the strip hidden. The Open and Save icons left the top-right of the menu row (they live in the strip).
+- Customize strip window: icons in both lists, smooth drag and drop, and position and size options.
+- Composer panel: category cards for Drums, Bass, Guitar and Keyboard, a search box, style rows and a results box; pattern browsing is coming soon, so choosing anything shows an empty state for now.
+- F1 Help window: F1 (or Help > Help) opens an in-app Help of fourteen chapters, from What's new and Getting started to Troubleshooting and FAQ, with a left list grouped Start here / Writing music / Playing and tools / Help, a Troubleshooting link and a reading pane with step badges, key-cap chips, Tip / Note / Warning boxes and Problem / Fix cards. The search box is local and understands everyday words: it matches word forms, forgives small typos, follows intent and symptom phrases like "no sound" or "won't play" to the right chapter, and takes quoted phrases. Chapters load when opened and the window remembers its size.
+- Scale panel: an On/Off switch beside the SCALE title (the same setting as "Show on the fretboard", easier to see and hit), a highlight opacity slider, and larger outlined note names and degrees. The opacity slider is accent-driven, following your accent colour.
+- Hotkeys: new commands for the strip and Composer. Ctrl+N is the single new-tab command.
+- TuxGuitar file (`.tg`): open and save as a further file type (never the default; `.tforge` stays the default format and save type), in Open, Save As and drag-drop. A file holds the song details, tracks and tunings and capo, bars and signatures, repeats, tempo changes, notes and durations, ties, effects, drum parts, lyrics and section markers. Anything it cannot hold is left out and, when opening, named in the open message.
+- Scale highlight colour picker: the Fretboard settings window's Scale highlight page has its Colour row (named colours and a custom colour picker, the same picker as the Note colours card) and Highlight opacity again, one setting shared with the Scales popup; Reset section and Reset all restore the default colour.
+
+### Changed
+
+- Light theme: the accent is outlined with little fill. Selected chips, rows and tabs get a pale tint with accent text, check boxes are filled with the accent, slider fills are lighter, and the OK button is the only solid fill. Every shade comes from your accent colour. In light mode the default fretboard (Maple) also shows notes at 90% brightness, unless you changed the fretboard look.
+- Scale highlight: a single shared on/off state across every control.
+- Toolbar and shortcuts dialog: the Open and Save icons are removed from the top-right toolbar. The Keyboard shortcuts dialog is removed, and the Command palette (Ctrl+Shift+A) lists every command with its keys; Preferences > Shortcuts still rebinds them. F1 now opens the Help window.
+
+### Fixed
+
+- Band mode: it no longer removes the right panel.
+- Speed: the keyboard and side panel speed controls are in sync.
+- Playback freeze: a playhead that froze after clicking bar 1 or after a loop wrap.
+- Hotkeys and tooltips: the duplicate Tab.New command, the F12 clash in the TuxGuitar preset, and the strip tooltips that hung.
+- Ctrl+N is now the one New command: it opens a new untitled score in a new tab, and File > New, the tab strip + button, the tab menu and the left strip New icon all run it. The separate New tab command (Ctrl+Alt+T) is gone.
+- Light mode: panels, dialogs and the track list stayed dark (with dark-blue text on selected tabs and faint icons) while the fretboard and timeline turned light. A settings reset had marked every theme colour as your own pick, so switching to Light kept the dark ones; resets now hand colours back to the theme, and settings saved that way are repaired once at start.
 
 ## 0.9.2
 

@@ -95,11 +95,12 @@ public sealed class MainWindowSaving
     {
         const string gpFilter = ".gp file (*.gp) - keeps every TabForge feature|*.gp";
         const string tforgeFilter = "TabForge project (*.tforge)|*.tforge";
+        const string tuxFilter = "TuxGuitar file (*.tg)|*.tg";
         var gpDefault = !string.Equals(_defaultSaveFormat(), "tforge", StringComparison.OrdinalIgnoreCase);
         var legacyFilters = string.Join("|", LegacyGpFormats.All.Select(LegacyGpFormats.DialogFilter));   // copies for older programs, last in the list
         var path = await _dialogs.SaveFileAsync(new FileDialogOptions
         {
-            Key = TabForge.Services.DialogKeys.ProjectSave, Title = "Save song", Filter = (gpDefault ? $"{gpFilter}|{tforgeFilter}" : $"{tforgeFilter}|{gpFilter}") + "|" + legacyFilters,
+            Key = TabForge.Services.DialogKeys.ProjectSave, Title = "Save song", Filter = (gpDefault ? $"{gpFilter}|{tforgeFilter}|{tuxFilter}" : $"{tforgeFilter}|{gpFilter}|{tuxFilter}") + "|" + legacyFilters,
             DefaultExt = gpDefault ? ".gp" : ".tforge", AddExtension = true,
             FileName = SafeFileNames.SafeFileName(Path.GetFileNameWithoutExtension(document.LabelPath) is { Length: > 0 } name ? name : document.Project.Title, "Untitled"),
         }, _owner);

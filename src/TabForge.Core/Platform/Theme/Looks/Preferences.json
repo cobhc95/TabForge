@@ -103,8 +103,9 @@
     "name": "PrefsCheckBox", "kind": "CheckBox",
     "rules": [
       { "name": "Checked", "when": [ { "property": "IsChecked", "value": "True" } ],
-        "set": [ { "part": "CheckBorder", "property": "Border.Background", "brush": "BorderBrush" },
-                 { "part": "CheckBorder", "property": "Border.BorderBrush", "brush": "BorderBrush" },
+        "set": [ { "part": "CheckBorder", "property": "Border.Background", "brush": "PrefsCheckFillBrush" },
+                 { "part": "CheckBorder", "property": "Border.BorderBrush", "brush": "PrefsCheckFillBrush" },
+                 { "part": "CheckMark", "property": "Path.Stroke", "brush": "CheckTickBrush" },
                  { "part": "CheckMark", "property": "Path.Visibility", "literal": "Visible" } ] },
       { "name": "Hover", "when": [ { "property": "IsMouseOver", "value": "True" } ],
         "set": [ { "part": "CheckBorder", "property": "Border.BorderBrush", "brush": "AccentBrush" } ] },

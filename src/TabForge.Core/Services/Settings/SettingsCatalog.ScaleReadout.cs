@@ -28,7 +28,7 @@ public static partial class SettingsCatalog
             Bool(Fretboard, "Scale readout", "scalereadout.keynames", "Use musical key names (E♭ instead of D#)", v => scale.MusicalKeyNames = v, () => scale.MusicalKeyNames,
                 "Off (default): the scale readout names keys with sharps only (D# major). On: keys are spelled like their key signature (E♭ major).",
                 "scale key readout key names flats sharps musical spelling"),
-            Bool(Fretboard, "Scale readout", "scalereadout.fretboard", "Show the readout scale on the fretboard", v => scale.ShowOnFretboard = v, () => scale.ShowOnFretboard,
+            Bool(Fretboard, "Scale readout", "scalereadout.fretboard", "Show the readout scale on the fretboard", v => s.Editing!.SetScaleShown(v), () => s.Editing!.ScaleShown,
                 "The scale in the status bar also becomes the scale highlight on the fretboard and keyboard, and follows it as the section changes.",
                 "scale key readout fretboard highlight keyboard follow"),
         };

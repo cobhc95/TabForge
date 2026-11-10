@@ -35,13 +35,12 @@ public sealed class PaletteThemeTokenTests
     }
 
     [Theory]
-    [InlineData("Accent", "PanelBackground", 4.5)]
-    [InlineData("Accent", "WindowBackground", 4.5)]
-    [InlineData("Accent", "CardBackground", 4.5)]
-    [InlineData("Accent", "RaisedBackground", 4.5)]
-    [InlineData("Accent", "ChromeStrip", 4.5)]
-    [InlineData("OnAccent", "Accent", 4.5)]
-    [InlineData("AccentHover", "PanelBackground", 4.5)]
+    // The light accent is outlined, minimal fill: outlines, check boxes and rings (3.0, interface parts); the accent text is SelectedInk / IconActive.
+    [InlineData("Accent", "PanelBackground", 3.0)]
+    [InlineData("Accent", "WindowBackground", 3.0)]
+    [InlineData("OnAccent", "PrimaryFill", 3.0)]
+    [InlineData("SelectedInk", "SelectedTint", 4.5)]
+    [InlineData("AccentHover", "PanelBackground", 3.0)]
     [InlineData("AccentPress", "PanelBackground", 4.5)]
     [InlineData("TextPrimary", "WindowBackground", 4.5)]
     [InlineData("TextMuted", "PanelBackground", 4.5)]

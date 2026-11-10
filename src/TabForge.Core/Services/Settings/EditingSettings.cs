@@ -62,7 +62,7 @@ public sealed class EditingSettings
     /// <summary>What the fretboard look follows: the theme ("Dark" or "Light") its default was last set for, "Own" once the person chose a
     /// look, empty in a file from before the defaults followed the theme (FretboardStyles.FollowTheme).</summary>
     public string FretboardDefaultsTheme { get; set; } = "";
-    /// <summary>The same for the board brightness (<see cref="FretboardBrightness"/>).</summary>
+    /// <summary>The same for the board and note brightness (<see cref="FretboardBrightness"/>, <see cref="FretboardNoteBrightness"/>), which follow together.</summary>
     public string FretboardBrightnessTheme { get; set; } = "";
     /// <summary>Brightness of cursor/playback note colours, independent of decorative position inlays and scale highlights.</summary>
     public int FretboardNoteBrightness { get; set; } = FretboardStyles.DefaultNoteBrightness;
@@ -92,6 +92,28 @@ public sealed class EditingSettings
     /// <summary>Show the grey trail of notes just played (the legend's "recent"); off by default, and a settings file without the key loads as off.</summary>
     public bool PreviewPreviousNotesEnabled { get; set; } = false;
     public string? ScaleHighlight { get; set; }
+
+    /// <summary>Raised after <see cref="SetScaleShown"/> or <see cref="ShowScale"/> changed whether the scale is shown, so every control that shows it can read again.</summary>
+    public event System.Action? ScaleShownChanged;
+
+    /// <summary>True when the fretboard and keyboard show a scale, or the readout is set to show its scale there. The one state every scale on/off control reads.</summary>
+    [JsonIgnore] public bool ScaleShown => ScaleHighlight is not null || ScaleReadout.ShowOnFretboard;
+
+    /// <summary>The one on/off method: off clears the highlight and stops the readout driving it; on lets the readout scale show. Raises <see cref="ScaleShownChanged"/>.</summary>
+    public void SetScaleShown(bool on)
+    {
+        ScaleReadout.ShowOnFretboard = on;
+        if (!on) ScaleHighlight = null;
+        ScaleShownChanged?.Invoke();
+    }
+
+    /// <summary>Shows <paramref name="scale"/> by name ("D Dorian") as a manual highlight, or none (null: off, as <see cref="SetScaleShown"/>). Raises <see cref="ScaleShownChanged"/>.</summary>
+    public void ShowScale(string? scale)
+    {
+        if (scale is null) { SetScaleShown(false); return; }
+        ScaleHighlight = scale;
+        ScaleShownChanged?.Invoke();
+    }
     /// <summary>Ask before deleting a bar.</summary>
     public bool ConfirmDeleteBar { get; set; }
     /// <summary>"Move to the next note after writing": false keeps the cursor on the note just written.</summary>

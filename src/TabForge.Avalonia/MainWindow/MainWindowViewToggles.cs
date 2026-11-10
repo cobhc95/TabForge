@@ -54,7 +54,7 @@ public static class MainWindowViewToggles
     {
         foreach (var (commandId, change) in Changes)
             commands.Add(commandId, () => Change(settings, change));
-        commands.Add(ClearScaleCommandId, () => Change(settings, s => s.Editing.ScaleHighlight = null));
+        commands.Add(ClearScaleCommandId, () => Change(settings, s => s.Editing.SetScaleShown(false)));
         commands.Add(FretboardPositionCommandId, () => MoveFretboard(settings, status));
         commands.Add(FollowPlaybackCommandId, () => ToggleFollowPlayback(settings, status));
     }

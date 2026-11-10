@@ -151,8 +151,8 @@ public static partial class AvaloniaFormControlStyles
         {
             Setters =
             {
-                Bound(TemplatedControl.BackgroundProperty, "AccentBrush"),
-                Bound(TemplatedControl.BorderBrushProperty, "AccentBrush"),
+                Bound(TemplatedControl.BackgroundProperty, "PrimaryFillBrush"),
+                Bound(TemplatedControl.BorderBrushProperty, "PrimaryFillBrush"),
                 Bound(TemplatedControl.ForegroundProperty, "OnAccentBrush"),
             },
         },

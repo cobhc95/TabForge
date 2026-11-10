@@ -54,11 +54,14 @@ public static class ThemeColours
         Set("LegibleBrush", Blend(muted, text, 0.2));   // lifted muted text for tiny labels
         Set("SecondaryTextBrush", Blend(muted, text, 0.45));
         // The applied accent: the picked colour, lifted or lowered until it reads on the background (the stored setting keeps the pick).
-        var accent = parse(a.Accent) is { } picked && parse(a.Background) is { } background ? AccentShades(picked, background, light).Base : parse(a.Accent);
+        // Light: the pick as it is unless it would vanish on the page (outlined, minimal fill: no label sits on it, see LightAccent).
+        var accent = parse(a.Accent) is { } picked && parse(a.Background) is { } background
+            ? light ? LightAccent(picked, background) : AccentShades(picked, background, light).Base
+            : parse(a.Accent);
         Set("AccentBrush", accent);
-        Set("AccentSoftBrush", accent is { } soft ? ThemeColours.Blend(soft, parse(a.Background) ?? soft, 0.55) : null);
-        // Label ink on accent fills (the AccentButton style): whichever ink reads better on this accent.
-        if (accent is { } fill) Set("OnAccentBrush", InkOn(fill));
+        Set("AccentSoftBrush", accent is { } soft ? light ? LightRole(LightAccentRole.Tint, soft) : ThemeColours.Blend(soft, parse(a.Background) ?? soft, 0.55) : null);
+        // Label ink on accent fills (the AccentButton style): whichever ink reads better on this accent; light keeps the light ink on its primary fill.
+        if (accent is { } fill) Set("OnAccentBrush", light ? InkLight : InkOn(fill));
         Set("SelectionBrush", a.IsOverridden(nameof(a.SelectionColour)) ? parse(a.SelectionColour) : accent);   // the selection follows the accent until the user picks its own
         Set("HoverAccentBrush", parse(a.HoverColour));
         Set("TimelineScrollTrackBrush", Shade(panel, light ? 0.88 : 0.82));
@@ -131,12 +134,12 @@ public static class ThemeColours
     public static bool DerivesFromAccent(string name) => name is
         "SelectedTint" or "SelectedOutline" or "AccentHover" or "AccentPress" or "FocusRing" or "IconActive" or "SliderTrackFill" or "SliderThumbGlow" or "TransportButtonGlow" or "AddTrackBorder" or "AddTrackSurface"
         or "PrefsAccent" or "PrefsPrimary" or "PrefsPrimaryHover" or "PrefsPrimaryPress" or "PrefsPrimaryInk" or "PrefsSelection" or "SettingsNavIconSelected"
-        or "ModePillOn" or "ModePillOnText" or "DockGhostAccentFallback" or "DockGhostGlow" or "DockDragGhostFallback" or "DockDragGlow" or "FxSplitAccentFallback" or "ToolPaletteAccentFallback" or "ControllerDockGlow";
+        or "ModePillOn" or "ModePillOnText" or "PrimaryFill" or "SelectedInk" or "CheckFill" or "CheckFillBorder" or "PrefsCheckFill" or "CheckTick" or "DockGhostAccentFallback" or "DockGhostGlow" or "DockDragGhostFallback" or "DockDragGlow" or "FxSplitAccentFallback" or "ToolPaletteAccentFallback" or "ControllerDockGlow";
 
     /// <summary>The accent-derived token <paramref name="name"/> for the applied accent (<paramref name="accent"/>, already lifted to read on <paramref name="surface"/>) and its soft fill.
     /// The hover and press steps are fixed lightness steps of the accent, the ink on a primary fill is the light or dark ink that reads better,
     /// and the icon and text shades (active icon, selected nav icon) are the accent moved by the measured icon offset.</summary>
-    public static UiColor FromAccent(string name, UiColor accent, UiColor accentSoft, UiColor surface, bool light) => name switch
+    public static UiColor FromAccent(string name, UiColor accent, UiColor accentSoft, UiColor surface, bool light) => light && FromLightAccent(name, accent) is { } role ? role : name switch
     {
         // Light: the accent mixed 85% toward the surface (a pale tint, dark glyph on it); dark keeps the soft fill. The outline is the accent in both.
         "SelectedTint" => light ? Blend(accent, surface, SelectedTintLightAmount) : accentSoft,
@@ -150,6 +153,77 @@ public static class ThemeColours
         "IconActive" or "PrefsAccent" or "SettingsNavIconSelected" => AccentShades(accent, surface, light).Icon,
         _ => accent,
     };
+
+    /// <summary>The light theme's shades of the accent (outlined, minimal fill), all from the applied accent so a picked accent recolours every one.</summary>
+    public enum LightAccentRole { Tint, Border, Slider, Fill, Ink }
+
+    // How far each light shade is mixed from the accent toward white; the default accent gives the tint #EAF2FC, the soft border #9CC0F2,
+    // the slider fill #6FA6EE and (before the ink check) the primary fill #3A86E8.
+    private const double LightTintWhite = 0.9, LightBorderWhite = 0.52, LightSliderWhite = 0.31, LightFillWhite = 0.05;
+
+    /// <summary>Lowest contrast of the light ink on the light theme's one solid fill (the OK / primary button): the WCAG figure for interface parts and large text.</summary>
+    public const double LightFillInkContrast = 3.0;
+
+    /// <summary>Lowest contrast of the selected text (accent ink) on the pale selected tint.</summary>
+    public const double SelectedInkContrast = 5.0;
+
+    private static readonly UiColor White = new(0xFF, 0xFF, 0xFF, 0xFF);
+
+    /// <summary>One light-theme shade of <paramref name="accent"/>: the pale selected tint, the soft row border, the slider fill, the primary fill (darkened until the light ink
+    /// has <see cref="LightFillInkContrast"/> on it) or the selected text (darkened until it has <see cref="SelectedInkContrast"/> on the tint).</summary>
+    public static UiColor LightRole(LightAccentRole role, UiColor accent) => role switch
+    {
+        LightAccentRole.Tint => Blend(accent, White, LightTintWhite),
+        LightAccentRole.Border => Blend(accent, White, LightBorderWhite),
+        LightAccentRole.Slider => Blend(accent, White, LightSliderWhite),
+        LightAccentRole.Fill => DarkenUntil(Blend(accent, White, LightFillWhite), InkLight, LightFillInkContrast),
+        _ => DarkenUntil(accent, Blend(accent, White, LightTintWhite), SelectedInkContrast),
+    };
+
+    /// <summary>The token whose dark value a light-only accent role takes, so the dark theme paints exactly what it painted before the role existed; null for other tokens.</summary>
+    public static string? DarkTwin(string name) => name switch
+    {
+        "SelectedInk" => "TextStrong", "PrimaryFill" or "CheckTick" => "Accent", "CheckFill" => "WindowBackground",
+        "CheckFillBorder" => "CheckBoxBorder", "PrefsCheckFill" => "GeneralBorder",
+        _ => null,
+    };
+
+    // The light theme's accent-derived tokens; null for a token that derives as in the dark theme.
+    private static UiColor? FromLightAccent(string name, UiColor accent) => name switch
+    {
+        "SelectedTint" or "PrefsSelection" or "ModePillOn" => LightRole(LightAccentRole.Tint, accent),
+        "SelectedOutline" or "FocusRing" => accent,
+        "AccentHover" => Shade(accent, 0.9),
+        "AccentPress" => Shade(accent, 0.8),
+        "PrimaryFill" or "PrefsPrimary" => LightRole(LightAccentRole.Fill, accent),
+        "PrefsPrimaryHover" => Shade(LightRole(LightAccentRole.Fill, accent), 0.92),
+        "PrefsPrimaryPress" => Shade(LightRole(LightAccentRole.Fill, accent), 0.84),
+        "PrefsPrimaryInk" or "CheckTick" => InkLight,
+        "CheckFill" or "CheckFillBorder" or "PrefsCheckFill" => accent,
+        "SliderTrackFill" => LightRole(LightAccentRole.Slider, accent),
+        "SelectedInk" or "ModePillOnText" or "IconActive" or "PrefsAccent" or "SettingsNavIconSelected" => LightRole(LightAccentRole.Ink, accent),
+        _ => null,
+    };
+
+    // The light accent: the pick, lowered in lightness only when it has under MinimumAccentContrast on the page (a pale pick would vanish as an outline).
+    private static UiColor LightAccent(UiColor picked, UiColor surface)
+    {
+        if (Reads(picked, surface, label: false)) return picked;
+        var (hue, saturation, lightness) = ToHsl(picked);
+        return ReadOn(hue, saturation, lightness, surface, label: false);
+    }
+
+    // Lowers the HSL lightness (hue and saturation kept) until the colour has the contrast against the ink or surface; black at worst.
+    private static UiColor DarkenUntil(UiColor colour, UiColor against, double contrast)
+    {
+        var (hue, saturation, lightness) = ToHsl(colour);
+        while (Contrast(colour, against) < contrast && lightness > 0)
+        {
+            lightness = Math.Max(0, lightness - LightnessStep);
+            colour = FromHsl(hue, saturation, lightness);
+        }
+        return colour;
+    }
 
     // A hover or press step moves the accent away from its label ink (darker under light ink, lighter under dark ink), so the ink keeps its contrast in every state.
     private static UiColor Step(UiColor accent, double darken, double lighten) =>

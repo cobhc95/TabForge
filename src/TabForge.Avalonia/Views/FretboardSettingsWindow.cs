@@ -55,6 +55,7 @@ public sealed partial class FretboardSettingsWindow : Window
     private readonly Button _apply = new() { Name = "FretboardSettingsApply", Content = SettingsCatalog.Special(SettingsCatalog.ActionApply).Label, IsEnabled = false };
     private AppSettings _kept;
     private readonly Dictionary<FretNoteRole, ColourButton> _noteColourButtons = new();
+    private ColourButton? _scaleCustomColourButton;
     private bool _dirty;
 
     /// <param name="settings">The live settings the rows read and write.</param>
@@ -133,7 +134,7 @@ public sealed partial class FretboardSettingsWindow : Window
     {
         if (!_dirty) return;
         foreach (var section in Enumerable.Range(0, SectionCount)) CopySection(section, _kept.Editing, _kept.Appearance);
-        _settings.Editing.ScaleHighlight = _kept.Editing.ScaleHighlight;
+        _settings.Editing.ShowScale(_kept.Editing.ScaleHighlight);
         _dirty = false;
         _changed();
     }

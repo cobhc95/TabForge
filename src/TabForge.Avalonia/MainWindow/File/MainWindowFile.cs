@@ -72,7 +72,7 @@ public sealed class MainWindowFile
             var chosen = await _dialogs.OpenFilesAsync(new FileDialogOptions
             {
                 Key = TabForge.Services.DialogKeys.ProjectOpen, Title = "Open TabForge or .gp file",
-                Filter = "Supported scores|*.tforge;*.gp3;*.gp4;*.gp5;*.gpx;*.gp;*.musicxml;*.mxl;*.xml;*.mid;*.midi|TabForge project (*.tforge)|*.tforge|GP files (*.gp3;*.gp4;*.gp5;*.gpx;*.gp)|*.gp3;*.gp4;*.gp5;*.gpx;*.gp|MusicXML (*.musicxml;*.mxl;*.xml)|*.musicxml;*.mxl;*.xml|MIDI (*.mid;*.midi)|*.mid;*.midi",
+                Filter = "Supported scores|*.tforge;*.gp3;*.gp4;*.gp5;*.gpx;*.gp;*.tg;*.musicxml;*.mxl;*.xml;*.mid;*.midi|TabForge project (*.tforge)|*.tforge|GP files (*.gp3;*.gp4;*.gp5;*.gpx;*.gp)|*.gp3;*.gp4;*.gp5;*.gpx;*.gp|TuxGuitar files (*.tg)|*.tg|MusicXML (*.musicxml;*.mxl;*.xml)|*.musicxml;*.mxl;*.xml|MIDI (*.mid;*.midi)|*.mid;*.midi",
                 Multiselect = true,
             }, _owner);
             if (chosen is null) return;

@@ -89,7 +89,7 @@ public static partial class HotkeyCatalog
     private static readonly HashSet<string> TextBoxSafe = new(StringComparer.OrdinalIgnoreCase)
     {
         "File.New", "File.Open", "File.OpenInNewTab", "File.Save", "File.SaveAs", "File.Print", "File.PrintPreview",
-        "Tab.New", "Tab.Close", "Tab.Duplicate", "App.Preferences", "App.Shortcuts", "App.CommandPalette",
+        "Tab.Close", "Tab.Duplicate", "App.Preferences", "App.CommandPalette",
         "FxChain.Save", "FxChain.Load"
     };
 
@@ -329,6 +329,8 @@ public static class HotkeyPresets
     public static string? Override(string? preset, string id, int slot)
     {
         if (preset == GuitarPro5 && id == "Track.Add") return slot == 2 ? "Ctrl+T" : "Ctrl+Shift+Insert";
+        // TuxGuitar puts Save as on F12, so Preferences loses its default Hotkey 2 there.
+        if (preset == TuxGuitar && id == "App.Preferences" && slot == 2) return "";
         if (slot == 2) return null;
         var map = preset switch
         {
@@ -338,6 +340,11 @@ public static class HotkeyPresets
         };
         return map is not null && map.TryGetValue(id, out var gesture) ? gesture : null;
     }
+
+    /// <summary>Every action id the preset rebinds (for consistency checks).</summary>
+    public static IEnumerable<string> OverriddenIds(string preset) =>
+        (preset == TuxGuitar ? TuxGuitarOverrides.Keys : preset == GuitarPro5 ? GuitarPro5Overrides.Keys : Enumerable.Empty<string>())
+        .Concat(preset == GuitarPro5 ? new[] { "Track.Add" } : Array.Empty<string>());
 
     /// <summary>Switches to a preset, dropping the user's own changes.</summary>
     public static void Apply(HotkeySettings settings, string preset)

@@ -17,16 +17,14 @@ using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia;
 
-// Owns: the Help and App menu rows that open a plain dialog: Help > About (the About text with Close and Third-party licences
-// buttons, opening THIRD_PARTY.md / the licenses folder / the GitHub copy), App > Shortcuts
-//   (the keyboard shortcut list), registered into the window's command table.
-// Does not own: the menu rows (MainMenuTable), the texts (AboutText, ShortcutHelp) or the message box (AvaloniaMessageBox).
+// Owns: the Help > About (the About text with Close and Third-party licences buttons, opening THIRD_PARTY.md / the licenses
+// folder / the GitHub copy), registered into the window's command table.
+// Does not own: the menu rows (MainMenuTable) or the text (AboutText).
 // Tests: TabForge.Avalonia.Tests.HelpMenuTests.
 /// <summary>Adds the Help and App menu handlers to the window's command table.</summary>
 public static class MainWindowHelpMenu
 {
     private const string AboutCaption = "About TabForge";
-    private const string ShortcutsCaption = "Keyboard shortcuts";
     // The About dialog's second button and the two buttons' tooltips (its yesToolTip/noToolTip).
     internal const string CloseButtonText = "Close";
     internal const string LicencesButtonText = "Third-party licences";
@@ -45,15 +43,11 @@ public static class MainWindowHelpMenu
     internal const double ButtonHeight = 28;
     internal const double ButtonGap = 8;
 
-    /// <summary>Registers the handlers; <paramref name="hotkeys"/> is read each time Shortcuts opens, so the list shows the current bindings.</summary>
     /// <summary>The Help menu command ids this class handles.</summary>
-    public static readonly IReadOnlyList<string> Commands = new[] { "Help.About", "App.Shortcuts" };
+    public static readonly IReadOnlyList<string> Commands = new[] { "Help.About" };
 
-    public static void Register(MainWindowCommands commands, Window owner, Func<HotkeySettings> hotkeys)
-    {
+    public static void Register(MainWindowCommands commands, Window owner) =>
         commands.Add("Help.About", () => _ = ShowAboutAsync(owner));
-        commands.Add("App.Shortcuts", () => _ = ShowMessage(owner, ShortcutHelp.Build(hotkeys()), ShortcutsCaption));
-    }
 
     private static async Task ShowAboutAsync(Window owner)
     {
@@ -111,8 +105,6 @@ public static class MainWindowHelpMenu
         }
     }
 
-    private static Task<MessageBoxAnswer> ShowMessage(Window owner, string text, string caption) =>
-        AvaloniaMessageBox.Show(new AvaloniaDialogHost(), owner, text, caption, MessageBoxButtons.OK, MessageBoxIcon.Information, MessageBoxAnswer.OK);
 }
 
 /// <summary>The About dialog: the About text with Close (default) and Third-party licences buttons.</summary>

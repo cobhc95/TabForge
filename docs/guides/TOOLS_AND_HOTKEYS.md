@@ -2,7 +2,7 @@
 
 Generated from the source (the palette rows in `Views/ToolPaletteController.Tools.cs`, the palette command handling in `MainWindow.Palette.cs`, and `Services/Hotkeys/HotkeyCatalog.cs`). Almost every item here can be bound to a key in **Settings → Shortcuts** (one palette icon, Change accidental, is not yet bindable); palette icons are registered automatically as `Tool.<id>` commands, so new icons become mappable without editing this list.
 
-*Verified 2026-10-19: 519 lines (generated; see header).*
+*Verified 2026-10-19: 520 lines (generated; see header).*
 
 ## Tools palette
 
@@ -148,11 +148,9 @@ Default keys are the **TabForge** preset, identical to the **Classic** preset ex
 | File and tabs | Render to audio file | Render the song to WAV / MP3 (master mix and / or stems) faster than realtime. (Also File > Export > Audio file.) | `File.Render` | Ctrl+Alt+R |  |
 | File and tabs | Print | Print the active score (not available yet: the File menu row is disabled). | `File.Print` | Ctrl+P |  |
 | File and tabs | Print preview | Preview the printed page (not available yet: the File menu row is disabled). | `File.PrintPreview` | Ctrl+Shift+P |  |
-| File and tabs | New tab | Open another score in a new tab. | `Tab.New` | Ctrl+Alt+T |  |
 | File and tabs | Close tab | Close the active tab. | `Tab.Close` | Ctrl+W |  |
 | File and tabs | Duplicate tab | Duplicate the active tab as an unsaved copy. | `Tab.Duplicate` | Ctrl+Shift+D | — |
 | File and tabs | Preferences | Open this settings window. | `App.Preferences` | Ctrl+OemComma | F7 |
-| File and tabs | Keyboard shortcuts | Show the shortcut reference. | `App.Shortcuts` | F1 |  |
 | Editing | Undo | Undo the last edit. | `Edit.Undo` | Ctrl+Z |  |
 | Editing | Redo | Redo the last undone edit. | `Edit.Redo` | Ctrl+Y |  |
 | Editing | Copy | Copy the selected beats or bars, or the beat at the cursor. | `Edit.Copy` | Ctrl+C |  |
@@ -393,7 +391,7 @@ These share keys with score commands on purpose: they act only while a clip is s
 | View | Follow playback on / off | Turn the score and timeline following the playhead on or off. The same setting as Preferences > Playback > Follow > Follow playback. | `View.FollowPlayback` | Ctrl+Shift+F |  |
 | View | Smooth page-turn follow | Switch playback follow between instant and smooth (glided) page turns. | `View.SmoothFollow` | — |  |
 | View | Show / hide left strip | Show or hide the slim icon strip at the left of the window (and its Composer panel with it). | `View.ToggleLeftStrip` | — |  |
-| View | Show / hide Composer | Open or close the Composer panel beside the left strip (experimental placeholder). | `View.ToggleComposer` | — |  |
+| View | Show / hide Composer | Open or close the Composer panel beside the left strip. | `View.ToggleComposer` | — |  |
 | View | Show strip button | Show or hide the left strip's toggle icon at the left end of the menu bar (View > Show strip button). | `View.ShowStripButton` | — |  |
 | View | Show strip on start | Choose whether the left strip shows when TabForge starts (View > Show strip on start). | `View.ShowStripOnStart` | — |  |
 | View | Highlight playing bar | Shade the whole bar that is playing (staff and tab) with a translucent band behind the notes; on by default and subtle (10% opacity). Colour, opacity and "Also show the cursor's bar when stopped" are in Preferences > Appearance > Playback look (the "when stopped" option under More options). | `View.PlayingBar` | — |  |
@@ -426,6 +424,7 @@ These share keys with score commands on purpose: they act only while a clip is s
 | View | Global tuning | Retune every pitched track of the song by the same amount: open the tuning window, pick a tuning and apply it in one undo step. | `Tools.GlobalTuning` | — |  |
 | View | Preview note sound | Turn the note sound preview on or off, the same as Options > Preview note sound. | `Tools.PreviewNotes` | — |  |
 | View | Preset manager | Open the preset manager: every saved plug-in preset, FX chain, container, MIDI chain, MIDI processor preset and drum map in one window, to rename, copy, reorder, delete and search (same as Tools > Preset manager). | `Tools.PresetManager` | — |  |
+| View | Help | Open the Help window: every chapter, with a search box (Help > Help). Pressing it again brings the open window to the front. | `Help.Open` | F1 |  |
 | View | Check for updates | Ask GitHub whether a newer TabForge release exists (one anonymous HTTPS request). | `Help.CheckForUpdates` | — |  |
 
 ## Hotkey 1 and Hotkey 2

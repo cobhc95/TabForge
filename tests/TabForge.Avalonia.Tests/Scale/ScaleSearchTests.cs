@@ -91,15 +91,19 @@ public sealed class ScaleSearchTests
         var low = SettingsValidator.Normalize(new AppSettings { Editing = { ScaleHighlightStyle = null!, ScaleHighlightOpacity = -3 } });
         Assert.Equal(ScaleHighlightStyles.Dots, low.Editing.ScaleHighlightStyle);
         Assert.Equal(ScaleHighlightStyles.MinOpacity, low.Editing.ScaleHighlightOpacity);
+        var odd = SettingsValidator.Normalize(new AppSettings { Editing = { ScaleHighlightColour = "Neon", ScaleHighlightCustomColour = "red" } });
+        Assert.Equal("Accent", odd.Editing.ScaleHighlightColour);
+        Assert.Equal("", odd.Editing.ScaleHighlightCustomColour);
     }
 
     [Fact]
     public void TheLookRoundTripsThroughTheSettingsFile()
     {
-        var json = System.Text.Json.JsonSerializer.Serialize(new EditingSettings { ScaleHighlightStyle = ScaleHighlightStyles.Degrees, ScaleHighlightOpacity = 35, ScaleDimOutside = true, ScaleHighlightCustomColour = "#102030" });
+        var json = System.Text.Json.JsonSerializer.Serialize(new EditingSettings { ScaleHighlightStyle = ScaleHighlightStyles.Degrees, ScaleHighlightOpacity = 35, ScaleHighlightColour = "Red", ScaleDimOutside = true, ScaleHighlightCustomColour = "#102030" });
         var back = System.Text.Json.JsonSerializer.Deserialize<EditingSettings>(json)!;
         Assert.Equal(ScaleHighlightStyles.Degrees, back.ScaleHighlightStyle);
         Assert.Equal(35, back.ScaleHighlightOpacity);
+        Assert.Equal("Red", back.ScaleHighlightColour);
         Assert.True(back.ScaleDimOutside);
         Assert.Equal("#102030", back.ScaleHighlightCustomColour);
         var missing = System.Text.Json.JsonSerializer.Deserialize<EditingSettings>("{}")!;

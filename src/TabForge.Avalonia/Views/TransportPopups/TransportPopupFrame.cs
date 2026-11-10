@@ -12,6 +12,7 @@ using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using Avalonia.Styling;
 using TabForge.Avalonia.Platform;
+using TabForge.Avalonia.Platform.Controls;
 using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views.TransportPopups;
@@ -47,6 +48,7 @@ public sealed class TransportPopupFrame
     private const double ShadowDepth = 3;
     private const double ShadowOpacity = 0.52;
     private static readonly Thickness ShadowRoom = new(ShadowBlur, 0, ShadowBlur, ShadowBlur);
+    private const double HeaderSwitchGap = 6;
     private const string CloseGlyph = "×";
     private const double CrossSize = 8, CrossStroke = 1.5;
     private const string PowerOnText = "On", PowerOffText = "Off";
@@ -109,6 +111,19 @@ public sealed class TransportPopupFrame
         DockPanel.SetDock(power, Dock.Right);
         _titleRow.Children.Insert(1, power);   // after the × (first), before the title (last, filling)
         power.IsCheckedChanged += (_, _) => { set(power.IsChecked == true); changed(); };
+    }
+
+    /// <summary>Adds an on/off switch with a small caption to the left of it, at the right of the title (before the ×): the caller wires <see cref="LargeSwitch.IsCheckedChanged"/>.</summary>
+    public LargeSwitch AddHeaderSwitch(string caption, string tip, bool isOn)
+    {
+        var toggle = new LargeSwitch { Name = "ScaleShowSwitch", IsChecked = isOn, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, HeaderSwitchGap, 0) }.Named(tip, tip);
+        var label = new TextBlock { Text = caption, FontSize = SmallFontSize, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, HeaderSwitchGap, 0) };
+        label[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        DockPanel.SetDock(toggle, Dock.Right);
+        DockPanel.SetDock(label, Dock.Right);
+        _titleRow.Children.Insert(1, toggle);   // after the × (first)
+        _titleRow.Children.Insert(2, label);    // then the caption to its left; the title (last) fills
+        return toggle;
     }
 
     /// <summary>The rows under the title; the content classes add theirs here.</summary>

@@ -87,7 +87,7 @@
       { "name": "Hover", "when": [ { "property": "IsMouseOver", "value": "True" } ],
         "set": [ { "part": "Bd", "property": "Border.Background", "brush": "HoverBrush" } ] },
       { "name": "Selected", "when": [ { "property": "IsSelected", "value": "True" } ],
-        "set": [ { "part": "Bd", "property": "Border.Background", "brush": "AccentSoftBrush" }, { "property": "Foreground", "brush": "TextStrongBrush" } ] },
+        "set": [ { "part": "Bd", "property": "Border.Background", "brush": "AccentSoftBrush" }, { "property": "Foreground", "brush": "SelectedInkBrush" } ] },
       { "name": "Pressed", "when": [ { "property": "IsPressed", "value": "True" } ],
         "set": [ { "part": "Bd", "property": "Border.Background", "brush": "PressBrush" } ] },
       { "name": "Disabled", "when": [ { "property": "IsEnabled", "value": "False" } ],
