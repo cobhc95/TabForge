@@ -5,7 +5,7 @@ namespace TabForge.Sf2Synth.Guitar;
 // Owns: how a string is set going and what rides on top of it: the initial shape (triangle at the pick point + pick-combed,
 //   velocity-filtered noise; a narrow struck bump for slap; a sine for harmonics), the pick click (high-passed noise, 1.5 ms),
 //   the tap (noise through a band-pass: fingertip, pick snap, thumb thump, upright knock) and the fretless mwah (a band-pass that
-//   follows the pitch and falls with the note).
+//   follows the pitch and falls with the note). Click/tap strength follows velocity^ClickVel / velocity^TapVel (1 on guitars).
 // Does not own: the waveguide loop (PluckedString), the values (Voicings).
 // Tests: GuitarLayerTests.
 internal sealed partial class PluckedString
@@ -45,9 +45,11 @@ internal sealed partial class PluckedString
         mean /= n;
         for (var i = 0; i < n; i++) _buf[(_w - n + i) & _mask] += amp * (scratch[i] - mean);
         var on = !_spec.Harmonic;
-        (_click, _noise, _clickX) = (on ? Click * _spec.Click * amp * (float)v : 0, state, 0);
+        var cv = _spec.ClickVel == 1 ? (float)v : (float)Math.Pow(v, _spec.ClickVel);
+        var tv = _spec.TapVel == 1 ? (float)v : (float)Math.Pow(v, _spec.TapVel);
+        (_click, _noise, _clickX) = (on ? Click * _spec.Click * amp * cv : 0, state, 0);
         var t = _spec.Tap;
-        _tap = on && t.Amount > 0 ? t.Amount * amp * (float)v : 0;
+        _tap = on && t.Amount > 0 ? t.Amount * amp * tv : 0;
         if (_tap > 0)
         {
             _tapF.C = BiquadCoefs.Of(new EqSpec(EqKind.BandPass, t.Hz, t.Q), _rate);

@@ -12,7 +12,8 @@ internal enum CabKind { None, Guitar, Bass, Room }
 // acoustic, no comb; Pickup2Mm = second coil or pickup); stiffness comes from StringPhysics; PluckHz = pluck low-pass at full
 // velocity; Vel = velocity exponent of the pluck; Drop = first stage of the double decay: dB lost beyond the slow decay with a time
 // constant of DropMs, scaled by velocity^DropVel (the pluck starts that much louder, so hard notes peak above the same sustain); Click = pick-click scale; Tap = attack noise; Slap = struck, not plucked;
-// Mwah = fretless resonance at Mwah × f0; Glide = every legato step slides this long (fretless).
+// Mwah = fretless resonance at Mwah × f0; Glide = every legato step slides this long (fretless). ClickVel/TapVel = velocity exponents
+// of the click/tap (1 = linear; bass techniques run 1.2-2 so soft hits stay round and hard hits bite).
 internal sealed record StringSpec(double RefHz, double T60Ref, double T60At1k, double Darkness, double NoiseMix, double PickMm,
     double PickupMm, double ReleaseT60, int MaxStrings, double PluckHz, bool Harmonic = false, bool Bass = false)
 {
@@ -22,6 +23,8 @@ internal sealed record StringSpec(double RefHz, double T60Ref, double T60At1k, d
     public double DropMs { get; init; } = 12;
     public double DropVel { get; init; } = 1;
     public float Click { get; init; } = 1;
+    public double ClickVel { get; init; } = 1;
+    public double TapVel { get; init; } = 1;
     public TapSpec Tap { get; init; }
     public bool Slap { get; init; }
     public double Mwah { get; init; }

@@ -18,14 +18,16 @@ internal static class CabinetImpulse
         new(Peak, 3800, 3, 3), new(LowPass, 5200, 0.9), new(LowPass, 6000, 0.6), new(Peak, 8000, 1, -8),
     ];
 
+    // The only high-pass in the bass chain (all pre/cab/stage duplicates removed): sub body plus low cone break-up,
+    // not just a boosted 70 Hz peak.
     private static readonly EqSpec[] BassSpeaker =
-        [new(HighPass, 22, 0.7), new(Peak, 70, 1.5, 6), new(Peak, 800, 1, -2), new(LowPass, 3500, 0.8), new(LowPass, 4500, 0.6)];
+        [new(HighPass, 14, 0.7), new(Peak, 55, 1.0, 3), new(Peak, 130, 1.2, 2.5), new(Peak, 340, 1.5, 1.5), new(Peak, 750, 1, -2), new(LowPass, 3200, 0.8), new(LowPass, 4200, 0.6)];
 
     public static float[] Build(CabKind kind, double rate)
     {
         var specs = kind == CabKind.Bass ? BassSpeaker : GuitarSpeaker;
-        // Bass needs several periods of the fundamental (30 Hz = 33 ms) to hold a body; 10 ms truncates it and sounds thin.
-        var taps = (int)Math.Round((kind == CabKind.Bass ? 0.04 : Seconds) * rate);
+        // Bass needs several periods of the fundamental (30 Hz = 33 ms) to hold a body; 40 ms truncates it and sounds thin.
+        var taps = (int)Math.Round((kind == CabKind.Bass ? 0.12 : Seconds) * rate);
         var filters = specs.Select(s => new Biquad { C = BiquadCoefs.Of(s, rate) }).ToArray();
         var raw = new double[taps];
         for (var n = 0; n < taps; n++)

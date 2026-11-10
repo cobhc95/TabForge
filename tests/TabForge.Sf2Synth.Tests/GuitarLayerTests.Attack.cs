@@ -50,12 +50,12 @@ public sealed partial class GuitarLayerTests
     [InlineData(29, 52, 6.6, -1.1, -1.5)]   // the captured amp squeezes like the real one (real amp output 7.7 dB, attack peak std 1.2 dB)
     [InlineData(30, 52, 6.6, -1.1, -1.5)]
     [InlineData(31, 52, 11.8, -21.0, 17.1)]
-    [InlineData(32, 33, 8.1, -37.5, 17.4)]
-    [InlineData(33, 33, 10.4, -8.7, 17.4)]
-    [InlineData(34, 33, 10.9, -11.4, 17.9)]
-    [InlineData(35, 33, 8.4, -18.6, 17.0)]
-    [InlineData(36, 33, 16.6, -24.5, 14.0)]
-    [InlineData(37, 33, 19.4, -30.9, 15.6)]
+    [InlineData(32, 33, 6.9, -32.6, 17.4)]
+    [InlineData(33, 33, 11.4, -12.0, 16.1)]
+    [InlineData(34, 33, 9.5, -19.0, 17.8)]
+    [InlineData(35, 33, 10.8, -16.1, 16.4)]
+    [InlineData(36, 33, 14.4, -31.5, 12.9)]
+    [InlineData(37, 33, 16.2, -27.6, 15.5)]
     public void EveryNotePeaksAboveItsSustain(int program, int note, double attack, double slope, double range)
     {
         var x = Struck(program, note, 110);

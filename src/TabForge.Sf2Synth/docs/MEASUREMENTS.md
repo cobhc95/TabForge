@@ -252,5 +252,22 @@ time slices = STFT frames 0-30 / 30-300 / 300+ ms after each onset; distance = R
 - CPU, Release, one channel, all layers on (DI, amp, humanizer, voice variation), % of one core: riff 29/30 1.7-2.0, arp 27 0.7, strum 27 0.8,
   strum 25 0.3, bass 33 0.6; humanizer on or off makes no measurable difference.
 
+## Modelled bass restarted (Nov 2026)
+Owner: the basses sounded synthy and thin (32-bit like). Restart from the modelling layer, no third-party samples/models; guitars (24-31) untouched.
+Genuinely new, per program 32-37 (values in `Voicings`, DSP in `GuitarBus`, `BodyModes`, `Compressor`, `StageAmp`, `CabinetImpulse`, `PluckedString.Attack`):
+- Electric basses (33-37) get a parallel low-frequency body (`BassBody`: 48 / 92 / 155 / 240 / 380 Hz, broad Q 7-15, direct 1.0) like the upright but lower and broader; the upright keeps its own `Upright` body.
+- P vs J pickup inductance/cable resonance: P = peak 1.3 kHz +2.5 dB under a 2.3 kHz low-pass (higher inductance, lower resonance); J = peak 2.7 kHz +4 dB under a 4.4 kHz low-pass (parallel coils, brighter).
+- No stacked high-passes above ~20 Hz: the only cut left in the bass chain is the cabinet's 14 Hz; the pre-EQ 18 Hz and stage 15 Hz cuts are removed (stage coupling now 5 Hz, effectively a DC guard).
+- Gentle drive preamp: two-stage `BassStages` (1.2 + 1.15, bias 0.06 / 0.01, 5 Hz coupling, 6 / 7.5 kHz plate) for finger/pick warmth; the earlier hotter 2.2 + 1.6 version cost 4-5 dB of velocity range, so it was kept soft.
+- Two-band compression (`Compressor` with `SplitHz = 180`): the low band (<=180 Hz) gets -26 dB / 2:1 / 250 ms release (sustain weight) and the rest -16 dB / 2.5:1 / 90 ms (attack definition); slap 220 ms. Guitars keep the single-band path (SplitHz 0).
+- Longer, low-end–rich cabinet: 120 ms (was 40 ms) with sub body 55 Hz +3, cone body 130 Hz +2.5, low cone break-up 340 Hz +1.5, boxiness 750 Hz -2.
+- Per-technique transients tied to velocity: finger tap 650 Hz, pick tap 2.8 kHz + click 2.5, fretless mwah 8x f0 falling + 0.12 s glide, thumb thump 110 Hz broad, pop 2.4 kHz + click 6; click/tap strength follows velocity^ClickVel / velocity^TapVel (1.1-1.8 on bass, 1 on guitars).
+- Measured (note 33, vel 100, layer only, 48 kHz; `GuitarLayerTests.Attack` centers updated for bass only): centroid 50 / 300 ms / 1 s (Hz) before -> after: 33 610 / 395 / 217 -> 366 / 266 / 160, 34 1089 / 983 / 680 -> 631 / 580 / 371, 35 813 / 452 / 260 -> 594 / 360 / 218, 36 1538 / 1260 / 913 -> 1178 / 990 / 748, 37 1354 / 1139 / 813 -> 1065 / 925 / 689; 32 unchanged. Layer is darker at the attack (pickup roll-off + cabinet), ordering kept (finger darkest, slap brightest).
+- Attack-to-sustain (dB) before -> after: 32 6.9 -> 6.9 (unchanged), 33 10.4 -> 11.4, 34 10.9 -> 9.5, 35 8.4 -> 10.8, 36 15.7 -> 14.4, 37 17.8 -> 16.2. Initial slopes: 33 -14.8 -> -12.0, 34 -10.9 -> -19.0, 35 -15.5 -> -16.1, 36 -25.4 -> -31.5, 37 -30.8 -> -27.6 dB/s. Attack-peak range 50 -> 127 (dB): 33 17.3 -> 16.1, 34 17.8 -> 17.8, 35 15.9 -> 16.4, 36 13.1 -> 12.9, 37 15.2 -> 15.5.
+- Levels re-trimmed so rms100 (note 33, 1 s) matches the old within 0.1 dB: 33 -17.98 -> -18.04, 34 -23.08 -> -23.00, 35 -18.50 -> -18.51, 36 -23.10 -> -23.10, 37 -29.95 -> -29.89 dBFS (the bank-match tests need TABFORGE_GS_SF2, which was absent; drift and relative loudness re-checked against the pre-change chain instead).
+- Tuning (autocorrelation, full bass rig): B0 30.9 Hz -0.16 cents, D1 -0.02, E1 -0.04, A1 +0.07, G1 +0.45 cents (all within 1 cent).
+- `GuitarLayerTests.Attack` bass centers set to the new numbers (±2 dB / ±8 dB/s / range lower bounds kept); guitar/distorted guards unchanged. No bass octave-band guard existed (only the guitar DI and captured-amp guards), so nothing there to move.
+- Demo `tfsynth_BASS_HUMANIZED.wav` (Downloads, not in the repo): six programs 32-37, each the 6-bar 120 bpm `Bass` part flat-written then Humanizer Natural, via Synthesizer + GuitarLayer at 48000, MasterVolume 0.5, 1 s gaps, peak 0.90. Human listening still pending (no one has played it through the app).
+
 ## Architecture decision
 Clean pickup-style guitar DI, then a user-chosen Neural Amp Modeler `.nam` model as the amp, then an optional cabinet `.wav` IR. Built-in defaults: the captured amp (no cabinet) on 29/30, the stage amp and synthetic cab on the other electric programs. NAM runtime is written from scratch from the public format spec (no copied code).
