@@ -1,7 +1,8 @@
 namespace TabForge.Sf2Synth.Humanize;
 
 // Owns: every value of the humanizer (docs/HUMAN_FEEL_SPEC.md): window, evidence thresholds, the structural level parts (dB),
-//   the timing parts (ms), the fast-run model, note lengths, strum, voice amounts, the three feel styles and the instrument families.
+//   the timing parts (ms), the fast-run model, note lengths, strum, voice amounts, the three feel styles and the instrument families
+//   (guitars/basses/bowed plus drums: per-kit-piece velocity ceilings and the backbeat/crash rules).
 // Does not own: the code reading them (Humanizer, Dynamics, Timing, Evidence, Strum, Noise, Nuance).
 // Tests: HumanizerTests.
 
@@ -42,7 +43,12 @@ public static class HumanTable
     public const double BiasStrumPerMs = 0.025, GapFirst = 1.3, GapLast = 0.8, GapJit = 0.2, GapMaxMs = 39;
     public const double FirstDb = 2, LastDb = -2, StringDb = 1, UpLowDb = -6, MissChance = 0.3, MissDb = -20, InnerChance = 0.08, InnerDb = -8;
 
-    // Voice: detune fall, vibrato onset and ramp, brightness of SF2 voices.
+    // Drum family (channel 9, GM bank 128): velocity ceilings per kit piece (crash always below snare), scaled by Feel KDb.
+    //   Snare 2&4 boost, fill backbeat, ghost cut, crash phrase fatigue, double-crash and choke rules, all in dB/ms at Natural.
+    public const int DrumProgram = 128, DrumSnareCeil = 118, DrumCrashCeil = 95, DrumKickCeil = 110, DrumHatCeil = 100, DrumHatOffCeil = 85, DrumTomCeil = 105;
+    public const double DrumSnareBackbeatLoDb = 4, DrumSnareBackbeatHiDb = 7, DrumSnareFillDb = 3, DrumGhostCutDb = -6, DrumGhostVel = 45;
+    public const double DrumCrashBar1Db = 2, DrumCrashFatigueDb = -1.5, DrumCrashChokeMs = 15, DrumDoubleCutDb = -5, DrumDoubleGapMs = 80, DrumDoubleLooseMs = -12;
+    public const double DrumBarAccentDb = 1.5, DrumOpenLenMs = 2, DrumOpenMs = 250, DrumChokeK = 0.5;
     public const double DetuneSeconds = 0.15, DetuneUntil = 1, VibOnset = 0.4, VibRamp = 0.3, VibLo = 4.5, VibHi = 6, FcCentsPerBright = 1500;
 
     /// <summary>Tight, Natural, Loose (index = <see cref="Feel"/>).</summary>
@@ -58,11 +64,12 @@ public static class HumanTable
     public static readonly Family Nylon = Guitar with { Strum = 1.5, LevelK = 1.2 };
     public static readonly Family Bass = Guitar with { Strum = 0, TimeK = 0.8, BiasMs = 3, AltDb = 0.5 };
     public static readonly Family Bowed = Guitar with { Strum = 0.25, Pick = 0, VibCents = 0 };
+    public static readonly Family Drums = Guitar with { Strum = 0, TimeK = 0.7, LevelK = 1, BiasMs = 0, AltDb = 0, DetuneCents = 0, Bright = 0, Pick = 0, Release = 0, VibCents = 0 };
 
-    /// <summary>The family of a GM program; null = left untouched.</summary>
+    /// <summary>The family of a GM program; null = left untouched. Drums are <see cref="DrumProgram"/> (bank 128, channel 9).</summary>
     public static Family? Of(int program) => program switch
     {
-        24 => Nylon, >= 25 and <= 31 => Guitar, >= 32 and <= 39 => Bass, >= 40 and <= 51 => Bowed, _ => null,
+        >= 128 => Drums, 24 => Nylon, >= 25 and <= 31 => Guitar, >= 32 and <= 39 => Bass, >= 40 and <= 51 => Bowed, _ => null,
     };
 
     public static double Smooth(double lo, double hi, double x)

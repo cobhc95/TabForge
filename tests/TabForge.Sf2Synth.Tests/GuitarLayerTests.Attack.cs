@@ -50,12 +50,12 @@ public sealed partial class GuitarLayerTests
     [InlineData(29, 52, 9.6, -18.7, -1.1)]   // post-amp transient expander past the real amp's 7.7 dB (attack peak std 1.2 dB on the real amp)
     [InlineData(30, 52, 9.6, -18.7, -1.1)]
     [InlineData(31, 52, 13.6, -30.1, 17.9)]
-    [InlineData(32, 33, 8.6, -41.4, 19.3)]
-    [InlineData(33, 33, 13.9, -23.9, 16.2)]
-    [InlineData(34, 33, 12.2, -25.7, 18.5)]
-    [InlineData(35, 33, 14.3, -29.7, 17.2)]
-    [InlineData(36, 33, 15.7, -39.8, 13.2)]
-    [InlineData(37, 33, 20.5, -39.7, 16.6)]
+    [InlineData(32, 33, 8.5, -41.4, 19.2)]
+    [InlineData(33, 33, 11.7, -26.2, 16.2)]
+    [InlineData(34, 33, 9.8, -25.2, 18.4)]
+    [InlineData(35, 33, 11.9, -30.9, 14.9)]
+    [InlineData(36, 33, 13.0, -40.0, 11.9)]
+    [InlineData(37, 33, 19.7, -37.6, 17.7)]
     public void EveryNotePeaksAboveItsSustain(int program, int note, double attack, double slope, double range)
     {
         var x = Struck(program, note, 110);

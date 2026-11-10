@@ -355,5 +355,35 @@ the string's short-note damping on the same programs; DI (peak +12.5, trim -30.4
   amp (1 kHz +0.2); phrase rms unchanged within 0.5 dB. Demo `tfsynth_DISTORTED.wav` (Downloads): program 29 then 30,
   Riff(6, 120) Humanizer Natural, MasterVolume 0.5, peak 0.90. Human listening still pending.
 
+## Distortion air, bass lane, drum feel (Nov 2026)
+Owner: distorted guitar needed more high end (3-6 kHz+), bass needed its own frequency, crashes must stay under snares.
+- Changed (`Voicings.CapturedEq`, 5 biquads; `MaxBands` 4->5): Peak 2600 Hz -3.5->-2.0, HighShelf 5700 -10->-5, new Peak 4600 Hz +2.2
+  (broadband under +3 dB). DI trim (-30.4 rms, peak 0.392-0.394), 135 Hz cut, Wobble ring and expander untouched; 900 Hz input stack
+  unchanged. Output Levels 29/30 0.94/0.73->0.82/0.65 (riff rms restored; captured-stage 29/30 +0.1/+1.9->about -1/+1 dB).
+- Changed (basses 33-37, `BassRig` PreEq, `BassBody`, `CabinetImpulse.BassSpeaker`, tone): PreEq LowShelf 85 +4.5->+5.5; cabinet
+  55 +3->+4.5, 130 +2.5->+3.5, 340 +1.5->+0.5, 750 -2->-3.5, LowPass 3200/4200->2600/3400; body 48/92 0.7/0.9->0.85/1.1,
+  380 0.2->0.1; tones 33 800-+1->-1, 34 shelf-2, 35 1000-+1/shelf-6, 36 shelf-2, 37 shelf-1. Dynamics (T60/Drop/ReleaseDarken) untouched.
+  Upright 32 keeps its body, HighShelf 2500 -5->-8 (dip 3-6 kHz). Levels re-trimmed to the bank (below).
+- Changed (drums, `HumanTable`+`Humanizer`, `Drums` family, program 128): ceilings crash 95 < snare 118, kick 110, hats 100/85,
+  toms 105 (x Feel KDb, crash floor enforced); snare 2&4 +4..+7 dB (+3 fill), ghost (<45) -6 dB half velocity never boosted, crash
+  bar-1 +2 dB, successive crash in 4-bar phrase -1.5 dB +15 ms velocity choke, doubles (<=80 ms) second -5 dB both -12 ms on Loose,
+  open crashes +2 ms longer, choked half; same Evidence window (human drums untouched); app hook `SynthHumanizePass` now routes
+  channel 9 as DrumProgram instead of skipping it (SF2 preset selection untouched).
+- Measured (octave bands Biquad Q 1.41, dB re sum; amp and DI phrase/take as in the captured-amp guard, bass single note 33 vel 100):
+  amp 2 kHz -9.6->-8.4 (+1.2), 4 kHz -13.0->-10.6 (+2.4), 8 kHz -20.6->-18.0 (+2.6); full amp -13.5/-8.4/-7.4/-6.7/-7.8/-8.4/-10.6/-18.0
+  vs real -12.3/-7.2/-6.8/-6.8/-7.9/-9.7/-12.9/-20.4 (max 2.4 dB, all within 2.5; 2-4k/4-8k rise as required).
+  Bass 33 bands -1.9/-5.7/-12.3/-18.0/-23.1/-27.4/-34.2/-41.3 -> -1.6/-6.1/-13.0/-19.3/-25.1/-30.1/-36.8/-43.7 (500 Hz -1.3,
+  1 kHz -2.0, 2-4 kHz -2.6..-2.7; highs rolled, lows held); 34 highs 4 kHz -27.4->-33.5, 8 kHz -35.2->-40.6.
+  Upright 32 highs 4 kHz -34.3->-35.1, 8 kHz -40.0->-41.3 (3-6 kHz dip, body identical).
+  Bank RMS at velocity 100 (mean single+chord, layer-bank): 32 3.86->-0.02, 33 8.17->+0.14, 34 6.90->-0.10, 35 7.54->+0.05,
+  36 2.72->+0.08, 37 2.53->+0.03 (all within 0.5 dB); 29/30 0.75/1.16; tuning B0-E1-A1-D1-G1 -0.83..-0.28 cents (<1).
+  Attack (single note, same detector): 33 13.9->11.7, 34 12.2->9.8, 35 14.3->11.9, 36 15.7->13.0, 37 20.5->19.7, 32 8.6->8.5,
+  29/30 9.6->11.0 (real amp 7.7; distorted guards unchanged, bass centers updated only).
+- Drums (flat song MIDI): before max crash 127 = max snare 127; after max crash 95 < max snare 118. Synthetic groove: max crash 85,
+  max snare 118, snare 2&4 mean 98.6-105.6 vs 1&3 72.5; successive crash -1.46 dB and later (fatigue -1.5 dB). Tests: 128 passing (Debug, no bank).
+- Mix `tfsynth_SONG_MIX.wav` (Downloads): GeneralUser GS, 48000, MasterVolume 0.5, effects on, Humanize Natural + VoiceVariation on all
+  tracks (drums through the drum family), one gain +6.6 dB to peak 0.90, 9601403 frames (200.0 s, 16-bit stereo, 38405656 bytes).
+  Human listening still pending.
+
 ## Architecture decision
 Clean pickup-style guitar DI, then a user-chosen Neural Amp Modeler `.nam` model as the amp, then an optional cabinet `.wav` IR. Built-in defaults: the captured amp (no cabinet) on 29/30, the stage amp and synthetic cab on the other electric programs. NAM runtime is written from scratch from the public format spec (no copied code).

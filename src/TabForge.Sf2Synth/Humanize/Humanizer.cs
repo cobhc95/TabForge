@@ -16,8 +16,9 @@ internal struct Ctx
 //   (Evidence.Window) for energy and evidence, the motif of each beat (hash of its rhythm and intervals), neighbours,
 //   fast runs, pick direction; then each stroke's level (Dynamics, under a headroom so accents fit below velocity 127), onset (Timing)
 //   and strum (Strum), and the per-key order check
-//   (no stuck or colliding notes). Every value is a pure function of position and nearby content, so a start mid-song or an edit
-//   changes only the neighbourhood.
+//   (no stuck or colliding notes). Drums (DrumProgram) use the drum family instead: per-piece ceilings, backbeat and crash rules
+//   (HumanTable drum constants), the same window and evidence (human drums untouched), position-keyed hashes only.
+//   Every value is a pure function of position and nearby content, so a start mid-song or an edit changes only the neighbourhood.
 // Does not own: the parts (Dynamics, Timing, Strum), evidence (Evidence), noise (Noise), values (HumanTable), building notes (host).
 // Tests: HumanizerTests.
 public static class Humanizer
@@ -33,6 +34,7 @@ public static class Humanizer
         var strokes = Strokes(a);
         var ctx = Contexts(a, strokes, seed);
         Evidence.Window(a, strokes, ctx);
+        if (program >= DrumProgram) { ApplyDrums(a, output, strokes, ctx, s, f, o, seed, parts); KeepOrder(a, output); return; }
         double[] db = new double[16], ms = new double[16];
         for (var k = 0; k < strokes.Count; k++)
         {
@@ -121,6 +123,126 @@ public static class Humanizer
     }
 
     private static int Snap(double sub) => sub switch { < 1.5 => 1, < 2.5 => 2, < 3.5 => 3, < 5 => 4, < 7 => 6, _ => 8 };
+
+    private static bool IsKick(int key) => key is 35 or 36;
+    private static bool IsSnare(int key) => key is 38 or 40;
+    private static bool IsHat(int key) => key is 42 or 44 or 46;
+    private static bool IsTom(int key) => key is 41 or 43 or 45 or 47 or 48 or 50;
+    private static bool IsCrash(int key) => key is 49 or 55 or 57;
+
+    // Drum pass: same window and evidence as the melodic pass (human drums get Vf/Tf 0, so untouched). All noise is a hash of
+    //   stroke position (seed, bar, beat) and content (density), never a running stream; ceilings scale with Feel KDb and the
+    //   crash ceiling is always below the snare ceiling, with a final max-crash < max-snare enforcement.
+    private static void ApplyDrums(HumanNote[] a, Span<HumanOut> output, List<List<int>> strokes, Ctx[] ctx, Style s, Family f, SynthOptions o, uint seed, Span<LevelParts> parts)
+    {
+        var kDb = s.KDb;
+        var snareCeil = Math.Min(127, DrumSnareCeil * kDb);
+        var crashCeil = Math.Min(DrumCrashCeil * kDb, snareCeil - 1);
+        var kickCeil = Math.Min(127, DrumKickCeil * kDb);
+        var hatCeil = Math.Min(127, DrumHatCeil * kDb);
+        var hatOffCeil = Math.Min(127, DrumHatOffCeil * kDb);
+        var tomCeil = Math.Min(127, DrumTomCeil * kDb);
+        // Crash order in each 4-bar phrase from the section start, and layered doubles within DrumDoubleGapMs.
+        var crashIndex = new int[strokes.Count];
+        var isDouble = new bool[strokes.Count];
+        var prevCrash = -1;
+        for (var k = 0; k < strokes.Count; k++)
+        {
+            ref readonly var x = ref a[strokes[k][0]];
+            var crash = strokes[k].Exists(i => IsCrash(a[i].Key));
+            if (!crash) continue;
+            if (prevCrash >= 0)
+            {
+                ref readonly var p = ref a[strokes[prevCrash][0]];
+                if (x.OnMs - p.OnMs <= DrumDoubleGapMs) { isDouble[k] = true; isDouble[prevCrash] = true; }
+                var samePhrase = (int)((x.Bar - x.Section) / ArchBars) == (int)((p.Bar - p.Section) / ArchBars);
+                crashIndex[k] = samePhrase ? crashIndex[prevCrash] + 1 : 0;
+            }
+            prevCrash = k;
+        }
+        for (var k = 0; k < strokes.Count; k++)
+        {
+            var c = ctx[k];
+            var st = strokes[k];
+            var n = a[st[0]];
+            var writtenVel = st.Max(i => a[i].Velocity);
+            var barInPhrase = (((n.Bar - n.Section) % ArchBars) + ArchBars) % ArchBars;
+            var beatNum = (int)Math.Floor(n.Beat + 1e-6) + 1;
+            var backbeat = beatNum == 2 || beatNum == 4;
+            var fill = c.Npb >= 2.5;
+            var isCrash = st.Exists(i => IsCrash(a[i].Key));
+            var isSnare = st.Exists(i => IsSnare(a[i].Key));
+            var ghost = writtenVel < DrumGhostVel;
+            var levelDb = 0.0;
+            // Phrase and energy accent (bar 1 louder); crashes total DrumCrashBar1Db on bar 1, others DrumBarAccentDb.
+            if (barInPhrase == 0) levelDb += (isCrash ? DrumCrashBar1Db : DrumBarAccentDb) * kDb;
+            levelDb += EnergyDb * Math.Clamp(Math.Log2(Math.Max(0.01, c.Npb) / EnergyRef), -1.5, 1.5) * kDb;
+            if (isSnare)
+            {
+                if (ghost) levelDb += DrumGhostCutDb * kDb;
+                else
+                {
+                    if (backbeat)
+                    {
+                        var u = Hash.U01(Hash.Of(seed, n.Bar, (int)Math.Round(n.Beat * Grid), 0xA1));
+                        levelDb += (DrumSnareBackbeatLoDb + (DrumSnareBackbeatHiDb - DrumSnareBackbeatLoDb) * u) * kDb;
+                        if (fill) levelDb += DrumSnareFillDb * kDb;
+                    }
+                }
+            }
+            if (isCrash)
+            {
+                levelDb += DrumCrashFatigueDb * kDb * crashIndex[k];
+                if (isDouble[k] && crashIndex[k] > 0) levelDb += DrumDoubleCutDb * kDb;
+            }
+            var shift = o.HumanizeTiming ? Timing.Shift(c, n, s, f, seed, o.HumanizeDrift) * c.Tf : 0;
+            var len = o.HumanizeTiming ? Timing.Length(c, n, s) * c.Tf : 0;
+            if (isCrash && o.HumanizeTiming)
+            {
+                shift += DrumCrashChokeMs * (writtenVel / 127.0) * Math.Min(crashIndex[k], 2) * s.KMs;
+                if (isDouble[k] && o.Feel == Feel.Loose) shift += DrumDoubleLooseMs * s.KMs;
+                var writtenLen = n.OffMs - n.OnMs;
+                len += writtenLen >= DrumOpenMs ? DrumOpenLenMs * s.KMs : -DrumChokeK * writtenLen;
+            }
+            else if (isDouble[k] && isCrash && o.HumanizeTiming && o.Feel == Feel.Loose) shift += DrumDoubleLooseMs * s.KMs;
+            for (var j = 0; j < st.Count; j++)
+            {
+                var i = st[j];
+                var d = (o.HumanizeVelocity ? levelDb * c.Vf - Math.Max(0, HeadDb - 40 * Math.Log10(127.0 / a[i].Velocity)) * c.Vf : 0);
+                var vel = a[i].Velocity * Math.Pow(10, d / 40);
+                if (isSnare && ghost) vel *= 0.5;
+                var key = a[i].Key;
+                double ceil;
+                if (IsCrash(key)) ceil = crashCeil;
+                else if (IsSnare(key)) ceil = snareCeil;
+                else if (IsKick(key)) ceil = kickCeil;
+                else if (IsHat(key))
+                {
+                    var frac = n.Beat - Math.Floor(n.Beat);
+                    ceil = Math.Abs(frac - 0.5) < 0.1 ? hatOffCeil : hatCeil;
+                }
+                else if (IsTom(key)) ceil = tomCeil;
+                else ceil = kickCeil;
+                vel = Math.Clamp(vel, 1, ceil);
+                output[i] = new(a[i].OnMs + shift, a[i].OffMs + shift + len, (int)Math.Round(vel));
+                if (i < parts.Length) parts[i] = new LevelParts(levelDb, 0, 0, 0, 0, EnergyDb * Math.Clamp(Math.Log2(Math.Max(0.01, c.Npb) / EnergyRef), -1.5, 1.5), 0, 0, 0, 0);
+            }
+        }
+        // Ceilings scale with Feel, but crash < snare always: if the scaled ceilings meet at 127, pull crashes down.
+        var maxSnare = 0;
+        var maxCrash = 0;
+        for (var i = 0; i < a.Length; i++)
+        {
+            if (IsSnare(a[i].Key) && output[i].Velocity > maxSnare) maxSnare = output[i].Velocity;
+            if (IsCrash(a[i].Key) && output[i].Velocity > maxCrash) maxCrash = output[i].Velocity;
+        }
+        if (maxSnare > 0 && maxCrash >= maxSnare)
+        {
+            var k = (double)(maxSnare - 1) / maxCrash;
+            for (var i = 0; i < a.Length; i++)
+                if (IsCrash(a[i].Key)) output[i] = output[i] with { Velocity = Math.Max(1, (int)Math.Round(output[i].Velocity * k)) };
+        }
+    }
 
     // Per key: every note keeps its note-off after its note-on (at least the shorter of its length and MinKeepMs) and ends before the
     // same key starts again (the written gap kept, at most RetrigMs); onsets stay in order and never before 0.

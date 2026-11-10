@@ -21,7 +21,7 @@ internal static class CabinetImpulse
     // The only high-pass in the bass chain (all pre/cab/stage duplicates removed): sub body plus low cone break-up,
     // not just a boosted 70 Hz peak.
     private static readonly EqSpec[] BassSpeaker =
-        [new(HighPass, 14, 0.7), new(Peak, 55, 1.0, 3), new(Peak, 130, 1.2, 2.5), new(Peak, 340, 1.5, 1.5), new(Peak, 750, 1, -2), new(LowPass, 3200, 0.8), new(LowPass, 4200, 0.6)];
+        [new(HighPass, 14, 0.7), new(Peak, 55, 1.0, 4.5), new(Peak, 130, 1.2, 3.5), new(Peak, 340, 1.5, 0.5), new(Peak, 750, 1, -3.5), new(LowPass, 2600, 0.7), new(LowPass, 3400, 0.6)];
 
     public static float[] Build(CabKind kind, double rate)
     {

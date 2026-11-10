@@ -25,8 +25,8 @@ Programs 29/30 only (`RigSpec.Captured`); clean, acoustic, muted and bass progra
   DI × `Trim` × `Drive` feeds it at the capture's training level (about -29 dBFS rms, peak ≤ 0.4), its silence output and DC are removed,
   `Level` matches the old stage-amp loudness. No cabinet by default: the capture is a full amp output, cabinet path unknown;
   `CapturedAmpCabinet` adds the built-in guitar cabinet. If the resource fails to load, the stage amp plays.
-  Output EQ (`CaptureSpec.Eq`, `Voicings.CapturedEq`, `SynthOptions.CapturedAmpEq`, on; skipped when a cabinet follows): four biquads
-  fitted to the real amp's recording of the measured take (210 Hz +4, 830 Hz -6, 2.55 kHz -3.5 dB, shelf 5.7 kHz -10 dB). It corrects
+  Output EQ (`CaptureSpec.Eq`, `Voicings.CapturedEq`, `SynthOptions.CapturedAmpEq`, on; skipped when a cabinet follows): five biquads
+  fitted to the real amp's recording of the measured take (210 Hz +4, 830 Hz -5.5, 2.6 kHz -2.0 dB, 4.6 kHz +2.2, shelf 5.7 kHz -5 dB). It corrects
   the capture's own fizz above 6 kHz and what our DI does differently (bright pick on muted chugs, thin low mids); `Level` re-trimmed.
   `GuitarLayerTests.TheCapturedAmpMatchesTheRealAmp` keeps the octave bands within 2.5 dB of the real amp's.
 - `Stage`: the modelled `StageAmp` and synthetic cabinet (the previous default).
@@ -46,7 +46,9 @@ loop loses it fast, then the normal decay follows, so each note and chord peaks 
 ## Humanizer
 A pass over a track's WRITTEN notes, run by the host before playback or render (TabForge: `SynthHumanizePass` through
 `PlaybackOptions.Humanizer`): `Humanizer.Apply(notes, output, program, options, seed)`. Early notes are simply scheduled earlier: no
-look-ahead, no latency. Guitars/basses (24-39) and bowed (40-51) only; never drums. Every value is in `HumanTable`.
+look-ahead, no latency. Guitars/basses (24-39), bowed (40-51) and drums (`DrumProgram` 128, channel 9; the host passes that program
+for the drum channel). Drums use per-piece ceilings (crash always under snare) with backbeat and crash rules below; already-human
+drums are left alone by Evidence. Every value is in `HumanTable`.
 - Input (`HumanNote`): written on/off ms, key, velocity, string, the performed bar (a key: passes of a repeat differ), the section's first
   bar, beat position, meter (beats, unit), beat length, a stroke id (notes struck together) and written marks (palm mute, legato,
   slide, ghost, dead, accent, pick up/down).
@@ -69,6 +71,10 @@ look-ahead, no latency. Guitars/basses (24-39) and bowed (40-51) only; never dru
 - Leave human input alone (`Evidence`): velocity is human with many distinct values and a spread or short runs; timing with few
   onsets on the grid; human parts get 0.
 - Feel presets (`SynthOptions.Feel`): Tight, Natural (default), Loose scale level and timing (0.65 / 1 / 1.5) and set strum, bias and odd-note rate.
+- Drums (program `DrumProgram`): ceilings crash 95, snare 118, kick 110, hats 100 (85 offbeat), toms 105, all × feel; snare on 2&4 gets
+  +4..+7 dB (+3 more in fills), ghost snares (written < 45) -6 dB and half velocity, crash on bar 1 +2 dB, each successive crash in a
+  4-bar phrase -1.5 dB and +15 ms × velocity choke, doubled crashes (≤ 80 ms) second -5 dB and both 12 ms early on Loose, open crashes
+  +2 ms longer and choked crashes half length. The crash ceiling always stays below the snare ceiling.
 - Add a rule: add its amount to `HumanTable`, compute it in `Dynamics.Parts` (a new `LevelParts` field, counted in `Structural` when it
   follows from the music) or in `Timing.Shift`, from the stroke's `Ctx` (add what it needs in `Humanizer.Contexts`, from notes within
   the window only); keep it a function of position and nearby content, and check it in `HumanizerTests`.

@@ -10,7 +10,8 @@ using Xunit;
 namespace TabForge.Avalonia.Tests;
 
 // Owns: the checks of the app hook (SynthHumanizePass through PlaybackOptions.Humanizer): only TabForge Synth with the option on
-//   changes the timeline, only melodic tracks, nothing is lost, and a start mid-song plays the later bars exactly as the whole song.
+//   changes the timeline, melodic and drum tracks change (drums use the drum family: crashes under snare, human untouched),
+//   nothing is lost, and a start mid-song plays the later bars exactly as the whole song.
 // Does not own: the model's checks (the engine's HumanizerTests).
 // Tests: SynthHumanizePass, ITimelineHumanizer, ScoreToMidiCompiler hook.
 public sealed class HumanizerAppTests
@@ -44,7 +45,9 @@ public sealed class HumanizerAppTests
         var plain = MidiTimelineBuilder.Build(song, new PlaybackOptions());
         var human = MidiTimelineBuilder.Build(song, new PlaybackOptions { Humanizer = synth });
         Assert.Equal("Natural", synth.Key);
-        Assert.Equal(NoteEvents(plain, 9), NoteEvents(human, 9));
+        var (drumsPlain, drumsHuman) = (NoteEvents(plain, 9), NoteEvents(human, 9));
+        Assert.NotEqual(drumsPlain, drumsHuman);   // the drum channel is humanized too (as DrumProgram)
+        Assert.Equal(drumsPlain.Where(e => e.D2 > 0).Select(e => e.D1).OrderBy(k => k), drumsHuman.Where(e => e.D2 > 0).Select(e => e.D1).OrderBy(k => k));
         Assert.Equal(plain.Events.Count, human.Events.Count);
         var (a, b) = (NoteEvents(plain, 0), NoteEvents(human, 0));
         Assert.NotEqual(a, b);

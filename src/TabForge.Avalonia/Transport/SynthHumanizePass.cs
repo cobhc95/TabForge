@@ -12,8 +12,9 @@ namespace TabForge.Avalonia.Transport;
 // Owns: the app's humanize pass over a compiled timeline (PlaybackOptions.Humanizer): with TabForge Synth and "Humanize flat dynamics"
 //   on, each sounding track without a VST instrument becomes the written note list the Sf2Synth humanizer reads (performed bar keys,
 //   sections from the markers, meter, tempo, strokes and techniques from the score), and its played notes go back into the note-on
-//   and note-off events; a channel's controllers and pitch wheel move with the note that sounds when they are sent. Other engines and
-//   tracks with an instrument never see it.
+//   and note-off events; a channel's controllers and pitch wheel move with the note that sounds when they are sent. The drum channel
+//   is humanized too (as DrumProgram): crashes stay under the snare and already-human drums are left alone by Evidence. Other engines
+//   and tracks with an instrument never see it.
 // Does not own: the model (Sf2Synth Humanize/Humanizer), the compile and the event sort (ScoreToMidiCompiler), the settings rows.
 // Tests: HumanizerTests.
 public sealed class SynthHumanizePass(PluginSettings settings) : ITimelineHumanizer
@@ -45,8 +46,9 @@ public sealed class SynthHumanizePass(PluginSettings settings) : ITimelineHumani
             if (e.IsNoteOn) { if (!open.TryGetValue(k, out var q)) open[k] = q = new(); q.Enqueue(e); }
             else if (e.IsNoteOff && open.TryGetValue(k, out var q) && q.Count > 0) pairs.Add((q.Dequeue(), e));
         }
-        if (pairs.Count == 0 || pairs[0].On.Channel == ChannelAllocator.PercussionChannel) return;
-        var program = tl.ChannelSetup.LastOrDefault(e => (e.Status & 0xF0) == 0xC0 && e.Channel == pairs[0].On.Channel)?.Data1 ?? 0;
+        if (pairs.Count == 0) return;
+        var isDrums = pairs[0].On.Channel == ChannelAllocator.PercussionChannel;
+        var program = isDrums ? HumanTable.DrumProgram : tl.ChannelSetup.LastOrDefault(e => (e.Status & 0xF0) == 0xC0 && e.Channel == pairs[0].On.Channel)?.Data1 ?? 0;
         var notes = pairs.Select(x => Note(x.On, x.Off, tl, p, keys, written)).ToArray();
         var played = new HumanOut[notes.Length];
         Humanizer.Apply(notes, played, program, o, seed);
