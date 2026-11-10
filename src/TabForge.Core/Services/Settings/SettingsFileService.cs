@@ -147,9 +147,11 @@ public static class SettingsFileService
             case JsonValueKind.String:
                 // Plug-in states of auto-load / startup chains: older builds stored them inline (base64); they are moved
                 // to ChainStates files on load, so accept them up to the plug-in state limit rather than rejecting the file.
+                // AppliedPreset.Snapshot holds the same kind of state (e.g. a drum-machine preset, up to 256 Ki chars).
                 var maximumLength = string.Equals(arrayProperty, "RecentColours", StringComparison.OrdinalIgnoreCase)
                     ? InputLimits.MaxRecentColourLength
-                    : string.Equals(arrayProperty, "State", StringComparison.Ordinal)
+                    : string.Equals(arrayProperty, "State", StringComparison.Ordinal) ||
+                      string.Equals(arrayProperty, "Snapshot", StringComparison.Ordinal)
                         ? TabForge.Audio.Contracts.PluginStateLimits.MaxBase64Chars
                         : InputLimits.MaxSettingsTextLength;
                 if (element.GetString()!.Length > maximumLength)
