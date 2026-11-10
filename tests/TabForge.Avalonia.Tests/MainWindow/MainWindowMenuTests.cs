@@ -37,7 +37,10 @@ public class MainWindowMenuTests
         Assert.Equal(30, menu.FindAncestorOfType<Border>()!.Bounds.Height, 0.5);
         var file = menu.GetVisualDescendants().OfType<MenuItem>().First();
         var text = file.GetVisualDescendants().OfType<TextBlock>().First(t => t.IsVisible && t.Bounds.Width > 0);
-        Assert.Equal(16, text.TranslatePoint(default, main)!.Value.X, 1.0);
+        // 16 px from the left edge of the room the menu has: after the left strip's toggle when it shows.
+        var row = (DockPanel)menu.Parent!;
+        var before = row.Children.Where(c => c.IsVisible && DockPanel.GetDock(c) == Dock.Left && c != menu).Select(c => c.TranslatePoint(new global::Avalonia.Point(c.Bounds.Width + c.Margin.Right, 0), main)!.Value.X).DefaultIfEmpty(0).Max();
+        Assert.Equal(before + 16, text.TranslatePoint(default, main)!.Value.X, 1.0);
         main.Close();
     }
 

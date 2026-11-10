@@ -24,7 +24,7 @@ public static class MainWindowMenu
     /// <summary>The menu bar height.</summary>
     public const double BarHeight = 30;
 
-    /// <summary>The narrowest menu row (DIP) that still shows the Piano / Tab pills beside the menus and the quick buttons.</summary>
+    /// <summary>The narrowest menu row (DIP) that still shows the Piano / Tab pills beside the menus and the layout icons.</summary>
     public const double PillsMinRow = 1180;
 
     /// <summary>The command of the View menu row that the Layouts and Panels items sit above.</summary>
@@ -48,16 +48,11 @@ public static class MainWindowMenu
         menu[!TemplatedControl.BackgroundProperty] = new DynamicResourceExtension("PanelBackground");
         var toggles = Views.MenuRowToggles.Build(commands);
         DockPanel.SetDock(toggles, Dock.Right);
-        // The Open / Save group sits just left of the layout icons (added after them, so it docks beside them), set off by the icons' own separator.
-        var divider = Views.MenuRowToggles.Separator();
-        DockPanel.SetDock(divider, Dock.Right);
-        var quick = Views.QuickActionsGroup.Build(() => commands);
-        DockPanel.SetDock(quick, Dock.Right);
-        if (modePills is not null) DockPanel.SetDock(modePills, Dock.Right);   // added after the quick buttons, so it sits just left of them
+        if (modePills is not null) DockPanel.SetDock(modePills, Dock.Right);   // added after the layout icons, so it sits just left of them
         var menuRow = new Border
         {
             Name = "MainMenuRow", BorderThickness = new global::Avalonia.Thickness(0, 0, 0, 1),
-            Child = new DockPanel { LastChildFill = true, Children = { toggles, divider, quick } },
+            Child = new DockPanel { LastChildFill = true, Children = { toggles } },
         };
         var dock = (DockPanel)menuRow.Child!;
         if (modePills is not null) dock.Children.Add(modePills);

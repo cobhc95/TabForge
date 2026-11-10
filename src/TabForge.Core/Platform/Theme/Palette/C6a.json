@@ -92,7 +92,5 @@
   { "name": "MeterHot", "dark": "#FFE6B93A", "light": "#FFC99A1E" },
   { "name": "OverlayInk", "dark": "#FFFFFFFF", "light": "#FF000000" },
   { "name": "PrefsPrimaryPress", "value": "#FF1E5380" },
-  { "name": "PrefsPrimaryInk", "value": "#FFFFFFFF" },
-  { "name": "QuickActionsGroupFill", "dark": "#FF32353A", "light": "#FFD9D9D7" },
-  { "name": "QuickActionsGroupBorder", "dark": "#FF32353A", "light": "#FFBDBDBB" }
+  { "name": "PrefsPrimaryInk", "value": "#FFFFFFFF" }
 ]

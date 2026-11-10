@@ -148,7 +148,7 @@ public static class MenuRowToggles
     private static IBrush PaletteBrush(Control control, string paletteKey) =>
         new SolidColorBrush(Platform.AvaloniaPalette.ColorOf(Platform.AvaloniaPalette.Get(paletteKey, control.ActualThemeVariant == ThemeVariant.Light)));
 
-    /// <summary>The thin vertical line between icon clusters (the menu row also puts one before the Open / Save group).</summary>
+    /// <summary>The thin vertical line between icon clusters.</summary>
     internal static Control Separator()
     {
         var line = new Border { Width = 1, Height = 15, Margin = new Thickness(5.5, 0), VerticalAlignment = VerticalAlignment.Center, Opacity = 0.4, IsHitTestVisible = false };

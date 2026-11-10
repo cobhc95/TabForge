@@ -30,29 +30,10 @@ public static class UiMetrics
     /// <summary>The square of a Tools pane tool button (DIPs).</summary>
     public const double ToolButtonSize = 36;
 
-    /// <summary>The quick actions group's (Open / Save) height of one button (DIPs): the menu row's icon buttons.</summary>
+    /// <summary>The height of one quick action button (DIPs; the left strip's file icons): the menu row's icon buttons.</summary>
     public const double QuickButtonHeight = 27;
-    /// <summary>The quick actions group's least button width (DIPs).</summary>
+    /// <summary>The least width of a quick action button (DIPs).</summary>
     public const double QuickButtonMinWidth = 30;
-    /// <summary>The gap between the Open and Save buttons (DIPs).</summary>
-    public const double QuickGroupGap = 2;
-    /// <summary>The group's inset from the Tab pill and the divider on each side (DIPs): the same left and right.</summary>
-    public const double QuickGroupSide = 6;
-    /// <summary>The group's rounded corner (DIPs): the grey capsule's corner, clipped to its bounds.</summary>
-    public const double QuickGroupCorner = 6;
-    /// <summary>The group's edge (DIPs): the one inset on every side, so the group has no inner padding and its buttons sit inside the edge evenly.</summary>
-    public const double QuickGroupEdge = 1;
-
-    /// <summary>The quick actions group's (Open / Save) frame: the grey capsule clipped to its rounded bounds, an edge as the even inset on all sides,
-    /// and the same left and right margin.</summary>
-    public static void StyleQuickGroup(Border group)
-    {
-        group.CornerRadius = new CornerRadius(QuickGroupCorner);
-        group.BorderThickness = new Thickness(QuickGroupEdge);
-        group.Padding = default;
-        group.Margin = new Thickness(QuickGroupSide, 0, QuickGroupSide, 0);
-        group.ClipToBounds = true;
-    }
 
     /// <summary>The size of a quick action button (a menu row icon button): the row's icon height, no margin, its own hover and pressed fills clipped to its bounds.</summary>
     public static void StyleQuickCell(TemplatedControl button)

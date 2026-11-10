@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Text.Json;
 using TabForge.Features.LeftStrip;
 using TabForge.Services;
@@ -5,7 +6,7 @@ using Xunit;
 
 namespace TabForge.Avalonia.Tests;
 
-// Owns: the left strip's saved-state defaults and start rules, and that a saved value survives a settings round trip and wins over the default.
+// Owns: the left strip's saved-state defaults and start rules, that a saved value survives a settings round trip and wins over the default, and the icon catalog.
 // Does not own: the strip's controls (LeftStripFeature) or the settings file store.
 // Tests: this class.
 public sealed class LeftStripSettingsTests
@@ -29,10 +30,35 @@ public sealed class LeftStripSettingsTests
         settings.LeftStrip.BesideMenus = true;
         var loaded = JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(settings))!.LeftStrip;
         Assert.False(loaded.ShownAtStart);
-        Assert.False(loaded.ComposerOpenAtStart);   // the composer opens only beside a shown strip
+        Assert.True(loaded.ComposerOpenAtStart);   // the composer opens on its own, strip hidden or not
         Assert.True(loaded.BesideMenus);
-        loaded.Visible = true;
-        Assert.True(loaded.ComposerOpenAtStart);
+    }
+
+    [Fact]
+    public void CustomisedStripSurvivesARoundTrip()
+    {
+        var settings = new AppSettings();
+        settings.LeftStrip.Items = new() { "Edit.Undo", "Separator", "File.Open" };
+        settings.LeftStrip.RightSide = true;
+        settings.LeftStrip.Large = true;
+        settings.LeftStrip.Tooltips = false;
+        settings.LeftStrip.Labels = true;
+        var loaded = JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(settings))!.LeftStrip;
+        Assert.Equal(new[] { "Edit.Undo", "Separator", "File.Open" }, loaded.Items);
+        Assert.True(loaded.RightSide && loaded.Large && loaded.Labels && !loaded.Tooltips);
+        Assert.True(new LeftStripSettings().Tooltips);
+    }
+
+    [Fact]
+    public void TheCatalogOffersAtLeast36DistinctIconsAndTheDefaultStrip()
+    {
+        var all = TabForge.Avalonia.Features.LeftStrip.LeftStripItems.All;
+        Assert.True(all.Count >= 36);
+        Assert.Equal(all.Count, all.Select(i => i.Id).Distinct().Count());
+        Assert.All(all, i => global::Avalonia.Media.Geometry.Parse(i.Icon));
+        Assert.Equal(new[] { "File.Open", "File.Save", "File.SaveAs", "File.Render", "Separator", "View.ToggleComposer" },
+            TabForge.Avalonia.Features.LeftStrip.LeftStripItems.Resolve(null));
+        Assert.Equal(new[] { "File.Open" }, TabForge.Avalonia.Features.LeftStrip.LeftStripItems.Resolve(new[] { "Gone.Command", "File.Open" }));
     }
 
     [Fact]

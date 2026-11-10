@@ -6,6 +6,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ### Added
 
+- Left strip: the Open and Save icons left the top-right of the menu row (they live in the strip); the strip and Composer panel now sit beside the score only, above the full-width timeline; the strip's right-click menu ticks the current placement; View > Left strip and View > Composer show them, and the Composer opens on its own even with the strip hidden; right-click > Customize strip… picks from 41 icons, orders them with separators, and sets position (left, beside menus, right), size, tooltips and labels.
 - Experimental left strip: a slim icon strip at the window's left with Open, Save, Save as and Render, and a Composer button that opens a placeholder Composer panel beside it. A sidebar icon at the left of the menu bar (and of the compact / Band mode bar) shows or hides it; right-click the strip to place it beside the menus, keep it vertical or hide it. View > Show strip button and Show strip on start; both toggles can be given hotkeys. The state is saved with your settings.
 
 ## 0.9.2

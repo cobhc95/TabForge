@@ -15,7 +15,7 @@ using TabForge.Services;
 
 namespace TabForge.Avalonia;
 
-// Owns: the score pane's one slot holding either the score or the piano roll for the selected track (TrackModel.EditorView through
+// Owns: the score pane's area (the slot, with room for a part docked beside it); the score pane's one slot holding either the score or the piano roll for the selected track (TrackModel.EditorView through
 //       PianoRollViewRules: MIDI tracks and takes default to the piano roll, tab tracks to the score), following the shown song, the selected track,
 //       undo and edits; the two switch commands (Score.ShowInPianoRoll, PianoRoll.ShowInScore), each one undo step that marks the song changed so
 //       the choice is saved with it; the automatic switch a MIDI take click makes (the roll on that take's lane until the track's header or tab lane is
@@ -172,8 +172,12 @@ public sealed partial class EditorPaneSwitch
         if (_shown.Roll && _panes.Arrangement is { } arrangement) PianoRoll.FollowTimeline(arrangement.LeftSeconds);
     }
 
-    /// <summary>The control the dock places in the score pane: the score and the piano roll, one of them visible.</summary>
+    /// <summary>The score and the piano roll, one of them visible.</summary>
     public Grid Host { get; } = new();
+
+    /// <summary>The control the dock places in the score pane: <see cref="Host"/> filling it, with room for the window to dock a side part (the left strip) beside it.</summary>
+    public DockPanel Area => _area ??= new DockPanel { LastChildFill = true, Children = { Host } };
+    private DockPanel? _area;
 
     public PianoRollView PianoRoll { get; }
 

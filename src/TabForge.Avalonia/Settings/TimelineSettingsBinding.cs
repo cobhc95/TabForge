@@ -87,7 +87,7 @@ internal sealed class TimelineSettingsBinding
         var timeline = settings.Timeline;
         var view = pane.Timeline;
         pane.Follow = settings.Follow;
-        pane.Transport.IsVisible = settings.General.ShowToolbar;   // Show the toolbar: the transport bar (the menu row's Open / Save group follows in MainWindow.Compose)
+        pane.Transport.IsVisible = settings.General.ShowToolbar;   // Show the toolbar: the transport bar
         pane.Input.SectionAnimator.Enabled = timeline.SectionDragAnimation && !settings.Appearance.ReduceAnimations;
         view.ShowBarNumbers = timeline.ShowBarNumbers;
         view.ShowSectionNames = timeline.ShowSectionNames;

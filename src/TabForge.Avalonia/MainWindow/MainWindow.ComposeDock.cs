@@ -208,7 +208,7 @@ public sealed partial class MainWindow
         // The score pane holds the score or the piano roll of the selected track (per track, saved in the song).
         var editorPane = new EditorPaneSwitch(score, scorePreview, songs, panes, d.Playback, settings, () => this, showStatus);
         // The dock rebuilds its tree on every change: the one score view moves to the new editor host; arrangement/band/instrument are reused (Detached/Shared).
-        setup.RegisterEditor(() => DockPaneSetup.Detached(editorPane.Host));
+        setup.RegisterEditor(() => DockPaneSetup.Detached(editorPane.Area));
         var timelineSettings = new TimelineSettingsBinding(settings?.Settings ?? SettingsDefaults.Fallback(), shown => d.Dock?.SetPanelVisible("timeline", shown), () => d.TrackListFit?.Fit());
         // One wiring per arrangement (replace, not append): a rebuilt arrangement drops the previous
         // track-list fit before taking it, so a repeated creation never stacks duplicate fits.

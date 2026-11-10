@@ -11,24 +11,25 @@ using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Features.LeftStrip;
 
-// Owns: the experimental left strip: the slim vertical icon strip (Open, Save, Save as, Render, then the Composer toggle) at the window's left, the
-//   same icons as a row beside the menus, the sidebar toggle icon at the left end of the menu bar (moved into the compact / Band mode bar while
-//   that bar replaces the menus), the strip's right-click menu (Place beside menus, Keep vertical, Hide strip), the Composer panel's showing, and
-//   the commands View.ToggleLeftStrip, View.ToggleComposer, View.ShowStripButton and View.ShowStripOnStart with their saved state.
-// Does not own: the file commands the icons run (MainWindowCommands), the icon look (MenuRowToggles, QuickActionsGroup), the panel's content
-//   (ComposerPanel), the saved values and start rules (Core LeftStripSettings), the menu rows (MainMenuTable).
+// Owns: the experimental strip: the slim vertical icon strip (the icons the owner picked, LeftStripItems; Open, Save, Save as, Render, then the Composer
+//   toggle by default) left or right of the score pane, the same icons as a row beside the menus, their size, tooltips and labels, the sidebar toggle
+//   icon at the left end of the menu bar (moved into the compact / Band mode bar while that bar replaces the menus), the strip's right-click menu
+//   (Place beside menus, Keep vertical with the current one ticked, Customize strip…, Hide strip), the Composer panel's showing (on its own, strip
+//   hidden or not), and the commands View.ToggleLeftStrip, View.ToggleComposer, View.ShowStripButton and View.ShowStripOnStart with their saved state.
+// Does not own: the commands the icons run (MainWindowCommands), the icon look (MenuRowToggles, QuickActionsGroup), the catalog (LeftStripItems),
+//   the customise window (LeftStripCustomizeWindow), the panel's content (ComposerPanel), the saved values and start rules (Core LeftStripSettings),
+//   the menu rows (MainMenuTable).
 // Tests: TabForge.Avalonia.Tests.LeftStripSettingsTests.
 public sealed class LeftStripFeature
 {
     public const string ToggleStripId = "View.ToggleLeftStrip", ToggleComposerId = "View.ToggleComposer";
     public const string ShowButtonId = "View.ShowStripButton", ShowOnStartId = "View.ShowStripOnStart";
 
+    /// <summary>The commands the strip registers (the menu tests discover this list).</summary>
+    public static readonly string[] Commands = { ToggleStripId, ToggleComposerId, ShowButtonId, ShowOnStartId };
+
     private const string StripIcon = "M3,4 H21 V20 H3 Z M9,4 V20";
-    private const string OpenIcon = "M3,6 H9 L11,8 H21 V19 H3 Z";
-    private const string SaveIcon = "M4,3 H17 L21,7 V21 H4 Z M8,3 V8 H15 V3 M8,21 V14 H17 V21";
-    private const string SaveAsIcon = "M4,3 H15 L18,6 V11 M4,3 V21 H11 M8,3 V8 H13 V3 M13,21 L20,14 L22,16 L15,23 H13 Z";
-    private const string RenderIcon = "M2,12 H5 L7,7 L10,18 L13,4 L16,16 L18,12 H22";
-    private const string ComposerIcon = "M9,18 V5 L19,3 V16 M9,18 A3,3 0 1 1 3,18 A3,3 0 1 1 9,18 M19,16 A3,3 0 1 1 13,16 A3,3 0 1 1 19,16";
+    private const double LargeScale = 1.4;
 
     private readonly MainWindowCommands _commands;
     private readonly MainWindowSettings? _settings;
@@ -53,27 +54,32 @@ public sealed class LeftStripFeature
         commands.Add(ShowButtonId, () => { _state.ShowButton = !_state.ShowButton; Apply(); });
         commands.Add(ShowOnStartId, () => { _state.ShowOnStart = !_state.ShowOnStart; Save(); });
         commands.AddCheckState(ShowButtonId, () => _state.ShowButton);
+        commands.AddCheckState(ToggleStripId, () => _visible);
+        commands.AddCheckState(ToggleComposerId, () => _composerOpen);
         commands.AddCheckState(ShowOnStartId, () => _state.ShowOnStart);
     }
 
-    /// <summary>The window's left region (the vertical strip and the Composer panel); the window docks it left of the workspace.</summary>
+    /// <summary>The left region (the vertical strip when at the left, and the Composer panel); the window docks it left of the score pane, above the timeline.</summary>
     public DockPanel Left { get; } = new() { LastChildFill = false };
+
+    /// <summary>The right region (the vertical strip when at the right); the window docks it right of the score pane.</summary>
+    public DockPanel Right { get; } = new() { LastChildFill = false };
+
+    /// <summary>The saved state the customise window edits.</summary>
+    internal LeftStripSettings State => _state;
 
     /// <summary>Builds the strip's parts and places the toggle icon in the menu row, or in the mode bar while the menu row is hidden.</summary>
     public void Attach(Control menuRow, CompactTrackStrip modeBar)
     {
-        _vertical = new Border { Width = ChromeMetrics.LeftStripWidth, BorderThickness = new Thickness(0, 0, 1, 0) };
+        _vertical = new Border { MinWidth = ChromeMetrics.LeftStripWidth };
         _vertical[!Border.BackgroundProperty] = new DynamicResourceExtension("PanelBackground");
         _vertical[!Border.BorderBrushProperty] = new DynamicResourceExtension("SoftBorder");
-        _vertical.Child = Icons(Orientation.Vertical);
         _vertical.ContextMenu = StripMenu();
         _composer = ComposerPanel.Build();
         DockPanel.SetDock(_vertical, Dock.Left);
         DockPanel.SetDock(_composer, Dock.Left);
-        Left.Children.Add(_vertical);
         Left.Children.Add(_composer);
-        _row = Icons(Orientation.Horizontal);
-        _row.ContextMenu = StripMenu();
+        _row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2, VerticalAlignment = VerticalAlignment.Center, ContextMenu = StripMenu() };
         _toggle = MenuRowToggles.Button(new MenuRowToggles.Toggle(ToggleStripId, "Show / hide the left strip", StripIcon), _commands);
         _host = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 0, 0) };
         _host.Children.Add(_toggle);
@@ -87,32 +93,58 @@ public sealed class LeftStripFeature
         }
         menuRow.PropertyChanged += (_, e) => { if (e.Property == Visual.IsVisibleProperty) Place(); };
         Place();
-        Paint();
+        Rebuild();
     }
 
-    private StackPanel Icons(Orientation orientation)
+    /// <summary>Rebuilds the icons from the saved state (after the customise window applies) and shows the parts as it says.</summary>
+    internal void Rebuild()
     {
-        var vertical = orientation == Orientation.Vertical;
-        var panel = new StackPanel
+        if (_vertical is null || _row is null) return;
+        _composerToggles.Clear();
+        var column = new StackPanel { Orientation = Orientation.Vertical, Spacing = 2, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 6) };
+        Fill(column, vertical: true);
+        _vertical.Child = column;
+        _row.Children.Clear();
+        Fill(_row, vertical: false);
+        Apply();
+    }
+
+    private void Fill(StackPanel panel, bool vertical)
+    {
+        foreach (var id in LeftStripItems.Resolve(_state.Items))
         {
-            Orientation = orientation, Spacing = 2, HorizontalAlignment = vertical ? HorizontalAlignment.Center : HorizontalAlignment.Left,
-            VerticalAlignment = vertical ? VerticalAlignment.Top : VerticalAlignment.Center, Margin = vertical ? new Thickness(0, 6) : new Thickness(0),
-        };
-        panel.Children.Add(QuickActionsGroup.Button(() => _commands, "File.Open", "Open", OpenIcon));
-        panel.Children.Add(QuickActionsGroup.Button(() => _commands, "File.Save", "Save", SaveIcon));
-        panel.Children.Add(QuickActionsGroup.Button(() => _commands, "File.SaveAs", "Save as", SaveAsIcon));
-        panel.Children.Add(QuickActionsGroup.Button(() => _commands, "File.Render", "Render", RenderIcon));
-        if (vertical)
-        {
-            var line = new Border { Height = 1, Width = 18, Margin = new Thickness(0, 4), Opacity = 0.4, IsHitTestVisible = false };
-            line[!Border.BackgroundProperty] = new DynamicResourceExtension("TextMuted");
-            panel.Children.Add(line);
+            if (LeftStripItems.Find(id) is not { } item) { panel.Children.Add(Line(vertical)); continue; }
+            var size = IconSizing.Current * (_state.Large ? LargeScale : 1);
+            Button? plain = null;
+            ToggleButton? toggle = null;
+            if (item.IsToggle) _composerToggles.Add(toggle = MenuRowToggles.Button(new MenuRowToggles.Toggle(item.Id, item.Label, item.Icon), _commands));
+            else plain = QuickActionsGroup.Button(() => _commands, item.Id, item.Label, item.Icon);
+            var button = (ContentControl?)plain ?? toggle!;
+            var icon = MenuRowToggles.Icon(item.Icon, size);
+            button.Content = _state.Labels ? Labelled(icon, item.Label, vertical) : icon;
+            if (_state.Large || _state.Labels) button.Height = double.NaN;
+            if (_state.Large) button.MinHeight = UiMetrics.QuickButtonHeight * LargeScale;
+            ToolTip.SetServiceEnabled(button, _state.Tooltips);
+            panel.Children.Add(button);
         }
-        else panel.Children.Add(MenuRowToggles.Separator());
-        var composer = MenuRowToggles.Button(new MenuRowToggles.Toggle(ToggleComposerId, "Composer", ComposerIcon), _commands);
-        _composerToggles.Add(composer);
-        panel.Children.Add(composer);
-        return panel;
+    }
+
+    private static Control Labelled(Control icon, string label, bool vertical)
+    {
+        var text = new TextBlock { Text = label, FontSize = ChromeMetrics.TextCaption, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+        return new StackPanel
+        {
+            Orientation = vertical ? Orientation.Vertical : Orientation.Horizontal, Spacing = vertical ? 1 : 4, Margin = vertical ? new Thickness(0, 2) : default,
+            Children = { icon, text },
+        };
+    }
+
+    private static Control Line(bool vertical)
+    {
+        if (!vertical) return MenuRowToggles.Separator();
+        var line = new Border { Height = 1, Width = 18, Margin = new Thickness(0, 4), Opacity = 0.4, IsHitTestVisible = false };
+        line[!Border.BackgroundProperty] = new DynamicResourceExtension("TextMuted");
+        return line;
     }
 
     private ContextMenu StripMenu()
@@ -123,15 +155,25 @@ public sealed class LeftStripFeature
             item.Click += (_, _) => run();
             return item;
         }
-        return new ContextMenu
+        // The placement rows are ticked as the app's other checkable rows (ContextMenuBuilder): exactly one, re-read each time the menu opens.
+        var beside = Item("Place beside menus", () => { _state.BesideMenus = true; Apply(); });
+        var vertical = Item("Keep vertical", () => { _state.BesideMenus = false; Apply(); });
+        beside.ToggleType = vertical.ToggleType = MenuItemToggleType.CheckBox;
+        var menu = new ContextMenu
         {
-            Items =
-            {
-                Item("Place beside menus", () => { _state.BesideMenus = true; Apply(); }),
-                Item("Keep vertical", () => { _state.BesideMenus = false; Apply(); }),
-                Item("Hide strip", () => SetVisible(false)),
-            },
+            Items = { beside, vertical, new Separator(), Item("Customize strip…", Customize), Item("Hide strip", () => SetVisible(false)) },
         };
+        void Tick() { beside.IsChecked = _state.BesideMenus; vertical.IsChecked = !_state.BesideMenus; }
+        Tick();
+        menu.Opening += (_, _) => Tick();
+        return menu;
+    }
+
+    private void Customize()
+    {
+        var owner = _vertical is null ? null : TopLevel.GetTopLevel(_vertical) as Window;
+        var window = new LeftStripCustomizeWindow(_state, Rebuild);
+        if (owner is not null) window.Show(owner); else window.Show();
     }
 
     private void SetVisible(bool visible)
@@ -142,8 +184,8 @@ public sealed class LeftStripFeature
 
     private void ToggleComposer()
     {
-        _composerOpen = !(_visible && _composerOpen);
-        _visible |= _composerOpen;
+        // The Composer opens on its own (docked left without the strip when the strip is hidden); hiding the strip leaves it open.
+        _composerOpen = !_composerOpen;
         Apply();
     }
 
@@ -157,9 +199,17 @@ public sealed class LeftStripFeature
     private void Paint()
     {
         if (_vertical is null || _row is null || _toggle is null || _composer is null || _host is null) return;
+        var side = _state.RightSide ? Right : Left;
+        if (_vertical.Parent != side)
+        {
+            (_vertical.Parent as Panel)?.Children.Remove(_vertical);
+            DockPanel.SetDock(_vertical, _state.RightSide ? Dock.Right : Dock.Left);
+            side.Children.Insert(0, _vertical);   // at the left, the strip sits outside the Composer panel
+        }
+        _vertical.BorderThickness = _state.RightSide ? new Thickness(1, 0, 0, 0) : new Thickness(0, 0, 1, 0);
         _vertical.IsVisible = _visible && !_state.BesideMenus;
         _row.IsVisible = _visible && _state.BesideMenus;
-        _composer.IsVisible = _visible && _composerOpen;
+        _composer.IsVisible = _composerOpen;
         _toggle.IsVisible = _state.ShowButton;
         _toggle.IsChecked = _visible;
         if (_toggle.Content is Control icon) icon.Opacity = _visible ? 1 : ChromeMetrics.DimTextOpacity;   // grey while hidden

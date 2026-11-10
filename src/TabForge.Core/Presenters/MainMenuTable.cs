@@ -218,6 +218,8 @@ public static class MainMenuTable
                 Toggle("Show the notes in each track lane", "View.ArrangementIndividualNotes"),
                 Toggle("Show one continuous line per track lane", "View.ArrangementContinuousBlocks")),
             Toggle("Highlight playing bar", "View.PlayingBar"),
+            Toggle("Left strip", "View.ToggleLeftStrip", checkedAtStart: true),
+            Toggle("Composer", "View.ToggleComposer"),
             Toggle("Show strip button", "View.ShowStripButton", checkedAtStart: true),
             Toggle("Show strip on start", "View.ShowStripOnStart", checkedAtStart: true),
             Separator),

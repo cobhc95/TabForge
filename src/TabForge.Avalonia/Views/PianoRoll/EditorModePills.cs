@@ -11,7 +11,7 @@ using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views;
 
-// Owns: the Piano / Tab pills in the main menu row (right side, left of the open / save quick buttons; MainWindowMenu docks them): the lit pill is the view
+// Owns: the Piano / Tab pills in the main menu row (right side, left of the layout icons; MainWindowMenu docks them): the lit pill is the view
 //       shown for the current track, a click on the other switches that track's view (the same command as the right-click rows). Hover and pressed
 //       states, tooltips per pill, disabled (with a tooltip) while no track is shown, and hidden by the row when it is too narrow (the menus keep priority).
 //       Drawn in theme tokens (Palette ModePill*, light and dark).

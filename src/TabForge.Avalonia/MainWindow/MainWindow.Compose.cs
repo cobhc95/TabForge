@@ -143,22 +143,16 @@ public sealed partial class MainWindow
         if (state.Settings is { } iconSettings)
         {
             // Icon size: the menu row's icons are built once, so each applied size resizes them in place.
-            void SizeIcons(AppSettings applied) { foreach (var box in menu.GetVisualDescendants().OfType<Control>().Where(c => c.Name is MenuRowToggles.PanelName or QuickActionsGroup.GroupName).SelectMany(c => c.GetVisualDescendants()).OfType<Viewbox>()) box.Width = box.Height = IconSizing.Current; }
+            void SizeIcons(AppSettings applied) { foreach (var box in menu.GetVisualDescendants().OfType<Control>().Where(c => c.Name == MenuRowToggles.PanelName).SelectMany(c => c.GetVisualDescendants()).OfType<Viewbox>()) box.Width = box.Height = IconSizing.Current; }
             iconSettings.SettingsChanged += SizeIcons;
             Closed += (_, _) => iconSettings.SettingsChanged -= SizeIcons;
         }
-        if (state.Settings is { } toolbarSettings && Views.QuickActionsGroup.In(menu) is { } quickGroup)
-        {
-            // Show the toolbar: the Open / Save group and its divider in the menu row follow the row (the transport bars follow it in TimelineSettingsBinding).
-            var quickPanel = (DockPanel)quickGroup.Parent!;
-            var quickDivider = quickPanel.Children[quickPanel.Children.IndexOf(quickGroup) - 1];
-            void ShowQuick(AppSettings applied) => quickGroup.IsVisible = quickDivider.IsVisible = applied.General.ShowToolbar;
-            ShowQuick(toolbarSettings.Settings);
-            toolbarSettings.SettingsChanged += ShowQuick;
-            Closed += (_, _) => toolbarSettings.SettingsChanged -= ShowQuick;
-        }
         leftStrip.Attach(menu, (Platform.Controls.CompactTrackStrip)state.CompactStrip);
+        // Beside the score pane only, so the timeline and track list below keep the full width.
         DockPanel.SetDock(leftStrip.Left, Dock.Left);
+        DockPanel.SetDock(leftStrip.Right, Dock.Right);
+        state.EditorPane.Area.Children.Insert(0, leftStrip.Left);
+        state.EditorPane.Area.Children.Insert(1, leftStrip.Right);
         var titleRow = TitleBarView.For(this, state.Tabs, state.Commands);
         state.LiveVideo.RecordingChanged += titleRow.ShowRecording;
         state.LiveVideo.RecordingChanged += on => state.StatusBar.Activity.VideoRecording = on;   // the status bar's state word reads Recording
@@ -189,7 +183,7 @@ public sealed partial class MainWindow
             Children =
             {
                 titleRow, menu, state.CompactStrip, state.LiveVideo.SavedNotice, state.Notice, state.Autosave.Notice, state.StatusBar.View,
-                approvals.MediaNotice, approvals.TrustNotice, leftStrip.Left, state.Workspace,
+                approvals.MediaNotice, approvals.TrustNotice, state.Workspace,
             },
         });
         var scaler = new LayoutTransformControl { Child = framed };
