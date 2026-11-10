@@ -42,20 +42,20 @@ public sealed partial class GuitarLayerTests
     }
 
     [Theory]
-    [InlineData(24, 52, 13.3, -20.9, 15.4)]
-    [InlineData(25, 52, 13.4, -19.4, 13.6)]
-    [InlineData(26, 52, 12.1, -18.7, 16.4)]
-    [InlineData(27, 52, 16.8, -26.8, 17.1)]
-    [InlineData(28, 52, 25.3, -85.7, 16.0)]
-    [InlineData(29, 52, 6.6, -1.1, -1.5)]   // the captured amp squeezes like the real one (real amp output 7.7 dB, attack peak std 1.2 dB)
-    [InlineData(30, 52, 6.6, -1.1, -1.5)]
-    [InlineData(31, 52, 11.8, -21.0, 17.1)]
-    [InlineData(32, 33, 6.9, -32.6, 17.4)]
-    [InlineData(33, 33, 11.4, -12.0, 16.1)]
-    [InlineData(34, 33, 9.5, -19.0, 17.8)]
-    [InlineData(35, 33, 10.8, -16.1, 16.4)]
-    [InlineData(36, 33, 14.4, -31.5, 12.9)]
-    [InlineData(37, 33, 16.2, -27.6, 15.5)]
+    [InlineData(24, 52, 15.2, -34.8, 17.3)]
+    [InlineData(25, 52, 15.4, -33.7, 16.1)]
+    [InlineData(26, 52, 15.0, -25.8, 18.2)]
+    [InlineData(27, 52, 17.8, -30.3, 17.3)]
+    [InlineData(28, 52, 25.5, -85.3, 16.0)]
+    [InlineData(29, 52, 6.9, -0.5, -2.3)]   // the captured amp squeezes like the real one (real amp output 7.7 dB, attack peak std 1.2 dB)
+    [InlineData(30, 52, 6.9, -0.5, -2.3)]
+    [InlineData(31, 52, 13.6, -30.1, 17.9)]
+    [InlineData(32, 33, 8.6, -41.4, 19.3)]
+    [InlineData(33, 33, 13.9, -23.9, 16.2)]
+    [InlineData(34, 33, 12.2, -25.7, 18.5)]
+    [InlineData(35, 33, 14.3, -29.7, 17.2)]
+    [InlineData(36, 33, 15.7, -39.8, 13.2)]
+    [InlineData(37, 33, 20.5, -39.7, 16.6)]
     public void EveryNotePeaksAboveItsSustain(int program, int note, double attack, double slope, double range)
     {
         var x = Struck(program, note, 110);
@@ -76,12 +76,12 @@ public sealed partial class GuitarLayerTests
     }
 
     [Theory]
-    [InlineData(24, 10.7)]
-    [InlineData(25, 8.7)]
-    [InlineData(26, 5.1)]
-    [InlineData(27, 9.6)]
-    [InlineData(29, 6.5)]
-    [InlineData(30, 6.5)]
+    [InlineData(24, 13.5)]
+    [InlineData(25, 12.0)]
+    [InlineData(26, 8.3)]
+    [InlineData(27, 11.1)]
+    [InlineData(29, 7.8)]
+    [InlineData(30, 7.8)]
     public void AStrumPeaksAboveItsSustain(int program, double attack)
     {
         var a = AttackToSustain(Struck(program, 0, 110, 40, 47, 52, 56, 59, 64));

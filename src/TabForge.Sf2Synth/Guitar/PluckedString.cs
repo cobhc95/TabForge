@@ -14,7 +14,7 @@ internal sealed partial class PluckedString
 {
     public const double LowestHz = 25;
     private const float Silent = 1e-4f, RepluckKeep = 0.3f;
-    private const double ReleaseDarken = 0.3, ShortNote = 0.12;
+    private const double ShortNote = 0.12;
 
     private readonly float[] _buf;
     private readonly int _mask;
@@ -110,7 +110,7 @@ internal sealed partial class PluckedString
         (Released, Held) = (true, false);
         var shortNote = Age < ShortNote;
         _t60 = _spec.ReleaseT60 * (shortNote ? 0.5 : 1) * (1 + _nu.Release);
-        _dark = Math.Min(0.95, _dark + ReleaseDarken * (shortNote ? 1.5 : 1));
+        _dark = Math.Min(0.95, _dark + _spec.ReleaseDarken * (shortNote ? 1.5 : 1));
         Retune(_hz);
     }
 

@@ -39,7 +39,7 @@ internal static class Voicings
     // 27/29/30 DI fitted to a measured real guitar DI (status doc): low cut 135 Hz, pickup resonance 900 Hz (+13.5 dB, Q 1) under a
     // 2.07 kHz roll-off; a dark loop (highs: T60 0.8 s at 2 kHz), softer pluck, two-coil bridge humbucker.
     private static readonly EqSpec[] MeasuredDi = [new(HighPass, 135, 0.7), new(Peak, 900, 1, 13.5), new(LowPass, 2070, 0.4)];
-    private static readonly StringSpec MeasuredString = Gtr(6.0, 2.0, 0.55, 0.25, 78, 45, 0.10, 3500) with { Pickup2Mm = 63, Vel = 1.85 };
+    private static readonly StringSpec MeasuredString = Gtr(5.0, 1.4, 0.55, 0.25, 78, 45, 0.12, 3500) with { Pickup2Mm = 63, Vel = 1.85 };
 
     // Captured amp output EQ, fitted to the real amp recording of the measured take (status doc): low mids up, the 830 Hz bump and
     // upper mids down, the capture's fizz above 6 kHz down.
@@ -51,11 +51,11 @@ internal static class Voicings
 
     private static readonly Voicing[] Table =
     [
-        new(Gtr(6.0, 1.6, 0.25, 0.10, 117, 0, 0.15, 3500) with { Vel = 1.67, Tap = new(0.25f, 1500, 0.7, 4), Click = 0.3f },                      // 24 nylon
+        new(Gtr(6.5, 1.1, 0.35, 0.10, 117, 0, 0.28, 3500) with { Vel = 1.67, Drop = 7, DropMs = 30, ReleaseDarken = 0.25, Tap = new(0.25f, 1500, 0.7, 4), Click = 0.3f },                      // 24 nylon
             Body(Nylon, Hp60, new(HighShelf, 4000, 0.7, -4)) with { Level = 1.36f }),
-        new(Gtr(7.0, 2.2, 0.18, 0.30, 97, 0, 0.18, 6000) with { Vel = 1.47, Tap = new(0.25f, 3500, 0.8, 3) },                                     // 25 steel
+        new(Gtr(7.5, 1.4, 0.28, 0.30, 97, 0, 0.30, 6000) with { Vel = 1.47, Drop = 7, DropMs = 30, ReleaseDarken = 0.25, Tap = new(0.25f, 3500, 0.8, 3) },                                     // 25 steel
             Body(Steel, Hp60, new(Peak, 3000, 1, 2)) with { Level = 1.125f }),
-        new(Gtr(6.0, 1.8, 0.30, 0.15, 130, 155, 0.12, 3500) with { Vel = 1.85, Pickup2Mm = 173, Tap = new(0.1f, 2500, 0.7, 2) },                  // 26 jazz
+        new(Gtr(5.0, 1.3, 0.40, 0.15, 130, 155, 0.18, 3500) with { Vel = 1.85, Pickup2Mm = 173, Drop = 7, DropMs = 14, Tap = new(0.1f, 2500, 0.7, 2) },                  // 26 jazz
             Clean(new(LowShelf, 200, 0.7, 2), new(HighShelf, 2000, 0.7, -6)) with { Level = 1.06f, Pickup = NeckHumbucker }),
         new(MeasuredString with { Tap = new(0.15f, 4000, 0.8, 2) },                                 // 27 clean
             Clean(new EqSpec(HighShelf, 2500, 0.7, 3)) with { Level = 2.08f, Pickup = MeasuredDi }),
@@ -65,18 +65,18 @@ internal static class Voicings
         new(MeasuredString,                                                                                                                     // 30 distortion
             new RigSpec(1, [new(HighPass, 110, 0.7), new(Peak, 900, 0.8, 4)], LeadStages, 0.15f,
                 [new(LowShelf, 100, 0.7, 2), new(Peak, 650, 0.9, -5), new(HighShelf, 3000, 0.7, 2)], CabKind.Guitar, 0.057f) { Pickup = MeasuredDi, Captured = new(0.30f, 0.73f, CapturedEq) }),
-        new(Gtr(4.0, 2.5, 0.05, 0, 324, 110, 0.15, 4000, harmonic: true) with { Vel = 2 }, Clean(new EqSpec(HighShelf, 2500, 0.7, 2)) with { Level = 0.54f }), // 31 harmonics
-        new(Bass(4.0, 0.9, 0.35, 0.16, 173, 0, 0.15, 1800) with { Vel = 1.75, Drop = 7, DropMs = 22, Tap = new(1.5f, 300, 1.0, 20), TapVel = 1.2, Click = 0.3f },                            // 32 upright
+        new(Gtr(3.5, 1.5, 0.05, 0, 324, 110, 0.20, 4000, harmonic: true) with { Vel = 2, Drop = 6, DropMs = 18 }, Clean(new EqSpec(HighShelf, 2500, 0.7, 2)) with { Level = 0.54f }), // 31 harmonics
+        new(Bass(4.5, 1.0, 0.35, 0.16, 173, 0, 0.30, 1800) with { Vel = 1.75, Drop = 9, DropMs = 28, ReleaseDarken = 0.25, Tap = new(1.5f, 300, 1.0, 20), TapVel = 1.2, Click = 0.3f },                            // 32 upright
             Body(Upright, new(HighPass, 18, 0.7), new(LowShelf, 100, 0.7, 3), new(HighShelf, 2500, 0.7, -5)) with { Level = 2.00f }),
-        new(Bass(8.0, 1.5, 0.45, 0.15, 173, 150, 0.12, 2500) with { Vel = 2, Tap = new(0.45f, 650, 0.7, 6), TapVel = 1.3, Click = 0.4f, ClickVel = 1.2 },     // 33 finger (P)
+        new(Bass(5.5, 1.0, 0.50, 0.15, 173, 150, 0.25, 2500) with { Vel = 2, Drop = 7, DropMs = 22, Tap = new(0.45f, 650, 0.7, 6), TapVel = 1.3, Click = 0.4f, ClickVel = 1.2 },     // 33 finger (P)
             BassRig(PBass, new EqSpec(Peak, 800, 1, 1)) with { Level = 0.68f }),
-        new(Bass(8.0, 1.8, 0.20, 0.35, 104, 150, 0.10, 5000) with { Vel = 2, Tap = new(0.5f, 2800, 0.9, 3), TapVel = 1.6, Click = 2.5f, ClickVel = 1.6 },   // 34 pick (P)
+        new(Bass(5.5, 1.1, 0.30, 0.35, 104, 150, 0.20, 5000) with { Vel = 2, Drop = 7, DropMs = 18, Tap = new(0.5f, 2800, 0.9, 3), TapVel = 1.6, Click = 2.5f, ClickVel = 1.6 },   // 34 pick (P)
             BassRig(PBass, new EqSpec(HighShelf, 1500, 0.7, 4)) with { Level = 0.47f }),
-        new(Bass(6.0, 1.2, 0.45, 0.10, 216, 125, 0.15, 2000) with { Vel = 1.8, Pickup2Mm = 45, Tap = new(0.35f, 550, 0.7, 6), TapVel = 1.2, Click = 0.5f, ClickVel = 1.2, Mwah = 8, Glide = 0.12 }, // 35 fretless (J)
+        new(Bass(4.5, 0.9, 0.50, 0.10, 216, 125, 0.25, 2000) with { Vel = 1.8, Pickup2Mm = 45, Drop = 7, DropMs = 20, Tap = new(0.35f, 550, 0.7, 6), TapVel = 1.2, Click = 0.5f, ClickVel = 1.2, Mwah = 8, Glide = 0.12 }, // 35 fretless (J)
             BassRig(JBass, new(Peak, 1000, 0.7, 3), new(HighShelf, 2500, 0.7, -4)) with { Level = 0.90f }),
-        new(Bass(5.0, 1.5, 0.15, 0.20, 250, 125, 0.10, 8000) with { Vel = 2, Pickup2Mm = 45, Slap = true, Tap = new(2f, 110, 0.6, 18), TapVel = 1.2, Click = 4.5f, ClickVel = 1.1 },   // 36 slap 1 (thumb)
+        new(Bass(4.0, 1.0, 0.25, 0.20, 250, 125, 0.20, 8000) with { Vel = 2, Pickup2Mm = 45, Slap = true, Drop = 5, DropMs = 18, Tap = new(2f, 110, 0.6, 18), TapVel = 1.2, Click = 4.5f, ClickVel = 1.1 },   // 36 slap 1 (thumb)
             BassRig(JBass, new(Peak, 500, 0.8, -6), new(HighShelf, 2500, 0.7, 6)) with { Level = 1.49f, Comp = SlapComp }),
-        new(Bass(5.0, 1.5, 0.15, 0.20, 200, 125, 0.10, 8000) with { Vel = 2.1, Pickup2Mm = 45, Slap = true, Tap = new(0.7f, 2400, 1.4, 4), TapVel = 1.8, Click = 6f, ClickVel = 1.5 },   // 37 slap 2 (pop)
+        new(Bass(4.0, 1.0, 0.25, 0.20, 200, 125, 0.20, 8000) with { Vel = 2.1, Pickup2Mm = 45, Slap = true, Drop = 8, DropMs = 16, Tap = new(0.7f, 2400, 1.4, 4), TapVel = 1.8, Click = 6f, ClickVel = 1.5 },   // 37 slap 2 (pop)
             BassRig(JBass, new(Peak, 500, 0.8, -4), new(HighShelf, 2500, 0.7, 4)) with { Level = 0.68f, Comp = SlapComp }),
     ];
 

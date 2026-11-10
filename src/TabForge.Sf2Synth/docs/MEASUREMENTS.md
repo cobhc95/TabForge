@@ -279,5 +279,35 @@ Owner: the upright still sounded like a synthy electric bass after the electric 
 - Attack-to-sustain (vel 110, note 33, guard center 6.9 kept, no guard edit) 6.87 -> 7.22 dB; initial slope -32.64 -> -34.87 dB/s (target -32.6); attack-peak range 50 -> 127 17.4 -> 18.1 dB. Full suite 125 passing (Debug), electric basses unchanged.
 - Demo `tfsynth_BASS_UPRIGHT.wav` (Downloads, not in the repo): only program 32, the 6-bar 120 bpm `Bass` line flat-written then Humanizer Natural, via Synthesizer + GuitarLayer at 48000, MasterVolume 0.5, peak 0.90, 16-bit stereo. Human listening still pending (no one has played it through the app).
 
+## Natural attack, sustain and decay on every modelled program (Nov 2026)
+Owner: no natural attack/sustain/decay; programmes should be very decayable like real instruments. Fix is time constants only
+(`StringSpec` T60Ref/T60At1k, Darkness, Drop/DropMs/DropVel, ReleaseT60/ReleaseDarken, PluckHz, Vel exponents, Tap; new
+`ReleaseDarken` field, default 0.3, read in `PluckedString.Release`, was a fixed 0.3). Body/pickup/drive/cab/EQ untouched;
+electric-bass body/pickup/drive/cab and the rebuilt upright body bit-identical. Acoustics (24-25) longer warm fall
+(T60Ref 6.5/7.5 s, T60At1k 1.1/1.4 s, Darkness 0.35/0.28, Drop 7 dB / 30 ms, ReleaseT60 0.28/0.30 s, darken 0.25);
+electrics (26-31) punchier fast drop then tight sustain (26: 5.0/1.3 s, Darkness 0.40, Drop 7 dB / 14 ms; 27/29/30
+MeasuredString 5.0/1.4 s, Darkness 0.55 kept, Drop 4 dB / 12 ms kept — the DI is already 17.9 dB vs the real 17.7 and
+its peak is at the capture trim limit; 31: 3.5/1.5 s, Drop 6 dB / 18 ms); basses (32-37) longest heavy fall with fast
+slap/pick transients (32: 4.5/1.0 s, Drop 9 dB / 28 ms, ReleaseT60 0.30 s; 33: 5.5/1.0 s, Darkness 0.50, Drop 7 dB / 22 ms;
+34: 5.5/1.1 s, Darkness 0.30, Drop 7 dB / 18 ms; 35: 4.5/0.9 s, Darkness 0.50, Drop 7 dB / 20 ms; 36: 4.0/1.0 s, Drop 5 dB /
+18 ms (8→6→5: the slap chord peak clipped 0.98 at Drop 8/6); 37: 4.0/1.0 s, Drop 8 dB / 16 ms). 28 muted and 29/30 through
+the squeezed amp measured unchanged (28: 25.5 dB / -85.3 dB/s; 29/30: 6.9 dB / -0.5 dB/s, real amp output 7.7 dB), so kept.
+ReleaseT60 sets the note-off damping (short notes under 0.12 s damp half again, in the loop as before), longest on the
+open acoustics and basses, tightest on the muted and the squeezed-amp DI.
+- Measured (bus output, note 52 guitars / 33 basses, velocity 110, same detector and onsets as the attack section above):
+  attack-to-sustain (dB) and initial slope (dB/s) before -> after: 24 12.2/-20.9 -> 15.2/-34.8, 25 12.7/-19.4 -> 15.4/-33.7,
+  26 12.1/-18.2 -> 15.0/-25.8, 27 17.1/-26.8 -> 17.8/-30.3, 28 25.5/-85.3 (same), 29/30 6.9/-0.5 (same), 31 11.3/-21.1 ->
+  13.6/-30.1, 32 7.2/-34.9 -> 8.6/-41.4, 33 11.4/-12.0 -> 13.9/-23.9, 34 9.5/-19.0 -> 12.2/-25.7, 35 10.8/-16.1 -> 14.3/-29.7,
+  36 14.4/-31.5 -> 15.7/-39.8, 37 16.2/-27.6 -> 20.5/-39.7. Attack peak 50->127 (dB) after: 24 17.3, 25 16.1, 26 18.2,
+  27 17.3, 28 16.0, 29/30 -2.3, 31 17.9, 32 19.3, 33 16.2, 34 18.5, 35 17.2, 36 13.2, 37 16.6. Strum attack-to-sustain
+  (dB) before -> after: 24 10.5 -> 13.5, 25 8.9 -> 12.0, 26 5.3 -> 8.3, 27 10.5 -> 11.1, 29/30 7.9 -> 7.8. DI 29
+  attack-to-sustain 17.9 -> 18.5 dB (real 17.7); DI octaves within 1.7 dB of the measured curve; DI T60 at 2 kHz 1.07 ->
+  1.00 s (target 0.76); captured-amp octaves within 0.8 dB; distorted DI trim still -29.7 dBFS rms, peak 0.376.
+- Guards: `GuitarLayerTests.Attack` and `AStrumPeaksAboveItsSustain` centers set to the new numbers (±2 dB / ±8 dB/s,
+  range lower bounds kept); guitar/distorted octave-band guards unchanged. Full suite 125 passing (Debug).
+- Demo `tfsynth_DYNAMICS.wav` (Downloads, not in the repo): 24 nylon strum, 27 clean run, 30 distortion riff (captured
+  amp), 33 bass (electric), 32 upright — in that order, 1 s gaps, flat-written then Humanizer Natural, via Synthesizer +
+  GuitarLayer at 48000, MasterVolume 0.5, peak 0.90, 16-bit stereo, one gain. Human listening still pending.
+
 ## Architecture decision
 Clean pickup-style guitar DI, then a user-chosen Neural Amp Modeler `.nam` model as the amp, then an optional cabinet `.wav` IR. Built-in defaults: the captured amp (no cabinet) on 29/30, the stage amp and synthetic cab on the other electric programs. NAM runtime is written from scratch from the public format spec (no copied code).
