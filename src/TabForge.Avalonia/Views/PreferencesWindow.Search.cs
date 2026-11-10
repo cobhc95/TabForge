@@ -32,13 +32,21 @@ public sealed partial class PreferencesWindow
         var stack = new StackPanel { Spacing = 12 };
         foreach (var row in card.Basic)
         {
-            stack.Children.Add(RowPanel(row));
+            var panel = RowPanel(row);
+            // Playback engine on the Audio & Plug-ins page: the Sound engine combo duplicates the list below, so hide it
+            // (the setting is still written by Use and kept in ShownRows; the ComboBox stays built, just not shown).
+            if (!searching && _page == SettingsCatalog.AudioVst && card.Group == "Playback engine" && row.Key == "vst.soundengine")
+                panel.IsVisible = false;
+            stack.Children.Add(panel);
             // The Theme combo's card is the Interface group in the catalogue, so the reset follows the combo row itself.
             if (!searching && _page == SettingsCatalog.Appearance && row.Key == "appearance.thememode")
                 stack.Children.Add(PreferencesSpecialPages.Part(SettingsCatalog.Special(SettingsCatalog.ActionResetTheme), SpecialActions())!);
-            // Playback engine: the engine list (banks + own file) lives in the same card as the Sound engine row.
+            // Playback engine: the engine list (banks + own file) lives in the same card.
             if (!searching && _page == SettingsCatalog.AudioVst && card.Group == "Playback engine" && row.Key == "vst.soundengine")
+            {
+                stack.Children.Add(ToolWindowParts.Small("Pick an engine below — Use selects it. Banks show Downloaded / Not downloaded; download one before Use. Windows GM is built in."));
                 stack.Children.Add(SoundBanksList());
+            }
         }
         if (card.More.Count > 0) stack.Children.Add(MoreOptions(card.Category(), card.Group, card.More, searching));
         return PreferencesSpecialPages.Card(card.Title, stack);
