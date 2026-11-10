@@ -1,4 +1,4 @@
-# TabForge 0.9.1
+# TabForge 0.9.2
 
 **A keyboard-driven tablature and notation editor for Windows, with experimental Linux packages.** Opens .gp3, .gp4, .gp5, .gpx and .gp files, and saves .gp and its own .tforge projects. Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard or keyboard, a piano roll, an arrangement timeline, audio and MIDI recording, a mixer, built-in effects, VST2, VST3 and CLAP plug-ins (32-bit and 64-bit VST), and offline audio and video rendering.
 
@@ -7,15 +7,15 @@
 ## Download
 
 > [!TIP]
-> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.9.1/TabForge-0.9.1-win-setup.exe)** · no administrator rights needed
+> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.9.2/TabForge-0.9.2-win-setup.exe)** · no administrator rights needed
 >
-> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.9.1/TabForge-0.9.1-win-x64-portable.zip)** · extract and run `TabForge.exe`
+> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.9.2/TabForge-0.9.2-win-x64-portable.zip)** · extract and run `TabForge.exe`
 
 Windows 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify your download](#verify-your-download). Older versions: [Releases](https://github.com/cobhc95/TabForge/releases).
 
 ### Linux packages (experimental)
 
-The main Linux download is the AppImage ([`TabForge-0.9.1-linux-x86_64.AppImage`](https://github.com/cobhc95/TabForge/releases/download/v0.9.1/TabForge-0.9.1-linux-x86_64.AppImage)). The archive ([`TabForge-0.9.1-linux-x64.tar.gz`](https://github.com/cobhc95/TabForge/releases/download/v0.9.1/TabForge-0.9.1-linux-x64.tar.gz)) is the fallback. Both include Wine 9.21 for Windows plug-ins, FFmpeg for video export and a General MIDI SoundFont, so sound works on first run.
+The main Linux download is the AppImage ([`TabForge-0.9.2-linux-x86_64.AppImage`](https://github.com/cobhc95/TabForge/releases/download/v0.9.2/TabForge-0.9.2-linux-x86_64.AppImage)). The archive ([`TabForge-0.9.2-linux-x64.tar.gz`](https://github.com/cobhc95/TabForge/releases/download/v0.9.2/TabForge-0.9.2-linux-x64.tar.gz)) is the fallback. Both include Wine 9.21 for Windows plug-ins, FFmpeg for video export and a General MIDI SoundFont, so sound works on first run.
 
 ```bash
 chmod +x TabForge-*-linux-x86_64.AppImage
@@ -36,11 +36,21 @@ chmod +x TabForge-*-linux-x86_64.AppImage
 </tr>
 </table>
 
-**Contents:** [Download](#download) · [What's new in 0.9.1](#whats-new-in-091) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Piano roll](#piano-roll) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Plug-ins](#plug-ins) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
+**Contents:** [Download](#download) · [What's new in 0.9.2](#whats-new-in-092) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Piano roll](#piano-roll) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Plug-ins](#plug-ins) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
 
-## What's new in 0.9.1
+## What's new in 0.9.2
 
-0.9.1 is a stable release.
+0.9.2 is a stable release.
+
+- **Fretboard legend tiles:** Now, Next and Upcoming are three side-by-side tiles, each in its own colour, with Scales and Modify as two aligned tiles under them. The legend is always exactly as tall as the fretboard, and a chevron minimises it to a round button.
+- **Look-ahead in notes:** "Next notes shown ahead" now counts notes, not movements, shows while paused and stopped, and auditions live as you move the slider.
+- **Section stretch:** dragging a section's start back past the previous section gets a new second option, *Add a new section in those bars*, which turns the added bars into a named, coloured section of their own.
+- **Fretboard settings:** the footer link reads *More settings*, with a *Reset all* button that restores every fretboard setting.
+- **Preferences key:** Preferences now opens with Ctrl+, (F12 keeps working as a second key).
+
+Full list: the [changelog](CHANGELOG.md#092).
+
+<details><summary>Earlier in 0.9.1: shortcuts, note colours, drag scrolling</summary>
 
 - **More shortcuts:** the piano roll's tools and editing commands, the metronome, count-in and loop windows, loop commands, Clear selection, master track and Fretboard settings can all be given keys in Settings > Shortcuts.
 - **Fretboard note colours:** choose the Now, Next and Upcoming colours and a Fill or Ring dot style, with the same colour picker as Appearance.
@@ -49,6 +59,8 @@ chmod +x TabForge-*-linux-x86_64.AppImage
 - **Fixes:** the first sound at start-up now passes through Monitor FX, a start-up crash on the fretboard is fixed, docked plug-in editors scroll when larger than their area, and rewinding repeatedly no longer stalls.
 
 Full list: the [changelog](CHANGELOG.md#091).
+
+</details>
 
 <details><summary>Earlier in 0.9.0: wound strings, lighter playback, ASIO</summary>
 
