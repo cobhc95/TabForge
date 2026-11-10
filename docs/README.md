@@ -43,8 +43,10 @@ chmod +x TabForge-*-linux-x86_64.AppImage
 0.9.3 is a stable release. ✨
 
 - **Left strip and Composer:** a customizable icon strip beside the score (41 icons, large by default) with New, Open, Save, Save as, Render, Undo, Redo and Composer, plus a Composer panel with Drums, Bass, Guitar and Keyboard cards, search and style rows — more patterns coming soon in the Composer tab.
+
+  <img src="https://raw.githubusercontent.com/cobhc95/TabForge/v0.9.3/docs/media/screenshots/0.9.3/left-strip-composer.png" alt="Left strip with Composer panel: Drums, Bass, Guitar and Keyboard cards under the score" width="560">
 - **F1 Help:** fourteen chapters with a forgiving local search that follows everyday words and symptom phrases like “no sound”, plus step badges, key-cap chips and Tip / Note / Warning boxes.
-- **TuxGuitar (.tg):** open and save as a further file type (`.tforge` stays the default), with song details, tracks, tunings, bars, repeats, tempo changes, notes, ties, effects, drum parts, lyrics and section markers.
+- **TuxGuitar (.tg) open and save:** open and save as a further file type (`.tforge` stays the default) — if you keep your songs in TuxGuitar, they now open here and come back intact. A file holds song details, tracks, tunings, bars, repeats, tempo changes, notes, ties, effects, drum parts, lyrics and section markers.
 - **Scale highlight:** one shared On/Off everywhere, an On/Off switch beside the SCALE title, an opacity slider, larger outlined note names and degrees, and a Colour picker with named and custom colours.
 - **Light theme:** outlined with little fill. Selected chips, rows and tabs get a pale tint with accent text, and every shade comes from your accent colour.
 - **Fixes:** Band mode keeps its right panel, keyboard and side-panel speed controls are in sync again, the playhead no longer freezes after clicking bar 1 or a loop wrap, the duplicate Tab.New command and the F12 clash are gone, and panels no longer stay dark in light mode.
