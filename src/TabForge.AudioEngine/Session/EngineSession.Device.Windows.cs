@@ -276,12 +276,35 @@ internal sealed partial class EngineSession
         if (Mix is { } mix && _following) mix.MasterGain = _endpointGain * _sessionGain * _pathOffsetGain;
     }
 
-    /// <summary>Engine thread, about once a second while following: TabForge's app volume in the Windows Volume Mixer.</summary>
+    /// <summary>Engine thread, about once a second while following: TabForge's app volume in the Windows Volume Mixer,
+    /// plus the default playback device itself (the follow must track the default the Windows slider controls: at open it
+    /// captured Loop-back for one Audient iD4, while the default is the analogue main output).</summary>
 #if WINDOWS
     public void RefreshSessionVolume()
     {
         AssertMain();
-        if (_volumeDevice is null || UiProcessId == 0) return;
+        if (_volumeDevice is null) return;
+        try
+        {
+            NAudio.CoreAudioApi.MMDevice current;
+            using (var enumerator = new NAudio.CoreAudioApi.MMDeviceEnumerator())
+                current = enumerator.GetDefaultAudioEndpoint(NAudio.CoreAudioApi.DataFlow.Render, NAudio.CoreAudioApi.Role.Multimedia);
+            if (!string.Equals(current.ID, _volumeDevice.ID, StringComparison.Ordinal))
+            {
+                var was = _volumeDevice.FriendlyName;
+                _volumeDevice.AudioEndpointVolume.OnVolumeNotification -= OnWindowsVolume;
+                _volumeDevice.Dispose();
+                _volumeDevice = current;
+                var endpoint = _volumeDevice.AudioEndpointVolume;
+                endpoint.OnVolumeNotification += OnWindowsVolume;
+                _endpointGain = EndpointGain(endpoint.MasterVolumeLevel, endpoint.Mute);
+                ApplyFollowedGain();
+                Log.Write($"following the Windows volume of {_volumeDevice.FriendlyName} (switched from {was}): {endpoint.MasterVolumeLevel:0.00} dB, gain {_endpointGain:0.000}");
+            }
+            else current.Dispose();
+        }
+        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException) { Log.Write($"volume follow: reading the default device failed: {ex.Message}"); }
+        if (UiProcessId == 0) return;
         try
         {
             var manager = _volumeDevice.AudioSessionManager;
