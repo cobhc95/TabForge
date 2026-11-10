@@ -6,6 +6,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ### Added
 
+- TabForge Synth (experimental): the overdriven and distortion guitars sound less robotic: the doubled 800-900 Hz input hump is flattened to one resonance and the string ring wobbles like a real string, with a slightly harder, faster attack on loud notes (untested in app).
 - TabForge Synth (experimental): the overdriven and distortion guitars' built-in amp is EQ'd to match a recording of the real amp it was captured from: fuller low mids, less honk around 800 Hz and less harsh upper mids and fizz, at the same loudness; a new setting Captured amp EQ (on) turns it off (untested in app).
 - TabForge Synth (experimental): guitars and basses have a real attack again: every note and chord starts with a clear peak that falls quickly into the ring (as a real string does), harder notes peak harder, and Humanize flat dynamics plays accents about twice as deep, with room above the written velocity so the strong beats stand out (untested in app).
 - TabForge Synth (experimental): every modelled guitar and bass (24-37) now has natural attack, sustain and decay: acoustics ring with a long warm fall, electrics punch with a fast drop into a tight sustain, basses fall longest and heaviest (slap and pick transients fastest), muted and squeezed-amp programmes measured and kept; DI and captured-amp tone unchanged (untested in app).

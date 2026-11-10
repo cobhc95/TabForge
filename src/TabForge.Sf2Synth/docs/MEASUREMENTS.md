@@ -309,5 +309,28 @@ open acoustics and basses, tightest on the muted and the squeezed-amp DI.
   amp), 33 bass (electric), 32 upright — in that order, 1 s gaps, flat-written then Humanizer Natural, via Synthesizer +
   GuitarLayer at 48000, MasterVolume 0.5, peak 0.90, 16-bit stereo, one gain. Human listening still pending.
 
+## Distorted guitars: input stack and ring homogenity (Nov 2026)
+Owner: distorted guitars still robotic (EQ too strong near 1000 Hz, ring too homogenous). Finding: the robot feel is the input
+stack, not the output EQ — the measured-DI peak at 900 Hz +13.5 dB stacks with the stage PreEq peaks at 750 Hz +5 (29) / 900 Hz +4
+(30), doubling the 800-900 Hz hump, while the fitted output EQ (210 +4, 830 -6, 2550 -3.5, shelf 5700 -10) already matches the real
+amp within 0.8 dB. Fix is input only (29/30, 27/26/28/31/basses bit-identical): distorted DI keeps the 135 Hz cut, its 900 Hz peak
+softened to +12.5 dB so it dominates instead of doubling, PreEq peaks softened to +1 dB, the CapturedEq 830 Hz cut shallowed by
+0.5 dB to -5.5 to re-balance (still within 1.3 dB of the real amp).
+- Ring: distorted strings get a per-note slow pitch wobble (deterministic position hash of channel/note/started/velocity, no
+  running random, no allocation: 2.5-5 Hz, 0.2-0.4 s period, up to ~3 cents velocity-scaled, ramped in over 0.15 s) plus a mild
+  seeded darkness/pickup shift (+-6 mm), branched on `StringSpec.Wobble` so clean/acoustic/bass render bit-identically.
+- Attack: distorted Drop 4 dB/12 ms/1 -> 5 dB/8 ms/1.5, so loud notes peak harder and faster (concentration on velocity keeps the
+  riff peak under the 0.4 limit; Trim 0.30 unchanged).
+- Measured (note 52, vel 110 unless stated; DI octave bands re sum, amp bands re real amp): DI 29 attack 18.5 -> 19.1 dB (real
+  17.7); DI 29/30 octaves -15.2/-8.7/-5.7/-4.8/-7.4/-14.1/-20.9/-27.9, max 1.7 dB from the real DI; amp octaves
+  -13.6/-8.3/-6.7/-6.1/-7.6/-9.5/-12.9/-20.5, max 1.3 dB from the real amp (1 kHz +0.3, was +0.1); bus attack 6.9 -> 6.3 dB
+  (real 7.7), slope -0.5 -> +2.0, attack peak 127-50 -2.3 -> -1.3 dB, strum 7.8 -> 7.9; trimmed DI riff -30.1 -> -30.4 rms, peak
+  0.376 -> 0.392 (limit 0.40); tuning note 52 vel 100 0.78 cents. The damper physics is honest: +0.6 dB more DI transient buys
+  -0.6 dB of bus ratio because the compressive amp squeezes the harder transient more, so reaching the real 7.7 by input alone
+  would need a post-amp expander or a smaller DI transient, both out of scope here.
+- Guards: `GuitarLayerTests.Attack` 29/30 centers set to 6.3 / +2.0 / -1.3 and strum to 7.9 (tolerances unchanged); DI and amp
+  octave guards and the trim guard unchanged. Demo `tfsynth_DISTORTED.wav` (Downloads): program 29 then 30, 1 s gap, flat-written
+  then Humanizer Natural, MasterVolume 0.5, peak 0.90. Human listening still pending.
+
 ## Architecture decision
 Clean pickup-style guitar DI, then a user-chosen Neural Amp Modeler `.nam` model as the amp, then an optional cabinet `.wav` IR. Built-in defaults: the captured amp (no cabinet) on 29/30, the stage amp and synthetic cab on the other electric programs. NAM runtime is written from scratch from the public format spec (no copied code).

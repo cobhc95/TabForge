@@ -31,6 +31,7 @@ internal sealed record StringSpec(double RefHz, double T60Ref, double T60At1k, d
     public bool Slap { get; init; }
     public double Mwah { get; init; }
     public double Glide { get; init; }
+    public bool Wobble { get; init; }
 }
 
 // Attack noise through a band-pass: amount (× pluck amplitude × velocity), centre Hz, Q, decay ms.

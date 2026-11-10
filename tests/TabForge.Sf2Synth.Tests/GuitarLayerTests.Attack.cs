@@ -47,8 +47,8 @@ public sealed partial class GuitarLayerTests
     [InlineData(26, 52, 15.0, -25.8, 18.2)]
     [InlineData(27, 52, 17.8, -30.3, 17.3)]
     [InlineData(28, 52, 25.5, -85.3, 16.0)]
-    [InlineData(29, 52, 6.9, -0.5, -2.3)]   // the captured amp squeezes like the real one (real amp output 7.7 dB, attack peak std 1.2 dB)
-    [InlineData(30, 52, 6.9, -0.5, -2.3)]
+    [InlineData(29, 52, 6.3, 2.0, -1.3)]   // the captured amp squeezes like the real one (real amp output 7.7 dB, attack peak std 1.2 dB)
+    [InlineData(30, 52, 6.3, 2.0, -1.3)]
     [InlineData(31, 52, 13.6, -30.1, 17.9)]
     [InlineData(32, 33, 8.6, -41.4, 19.3)]
     [InlineData(33, 33, 13.9, -23.9, 16.2)]
@@ -80,8 +80,8 @@ public sealed partial class GuitarLayerTests
     [InlineData(25, 12.0)]
     [InlineData(26, 8.3)]
     [InlineData(27, 11.1)]
-    [InlineData(29, 7.8)]
-    [InlineData(30, 7.8)]
+    [InlineData(29, 7.9)]
+    [InlineData(30, 7.9)]
     public void AStrumPeaksAboveItsSustain(int program, double attack)
     {
         var a = AttackToSustain(Struck(program, 0, 110, 40, 47, 52, 56, 59, 64));
