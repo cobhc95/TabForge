@@ -5,14 +5,13 @@ namespace TabForge.Playback;
 
 // Owns: the note lists an instrument pane lights while a song plays at one song time: the notes sounding now, the notes struck and then
 //     released within the hold window (newest first, at most RecentLimit), the last struck note while nothing sounds (a rest), the next
-//     movement (the notes sharing the first onset past now) and the later movements up to the preview horizon plus HorizonExtraMovements,
+//     movement (the notes sharing the first onset past now) and the later notes up to the preview horizon in total (Next and Upcoming together),
 //     one onset group per movement, each upcoming note tagged with its movement depth.
 // Does not own: drawing (the panes), the sounding timeline (ScoreTimeline), the score-cursor lights (InstrumentLitNotes).
 //     The instrument visualizer takes its sounding, recent, rest and upcoming notes from here.
 // Tests: TabForge.Avalonia.Tests.InstrumentPlaybackListsTests.
-// Threads: pure, called from the UI thread once per frame. Key: the song time and the note stream. Ceiling: each list holds at most
-//     the notes of one movement window, and the onset scratch at most previewHorizon + HorizonExtraMovements onsets. Fill allocates
-//     nothing once the snapshot is warm: every list, the onset scratch included, is cleared and refilled in place.
+// Threads: pure, called from the UI thread once per frame. Key: the song time and the note stream. Ceiling: the look-ahead holds at most
+//     previewHorizon notes. Fill allocates nothing once the snapshot is warm: every list is cleared and refilled in place.
 
 /// <summary>The lit lists for one song time; one instance is reused by its owner.</summary>
 public sealed class InstrumentPlaybackSnapshot
@@ -25,12 +24,9 @@ public sealed class InstrumentPlaybackSnapshot
     public List<NoteEvent> Upcoming { get; } = new();
     /// <summary>For each entry of Upcoming, its movement depth: 1 for the movement after Next, 2 for the one after that, and so on.</summary>
     public List<int> UpcomingDepth { get; } = new();
-    /// <summary>Scratch for Fill: the first onsets of the movements being read. Key: the song position; ceiling: the movement limit; thread: the owner's thread.</summary>
-    internal List<double> MovementOnsets { get; } = new();
 
     public void Clear()
     {
-        MovementOnsets.Clear();
         Now.Clear();
         Recent.Clear();
         Released.Clear();
@@ -63,13 +59,12 @@ public static class InstrumentPlaybackLists
     public const double SoundingLookbackMs = 6000;
     /// <summary>How long a released note stays in Recent, in ms.</summary>
     public const double DefaultHoldMs = 2600;
-    /// <summary>Movements read past the preview horizon, so the lists reach as far.</summary>
-    public const int HorizonExtraMovements = 2;
 
     /// <summary>
     /// Fills <paramref name="target"/> for the song time <paramref name="nowMs"/>. <paramref name="notes"/> is one track's canonical
-    /// note stream, sorted by onset (<see cref="NoteTimeline"/>); <paramref name="previewHorizon"/> is how many movements to preview,
-    /// negative to skip the look-ahead lists entirely (the drum map shows sounding notes only); <paramref name="includeRecent"/> false skips the recent trail.
+    /// note stream, sorted by onset (<see cref="NoteTimeline"/>); <paramref name="previewHorizon"/> is how many notes to preview ahead
+    /// (Next plus Upcoming together; the next movement is always shown whole), negative to skip the look-ahead lists entirely
+    /// (the drum map shows sounding notes only); <paramref name="includeRecent"/> false skips the recent trail.
     /// </summary>
     public static void Fill(InstrumentPlaybackSnapshot target, NoteEvent[] notes, double nowMs, int previewHorizon, double holdMs = DefaultHoldMs, bool includeRecent = true)
     {
@@ -105,28 +100,27 @@ public static class InstrumentPlaybackLists
 
     private static void FillMovements(InstrumentPlaybackSnapshot target, NoteEvent[] notes, int lo, int previewHorizon)
     {
-        var movementLimit = previewHorizon + HorizonExtraMovements;
-        var onsets = target.MovementOnsets;
-        for (var i = lo; i < notes.Length && onsets.Count < movementLimit; i++)
-        {
-            var onset = notes[i].OnsetMs;
-            if (onsets.Count == 0 || onset - onsets[^1] > OnsetToleranceMs) onsets.Add(onset);
-        }
-        if (onsets.Count == 0) return;
-
-        var nextOnset = onsets[0];
+        // Next is the whole first onset group; Upcoming then fills up to previewHorizon notes in total (counted in notes, not movements).
         var movement = 0;
+        var placed = 0;
+        var groupOnset = lo < notes.Length ? notes[lo].OnsetMs : 0;
         for (var i = lo; i < notes.Length; i++)
         {
             var note = notes[i];
-            if (note.OnsetMs - onsets[^1] > OnsetToleranceMs) break;
-            while (movement + 1 < onsets.Count && Math.Abs(onsets[movement + 1] - note.OnsetMs) <= OnsetToleranceMs) movement++;
-            if (Math.Abs(note.OnsetMs - nextOnset) <= OnsetToleranceMs) target.Next.Add(note);
+            if (note.OnsetMs - groupOnset > OnsetToleranceMs)
+            {
+                movement++;
+                groupOnset = note.OnsetMs;
+            }
+            // A new movement past the budget ends the look-ahead; the next movement is always shown whole, even past the budget.
+            if (movement > 0 && placed >= previewHorizon) break;
+            if (movement == 0) target.Next.Add(note);
             else
             {
                 target.Upcoming.Add(note);
                 target.UpcomingDepth.Add(movement);
             }
+            placed++;
         }
     }
 }

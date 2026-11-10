@@ -151,7 +151,7 @@ Default keys are the **TabForge** preset, identical to the **Classic** preset ex
 | File and tabs | New tab | Open another score in a new tab. | `Tab.New` | Ctrl+Alt+T |  |
 | File and tabs | Close tab | Close the active tab. | `Tab.Close` | Ctrl+W |  |
 | File and tabs | Duplicate tab | Duplicate the active tab as an unsaved copy. | `Tab.Duplicate` | Ctrl+Shift+D | — |
-| File and tabs | Preferences | Open this settings window. | `App.Preferences` | F12 | F7 |
+| File and tabs | Preferences | Open this settings window. | `App.Preferences` | Ctrl+OemComma | F7 |
 | File and tabs | Keyboard shortcuts | Show the shortcut reference. | `App.Shortcuts` | F1 |  |
 | Editing | Undo | Undo the last edit. | `Edit.Undo` | Ctrl+Z |  |
 | Editing | Redo | Redo the last undone edit. | `Edit.Redo` | Ctrl+Y |  |

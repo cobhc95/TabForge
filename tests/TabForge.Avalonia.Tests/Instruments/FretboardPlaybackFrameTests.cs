@@ -29,8 +29,7 @@ public class FretboardPlaybackFrameTests
     private const int SteadyFrames = 300;
 
     // The steady frame's allocation ceiling in bytes. It guards against a return to the per-frame lists, labels and delegates (1648 bytes before
-    // the change). What remains, about 230 bytes, is the movement line's path: the closure and path object that IDrawContext.Paths.BuildPath
-    // makes each frame while a hand movement is drawn.
+    // the change) and against rebuilding the inlay token string each frame (512 bytes). What remains, about 40 bytes, is the token dictionary lookup and marker work.
     private const double MaxBytesPerSteadyFrame = 256;
 
     private static InstrumentPanelView OpenPanel()

@@ -196,7 +196,8 @@ public sealed class InstrumentPanelStrip : Grid
         _playback.StateChanged -= ShowPlaybackNotes;
     }
 
-    /// <summary>The playing notes of the shown track at the playhead, or none when the song is not playing.</summary>
+    /// <summary>The playing notes of the shown track at the playhead, or none when nothing is shown. While playing or paused they follow
+    /// the transport; while stopped they preview at the seek position (or the song start), so the look-ahead setting auditions without playing.</summary>
     private void ShowPlaybackNotes()
     {
         if (!Panel.Look.FollowFretboard)
@@ -207,7 +208,7 @@ public sealed class InstrumentPanelStrip : Grid
         }
         var project = _score.Editor.Project;
         var index = _track is null || project is null ? -1 : project.Tracks.IndexOf(_track);
-        if (_playback is not { IsPlaying: true } session || index < 0 || session.Transport.Timeline is not { } timeline)
+        if (_playback is not { } session || index < 0 || session.Transport.Timeline is not { } timeline)
         {
             ClearPlaybackNotesKey();
             Panel.ShowPlayback(null, 0);
@@ -216,8 +217,13 @@ public sealed class InstrumentPanelStrip : Grid
         var transport = session.Transport;
         var bar = transport.PlayheadBar;
         var cell = transport.PlayheadCell;
+        if (!session.IsPlaying && transport.SeekPosition is { } seek)
+        {
+            bar = seek.Bar;
+            cell = seek.Cell;
+        }
         var nowMs = transport.PlayheadMs;
-        if (session.IsPaused && bar >= 0 && bar < timeline.Bars.Count)
+        if ((!session.IsPlaying || session.IsPaused) && bar >= 0 && bar < timeline.Bars.Count)
         {
             var scoreBar = timeline.Bars[bar];
             var slots = Math.Max(1, scoreBar.Slots);
@@ -389,7 +395,8 @@ public sealed class InstrumentPanelStrip : Grid
         content.VerticalAlignment = VerticalAlignment.Center;
         var size = tile is null ? FretboardChromeMetrics.PillIcon : FretboardChromeMetrics.TileIcon * unit;
         icon.Width = icon.Height = size;
-        icon.Margin = tile is null ? new Thickness(0, 0, FretboardChromeMetrics.PillIconGap, 0) : new Thickness(0, 0, 0, FretboardChromeMetrics.TileIconGap * unit);
+        if (tile is null) icon.WithMargin(0, 0, FretboardChromeMetrics.PillIconGap, 0);
+        else icon.WithMargin(0, 0, 0, FretboardChromeMetrics.TileIconGap * unit);
         button.FontSize = ((TextBlock)content.Children[1]).FontSize = FretboardChromeMetrics.PillFontSize * (tile is null ? 1 : unit);
         button.Width = tile?.Width ?? FretboardChromeMetrics.PillWidth;
         button.Height = tile?.Height ?? FretboardChromeMetrics.PillHeight;
@@ -415,19 +422,19 @@ public sealed class InstrumentPanelStrip : Grid
         steps[!Shape.StrokeProperty] = new DynamicResourceExtension("IconActiveBrush");
         var icon = new Viewbox
         {
-            Width = FretboardChromeMetrics.PillIcon, Height = FretboardChromeMetrics.PillIcon, Stretch = Stretch.Uniform, Margin = new Thickness(0, 0, FretboardChromeMetrics.PillIconGap, 0), VerticalAlignment = VerticalAlignment.Center,
+            Width = FretboardChromeMetrics.PillIcon, Height = FretboardChromeMetrics.PillIcon, Stretch = Stretch.Uniform, VerticalAlignment = VerticalAlignment.Center,
             Child = steps,
-        };
+        }.WithMargin(0, 0, FretboardChromeMetrics.PillIconGap, 0);
         var label = new TextBlock { Text = text, FontSize = FretboardChromeMetrics.PillFontSize, FontWeight = FontWeight.Normal, FontStyle = FontStyle.Normal, VerticalAlignment = VerticalAlignment.Center };
         label[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextBrush");
         var button = new Button
         {
             Name = name, Width = FretboardChromeMetrics.PillWidth, Height = FretboardChromeMetrics.PillHeight,
             FontSize = FretboardChromeMetrics.PillFontSize, FontWeight = FontWeight.Normal,
-            Padding = new Thickness(FretboardChromeMetrics.PillPadX, 0), BorderThickness = FretboardChromeMetrics.PillBorder,
+            BorderThickness = FretboardChromeMetrics.PillBorder,
             CornerRadius = new CornerRadius(FretboardChromeMetrics.PillRadius), Focusable = false,
             Content = new StackPanel { Orientation = Orientation.Horizontal, Children = { icon, label } },
-        };
+        }.WithPadding(FretboardChromeMetrics.PillPadX, 0);
         button[!BackgroundProperty] = new DynamicResourceExtension("Panel2Brush");
         button[!Border.BorderBrushProperty] = new DynamicResourceExtension("BorderSoftBrush");
         // The hover shade replaces the panel fill under the pointer; leaving restores the theme's Panel2 fill.
@@ -445,10 +452,10 @@ public sealed class InstrumentPanelStrip : Grid
         glyph[!Shape.StrokeProperty] = new DynamicResourceExtension("IconDefaultBrush");
         var button = new Button
         {
-            Name = "InstrumentHideButton", Content = glyph, Width = 20, Height = 20, MinWidth = 20, MinHeight = 20, Padding = new Thickness(0),
-            Margin = new Thickness(0, 2, 2, 0), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top,
-            Background = AvaloniaPalette.TransparentBrush, BorderThickness = new Thickness(0), Focusable = false,
-        };
+            Name = "InstrumentHideButton", Content = glyph, Width = 20, Height = 20, MinWidth = 20, MinHeight = 20,
+            HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top,
+            Background = AvaloniaPalette.TransparentBrush, BorderThickness = FretboardChromeMetrics.NoBorder, Focusable = false,
+        }.WithPadding(0, 0).WithMargin(0, FretboardChromeMetrics.CloseMarginTop, FretboardChromeMetrics.CloseMarginRight, 0);
         HotkeyTip.Set(button, "View.InstrumentPanel", "Hide fretboard / keyboard");
         button.Click += (_, _) => close?.Invoke();
         return button;

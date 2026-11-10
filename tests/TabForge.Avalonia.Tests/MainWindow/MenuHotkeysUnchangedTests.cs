@@ -27,7 +27,7 @@ public sealed class MenuHotkeysUnchangedTests
             "Tab.New|Ctrl+Alt+T|",
             "Tab.Close|Ctrl+W|",
             "Tab.Duplicate|Ctrl+Shift+D|",
-            "App.Preferences|F12|",
+            "App.Preferences|Ctrl+OemComma|F12",
             "App.Shortcuts|F1|",
             "Edit.Undo|Ctrl+Z|",
             "Edit.Redo|Ctrl+Y|",

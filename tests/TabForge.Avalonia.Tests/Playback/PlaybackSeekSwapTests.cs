@@ -16,6 +16,9 @@ namespace TabForge.Avalonia.Tests;
 /// Does not own: the rebuild itself (PlaybackSeekRebuild) or the session (AvaloniaPlaybackSessionTests).
 /// Tests: this class.
 /// </summary>
+/// <remarks>[Collection(TimingCollection.Name)] runs this alone so scheduler contention cannot starve its dispatches.</remarks>
+/// <seealso cref="TimingCollection"/>
+[Collection(TimingCollection.Name)]   // pumps a wall-clock engine: run alone so scheduler contention cannot starve the dispatches
 public class PlaybackSeekSwapTests
 {
     private const int PlayBeforeSeekMs = 1500;
@@ -45,21 +48,22 @@ public class PlaybackSeekSwapTests
         engine.Start(song, new PlaybackOptions { LoopEndBar = song.Tracks.Max(t => t.Measures.Count) - 1 }, _ => { }, () => { });
         Thread.Sleep(PlayBeforeSeekMs);
         var before = engine.Timeline;
+        output.Reset();
 
         engine.Seek(song, SeekBar, 0);
         // The swap must cope without the pending seek (a seek taken on the old timeline just before the rebuild was queued leaves none).
         typeof(PlaybackEngine).GetField("_pendingSeek", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(engine, null);
         var wait = Stopwatch.StartNew();
         while (ReferenceEquals(engine.Timeline, before) && wait.ElapsedMilliseconds < SwapWaitMs) Thread.Sleep(1);
-        output.Reset();
         var rebuilt = engine.Timeline!;
         Assert.NotSame(before, rebuilt);
-        Thread.Sleep(ListenMs);
-        var stillPlaying = engine.IsPlaying;
-        engine.Stop();
-
+        // Poll for the dispatches rather than a fixed sleep: the count must arrive, not just be due.
         var from = rebuilt.PlayFromMs;
         var expected = rebuilt.Events.Count(e => e.IsNoteOn && !e.IsMetronome && !e.IsSetup && e.TimeMs >= from && e.TimeMs < from + CheckedSpanMs);
+        var listen = Stopwatch.StartNew();
+        while (output.NoteOns < expected && listen.ElapsedMilliseconds < ListenMs) Thread.Sleep(10);
+        var stillPlaying = engine.IsPlaying;
+        engine.Stop();
         Assert.True(stillPlaying, "the scheduler kept running after the swap");
         Assert.True(expected > 0);
         Assert.True(output.NoteOns >= expected, $"sent {output.NoteOns} note-ons after the swap, the timeline has {expected} in its first {CheckedSpanMs} ms");

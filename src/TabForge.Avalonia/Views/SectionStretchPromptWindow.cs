@@ -17,7 +17,7 @@ using Avalonia.Automation;
 namespace TabForge.Avalonia.Views;
 
 /// <summary>
-/// The "Stretch Chorus by 4 bars?" prompt: a muted line (where the section and the next one end up), four clickable radio cards (the backward prompt has a fifth, add a new named section, with name and colour fields inside it) (add empty bars, default; repeat the section's last bars; add a repeat sign,
+/// The "Stretch Chorus by 4 bars?" prompt: a muted line (where the section and the next one end up), four clickable radio cards (the backward prompt has a fifth, add a new named section second, with name and colour fields inside it) (add empty bars, default; repeat the section's last bars; add a repeat sign,
 /// disabled with a reason line when a repeat is in the way; stop at the next section), "Remember my choice" with its hint and Cancel / Stretch. Enter stretches, Esc cancels.
 /// <see cref="Answer"/> is null on cancel.
 /// Owns: the window's controls and reading them back. Does not own: the words (SectionStretchPromptPresenter), the edit (SectionStretch) or the stored setting.
@@ -26,7 +26,7 @@ namespace TabForge.Avalonia.Views;
 public sealed class SectionStretchPromptWindow : Window
 {
     private static SectionStretchMode[] ForwardModes => new[] { SectionStretchMode.AddEmpty, SectionStretchMode.RepeatLast, SectionStretchMode.AddRepeatSign, SectionStretchMode.Stop };
-    private static SectionStretchBackMode[] BackModes => new[] { SectionStretchBackMode.AddEmpty, SectionStretchBackMode.RepeatFirst, SectionStretchBackMode.TakeFromPrevious, SectionStretchBackMode.NewSection, SectionStretchBackMode.Stop };
+    private static SectionStretchBackMode[] BackModes => new[] { SectionStretchBackMode.AddEmpty, SectionStretchBackMode.NewSection, SectionStretchBackMode.RepeatFirst, SectionStretchBackMode.TakeFromPrevious, SectionStretchBackMode.Stop };
     private readonly List<RadioCard> _cards = new();
     private readonly CheckBox _remember;
     private int _choice = -1;
@@ -57,9 +57,9 @@ public sealed class SectionStretchPromptWindow : Window
     public SectionStretchPromptWindow(SectionStretchBackQuestion question) : this(true, SectionStretchBackPromptPresenter.Title(question), SectionStretchBackPromptPresenter.Body(question), new (string, string, string, string?)[]
     {
         ("Add", SectionStretchBackPromptPresenter.AddTitle(question), SectionStretchBackPromptPresenter.AddHint, null),
+        ("NewSection", SectionStretchBackPromptPresenter.NewSectionTitle(question), SectionStretchBackPromptPresenter.NewSectionHint(question), null),
         ("Repeat", SectionStretchBackPromptPresenter.RepeatTitle(question), SectionStretchBackPromptPresenter.RepeatHint(question), null),
         ("Take", SectionStretchBackPromptPresenter.TakeTitle(question), SectionStretchBackPromptPresenter.TakeHint(question), SectionStretchBackPromptPresenter.TakeConflict(question)),
-        ("NewSection", SectionStretchBackPromptPresenter.NewSectionTitle(question), SectionStretchBackPromptPresenter.NewSectionHint(question), null),
         ("Stop", SectionStretchBackPromptPresenter.StopTitle(question), SectionStretchBackPromptPresenter.StopHint, null),
     }) { }
 

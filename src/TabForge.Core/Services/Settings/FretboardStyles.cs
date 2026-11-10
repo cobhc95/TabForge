@@ -92,10 +92,24 @@ public static class FretboardStyles
         "Pearl white", "Pearl cream", "Ivory", "Gold pearl", "Black pearl", "Pink pearl", "Abalone blue", "Abalone green", "Paua", "Black pearloid",
     };
 
-    /// <summary>The palette token of an inlay material's own colour ("Inlay" plus each word of the name capitalised, e.g. "Pearl cream" is
-    /// InlayPearlCream; palette names are case-sensitive): the tint over its grain and its flat colour when the texture is missing. An unknown
+    /// <summary>The palette token of an inlay material's own colour (e.g. "Pearl cream" is InlayPearlCream; palette names are case-sensitive): the tint over its grain and its flat colour when the texture is missing. An unknown
     /// name takes the first material's.</summary>
-    public static string InlayToken(string? material) =>
+    public static string InlayToken(string? material) => material switch
+    {
+        "Pearl white" => "InlayPearlWhite",
+        "Pearl cream" => "InlayPearlCream",
+        "Ivory" => "InlayIvory",
+        "Gold pearl" => "InlayGoldPearl",
+        "Black pearl" => "InlayBlackPearl",
+        "Pink pearl" => "InlayPinkPearl",
+        "Abalone blue" => "InlayAbaloneBlue",
+        "Abalone green" => "InlayAbaloneGreen",
+        "Paua" => "InlayPaua",
+        "Black pearloid" => "InlayBlackPearloid",
+        _ => PickDefaultToken(material),
+    };
+
+    private static string PickDefaultToken(string? material) =>
         "Inlay" + string.Concat(Pick(InlayMaterials, material, InlayMaterials[0]).Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(word => char.ToUpperInvariant(word[0]) + word[1..]));
 
     /// <summary>How strongly a material's own colour tints its grain (the grain stays visible under it).</summary>

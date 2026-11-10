@@ -87,10 +87,11 @@ public sealed class VideoExportFinishTests
     public async Task ARealMediaFoundation4kExportFinishesOffTheUiThread(string encoderChoice)
     {
         if (!OperatingSystem.IsWindows()) return;
+        const int w = 3840, h = 2160, frames = 120;
+        if (encoderChoice == "Auto" && !HardwareUsable(w, h, Fps)) return;   // the registered hardware encoder encodes nothing on some drivers
         var dir = Path.Combine(Path.GetTempPath(), "claude", "tf-real-4k-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         var mp4 = Path.Combine(dir, "real4k60-" + encoderChoice + ".mp4");
-        const int w = 3840, h = 2160, frames = 120;
         var stall = VideoEncoderFinisher.StallAllowance(w, h, Fps);
         using var encoder = VideoEncoderFactory.Open(mp4, w, h, Fps, new VideoAudioFormat(Rate, 2), options: new VideoEncoderOptions(encoderChoice) { FinalizeTimeout = stall });
         var pixels = new byte[w * h * 4];
@@ -118,6 +119,7 @@ public sealed class VideoExportFinishTests
     public async Task ARealExportThroughTheFlowFinishes(int w, int h, string encoderChoice)
     {
         if (!OperatingSystem.IsWindows()) return;
+        if (encoderChoice == "Hardware" && !HardwareUsable(w, h, Fps)) return;   // the registered hardware encoder encodes nothing on some drivers
         var dir = Path.Combine(Path.GetTempPath(), "claude", "tf-real-export-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         const int frames = 120;
@@ -132,6 +134,14 @@ public sealed class VideoExportFinishTests
             File.WriteAllText(Path.Combine(dir, "result.txt"), $"{w}x{h} {encoderChoice}: {frames} frames in {clock.ElapsedMilliseconds} ms, {new FileInfo(mp4).Length} bytes");
         }
         finally { File.Delete(wav); }
+    }
+
+    /// <summary>Whether the machine's hardware H264 encoder actually encodes (a bare registration check is not enough: some drivers encode nothing).</summary>
+    private static bool HardwareUsable(int w, int h, int fps)
+    {
+        if (!Services.Video.Mf.HardwareH264Available()) return false;
+        var probe = Path.Combine(Path.GetTempPath(), "tf-hwprobe-" + Guid.NewGuid().ToString("N") + ".mp4");
+        return Services.Video.VideoEncoderFactory.WithHardwareProbe(new Services.Video.VideoEncoderOptions(Services.Video.VideoEncoderChoices.Auto), probe, w, h, fps).HardwareProbe == Services.Video.VideoEncoderOptions.ProbePass;
     }
 
     [Fact]

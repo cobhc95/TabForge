@@ -33,7 +33,7 @@ internal sealed class FretboardLegendToggle : Button
         Name = "FretboardLegendToggle";
         IsVisible = false;
         Focusable = false;
-        Padding = new Thickness(0);
+        this.WithPadding(0, 0);
         MinWidth = MinHeight = 0;
         HorizontalContentAlignment = global::Avalonia.Layout.HorizontalAlignment.Center;
         VerticalContentAlignment = global::Avalonia.Layout.VerticalAlignment.Center;
@@ -41,7 +41,7 @@ internal sealed class FretboardLegendToggle : Button
         _icon.Child = _glyph;
         _chip.Child = _icon;
         Content = _chip;
-        BorderThickness = new Thickness(0);
+        BorderThickness = FretboardChromeMetrics.NoBorder;
         Background = AvaloniaPalette.TransparentBrush;   // a brush, so the whole area around the chip takes the click
         HoverShade.Attach(this, hovered => Rest(hovered));
         Click += (_, _) => Flip();
@@ -60,7 +60,7 @@ internal sealed class FretboardLegendToggle : Button
         _chip.Width = rect.Width;
         _chip.Height = rect.Height;
         _chip.CornerRadius = new CornerRadius(minimised ? rect.Width / 2 : 4 * unit);
-        _chip.BorderThickness = minimised ? FretboardChromeMetrics.PillBorder : new Thickness(1);
+        _chip.BorderThickness = FretboardChromeMetrics.PillBorder;
         _glyph.Data = Geometry.Parse(minimised ? FretboardChromeMetrics.PillIconPath : ChevronPath);
         _glyph.StrokeThickness = FretboardChromeMetrics.PillStroke;
         _glyph.Width = _glyph.Height = minimised ? 24 : 14;

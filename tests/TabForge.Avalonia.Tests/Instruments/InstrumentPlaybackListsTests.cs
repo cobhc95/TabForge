@@ -74,16 +74,35 @@ public class InstrumentPlaybackListsTests
     }
 
     [Fact]
-    public void UpcomingStopsAfterThePreviewHorizonPlusTwoMovements()
+    public void UpcomingStopsAfterThePreviewHorizonNotes()
     {
-        // Ten single-note movements; horizon 1 reads three movements: next plus two more.
+        // Ten single-note movements; horizon 1 shows one note ahead in total (the next movement, nothing after it).
         var notes = Enumerable.Range(0, 10).Select(i => Note(1000 + i * 100, 50, i % 6)).ToArray();
         var snapshot = new InstrumentPlaybackSnapshot();
 
         InstrumentPlaybackLists.Fill(snapshot, notes, 0, previewHorizon: 1);
 
         Assert.Single(snapshot.Next);
-        Assert.Equal(2, snapshot.Upcoming.Count);
+        Assert.Empty(snapshot.Upcoming);
+
+        InstrumentPlaybackLists.Fill(snapshot, notes, 0, previewHorizon: 4);
+
+        Assert.Single(snapshot.Next);
+        Assert.Equal(3, snapshot.Upcoming.Count);
+        Assert.Equal(new[] { 1, 2, 3 }, snapshot.UpcomingDepth);
+    }
+
+    [Fact]
+    public void TheNextMovementIsAlwaysShownWholePastTheHorizon()
+    {
+        // A three-note chord is the next movement; the horizon counts notes, so one more note follows it.
+        var notes = new[] { Note(1000, 100, 0), Note(1000, 100, 1), Note(1000, 100, 2), Note(2000, 100, 3), Note(3000, 100, 4) };
+        var snapshot = new InstrumentPlaybackSnapshot();
+
+        InstrumentPlaybackLists.Fill(snapshot, notes, 0, previewHorizon: 4);
+
+        Assert.Equal(3, snapshot.Next.Count);
+        Assert.Single(snapshot.Upcoming);
     }
 
     [Fact]

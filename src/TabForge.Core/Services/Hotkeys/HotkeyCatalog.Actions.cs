@@ -34,7 +34,7 @@ public static partial class HotkeyCatalog
         new("Tab.New", CategoryFile, "New tab", "Ctrl+Alt+T", "Open another score in a new tab."),
         new("Tab.Close", CategoryFile, "Close tab", "Ctrl+W", "Close the active tab."),
         new("Tab.Duplicate", CategoryFile, "Duplicate tab", "Ctrl+Shift+D", "Duplicate the active tab as an unsaved copy."),
-        new("App.Preferences", CategoryFile, "Preferences", "F12", "Open this settings window."),
+        new("App.Preferences", CategoryFile, "Preferences", "Ctrl+OemComma", "Open this settings window.", "F12"),
         new("App.Shortcuts", CategoryFile, "Keyboard shortcuts", "F1", "Show the shortcut reference."),
 
         new("Edit.Undo", CategoryEdit, "Undo", "Ctrl+Z", "Undo the last edit."),
