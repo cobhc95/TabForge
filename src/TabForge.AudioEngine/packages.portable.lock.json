@@ -80,9 +80,6 @@
           "NLayer": "[3.0.0, )",
           "NVorbis": "[0.10.5, )"
         }
-      },
-      "tabforge.sf2synth": {
-        "type": "Project"
       }
     },
     "net10.0/linux-x64": {},

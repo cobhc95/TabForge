@@ -37,7 +37,4 @@
     <PackageReference Include="NAudio" Version="2.2.1" />
     <PackageReference Include="SoundTouch.Net" Version="2.3.2" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\TabForge.Sf2Synth\TabForge.Sf2Synth.csproj" />
-  </ItemGroup>
 </Project>

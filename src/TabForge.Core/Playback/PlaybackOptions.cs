@@ -56,8 +56,6 @@ public sealed class PlaybackOptions
     public int MetronomeSubdivision { get; set; } = 1;
     /// <summary>Playback-only timelines can precompile all subdivision choices for seamless live changes.</summary>
     public bool LiveMetronomeEvents { get; set; }
-    /// <summary>Playback and render only: the app's pass that plays flat notes like a player (null: as written; exports never set it).</summary>
-    public ITimelineHumanizer? Humanizer { get; set; }
     /// <summary>Longest a let-ring note may ring on, in milliseconds.</summary>
     public double LetRingCapMs { get; set; } = 2000;
     /// <summary>

@@ -39,10 +39,7 @@ public sealed class MainWindowFileExports
         _hasSelection = hasSelection;
         _renderSettings = settings?.Render ?? new();
         _videoSettings = settings?.Video ?? new();
-        _humanizer = settings?.Plugins is { } plugins ? new Transport.SynthHumanizePass(plugins) : null;
     }
-
-    private readonly Transport.SynthHumanizePass? _humanizer;
 
     /// <summary>The settings the Render dialog opens with.</summary>
     public RenderSettings RenderSettings => _renderSettings;
@@ -119,7 +116,7 @@ public sealed class MainWindowFileExports
             Runner is { Engine: not null } runner ? (plan, progress, cancel) => Announce("Render", plan.MasterFile ?? plan.Stems.Values.FirstOrDefault(), () => runner.Run(song, plan, _renderSettings, window ?? owner, progress, cancel), r => r.Files.Count > 0 ? r.Files[0].Path : null) : null;
         window = new RenderWindow(project, _renderSettings, hasSelection: _hasSelection(), openVideoExport: () => ShowVideo(song, owner),
             pickFolder: start => _dialogs.PickFolderAsync(new FileDialogOptions { Key = TabForge.Services.DialogKeys.RenderFolder, Title = "Choose the render folder", InitialDirectory = start }, owner),
-            run: run, mp3Available: run is null || RenderJob.Mp3Available(), selection: _hasSelection() ? Selection() : null, loop: song.Selection.LoopSnapshot(), snip: song.Selection.Snapshot(), humanizer: _humanizer);
+            run: run, mp3Available: run is null || RenderJob.Mp3Available(), selection: _hasSelection() ? Selection() : null, loop: song.Selection.LoopSnapshot(), snip: song.Selection.Snapshot());
         window.ShowDialog(owner);
     }
 

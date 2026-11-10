@@ -3,8 +3,6 @@ using System.Collections.Immutable;
 using TabForge.Audio.Contracts;
 using MeltySynth;
 using TabForge.AudioEngine.Plugins;
-using TabForge.Sf2Synth.Guitar;
-using Sf2Synthesizer = TabForge.Sf2Synth.Synthesizer;
 
 namespace TabForge.AudioEngine.Synth;
 
@@ -19,22 +17,16 @@ namespace TabForge.AudioEngine.Synth;
 public sealed class GmSynth : IPluginInstance
 {
     private Synthesizer? _synth;
-    // The experimental TabForge Synth (own SF2 engine + guitar layer) in place of MeltySynth when the bank choice carries its SoundFont.
-    private Sf2Synthesizer? _tfs;
-    // Without a readable SoundFont the experimental choice keeps MeltySynth and lays the guitar layer over it.
-    private GuitarLayer? _layer;
     private int _bankVersion;
     private readonly GmBank _bank;
-    private sealed record Prepared(Synthesizer? Synth, Sf2Synthesizer? Tfs, GuitarLayer? Layer, int Version);
+    private sealed record Prepared(Synthesizer? Synth, int Version);
     private Prepared? _pending;
 
     /// <param name="bank">The sound bank choice of the engine session; null = a bank of its own (Windows GM).</param>
     public GmSynth(int sampleRate, int maxBlock, GmBank? bank = null)
     {
         _bank = bank ?? new GmBank();
-        _synth = NewSynth(sampleRate, _bank.Current, out _bankVersion);
-        _tfs = NewTfs(sampleRate, _bank.Current);
-        _layer = NewLayer(sampleRate, _bank.Current);
+        _synth = _bank.Current.Silent ? null : NewSynth(sampleRate, _bank.Current, out _bankVersion);
         SampleRate = sampleRate;
         _bank.Changed += PrepareBank;
         _ = maxBlock;
@@ -44,22 +36,8 @@ public sealed class GmSynth : IPluginInstance
     // Does not own: channel state (only touched by the callback). Its replay happens after publication at the block boundary.
     private void PrepareBank(GmBank.Choice choice)
     {
-        // Only the amp or cabinet changed: the live layer loads them here and fades them in at a block boundary; voices keep ringing.
-        if (_tfs is { } tfs) tfs.Options = tfs.Options with { Humanize = choice.Humanize };   // live, safe mid-note
-        if (choice.RigOnly && (_tfs?.Layer as GuitarLayer ?? _layer) is { } live) { live.LoadRig(choice.Amp, choice.Cab); return; }
-        Interlocked.Exchange(ref _pending, new Prepared(NewSynth(SampleRate, choice, out _), NewTfs(SampleRate, choice), NewLayer(SampleRate, choice), choice.Version));
-    }
-
-    private static Sf2Synthesizer? NewTfs(int sampleRate, GmBank.Choice bank) => bank.Sf2 is { } font
-        ? new Sf2Synthesizer(font, sampleRate, MaxVoices, GmSynthTuning.ReverbAndChorus) { MasterVolume = bank.MasterVolume, Layer = Rigged(new GuitarLayer(sampleRate), bank), Options = new() { Humanize = bank.Humanize } }
-        : null;
-
-    private static GuitarLayer? NewLayer(int sampleRate, GmBank.Choice bank) => bank.Experimental && bank.Sf2 is null && !bank.Silent ? Rigged(new GuitarLayer(sampleRate) { Gain = bank.MasterVolume }, bank) : null;
-
-    private static GuitarLayer Rigged(GuitarLayer layer, GmBank.Choice bank)
-    {
-        if (bank.Amp.Length + bank.Cab.Length > 0) layer.LoadRig(bank.Amp, bank.Cab);
-        return layer;
+        var synth = choice.Silent ? null : NewSynth(SampleRate, choice, out _);
+        Interlocked.Exchange(ref _pending, new Prepared(synth, choice.Version));
     }
 
     /// <summary>
@@ -69,12 +47,11 @@ public sealed class GmSynth : IPluginInstance
     public const int MaxVoices = 32;
 
     /// <summary>The live synthesizer's voice limit (self-test); 0 while the bank is silence.</summary>
-    public int Polyphony => _synth?.MaximumPolyphony ?? _tfs?.MaximumPolyphony ?? 0;
+    public int Polyphony => _synth?.MaximumPolyphony ?? 0;
 
-    private static Synthesizer? NewSynth(int sampleRate, GmBank.Choice bank, out int version)
+    private static Synthesizer NewSynth(int sampleRate, GmBank.Choice bank, out int version)
     {
         version = bank.Version;
-        if (bank.Silent || bank.Sf2 is not null) return null;
         var settings = new SynthesizerSettings(sampleRate)
         {
             BlockSize = 64,
@@ -101,23 +78,18 @@ public sealed class GmSynth : IPluginInstance
             // Sound engine None: no synthesizer at all (the next non-silent bank rebuilds it below).
             var dropped = _synth;
             _synth = null;
-            _tfs = null;
-            _layer = null;
             _bankVersion = _bank.Current.Version;
             SampleRate = rate;
             try { dropped?.NoteOffAll(true); } catch (Exception) { } // swallow: best-effort note-off on a replaced synth
             return;
         }
-        if (rate == SampleRate && (_synth is not null || _tfs is not null) && _bankVersion == _bank.Current.Version) return;
+        if (rate == SampleRate && _synth is not null && _bankVersion == _bank.Current.Version) return;
         // MeltySynth's Synthesizer holds no unmanaged resources of its own (the SoundFont bank is shared via
         // DlsToSoundFont's cache); dropping the reference is the dispose. Silence the old instance first so no
         // voice survives the swap (Reconfigure runs with audio stopped, but a render may have left voices ringing).
         var old = _synth;
         try { old?.NoteOffAll(true); } catch (Exception) { } // swallow: best-effort note-off on a replaced synth
-        _tfs?.NoteOffAll(true);
         _synth = NewSynth(rate, _bank.Current, out _bankVersion);
-        _tfs = NewTfs(rate, _bank.Current);
-        _layer = NewLayer(rate, _bank.Current);
         SampleRate = rate;
         ReplayChannelState();
     }
@@ -130,7 +102,7 @@ public sealed class GmSynth : IPluginInstance
     /// <summary>Offline render start: a clean synth (no voices, default channels, block phase 0), so a render never depends on what played before and repeats bit for bit. The song's own events set programs and controllers again.</summary>
     public void SetOfflineMode(bool offline)
     {
-        if (offline) { _sProgram = (int[])_program.Clone(); _sCc = (int[,])_cc.Clone(); _sBend = (int[])_bend.Clone(); _synth?.Reset(); _tfs?.Reset(); _layer?.Reset(); return; }
+        if (offline) { _sProgram = (int[])_program.Clone(); _sCc = (int[,])_cc.Clone(); _sBend = (int[])_bend.Clone(); _synth?.Reset(); return; }
         if (_sProgram is not null) { Array.Copy(_sProgram, _program, 16); Array.Copy(_sCc!, _cc, _cc.Length); Array.Copy(_sBend!, _bend, 16); _sProgram = null; }
         // Back to realtime: the reset wiped the programs / controllers the live song had already sent (they are not
         // resent mid-song), so replay the remembered channel state or every track falls back to piano.
@@ -139,24 +111,16 @@ public sealed class GmSynth : IPluginInstance
 
     private void ReplayChannelState()
     {
-        if (_synth is null && _tfs is null) return;
+        if (_synth is null) return;
         for (var ch = 0; ch < 16; ch++)
         {
             // Bank select (CC0, CC32) first: a program change picks its sound from the bank that is selected when it arrives.
-            if (_cc[ch, 0] >= 0) Send(ch, 0xB0, 0, _cc[ch, 0]);
-            if (_cc[ch, 32] >= 0) Send(ch, 0xB0, 32, _cc[ch, 32]);
-            if (_program[ch] >= 0) Send(ch, 0xC0, _program[ch], 0);   // never set: the synth's own default (the drum kit on channel 10) stays
-            for (var c = 1; c < 128; c++) if (c != 32 && _cc[ch, c] >= 0) Send(ch, 0xB0, c, _cc[ch, c]);
-            if (_bend[ch] >= 0) Send(ch, 0xE0, _bend[ch] & 0x7F, _bend[ch] >> 7);
+            if (_cc[ch, 0] >= 0) _synth.ProcessMidiMessage(ch, 0xB0, 0, _cc[ch, 0]);
+            if (_cc[ch, 32] >= 0) _synth.ProcessMidiMessage(ch, 0xB0, 32, _cc[ch, 32]);
+            if (_program[ch] >= 0) _synth.ProcessMidiMessage(ch, 0xC0, _program[ch], 0);   // never set: the synth's own default (the drum kit on channel 10) stays
+            for (var c = 1; c < 128; c++) if (c != 32 && _cc[ch, c] >= 0) _synth.ProcessMidiMessage(ch, 0xB0, c, _cc[ch, c]);
+            if (_bend[ch] >= 0) _synth.ProcessMidiMessage(ch, 0xE0, _bend[ch] & 0x7F, _bend[ch] >> 7);
         }
-    }
-
-    private void Send(int channel, int command, int data1, int data2)
-    {
-        if (command == 0x90 && data2 > 0 && _layer?.Owns(channel) == true) { _layer.ProcessMidi(channel, command, data1, data2); return; }
-        _layer?.ProcessMidi(channel, command, data1, data2);
-        _synth?.ProcessMidiMessage(channel, command, data1, data2);
-        _tfs?.ProcessMidiMessage(channel, command, data1, data2);
     }
 
     private int[]? _sProgram, _sBend; private int[,]? _sCc;
@@ -171,36 +135,27 @@ public sealed class GmSynth : IPluginInstance
         if (Interlocked.Exchange(ref _pending, null) is { } prepared)
         {
             try { _synth?.NoteOffAll(true); } catch (Exception) { }   // swallow: best-effort note-off on the replaced synth
-            _tfs?.NoteOffAll(true);
             _synth = prepared.Synth;
-            _tfs = prepared.Tfs;
-            _layer = prepared.Layer;
             _bankVersion = prepared.Version;
             ReplayChannelState();
         }
-        if (_synth is null && _tfs is null) return;
+        var synth = _synth;
+        if (synth is null) return;
         var left = output[0].AsSpan(0, frames);
         var right = output[1].AsSpan(0, frames);
         var at = 0;
         foreach (var e in midi)
         {
             var frame = Math.Clamp(e.Frame, at, frames);
-            if (frame > at) { Render(left[at..frame], right[at..frame]); at = frame; }
+            if (frame > at) { synth.Render(left[at..frame], right[at..frame]); at = frame; }
             var command = e.Status & 0xF0;
             var chn = e.Status & 0x0F;
             if (command == 0xC0) _program[chn] = e.Data1;
             else if (command == 0xB0 && e.Data1 < 120) _cc[chn, e.Data1 & 0x7F] = e.Data2;
             else if (command == 0xE0) _bend[chn] = (e.Data1 & 0x7F) | ((e.Data2 & 0x7F) << 7);
-            if (command is >= 0x80 and <= 0xE0) Send(chn, command, e.Data1, e.Data2);
+            if (command is >= 0x80 and <= 0xE0) synth.ProcessMidiMessage(e.Status & 0x0F, command, e.Data1, e.Data2);
         }
-        if (at < frames) Render(left[at..], right[at..]);
-    }
-
-    private void Render(Span<float> left, Span<float> right)
-    {
-        if (_synth is not null) _synth.Render(left, right);
-        else _tfs!.Render(left, right);
-        _layer?.Render(left, right);
+        if (at < frames) synth.Render(left[at..], right[at..]);
     }
 
     public byte[]? GetState() => null;
@@ -213,7 +168,6 @@ public sealed class GmSynth : IPluginInstance
         _bank.Changed -= PrepareBank;
         Interlocked.Exchange(ref _pending, null);
         _synth?.NoteOffAll(true);
-        _tfs?.NoteOffAll(true);
     }
 }
 

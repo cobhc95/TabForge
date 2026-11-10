@@ -41,7 +41,6 @@ public sealed class RenderWindow : Window
 
     private readonly SongProject _project;
     private readonly RenderSettings _settings;
-    private readonly TabForge.Playback.ITimelineHumanizer? _humanizer;   // TabForge Synth's humanizer, as playback uses it
     private readonly bool _hasSelection;
     private readonly Action? _openVideoExport;
     private readonly List<MarkerModel> _sections;
@@ -80,10 +79,8 @@ public sealed class RenderWindow : Window
     /// <param name="mp3Available">Whether the MP3 encoder is there (RenderJob.Mp3Available); the MP3 formats are disabled without it.</param>
     public RenderWindow(SongProject project, RenderSettings settings, bool hasSelection, Action? openVideoExport, Func<string, Task<string?>>? pickFolder = null,
         Func<RenderPlan, IProgress<RenderProgressInfo>, CancellationToken, Task<RenderResult>>? run = null, bool mp3Available = true,
-        (int StartBar, int StartCell, int EndBar, int EndCell)? selection = null, LoopRegionSnapshot? loop = null, SelectionSnapshot? snip = null,
-        TabForge.Playback.ITimelineHumanizer? humanizer = null)
+        (int StartBar, int StartCell, int EndBar, int EndCell)? selection = null, LoopRegionSnapshot? loop = null, SelectionSnapshot? snip = null)
     {
-        _humanizer = humanizer;
         _snip = RenderSnip.Any(snip) ? snip : null;
         _loop = loop is { Has: true } ? loop : null;
         _project = project; _settings = settings; _hasSelection = hasSelection; _openVideoExport = openVideoExport; _pickFolder = pickFolder;
@@ -272,7 +269,7 @@ public sealed class RenderWindow : Window
     /// <summary>The compiled song, the range and the output paths for the current choices; null with the reason shown.</summary>
     private RenderPlan? RenderPlanNow()
     {
-        var timeline = RenderSpecBuilder.Compile(_project, _humanizer);
+        var timeline = RenderSpecBuilder.Compile(_project);
         var mode = (RenderBounds)Math.Max(0, _settings.Bounds);
         int startBar = _selection?.StartBar ?? 0, startCell = _selection?.StartCell ?? 0, endBar = _selection?.EndBar ?? 0, endCell = _selection?.EndCell ?? -1;
         if (mode == RenderBounds.TimeSelection && _loop is { } lp) (startBar, startCell, endBar, endCell) = (lp.StartBar, lp.StartCell, lp.EndBar, lp.EndCell);
@@ -289,7 +286,7 @@ public sealed class RenderWindow : Window
         {
             var snip = RenderSnip.Build(_project, _snip);
             snipped = snip.Project; snipMap = new(snip.Map);
-            timeline = RenderSpecBuilder.Compile(snipped, _humanizer);
+            timeline = RenderSpecBuilder.Compile(snipped);
             (startMs, endMs) = snipRange;
         }
         else (startMs, endMs) = RenderSpecBuilder.Bounds(timeline, mode, startBar, startCell, endBar, endCell, _settings.CustomStartSec, _settings.CustomEndSec);

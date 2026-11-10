@@ -58,7 +58,6 @@ public sealed class AvaloniaEngineEvents : IDisposable
     private readonly DeviceChangePause _devicePause = new();
     private string _routeKey;
     private string _soundEngine;
-    private string _rigKey = "|";
     private bool _disposed;
     private const long DeviceReadyCooldownMs = 1000;   // a flapping device raises DeviceReady in bursts: one resend per burst
     private long _lastDeviceReadyMs = long.MinValue / 2;
@@ -104,17 +103,6 @@ public sealed class AvaloniaEngineEvents : IDisposable
             _host.ShowStatus(OperatingSystem.IsWindows()
                 ? "The chosen Sound bank is not downloaded yet, so Windows GM plays. Settings > Audio & Plug-ins > Sound banks."
                 : "The chosen Sound bank is not downloaded yet, so there is no General MIDI sound. Settings > Audio & Plug-ins > Sound banks.");
-        NoteSynthRig();
-    }
-
-    /// <summary>TabForge Synth with an amp or cabinet file set: say what plays (or why the built-in part does), once per change. Files are checked off the UI thread.</summary>
-    private void NoteSynthRig()
-    {
-        var (p, amp, cab) = (_host.Plugins, _host.Plugins.SynthAmpPath, _host.Plugins.SynthCabPath);
-        var rig = SoundEngines.Resolve(p.SoundEngine) == SoundEngines.TabForgeSynth ? amp + "|" + cab : "|";
-        if (rig == _rigKey || (_rigKey = rig) == "|") return;
-        System.Threading.Tasks.Task.Run(() => TabForge.Sf2Synth.Guitar.GuitarLayer.DescribeRig(amp, cab))
-            .ContinueWith(t => { if (t.IsCompletedSuccessfully && !_disposed && _rigKey == rig) _ui.Post(() => _host.ShowStatus(t.Result)); });
     }
 
     /// <summary>The audio route settings changed: when one of them differs, the song shown is synced to the engine at once.

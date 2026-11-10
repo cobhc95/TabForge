@@ -80,24 +80,6 @@ public sealed class SoundEngineTests
     }
 
     [Fact]
-    public void TheExperimentalSynthIsOfferedButNeverTheDefault()
-    {
-        Assert.Contains(SoundEngines.TabForgeSynth, SoundEngines.All);
-        Assert.NotEqual(SoundEngines.TabForgeSynth, SoundEngines.Default);
-        Assert.Equal(SoundEngines.TabForgeSynth, SoundEngines.Resolve("tabforge-synth", windowsHost: true));
-        Assert.Equal(SoundEngines.TabForgeSynth, SoundEngines.Resolve(SoundEngines.TabForgeSynth, windowsHost: false));
-        var plugins = new PluginSettings { SoundEngine = SoundEngines.TabForgeSynth };
-        Assert.StartsWith(SoundEngines.TabForgeSynthPath, SoundFontStore.ActivePath(plugins));
-        Assert.False(SoundFontStore.ChosenButMissing(plugins));
-        Assert.False(SoundFontStore.ChosenButMissing(plugins, windowsHost: false));
-        var bank = new GmBank(windowsHost: true, bundledPath: Path.Combine(Path.GetTempPath(), "tabforge-no-such-bank", "GeneralUser-GS.sf2"));
-        Assert.True(bank.Select(SoundEngines.TabForgeSynthPath, out _));   // no SoundFont anywhere: the layer over Windows GM
-        Assert.True(bank.Current.Experimental && !bank.Current.Silent);
-        Assert.True(bank.Select("", out _));
-        Assert.False(bank.Current.Experimental);
-    }
-
-    [Fact]
     public void NoneRoundTripsAndWarnsAboutNothing()
     {
         var plugins = new PluginSettings { SoundEngine = SoundEngines.None };

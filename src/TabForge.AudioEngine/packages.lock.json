@@ -124,9 +124,6 @@
           "TabForge.AlphaTab": "[1.8.4-tabforge.4, )",
           "TabForge.Audio.Contracts": "[0.9.2, )"
         }
-      },
-      "tabforge.sf2synth": {
-        "type": "Project"
       }
     },
     "net10.0-windows7.0/win-x64": {

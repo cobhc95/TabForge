@@ -416,8 +416,7 @@
           "NAudio": "[2.2.1, )",
           "SoundTouch.Net": "[2.3.2, )",
           "TabForge.Audio.Contracts": "[0.9.2, )",
-          "TabForge.Core": "[0.9.2, )",
-          "TabForge.Sf2Synth": "[0.9.2, )"
+          "TabForge.Core": "[0.9.2, )"
         }
       },
       "tabforge.core": {
@@ -427,9 +426,6 @@
           "TabForge.AlphaTab": "[1.8.4-tabforge.4, )",
           "TabForge.Audio.Contracts": "[0.9.2, )"
         }
-      },
-      "tabforge.sf2synth": {
-        "type": "Project"
       }
     }
   }
