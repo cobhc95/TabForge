@@ -151,7 +151,16 @@ public sealed partial class PlaybackEngine : IDisposable
     private readonly Dictionary<(int Device, int Channel, int Note), long> _previewTokens = new();
     private long _previewSerial;
 
-    public async Task PreviewNoteAsync(int deviceId, int channel = 0, int program = 24, int note = 64, int ms = 350)
+    public Task PreviewNoteAsync(int deviceId, int channel = 0, int program = 24, int note = 64, int ms = 350) =>
+        PreviewCoreAsync(deviceId, channel, note, ms, _output.Send, program);
+
+    private const int GmDrumChannel = 9;
+
+    /// <summary>A Composer groove audition note on the built-in drum sound (see <see cref="IMidiOutput.SendDrumAudition"/>): no program change, no song track's route.</summary>
+    public Task PreviewDrumNoteAsync(int deviceId, int note, int ms = 350) =>
+        PreviewCoreAsync(deviceId, GmDrumChannel, note, ms, _output.SendDrumAudition, program: null);
+
+    private async Task PreviewCoreAsync(int deviceId, int channel, int note, int ms, Action<int, int, int, int> send, int? program)
     {
         var ch = channel & 0x0F;
         var pitch = Math.Clamp(note, 0, MidiLimits.Max);
@@ -162,10 +171,10 @@ public sealed partial class PlaybackEngine : IDisposable
             token = ++_previewSerial;
             var retrigger = _previewTokens.ContainsKey(key);
             _previewTokens[key] = token;
-            if (retrigger) _output.Send(deviceId, 0x80 | ch, pitch, 0);
-            _output.Send(deviceId, 0xC0 | ch, Math.Clamp(program, 0, MidiLimits.Max), 0);
+            if (retrigger) send(deviceId, 0x80 | ch, pitch, 0);
+            if (program is { } p) _output.Send(deviceId, 0xC0 | ch, Math.Clamp(p, 0, MidiLimits.Max), 0);
             var velocity = Math.Clamp((int)Math.Round(100 * Volatile.Read(ref _masterVolume) / 100.0), 1, MidiLimits.Max);
-            _output.Send(deviceId, 0x90 | ch, pitch, velocity);
+            send(deviceId, 0x90 | ch, pitch, velocity);
         }
         try { await Task.Delay(Math.Clamp(ms, 60, 8000)).ConfigureAwait(false); }
         finally
@@ -174,7 +183,7 @@ public sealed partial class PlaybackEngine : IDisposable
                 if (_previewTokens.TryGetValue(key, out var current) && current == token)
                 {
                     _previewTokens.Remove(key);
-                    _output.Send(deviceId, 0x80 | ch, pitch, 0);
+                    send(deviceId, 0x80 | ch, pitch, 0);
                 }
         }
     }

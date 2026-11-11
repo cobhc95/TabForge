@@ -20,6 +20,8 @@ public interface IMidiOutput : IDisposable
     void SendLive(int deviceId, int status, int data1, int data2) => Send(deviceId, status, data1, data2);
     /// <summary>A metronome or count-in click: never routed to a song channel's engine slot (clicks share channel 9 with the drums).</summary>
     void SendMetronome(int deviceId, int status, int data1, int data2) => Send(deviceId, status, data1, data2);
+    /// <summary>A Composer groove audition note on the built-in drum sound, never a song track's route (drums share channel 9 with the tracks on it).</summary>
+    void SendDrumAudition(int deviceId, int status, int data1, int data2) => Send(deviceId, status, data1, data2);
     /// <summary>Turns all notes off on every open device (panic). Must be safe to call repeatedly.</summary>
     void ResetAll();
     void Close();

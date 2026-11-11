@@ -2,6 +2,13 @@
 
 TabForge is actively developed; please report anything odd on the Issues page.
 
+## 0.9.5
+
+### Fixed
+
+- GM sound stays off when a VST instrument plays the track after a song is reopened. Before, the automatic "GM sound" tick was not saved, so a reopened song with Superior Drummer (or any VST instrument) kept GM sound ticked and played alongside the instrument. Automatic and manual GM choices are now saved in the song, so reopening it keeps the same state.
+- Composer groove audition always plays the built-in drum kit. On Linux it could play the sound of whichever track was on the drum channel (channel 10), such as a VST drum kit with FX. Auditioning now goes to the built-in drum sound and never through a track's route, as metronome clicks already do.
+
 ## 0.9.4
 
 ### Added

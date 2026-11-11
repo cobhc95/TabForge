@@ -127,6 +127,22 @@ public sealed partial class RoutedMidiOutput : IMidiOutput
         Send(deviceId, status, data1, data2, metronome: true);   // the click is exempt from SoundNone: its fallback is the Windows MIDI synth
     }
 
+    /// <summary>
+    /// A Composer groove audition note: the built-in drum sound, the click's own engine slot (<see cref="AudioEngineClient.Click"/>), so no song
+    /// track's route, sound source, FX, mute, solo, volume or pan applies. Without that slot it goes straight to the Windows MIDI device, never
+    /// through a track's route; SoundNone still silences it.
+    /// </summary>
+    public void SendDrumAudition(int deviceId, int status, int data1, int data2)
+    {
+        if (status < 0xF0 && _engine.SlotOf(_engine.Click.Track) is var clickSlot and >= 0)
+        {
+            WriteToEngine(clickSlot, status, data1, data2);
+            return;
+        }
+        if (Silenced(deviceId, -1, metronome: false)) return;
+        SendWindows(deviceId, status, data1, data2);
+    }
+
     /// <summary>One channel message to an engine slot, stamped with the engine's latency compensation.</summary>
     private void WriteToEngine(int slot, int status, int data1, int data2)
     {

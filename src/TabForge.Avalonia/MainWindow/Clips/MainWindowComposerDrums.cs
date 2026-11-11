@@ -14,7 +14,7 @@ using TabForge.Services;
 
 namespace TabForge.Avalonia;
 
-// Owns: the window side of the Composer drum samples: auditioning one on a loop at the song's tempo through the test-note engine (one sample at a
+// Owns: the window side of the Composer drum samples: auditioning one on a loop at the song's tempo on the built-in drum sound (one sample at a
 //   time, the panel told of every step and of the stop), and the drag onto the arrangement as a real drag and drop (an in-app data format, the same
 //   lane highlight and landing ghost as an audio-file drop), the Tab/MIDI lane prompt with its remembered choice, and the post-edit refresh.
 // Does not own: the samples (DrumSamples), the panel and its rows (ComposerPanel), the landing edit (DrumSampleDrop), the prompt window
@@ -87,7 +87,7 @@ internal sealed class MainWindowComposerDrums
         var lengthMs = Math.Max(30, (int)StepInterval().TotalMilliseconds);
         if (_playback is not null)
             foreach (var midi in sample.NotesAt(step))
-                UiTasks.Forget(_playback.PlayTestNoteAsync(-1, 9, 0, midi, lengthMs), "Drum audition", _status);
+                UiTasks.Forget(_playback.PlayDrumAuditionAsync(-1, midi, lengthMs), "Drum audition", _status);
         _onStep?.Invoke(step);
         _step++;
     }

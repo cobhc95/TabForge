@@ -203,11 +203,18 @@ public sealed class AvaloniaPlaybackSessions : IDisposable
     internal const int TestNoteLengthMs = 350;
 
     /// <summary>Plays a short test note on a MIDI output through the test engine; completes at once when no engine is available.</summary>
-    public Task PlayTestNoteAsync(int deviceId, int channel, int program, int note, int lengthMs = TestNoteLengthMs)
+    public Task PlayTestNoteAsync(int deviceId, int channel, int program, int note, int lengthMs = TestNoteLengthMs) =>
+        TestNoteEngine() is { } engine ? engine.PreviewNoteAsync(deviceId, channel, program, note, lengthMs) : Task.CompletedTask;
+
+    /// <summary>Plays one Composer groove note on the built-in drum sound through the test engine, never a song track's sound; completes at once when no engine is available.</summary>
+    public Task PlayDrumAuditionAsync(int deviceId, int note, int lengthMs) =>
+        TestNoteEngine() is { } engine ? engine.PreviewDrumNoteAsync(deviceId, note, lengthMs) : Task.CompletedTask;
+
+    private IPlaybackEngine? TestNoteEngine()
     {
-        if (_createEngine is null) return Task.CompletedTask;
+        if (_createEngine is null) return null;
         _testNoteEngine ??= _createEngine();
-        return _testNoteEngine.PreviewNoteAsync(deviceId, channel, program, note, lengthMs);
+        return _testNoteEngine;
     }
 
     /// <summary>Cuts one preview note the test engine still holds (a string ring switched off or closed early): one note-off

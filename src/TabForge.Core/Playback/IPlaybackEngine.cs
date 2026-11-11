@@ -56,6 +56,9 @@ public interface IPlaybackEngine : IDisposable
     /// <summary>Plays one short test note on a MIDI output (the Sound menu's test row); an engine without MIDI output does nothing.</summary>
     System.Threading.Tasks.Task PreviewNoteAsync(int deviceId, int channel, int program, int note, int ms = 350) => System.Threading.Tasks.Task.CompletedTask;
 
+    /// <summary>Plays one Composer groove audition note on the built-in drum sound, never a song track's sound; an engine without MIDI output does nothing.</summary>
+    System.Threading.Tasks.Task PreviewDrumNoteAsync(int deviceId, int note, int ms = 350) => System.Threading.Tasks.Task.CompletedTask;
+
     /// <summary>MIDI input monitoring: one channel message straight to the output, for a track that has no engine slot; an engine without MIDI output ignores it.</summary>
     void SendLive(int deviceId, int status, int data1, int data2) { }
 

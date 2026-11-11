@@ -252,10 +252,10 @@ public sealed class TrackModel
     public bool TintRow { get; set; } = true;
     /// <summary>With the chain on: also play the track's General MIDI sound (off = only its VST instrument, if any).</summary>
     public bool MidiSound { get; set; } = true;
-    /// <summary>GM sound was ticked automatically (no VST instrument played); untick it again when one does.</summary>
-    [JsonIgnore] public bool MidiSoundAuto { get; set; }
-    /// <summary>The user unticked GM sound themselves: automatic switching leaves it off.</summary>
-    [JsonIgnore] public bool MidiSoundManualOff { get; set; }
+    /// <summary>GM sound was ticked automatically (no VST instrument played); untick it again when one does. Saved, so a reopened song still unticks it.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public bool MidiSoundAuto { get; set; }
+    /// <summary>The user unticked GM sound themselves: automatic switching leaves it off. Saved, so it holds after a reopen.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public bool MidiSoundManualOff { get; set; }
     /// <summary>Set on a track added from a startup template (FX window "Add as a track on startup"): it is left out of the saved file.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? StartupTemplateId { get; set; }
