@@ -13,8 +13,8 @@ using Xunit;
 
 namespace TabForge.Avalonia.Tests;
 
-// Owns: the Composer panel's drum-sample rows: one row per groove shown under Drums, each fitting the panel's width, and the audition button
-//   driving the window's hooks (play, stop, and a stop that comes from the window resetting the button).
+// Owns: the Composer panel's drum-sample rows: one row per groove shown, each fitting the panel's width, and the
+//   audition button driving the window's hooks (play, stop, and a stop that comes from the window resetting the button).
 // Does not own: the landing rules (DrumSampleDropTests) or the strip's open state (LeftStripSettingsTests).
 // Tests: this class.
 public sealed class ComposerPanelTests
@@ -27,22 +27,13 @@ public sealed class ComposerPanelTests
         return (window, panel);
     }
 
-    private static Border Card(Border panel, string name) =>
-        panel.GetLogicalDescendants().OfType<Border>().Single(b => global::Avalonia.Automation.AutomationProperties.GetName(b) == name + " category");
-
     private static List<Border> Rows(Border panel) =>
         panel.GetLogicalDescendants().OfType<Border>().Where(b => b.Name?.StartsWith(ComposerPanel.SampleRowPrefix, StringComparison.Ordinal) == true).ToList();
 
-    private static void Click(Border card) =>
-        card.RaiseEvent(new global::Avalonia.Input.KeyEventArgs { RoutedEvent = global::Avalonia.Input.InputElement.KeyDownEvent, Key = global::Avalonia.Input.Key.Enter });
-
     [AvaloniaFact]
-    public void Drums_ShowsEveryGrooveWithinThePanelWidth()
+    public void ShowsEveryGrooveWithinThePanelWidth()
     {
         var (window, panel) = Show(new ComposerDrumHooks());
-        Assert.All(Rows(panel), row => Assert.False(row.IsEffectivelyVisible));
-
-        Click(Card(panel, "Drums"));
         window.UpdateLayout();
 
         var rows = Rows(panel);
@@ -72,7 +63,6 @@ public sealed class ComposerPanelTests
             Stop = () => { stops++; onStep?.Invoke(-1); },
         };
         var (window, panel) = Show(hooks);
-        Click(Card(panel, "Drums"));
         var first = Rows(panel)[0].GetLogicalDescendants().OfType<Button>().Single();
 
         first.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));

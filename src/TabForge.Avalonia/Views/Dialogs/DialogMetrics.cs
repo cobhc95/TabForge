@@ -275,8 +275,10 @@ internal static class DialogMetrics
     public const double EqWidth = 960, EqHeight = 700, EqMinWidth = 780, EqMinHeight = 600, CompressorWidth = 780, CompressorHeight = 440, CompressorMinWidth = 660, CompressorMinHeight = 400,
         LimiterWidth = 560, LimiterHeight = 340, LimiterMinWidth = 460, LimiterMinHeight = 300, DelayWidth = 580, DelayHeight = 330, DelayMinWidth = 480, DelayMinHeight = 290,
         GateWidth = 560, GateHeight = 340, GateMinWidth = 460, GateMinHeight = 300,
+        ReverbWidth = 580, ReverbHeight = 330, ReverbMinWidth = 480, ReverbMinHeight = 290,
         FxLabelWidth = 112, FxValueWidth = 90, FxBandLabelWidth = 40, FxBandValueWidth = 66, FxGraphMinHeight = 120, FxTransferMinSize = 200, FxBandColumnMinWidth = 220, FxCutColumnMinWidth = 300, FxCompressorColumnMinWidth = 380, FxMeterHeight = 14, FxMeterLabelWidth = 128,
         FxLightSize = 16, FxDotRadius = 6, FxDotSelectedRadius = 8.5, FxDotHit = 12, FxCurveStroke = 2, FxGridStroke = 1, FxMarkerStroke = 1.5, FxMeterRadius = 3,
+        FxListSplitterWidth = 16,
         FxPlotLeft = 38, FxPlotTop = 10, FxPlotRight = 12, FxPlotBottom = 22, FxLabelInset = 4, FxQStep = 1.12;
 
     /// <summary>The built-in editors' on/off button: its padding, outline thickness and smallest height.</summary>

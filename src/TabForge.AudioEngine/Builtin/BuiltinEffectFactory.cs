@@ -16,6 +16,7 @@ public static class BuiltinEffectFactory
         BuiltinEffects.LimiterId => new Limiter.LimiterEffect(sampleRate, maxBlock),
         BuiltinEffects.DelayId => new Delay.DelayEffect(sampleRate, maxBlock),
         BuiltinEffects.GateId => new Gate.GateEffect(sampleRate, maxBlock),
+        BuiltinEffects.ReverbId => new Reverb.ReverbEffect(sampleRate, maxBlock),
         _ => throw new InvalidDataException($"This built-in effect is not part of this TabForge version ({id})."),
     };
 }

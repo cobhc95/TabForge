@@ -114,7 +114,16 @@ public class CompactTrackStripTests
         row.Items.Add(help);
         var window = new global::Avalonia.Controls.Window();
         var commands = new MainWindowCommands(window, () => { });
-        window.Content = new global::Avalonia.Controls.DockPanel { Children = { TabForge.Avalonia.Views.MenuRowToggles.Build(commands), row } };
+        var feature = new TabForge.Avalonia.Features.LeftStrip.LeftStripFeature(commands, null);
+        var menuRow = new global::Avalonia.Controls.Border { Child = new global::Avalonia.Controls.DockPanel() };
+        var modeBar = new TabForge.Avalonia.Platform.Controls.CompactTrackStrip();
+        feature.Attach(menuRow, modeBar);
+        window.Content = new global::Avalonia.Controls.DockPanel
+        {
+            Children = { TabForge.Avalonia.Views.MenuRowToggles.Build(commands), row, feature.Left, modeBar }
+        };
+        window.Show();
+        global::Avalonia.Threading.Dispatcher.UIThread.RunJobs();
         var menu = new CompactModeMenu(window).Build();
         var rows = menu.Items.OfType<global::Avalonia.Controls.MenuItem>().Where(item => item.Icon is not null).ToList();
         Assert.Equal(TabForge.Avalonia.Views.MenuRowToggles.Items.Count(toggle => toggle is not null), rows.Count);

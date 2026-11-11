@@ -117,6 +117,24 @@ public static class EqParameters
     }
 }
 
+/// <summary>The parameters of the built-in algorithmic Schroeder reverb (freeverb-style combs and all-passes, no impulse file).</summary>
+public static class ReverbParameters
+{
+    public const uint BypassId = 1, SizeId = 2, PredelayId = 3, MixId = 4, HighCutId = 5, LowCutId = 6, WidthId = 7;
+    public const double MinSize = 0, MaxSize = 100, MinPredelayMs = 0, MaxPredelayMs = 250, MinHighCut = 1000, MaxHighCut = 20000, MinLowCut = 20, MaxLowCut = 2000;
+
+    public static IReadOnlyList<BuiltinParameter> Descriptors { get; } =
+    [
+        BuiltinParameter.Switch(BypassId, "bypass", "Bypass", false),
+        new(SizeId, "size", "Size", MinSize, MaxSize, 40, Unit: "%"),
+        new(PredelayId, "predelay", "Predelay", MinPredelayMs, MaxPredelayMs, 15, Unit: "ms"),
+        new(MixId, "mix", "Mix", 0, 100, 30, Unit: "%"),
+        new(HighCutId, "highCut", "High cut", MinHighCut, MaxHighCut, 8000, Unit: "Hz"),
+        new(LowCutId, "lowCut", "Low cut", MinLowCut, MaxLowCut, MinLowCut, Unit: "Hz"),
+        new(WidthId, "width", "Width", 0, 100, 50, Unit: "%"),
+    ];
+}
+
 /// <summary>The parameters of the built-in delay.</summary>
 public static class DelayParameters
 {
@@ -175,6 +193,7 @@ public static class BuiltinParameters
         BuiltinEffects.LimiterId => LimiterParameters.Descriptors,
         BuiltinEffects.GateId => GateParameters.Descriptors,
         BuiltinEffects.DelayId => DelayParameters.Descriptors,
+        BuiltinEffects.ReverbId => ReverbParameters.Descriptors,
         BuiltinEffects.IrLoaderId => IrLoaderParameters.Descriptors,
         _ => [],
     };

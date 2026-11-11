@@ -25,15 +25,16 @@ public sealed class DrumSampleDropTests
     }
 
     [Fact]
-    public void Catalogue_HasTheSixStarterSamples()
+    public void Catalogue_HasTheNineStarterSamples()
     {
-        Assert.Equal(6, DrumSamples.All.Count);
+        Assert.True(DrumSamples.All.Count >= 50);
         Assert.Equal(DrumSamples.All.Count, DrumSamples.All.Select(s => s.Id).Distinct().Count());
         foreach (var sample in DrumSamples.All)
         {
             Assert.True(sample.Bars > 0);
             Assert.True(sample.SuggestedBpm > 0);
-            Assert.All(sample.KickSteps.Concat(sample.SnareSteps).Concat(sample.HatSteps), step => Assert.InRange(step, 0, DrumSample.StepsPerBar - 1));
+            Assert.NotEmpty(sample.Parts);
+            Assert.All(sample.Parts.SelectMany(p => p.Steps), step => Assert.InRange(step, 0, DrumSample.StepsPerBar - 1));
             Assert.Same(sample, DrumSamples.ById(sample.Id));
         }
         Assert.Null(DrumSamples.ById("no-such-sample"));
@@ -129,7 +130,7 @@ public sealed class DrumSampleDropTests
         Assert.Contains("bar 3", result.Status);
         var notes = drums.Measures[2].Cells.SelectMany(c => c.Notes).ToList();
         Assert.Equal(12, notes.Count);   // 4 kicks + 2 snares + 6 hats
-        Assert.All(notes, n => Assert.Contains(n.MidiValue, new[] { DrumSample.KickMidi, DrumSample.SnareMidi, DrumSample.HatMidi }));
+        Assert.All(notes, n => Assert.Contains(n.MidiValue, gallop.Parts.Select(p => p.Midi).ToArray()));
         Assert.All(notes, n => Assert.InRange(n.StringIndex, 0, drums.StringTunings.Count - 1));
         Assert.Equal(new[] { 64, 80, 95, 112 }, notes.Select(n => n.Velocity).Distinct().OrderBy(v => v));   // the accent pattern survives into the tab
 
@@ -218,7 +219,7 @@ public sealed class DrumSampleDropTests
         Assert.NotNull(clip.Notes);
         Assert.Equal(12, clip.Notes!.Count);
         Assert.All(clip.Notes, n => Assert.Equal(9, n.Channel));
-        Assert.All(clip.Notes, n => Assert.Contains(n.Pitch, new[] { DrumSample.KickMidi, DrumSample.SnareMidi, DrumSample.HatMidi }));
+        Assert.All(clip.Notes, n => Assert.Contains(n.Pitch, gallop.Parts.Select(p => p.Midi).ToArray()));
         Assert.Equal(clip.Notes.Select(n => n.StartSec).OrderBy(t => t), clip.Notes.Select(n => n.StartSec));
         Assert.All(clip.Notes, n => Assert.True(n.StartSec + n.LengthSec <= clip.SourceLengthSec + 0.001));
 

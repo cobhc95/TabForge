@@ -65,19 +65,21 @@ public static class LeftStripItems
         new("Bar.KeySignature", "Key signature", "Song", KeySig), new("Tools.Transpose", "Transpose", "Song", Transpose),
         new("Tools.GlobalTuning", "Tuning", "Song", Tuning), new("Insert.Lyrics", "Lyrics", "Song", Lyrics),
         new("View.ZoomIn", "Zoom in", "View", IconGeometry.ZoomIn), new("View.ZoomOut", "Zoom out", "View", IconGeometry.ZoomOut),
-        new("View.BandView", "Band view", "View", IconGeometry.BandView), new("View.CompactMode", "Compact mode", "View", IconGeometry.CompactMode),
+        new("View.BandView", "Band view", "View", IconGeometry.BandView, IsToggle: true), new("View.CompactMode", "Compact mode", "View", IconGeometry.CompactMode, IsToggle: true),
+        new("View.LearnMode", "Keyboard mode (experimental)", "View", IconGeometry.LearnMode, IsToggle: true),
         new("View.InstrumentPanel", "Fretboard", "View", IconGeometry.Fretboard),
         new("Tools.ChordFinder", "Chord finder", "App", ChordFinder), new("Tools.ScaleFinder", "Scale finder", "App", IconGeometry.ScaleSteps),
         new("App.Preferences", "Preferences", "App", IconGeometry.Prefs), new("Help.About", "About", "App", About),
         new(LeftStripFeature.ToggleComposerId, "Composer", "App", Composer, IsToggle: true),
     };
 
-    /// <summary>The strip as it comes: New, Open, Save, Save as, Render | Undo, Redo | Composer.</summary>
+    /// <summary>The strip as it comes: New, Open, Save, Save as, Render | Undo, Redo | Composer | Band view, Compact mode, Keyboard mode.</summary>
     public static readonly IReadOnlyList<string> Default = new[]
     {
         "File.New", "File.Open", "File.Save", "File.SaveAs", "File.Render", SeparatorId,
         "Edit.Undo", "Edit.Redo", SeparatorId,
-        LeftStripFeature.ToggleComposerId,
+        LeftStripFeature.ToggleComposerId, SeparatorId,
+        "View.BandView", "View.CompactMode", "View.LearnMode",
     };
 
     /// <summary>The catalog item for <paramref name="id"/>, or null (a separator, or an id no longer in the catalog).</summary>
@@ -85,5 +87,4 @@ public static class LeftStripItems
 
     /// <summary>The saved list with unknown ids dropped, or the default when nothing was saved.</summary>
     public static IReadOnlyList<string> Resolve(IReadOnlyList<string>? saved) =>
-        saved is null ? Default : saved.Where(id => id == SeparatorId || Find(id) is not null).ToList();
-}
+        saved is null ? Default : saved.Where(id => id == SeparatorId || Find(id) is not null).ToList();}

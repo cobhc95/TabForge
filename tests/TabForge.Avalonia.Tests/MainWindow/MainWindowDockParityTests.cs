@@ -85,7 +85,8 @@ public class MainWindowDockParityTests
         var main = Open();
         var strip = main.GetVisualDescendants().OfType<StackPanel>().Single(s => s.Name == "MenuRowToggles");
         var ids = strip.Children.OfType<Button>().Select(b => (string)b.Tag!).ToList();
-        Assert.Equal(new[] { "View.SidePanel", "View.InstrumentPanel", "View.LearnMode", "View.BandView", "View.CompactMode", "File.ProjectSettings" }, ids);
+        // The mode toggles (Keyboard mode, Band view, Compact mode) live in the left strip now, by design: the row keeps the tool toggles.
+        Assert.Equal(new[] { "View.SidePanel", "View.InstrumentPanel", "File.ProjectSettings" }, ids);
         var right = strip.TranslatePoint(new global::Avalonia.Point(strip.Bounds.Width, 0), main)!.Value.X;
         Assert.Equal(main.Width - 10, right, 1.0);
         Assert.All(strip.Children.OfType<Button>(), b => Assert.Equal(27, b.Bounds.Height, 0.5));

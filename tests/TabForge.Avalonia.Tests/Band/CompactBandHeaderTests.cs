@@ -5,6 +5,9 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Headless.XUnit;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
+using Avalonia.LogicalTree;
+using Avalonia.Threading;
+using TabForge.Avalonia.Features.LeftStrip;
 using TabForge.Avalonia.Platform.Controls;
 using TabForge.Avalonia.Views;
 using TabForge.Presenters;
@@ -55,47 +58,62 @@ public class CompactBandHeaderTests
         commands.Add(ModeCommandIds.CompactMode, () => { compactOn = !compactOn; MainWindowViewMenu.SetRowChecks(window, ModeCommandIds.CompactMode, compactOn); });
         commands.Add(ModeCommandIds.BandView, () => { bandOn = !bandOn; MainWindowViewMenu.SetRowChecks(window, ModeCommandIds.BandView, bandOn); });
         var strip = MenuRowToggles.Build(commands);
-        window.Content = new DockPanel { Children = { strip, row } };
+        // The mode toggles live in the left strip now: the same buttons the real window shows, in the window tree.
+        var feature = new LeftStripFeature(commands, null);
+        var menuRow = new Border { Child = new DockPanel() };
+        var modeBar = new CompactTrackStrip();
+        feature.Attach(menuRow, modeBar);
+        window.Content = new DockPanel { Children = { strip, row, feature.Left, menuRow, modeBar } };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
 
         Assert.False(Ticked(window, CompactRowHeader));
-        Assert.False(ToolbarToggle(strip, ModeCommandIds.CompactMode).IsChecked);
+        Assert.False(StripToggle(window, ModeCommandIds.CompactMode).IsChecked);
         ClickTick(window, CompactRowHeader);
         Assert.True(compactOn);
         Assert.True(Ticked(window, CompactRowHeader));
-        Assert.True(ToolbarToggle(strip, ModeCommandIds.CompactMode).IsChecked);
+        Assert.True(StripToggle(window, ModeCommandIds.CompactMode).IsChecked);
 
         ClickTick(window, BandRowHeader);
         Assert.True(bandOn);
         Assert.True(Ticked(window, CompactRowHeader));
         Assert.True(Ticked(window, BandRowHeader));
-        Assert.True(ToolbarToggle(strip, ModeCommandIds.CompactMode).IsChecked);
-        Assert.True(ToolbarToggle(strip, ModeCommandIds.BandView).IsChecked);
+        Assert.True(StripToggle(window, ModeCommandIds.CompactMode).IsChecked);
+        Assert.True(StripToggle(window, ModeCommandIds.BandView).IsChecked);
 
         ClickTick(window, CompactRowHeader);
         Assert.False(compactOn);
         Assert.False(Ticked(window, CompactRowHeader));
-        Assert.False(ToolbarToggle(strip, ModeCommandIds.CompactMode).IsChecked);
-        Assert.True(ToolbarToggle(strip, ModeCommandIds.BandView).IsChecked);
+        Assert.False(StripToggle(window, ModeCommandIds.CompactMode).IsChecked);
+        Assert.True(StripToggle(window, ModeCommandIds.BandView).IsChecked);
+        window.Close();
     }
 
     [AvaloniaFact]
-    public void ToolbarTogglesLightWithTheModeTheyRun()
+    public void StripTogglesLightWithTheModeTheyRun()
     {
         var window = new Window();
         var commands = new MainWindowCommands(window, () => { });
         var bandOn = false;
+        var feature = new LeftStripFeature(commands, null);
         commands.Add(ModeCommandIds.BandView, () => { bandOn = !bandOn; MainWindowViewMenu.SetRowChecks(window, ModeCommandIds.BandView, bandOn); });
         var strip = MenuRowToggles.Build(commands);
-        window.Content = new DockPanel { Children = { strip } };
-        var toggle = ToolbarToggle(strip, ModeCommandIds.BandView);
+        var menuRow = new Border { Child = new DockPanel() };
+        var modeBar = new CompactTrackStrip();
+        feature.Attach(menuRow, modeBar);
+        window.Content = new DockPanel { Children = { strip, feature.Left, menuRow, modeBar } };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        var toggle = StripToggle(window, ModeCommandIds.BandView);
 
         Assert.False(toggle.IsChecked);
-        Click(toggle);                                  // the toolbar button itself, as a user clicks it
+        Click(toggle);                                  // the strip button itself, as a user clicks it
         Assert.True(bandOn);
         Assert.True(toggle.IsChecked);
         Click(toggle);
         Assert.False(bandOn);
         Assert.False(toggle.IsChecked);
+        window.Close();
     }
 
     [AvaloniaFact]
@@ -104,8 +122,15 @@ public class CompactBandHeaderTests
         var window = new Window();
         var commands = new MainWindowCommands(window, () => { });
         var bandToggled = false;
+        var strip = MenuRowToggles.Build(commands);
+        var feature = new LeftStripFeature(commands, null);
+        var menuRow = new Border { Child = new DockPanel() };
+        var modeBar = new CompactTrackStrip();
+        feature.Attach(menuRow, modeBar);
         commands.Add(ModeCommandIds.BandView, () => bandToggled = true);
-        window.Content = new DockPanel { Children = { MenuRowToggles.Build(commands), new Menu() } };
+        window.Content = new DockPanel { Children = { strip, new Menu(), feature.Left, menuRow, modeBar } };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
         var picked = new List<string>();
         var menu = BandViewMenu.Build(new BandLayoutChoices(FretboardAbove: true, ColourFrame: false), picked.Add, window, new HotkeySettings());
 
@@ -138,9 +163,9 @@ public class CompactBandHeaderTests
     private static MenuItem TickOf(ContextMenu menu, string header) =>
         menu.Items.OfType<MenuItem>().Single(item => item.Icon is not null && Equals(item.Header, header));
 
-    /// <summary>The toolbar toggle that runs a command: its lit state (IsChecked) is what MenuRowToggles shows for the mode behind it.</summary>
-    private static ToggleButton ToolbarToggle(StackPanel strip, string commandId) =>
-        strip.Children.OfType<ToggleButton>().Single(toggle => Equals(toggle.Tag, commandId));
+    /// <summary>The strip toggle that runs a command: its lit state (IsChecked) is what the left strip shows for the mode behind it.</summary>
+    private static ToggleButton StripToggle(Window window, string commandId) =>
+        window.GetLogicalDescendants().OfType<ToggleButton>().First(toggle => Equals(toggle.Tag, commandId) && toggle.Classes.Contains(MenuRowToggles.ToggleClass));
 
     private static void Click(MenuItem item) => item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
 

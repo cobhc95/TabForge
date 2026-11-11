@@ -61,6 +61,7 @@ public sealed class MainWindowBandView
     {
         var band = new MainWindowBandView(window, dock, panes, header, settings);
         commands.Add(CommandId, band.Toggle);
+        commands.AddCheckState(CommandId, () => dock.IsPanelVisible(BandPanelId));
         RegisterBandHotkeys(commands, panes, settings, status);
         // The menu row is built after Register, so its check takes the panel's state when the window opens.
         window.Opened += (_, _) => MainWindowViewMenu.SetRowChecks(window, CommandId, dock.IsPanelVisible(BandPanelId));

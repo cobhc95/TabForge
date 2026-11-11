@@ -17,7 +17,7 @@ public static class BuiltinEditors
 
     /// <summary>True when the built-in effect of <paramref name="slot"/> has its own window.</summary>
     public static bool HasWindow(PluginSlot? slot) => slot is not null && BuiltinEffects.Find(slot.Path)?.Id is
-        BuiltinEffects.IrLoaderId or BuiltinEffects.EqId or BuiltinEffects.CompressorId or BuiltinEffects.LimiterId or BuiltinEffects.DelayId or BuiltinEffects.GateId;
+        BuiltinEffects.IrLoaderId or BuiltinEffects.EqId or BuiltinEffects.CompressorId or BuiltinEffects.LimiterId or BuiltinEffects.DelayId or BuiltinEffects.GateId or BuiltinEffects.ReverbId;
 
     /// <summary>A new editor panel for the built-in effect of <paramref name="slot"/> (null when it has none); the caller places it: embedded (BuiltinEditorHost) or in a BuiltinEditorWindow.</summary>
     public static Control? CreateEditor(IFxChainHost host, TrackModel track, PluginSlot slot) => !HasWindow(slot) ? null : BuiltinEffects.Find(slot.Path)!.Id switch
@@ -27,6 +27,7 @@ public static class BuiltinEditors
         BuiltinEffects.LimiterId => new LimiterEditor(host, track, slot),
         BuiltinEffects.DelayId => new DelayEditor(host, track, slot),
         BuiltinEffects.GateId => new GateEditor(host, track, slot),
+        BuiltinEffects.ReverbId => new ReverbEditor(host, track, slot),
         _ => new IrLoaderEditor(host, track, slot),
     };
 

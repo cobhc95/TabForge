@@ -17,14 +17,14 @@ using TabForge.Services;
 
 namespace TabForge.Avalonia.Features.LeftStrip;
 
-// Owns: the Composer panel beside the left strip: its title, the four clickable instrument-category cards (badge, name, note), the search box that
-//   filters the categories, genres and drum samples, the results box with its honest empty text, and the Drums
-//   category's sample rows grouped under genre headers (grip, name, audition button, suggested tempo and length, the HH/SD/BD step pattern lit while auditioning) and when a
+// Owns: the Composer panel beside the left strip: its title, the drum-groove count, the search box that
+//   filters the genres and drum samples, and the sample rows grouped under genre headers (grip, name, audition
+//   button, suggested tempo and length, the per-piece step pattern lit while auditioning) and when a
 //   press on a row becomes a drag.
-// Does not own: when the panel shows (LeftStripFeature), the saved open state (LeftStripSettings), the instrument badges (InstrumentBadgeView),
-//   the catalogue entries (InstrumentCatalog, DrumSamples), or playing and dropping a sample
-//   (ComposerDrumHooks, implemented by MainWindowComposerDrums).
-// Tests: TabForge.Avalonia.Tests.LeftStripSettingsTests (the open-state rules), ComposerPanelTests (the sample rows), DrumSampleDropTests (the samples).
+// Does not own: when the panel shows (LeftStripFeature), the saved open state (LeftStripSettings), the catalogue
+//   entries (DrumSamples), or playing and dropping a sample (ComposerDrumHooks, implemented by MainWindowComposerDrums).
+// Tests: TabForge.Avalonia.Tests.LeftStripSettingsTests (the open-state rules), ComposerPanelTests (the sample rows),
+//   DrumSampleDropTests (the samples).
 public static class ComposerPanel
 {
     /// <summary>The panel's element name.</summary>
@@ -40,18 +40,6 @@ public static class ComposerPanel
     private const string StopIcon = "M6,6 H18 V18 H6 Z";
     private const double DragThreshold = 4;
 
-    /// <summary>One clickable category card: its name, the catalogue program behind its badge, and its Palette accent key.</summary>
-    private sealed record Category(string Name, int Program, bool Drums, string AccentKey);
-
-    // The four category cards in grid order; the accents are Palette tokens with a dark and a light value.
-    private static readonly Category[] Categories =
-    {
-        new("Drums", 0, true, "SectionColour3"),
-        new("Bass", 33, false, "SectionColour5"),
-        new("Guitar", 27, false, "SectionColour6"),
-        new("Keyboard", 0, false, "SectionColour4"),
-    };
-
     /// <summary>One sample row's live parts: the play button and the step cells by voice row and step.</summary>
     private sealed class SampleRowParts
     {
@@ -64,16 +52,8 @@ public static class ComposerPanel
     public static Border Build(ComposerDrumHooks? hooks = null)
     {
         hooks ??= new ComposerDrumHooks();
-        string? chosenCategory = null;
-        var cards = new List<(Category Category, Border Card)>();
         var sampleRows = new List<SampleRowParts>();
         SampleRowParts? playing = null;
-
-        var results = new TextBlock { TextWrapping = TextWrapping.Wrap, FontSize = ChromeMetrics.TextSmall };
-        results[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
-        var samplesHost = new StackPanel { Spacing = ChromeMetrics.ComposerRowGap, IsVisible = false };
-        samplesHost.WithMargin(DialogMetrics.ComposerResultsGap);
-        Border resultsBox = null!;
 
         // The window calls this with each step while a sample plays and with -1 when it stops for any reason (Stop, another sample, a drag).
         void Light(SampleRowParts parts, int step)
@@ -99,69 +79,18 @@ public static class ComposerPanel
             ToolTip.SetTip(parts.Play, "Stop");
         }
 
-        void ShowResults()
-        {
-            var showSamples = chosenCategory == "Drums";
-            samplesHost.IsVisible = showSamples;
-            resultsBox.IsVisible = !showSamples;
-            if (!showSamples && playing is not null) hooks.Stop();
-            if (showSamples) return;
-            var name = chosenCategory;
-            results.Text = name is null
-                ? "Pick Drums for grooves you can audition and drag onto a track. Other patterns are coming soon."
-                : name + " patterns are coming soon.";
-        }
-
-        void PaintCards()
-        {
-            foreach (var (category, card) in cards)
-            {
-                if (category.Name == chosenCategory)
-                {
-                    card[!Border.BackgroundProperty] = new DynamicResourceExtension("AccentSoft");
-                    card[!Border.BorderBrushProperty] = new DynamicResourceExtension("AccentBrush");
-                }
-                else
-                {
-                    card.Background = AvaloniaPalette.TransparentBrush;
-                    card[!Border.BorderBrushProperty] = new DynamicResourceExtension("SoftBorder");
-                }
-            }
-        }
-
-        void ChooseCategory(Category category)
-        {
-            chosenCategory = chosenCategory == category.Name ? null : category.Name;
-            PaintCards();
-            ShowResults();
-        }
-
         var stack = new StackPanel { Spacing = ChromeMetrics.ComposerRowGap };
         stack.WithMargin(DialogMetrics.ComposerPanelInset);
         stack.Children.Add(Text("Composer", ChromeMetrics.TextHeading, FontWeight.Bold, "TextPrimary"));
-
-        var grid = new Grid();
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        for (var i = 0; i < Categories.Length; i++)
-        {
-            var category = Categories[i];
-            var note = category.Drums ? $"{DrumSamples.All.Count} grooves" : "Coming soon";
-            var card = Card(category, note, ChooseCategory);
-            cards.Add((category, card));
-            Grid.SetRow(card, i / 2);
-            Grid.SetColumn(card, i % 2);
-            grid.Children.Add(card);
-        }
-        stack.Children.Add(grid);
+        stack.Children.Add(Text($"{DrumSamples.All.Count} drum grooves", ChromeMetrics.TextSmall, FontWeight.Normal, "TextMuted"));
 
         var search = new TextBox { Watermark = "Search patterns...", FontSize = ChromeMetrics.TextEmphasis };
         search.WithMargin(DialogMetrics.ComposerSearchGap);
         stack.Children.Add(search);
 
         var genreHeaders = new List<(DrumGenre Genre, TextBlock Header)>();
+        var samplesHost = new StackPanel { Spacing = ChromeMetrics.ComposerRowGap };
+        samplesHost.WithMargin(DialogMetrics.ComposerResultsGap);
         foreach (var genre in DrumSamples.GenresPresent)
         {
             var header = Text(DrumGenreNames.Of(genre), ChromeMetrics.TextSmall, FontWeight.SemiBold, "TextMuted");
@@ -177,33 +106,18 @@ public static class ComposerPanel
         }
         stack.Children.Add(samplesHost);
 
-        resultsBox = new Border { Child = results, BorderThickness = DialogMetrics.ComposerOutline, CornerRadius = new CornerRadius(ChromeMetrics.RadiusMedium) };
-        resultsBox.WithPadding(DialogMetrics.ComposerCardInset);
-        resultsBox.WithMargin(DialogMetrics.ComposerResultsGap);
-        resultsBox[!Border.BorderBrushProperty] = new DynamicResourceExtension("SoftBorder");
-        stack.Children.Add(resultsBox);
-
         search.PropertyChanged += (_, e) =>
         {
             if (e.Property != TextBox.TextProperty) return;
             var query = search.Text?.Trim() ?? "";
             bool Matches(string text) => query.Length == 0 || text.Contains(query, StringComparison.OrdinalIgnoreCase);
             bool SampleMatches(SampleRowParts parts) => Matches(parts.Sample.Name) || Matches(DrumGenreNames.Of(parts.Sample.Genre));
-            var anySample = sampleRows.Any(SampleMatches);
-            foreach (var (category, card) in cards)
-                card.IsVisible = Matches(category.Name) || (category.Drums && anySample);
             foreach (var parts in sampleRows)
-                parts.Row.IsVisible = SampleMatches(parts) || Matches("Drums");
+                parts.Row.IsVisible = SampleMatches(parts);
             foreach (var (genre, header) in genreHeaders)
                 header.IsVisible = sampleRows.Any(parts => parts.Sample.Genre == genre && parts.Row.IsVisible);
-            // A query naming a groove opens the Drums list; one that matches nothing in the chosen category clears the choice.
-            if (query.Length > 0 && anySample && !Matches("Drums")) chosenCategory = "Drums";
-            else if (chosenCategory is not null && !Matches(chosenCategory) && !(chosenCategory == "Drums" && anySample)) chosenCategory = null;
-            PaintCards();
-            ShowResults();
         };
 
-        ShowResults();
         var panel = new Border
         {
             Name = PanelName, Width = ChromeMetrics.ComposerPanelWidth, BorderThickness = DialogMetrics.ComposerEdge,
@@ -226,7 +140,7 @@ public static class ComposerPanel
     };
 
     /// <summary>One drum-sample row, sized for the panel's width: grip, name and audition button on top, the suggested tempo and length under the name,
-    /// and the HH/SD/BD step pattern across the full width with a wider gap between beats. Pressing the row and moving starts a drag.</summary>
+    /// and the per-piece step pattern across the full width with a wider gap between beats. Pressing the row and moving starts a drag.</summary>
     private static SampleRowParts SampleRow(DrumSample sample, Action<SampleRowParts> togglePlay, ComposerDrumHooks hooks)
     {
         var play = new Button
@@ -313,15 +227,15 @@ public static class ComposerPanel
         return parts;
     }
 
-    /// <summary>The step pattern: a voice label then sixteen cells per row (hi-hat, snare, kick), stretched to the row's width.</summary>
+    /// <summary>The step pattern: a voice label then sixteen cells per row, one row per kit piece in the sample, stretched to the row's width.</summary>
     private static Grid Pattern(DrumSample sample, List<(Border Cell, bool On, int Step)> cells)
     {
         var grid = new Grid { RowSpacing = ChromeMetrics.ComposerStepGap * 2 };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(ChromeMetrics.ComposerVoiceLabelWidth) });
         for (var step = 0; step < DrumSample.StepsPerBar; step++)
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        var voices = new[] { ("HH", sample.HatSteps), ("SD", sample.SnareSteps), ("BD", sample.KickSteps) };
-        for (var voice = 0; voice < voices.Length; voice++)
+        var voices = sample.Parts.Select(p => (DrumSample.PartLabel(p.Midi), p.Steps)).ToList();
+        for (var voice = 0; voice < voices.Count; voice++)
         {
             grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             var label = Text(voices[voice].Item1, ChromeMetrics.TextMicro, FontWeight.Normal, "TextMuted");
@@ -362,53 +276,6 @@ public static class ComposerPanel
                 dots.Children.Add(dot);
             }
         return dots;
-    }
-
-    private static Border Card(Category category, string noteText, Action<Category> choose)
-    {
-        var badge = new InstrumentBadgeView(ChromeMetrics.ComposerBadgeSize)
-        {
-            Entry = InstrumentCatalog.ForTrack(null, category.Program, category.Drums),
-            HorizontalAlignment = HorizontalAlignment.Center,
-        };
-        badge.WithMargin(DialogMetrics.ComposerBadgeGap);
-        var dot = new Border { Width = ChromeMetrics.ComposerAccentSize, Height = ChromeMetrics.ComposerAccentSize, VerticalAlignment = VerticalAlignment.Center, CornerRadius = new CornerRadius(ChromeMetrics.ComposerAccentSize / 2) };
-        dot.WithMargin(DialogMetrics.ComposerDotGap);
-        dot[!Border.BackgroundProperty] = new DynamicResourceExtension(category.AccentKey);
-        var soon = Text(noteText, ChromeMetrics.TextSmall, FontWeight.Normal, "TextMuted");
-        var note = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
-        note.Children.Add(dot);
-        note.Children.Add(soon);
-        var body = new StackPanel();
-        body.Children.Add(badge);
-        var name = Text(category.Name, ChromeMetrics.TextBody, FontWeight.SemiBold, "TextPrimary");
-        name.HorizontalAlignment = HorizontalAlignment.Center;
-        body.Children.Add(name);
-        body.Children.Add(note);
-        var card = new Border
-        {
-            Child = body, MinHeight = ChromeMetrics.ComposerCardMinHeight, BorderThickness = DialogMetrics.ComposerOutline,
-            CornerRadius = new CornerRadius(ChromeMetrics.RadiusMedium), Focusable = true,
-        };
-        card.WithPadding(DialogMetrics.ComposerCardInset);
-        card.WithMargin(DialogMetrics.ComposerCardMargin);
-        card[!Border.BorderBrushProperty] = new DynamicResourceExtension("SoftBorder");
-        card.Background = AvaloniaPalette.TransparentBrush;
-        AutomationProperties.SetName(card, category.Name + " category");
-        HoverShade.Wire(card, fill => card.Background = fill, () => AvaloniaPalette.TransparentBrush);
-        card.PointerPressed += (_, e) =>
-        {
-            if (!e.GetCurrentPoint(card).Properties.IsLeftButtonPressed) return;
-            card.Focus();
-            choose(category);
-        };
-        card.KeyDown += (_, e) =>
-        {
-            if (e.Key is not (Key.Enter or Key.Space)) return;
-            choose(category);
-            e.Handled = true;
-        };
-        return card;
     }
 
     private static TextBlock Text(string text, double size, FontWeight weight, string colourKey)

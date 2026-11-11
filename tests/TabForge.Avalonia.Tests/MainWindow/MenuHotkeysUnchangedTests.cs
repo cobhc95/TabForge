@@ -155,6 +155,7 @@ public sealed class MenuHotkeysUnchangedTests
             "Learn.LookAheadShorter|Ctrl+Alt+OemMinus|",
             "View.LearnPopout|Ctrl+Alt+O|",
             "View.CompactMode|Ctrl+Alt+C|",
+            "View.BandView|Ctrl+Shift+B|",
     };
 
     [Fact]

@@ -266,7 +266,7 @@ internal sealed class ScoreGeometryProbe : IScoreLayoutHost, IScoreRenderHost, I
     private const double TabOnlyMarksRoom = 30.0, TightMarksRoom = 20.0, TightBelowTab = 10.0;
     private int Strings => Math.Max(1, _track.StringTunings.Count is > 0 and var n ? n : 6);
     private double SystemHeight => StaffMarginTop + StaffToTab + (Strings - 1) * StringGap + Math.Max((IsTight ? TightBelowTab : 20.0) * Appearance.ScoreSpacing, _layout.ExtraTabBelow);
-    private double HeaderHeight => !DrawsHeader ? 0 : 82 + (ScoreLayoutEngine.HasStringTuning(_track) ? Math.Max(1, (_track.StringTunings.Count + 1) / 2) + (PartialCapoRules.HasLine(_track.Capo, _track.PartialCapos) ? 1 : 0) : 0) * 11;
+    private double HeaderHeight => !DrawsHeader ? 0 : 84 + (ScoreLayoutEngine.HasStringTuning(_track) ? Math.Max(1, (_track.StringTunings.Count + 1) / 2) + (PartialCapoRules.HasLine(_track.Capo, _track.PartialCapos) ? 1 : 0) : 0) * 13;
     private double SystemRowTop(int system) => ScoreEditorGeometry.SystemTop(HeaderHeight, system, SystemHeight);
     public double StaffTop(int system) => ScoreEditorGeometry.StaffTop(HeaderHeight, system, SystemHeight, StaffMarginTop);
     public double TabTop(int system) => ScoreEditorGeometry.TabTop(StaffTop(system), StaffToTab);

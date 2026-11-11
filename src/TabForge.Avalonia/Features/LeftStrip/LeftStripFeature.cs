@@ -38,6 +38,7 @@ public sealed class LeftStripFeature
     private readonly MainWindowSettings? _settings;
     private readonly LeftStripSettings _state;
     private readonly List<ToggleButton> _composerToggles = new();
+    private readonly List<ToggleButton> _viewToggles = new();
     private readonly List<ContentControl> _tipButtons = new();
     private void OnDeactivated(object? sender, System.EventArgs e) => CloseTips();
     private bool _visible, _composerOpen;
@@ -110,6 +111,7 @@ public sealed class LeftStripFeature
     {
         if (_vertical is null || _row is null) return;
         _composerToggles.Clear();
+        _viewToggles.Clear();
         _tipButtons.Clear();
         var column = new StackPanel { Orientation = Orientation.Vertical, Spacing = 2, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 6) };
         Fill(column, vertical: true);
@@ -127,7 +129,12 @@ public sealed class LeftStripFeature
             var size = IconSizing.Current * (_state.Large ? LargeScale : 1);
             Button? plain = null;
             ToggleButton? toggle = null;
-            if (item.IsToggle) _composerToggles.Add(toggle = MenuRowToggles.Button(new MenuRowToggles.Toggle(item.Id, item.Label, item.Icon), _commands));
+            if (item.IsToggle)
+            {
+                var btn = MenuRowToggles.Button(new MenuRowToggles.Toggle(item.Id, item.Label, item.Icon), _commands);
+                (item.Id == ToggleComposerId ? _composerToggles : _viewToggles).Add(btn);
+                toggle = btn;
+            }
             else plain = QuickActionsGroup.Button(() => _commands, item.Id, item.Label, item.Icon);
             var button = (ContentControl?)plain ?? toggle!;
             var icon = MenuRowToggles.Icon(item.Icon, size);
@@ -243,6 +250,8 @@ public sealed class LeftStripFeature
         _toggle.IsChecked = _visible;
         if (_toggle.Content is Control icon) icon.Opacity = _visible ? 1 : ChromeMetrics.DimTextOpacity;   // grey while hidden
         foreach (var toggle in _composerToggles) toggle.IsChecked = _composer.IsVisible;
+        foreach (var toggle in _viewToggles)
+            if (toggle.Tag is string id && _commands.CheckStateOf(id) is { } on) toggle.IsChecked = on;
         _host.IsVisible = _toggle.IsVisible || _row.IsVisible;
     }
 

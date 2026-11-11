@@ -63,6 +63,7 @@ public sealed class MainWindowLearnMode
         var learn = new MainWindowLearnMode(window, dock, settings, topBar, refitTrackList);
         panes?.AttachLearnSettings(settings?.Settings, settings is null ? null : () => settings.SaveSettings());
         commands.Add(CommandId, learn.Toggle);
+        commands.AddCheckState(CommandId, () => learn.IsOn);
         commands.Add(ToggleWaitCommandId, () => ToggleWait(panes));
         commands.Add(WaitSkipCommandId, () => SkipWait(panes));
         commands.Add(LookAheadLongerCommandId, () => StepLookAhead(panes, 1));

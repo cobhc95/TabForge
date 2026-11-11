@@ -8,17 +8,20 @@ using TabForge.Services;
 namespace TabForge.Avalonia.Views.Fx;
 
 // Owns: the draggable divider between the FX chain window's plug-in list and its plug-in pane: the width limits, the double-click reset, the hover
-//   highlight and remembering the width (PluginSettings.FxListWidth). The pointer does not change shape over it.
+//   highlight and remembering the width (PluginSettings.FxListWidth). The pointer is the resize cursor over it.
 // Does not own: the list or the pane, or fitting the plug-in editor to the pane (FxEditorArea follows the pane size as it does on a window resize).
-// Tests: no dedicated test class.
+// Tests: TabForge.Avalonia.Tests.FxChainSupportTests (Limit and the drag).
 public sealed class FxListSplitter : Border
 {
     public const double Default = 290, Minimum = 180, PaneMinimum = 400, WindowShare = 0.45, WindowMargin = 30, BarCornerRadius = 2, BarMargin = 2;
+    private const double RestLine = 1, ActiveLine = 2;
+    private const string RestBrush = "BorderSoftBrush", ActiveBrush = "AccentBrush";
 
     private readonly Grid _body;
     private readonly PluginSettings _settings;
     private readonly Action _save;
     private readonly Func<double> _windowWidth;
+    private readonly Border _line = new() { HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center, VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Stretch };
     private Point _from;
     private double _startWidth;
     private bool _dragging;
@@ -40,13 +43,23 @@ public sealed class FxListSplitter : Border
         Name = "ListSplitter";
         Margin = new Thickness(BarMargin, 0);
         CornerRadius = new CornerRadius(BarCornerRadius);
-        Background = Platform.AvaloniaPalette.TransparentBrush;
-        Child = new Border { CornerRadius = new CornerRadius(BarCornerRadius), [!BackgroundProperty] = new DynamicResourceExtension("BorderSoftBrush") };
+        Background = Platform.AvaloniaPalette.TransparentBrush;   // the whole column takes the pointer; only the centred line is drawn
+        Cursor = new Cursor(StandardCursorType.SizeWestEast);
+        Child = _line;
+        Paint(active: false);
+        PointerEntered += (_, _) => Paint(active: true);
+        PointerExited += (_, _) => { if (!_dragging) Paint(active: false); };
         ToolTip.SetTip(this, "Drag to resize the plug-in list (double-click: default width)");
         global::Avalonia.Automation.AutomationProperties.SetName(this, "Plug-in list width");
         PointerPressed += OnDown;
         PointerMoved += OnMove;
         PointerReleased += OnUp;
+    }
+
+    private void Paint(bool active)
+    {
+        _line.Width = active ? ActiveLine : RestLine;
+        _line[!BackgroundProperty] = new DynamicResourceExtension(active ? ActiveBrush : RestBrush);
     }
 
     /// <summary>The list width now (DIPs).</summary>
@@ -89,6 +102,7 @@ public sealed class FxListSplitter : Border
         if (!_dragging) return;
         _dragging = false;
         e.Pointer.Capture(null);
+        Paint(active: false);
         Keep();
     }
 

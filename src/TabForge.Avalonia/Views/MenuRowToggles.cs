@@ -37,21 +37,21 @@ public static class MenuRowToggles
     private const string LitFillKey = "SelectedTint", LitEdgeKey = "SelectedOutline", LitHoverKey = "AccentSoft";
     private const double LitOutlineWidth = 1;
 
-    /// <summary>One toggle: its command id, tooltip and the icon path data (IconGeometry; 24 x 24 or 16 x 16 grid, drawn uniform at 14 px).</summary>
-    public sealed record Toggle(string CommandId, string ToolTip, string IconData);
+    /// <summary>One toggle: its command id, tooltip and the icon path data (IconGeometry; 24 x 24 or 16 x 16 grid, drawn uniform at 14 px).
+    /// <paramref name="InStrip"/> marks a toggle that lives in the left strip, so the row built here skips it (the mode menus still borrow its row).</summary>
+    public sealed record Toggle(string CommandId, string ToolTip, string IconData, bool InStrip = false);
 
-    /// <summary>The toggles in order; null is a separator. Icon data is the menu row's own path data.</summary>
+    /// <summary>The toggles in order; null is a separator. Icon data is the menu row's own path data. The layout-mode toggles
+    /// (<see cref="InStrip"/> set) are not drawn in this row: they live in the left strip instead.</summary>
     public static readonly IReadOnlyList<Toggle?> Items = new Toggle?[]
     {
         new("View.SidePanel", "Show / hide the side panel (tools, sections, practice)", IconGeometry.SidePanel),
         null,
         new("View.InstrumentPanel", "Show/hide fretboard / keyboard",
             IconGeometry.Fretboard),
-        new("View.LearnMode", "Keyboard mode (experimental)", IconGeometry.LearnMode),
-        null,
-        new("View.BandView", "Band view: a row per track",
-            IconGeometry.BandView),
-        new("View.CompactMode", "Compact mode", IconGeometry.CompactMode),
+        new("View.LearnMode", "Keyboard mode (experimental)", IconGeometry.LearnMode, InStrip: true),
+        new("View.BandView", "Band view: a row per track", IconGeometry.BandView, InStrip: true),
+        new("View.CompactMode", "Compact mode", IconGeometry.CompactMode, InStrip: true),
         null,
         new("File.ProjectSettings", "Project settings: song info, credits, tempo, key",
             IconGeometry.Prefs),
@@ -63,7 +63,13 @@ public static class MenuRowToggles
         {
             Name = PanelName, Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 0),
         };
-        foreach (var item in Items) strip.Children.Add(item is null ? Separator() : Button(item, commands));
+        foreach (var item in Items)
+        {
+            if (item is { InStrip: true }) continue;   // the strip carries these; the row stays with the tool toggles
+            strip.Children.Add(item is null
+                ? Separator()
+                : Button(item, commands));
+        }
         return strip;
     }
 

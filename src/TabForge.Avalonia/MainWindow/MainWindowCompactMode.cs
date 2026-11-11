@@ -56,6 +56,7 @@ public sealed class MainWindowCompactMode
     {
         var compact = new MainWindowCompactMode(window, dock, panes, header);
         commands.Add(CommandId, compact.Toggle);
+        commands.AddCheckState(CommandId, () => compact.IsOn);
         // The menu row is built after Register, so its check takes the mode's state when the window opens.
         window.Opened += (_, _) => MainWindowViewMenu.SetRowChecks(window, CommandId, compact.IsOn);
     }

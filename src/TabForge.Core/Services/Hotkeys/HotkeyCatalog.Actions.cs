@@ -148,7 +148,7 @@ public static partial class HotkeyCatalog
         new("Track.Arm", CategoryTransport, "Arm track for recording", "", "Monitor the audio input through the selected track (and record it with Record)."),
         new("View.SidePanel", CategoryView, "Show / hide side panel", "", "Hide the side panel (tools, sections, practice) for more score space, or bring it back."),
         new("View.InstrumentPanel", CategoryView, "Show / hide fretboard / keyboard", "", "Hide the instrument panel (fretboard, keyboard or drum map) for more score space, or bring it back (same as View > Instrument view)."),
-        new("View.BandView", CategoryView, "Show / hide Band view", "", "Switch to the Band layout (every track's instrument and tab in rows, with the arrangement below), or back to the layout you left (same as View > Band view)."),
+        new("View.BandView", CategoryView, "Show / hide Band view", "Ctrl+Shift+B", "Switch to the Band layout (every track's instrument and tab in rows, with the arrangement below), or back to the layout you left (same as View > Band view)."),
         new("View.FretboardPosition", CategoryView, "Fretboard position: toggle top / bottom", "", "Move the fretboard / keyboard pane between above the score (default) and below it, above the timeline (same as the fretboard's right-click menu > Position)."),
         new("View.LockInstrumentSize", CategoryView, "Lock fretboard size", "", "Lock or unlock the fretboard / keyboard pane's height. Unlocked, dragging its edge resizes it and the drawing scales to fit; locked, it keeps its size."),
         new("View.ToggleLeftStrip", CategoryView, "Show / hide left strip", "", "Show or hide the slim icon strip at the left of the window (and its Composer panel with it)."),

@@ -24,6 +24,7 @@ public static class BuiltinEffects
     public const string LimiterId = Prefix + "limiter";
     public const string DelayId = Prefix + "delay";
     public const string GateId = Prefix + "gate";
+    public const string ReverbId = Prefix + "reverb";
 
     /// <summary>Every built-in effect, in the order the Add plug-in window lists them.</summary>
     public static IReadOnlyList<BuiltinEffectInfo> All { get; } =
@@ -34,6 +35,7 @@ public static class BuiltinEffects
         new(LimiterId, "Limiter", "Look-ahead true-peak limiter with ceiling in dBTP and gain-reduction and output meters"),
         new(DelayId, "Delay", "Stereo delay, synced to the song tempo or in milliseconds, with feedback, ping-pong and filters on the repeats"),
         new(GateId, "Noise Gate", "Noise gate with threshold, attack, hold, release and range"),
+        new(ReverbId, "Reverb", "Room reverb with Size, Predelay, Mix, High cut, Low cut and Width"),
     ];
 
     /// <summary>True for a built-in id (a slot path that names TabForge's own effect, not a file).</summary>

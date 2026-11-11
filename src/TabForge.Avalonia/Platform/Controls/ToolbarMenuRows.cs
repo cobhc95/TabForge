@@ -22,7 +22,8 @@ public static class ToolbarMenuRows
 
     /// <summary>
     /// Appends the rows of the toggles <paramref name="include"/> accepts, in the toolbar's order, after a separator when the menu has rows already.
-    /// Adds nothing when the window has no toolbar or no toggle is taken.
+    /// Adds nothing when the window has no toolbar or no toggle is taken. The click a row raises goes to the window's own button for the
+    /// command (the tool bar's, or the left strip's when it carries the toggle).
     /// </summary>
     /// <param name="beforeClick">Runs before a row's button is clicked (the compact menu hands its lent items back there).</param>
     public static void Append(ContextMenu menu, Window window, Func<string, bool> include, HotkeySettings hotkeys, Action beforeClick)
@@ -32,7 +33,7 @@ public static class ToolbarMenuRows
         foreach (var toggle in MenuRowToggles.Items)
         {
             if (toggle is null) entries.Add(null);
-            else if (include(toggle.CommandId) && toolbar.Children.OfType<Button>().FirstOrDefault(button => Equals(button.Tag, toggle.CommandId)) is { } button)
+            else if (include(toggle.CommandId) && window.GetLogicalDescendants().OfType<Button>().FirstOrDefault(button => Equals(button.Tag, toggle.CommandId)) is { } button)
                 entries.Add(Row(window, toggle, button, hotkeys, beforeClick));
         }
         while (entries.Count > 0 && entries[^1] is null) entries.RemoveAt(entries.Count - 1);

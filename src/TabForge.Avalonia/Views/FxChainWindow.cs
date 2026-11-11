@@ -9,6 +9,7 @@ using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Styling;
 using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Platform.Controls;
+using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Avalonia.Views.Fx;
 using TabForge.Models;
 using TabForge.Platform;
@@ -56,7 +57,7 @@ public sealed partial class FxChainWindow : Window
     private bool _replaced;
     // Gap after each option of the options row, in DIP.
     private const double OptionGap = 14;
-    private const double BodyMargin = 10, ListGap = 10, SplitterWidth = 6;
+    private const double BodyMargin = 10, ListGap = 10;
     private const int CpuTickSeconds = 1;
 
     /// <summary>The questions, messages and file pickers of this window; a test replaces members to answer without a modal box.</summary>
@@ -147,7 +148,8 @@ public sealed partial class FxChainWindow : Window
             Grid.SetRow(options, 0);
             root.Children.Add(options);
         }
-        var body = new Grid { ColumnDefinitions = ColumnDefinitions.Parse($"{FxListSplitter.Limit(_host.PluginSettings.FxListWidth, Width)},{SplitterWidth},*") };
+        // The whole gutter between the list and the editor is the drag band (DialogMetrics.FxListSplitterWidth).
+        var body = new Grid { ColumnDefinitions = ColumnDefinitions.Parse($"{FxListSplitter.Limit(_host.PluginSettings.FxListWidth, Width)},{DialogMetrics.FxListSplitterWidth},*") };
         var chainPane = BuildChainPane();
         Grid.SetColumn(chainPane, 0);
         var splitter = _splitter = new FxListSplitter(body, _host.PluginSettings, _host.SaveSettings, () => Bounds.Width > 0 ? Bounds.Width : Width);
@@ -197,7 +199,7 @@ public sealed partial class FxChainWindow : Window
 
     private DockPanel BuildChainPane()
     {
-        var pane = new DockPanel { Margin = new Thickness(0, 0, ListGap, 0) };
+        var pane = new DockPanel();   // no right margin: the gutter to the editor is the splitter's drag band
         var buttons = new DockPanel { Margin = new Thickness(0, 6, 0, 0) };
         DockPanel.SetDock(buttons, Dock.Bottom);
         foreach (var control in new Control[] { _add, _newContainer, _remove, _cpuStatus }) { DockPanel.SetDock(control, Dock.Left); buttons.Children.Add(control); }
