@@ -57,9 +57,10 @@ public sealed class MixTablePresenter
     /// <param name="currentPan">The track's pan (0 to 127, 64 is centre), scaled to the table's range when the beat has none.</param>
     /// <param name="currentTempo">The bar's tempo, or null when the bar has none.</param>
     /// <param name="songTempo">The song's tempo, the tempo box's start when the bar has none.</param>
+    /// <param name="tempoTransitionBeats">The beats the bar's tempo takes to arrive (a gradual change), the Transition start when the beat has no mix point.</param>
     /// <param name="instruments">The catalogue entries: program, name and whether it is a drum kit.</param>
     public MixTablePresenter(MixChange? current, int currentProgram, int currentVolume, int currentPan, int? currentTempo, int songTempo,
-        IEnumerable<(int Program, string Name, bool IsDrumKit)> instruments)
+        IEnumerable<(int Program, string Name, bool IsDrumKit)> instruments, int tempoTransitionBeats = 0)
     {
         _instrumentChoices = instruments.Where(e => !e.IsDrumKit).GroupBy(e => e.Program)
             .Select(g => (g.Key, $"{g.Key + 1} - {g.First().Name}")).ToList();
@@ -78,7 +79,7 @@ public sealed class MixTablePresenter
         TempoStartText = (currentTempo ?? songTempo).ToString();
         TransitionLabels = Enumerable.Range(0, MaxTransitionBeats + 1)
             .Select(beats => beats == 0 ? "Immediately" : beats == 1 ? "Over 1 beat" : $"Over {beats} beats").ToList();
-        TransitionStartIndex = Math.Clamp(current?.TransitionBeats ?? 0, 0, MaxTransitionBeats);
+        TransitionStartIndex = Math.Clamp(current?.TransitionBeats ?? tempoTransitionBeats, 0, MaxTransitionBeats);
         AllTracksStart = current?.AllTracks ?? false;
     }
 

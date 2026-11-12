@@ -281,8 +281,19 @@ public sealed partial class TimelineView
             d.Line(edge, Math.Round(x) + 0.5, RulerHeight - 6, Math.Round(x) + 0.5, RulerHeight - 0.5);
             d.Line(edge, Math.Round(x) + 0.5, RulerHeight + SectionHeight, Math.Round(x) + 0.5, Bounds.Height);
         }
+        DrawMixChangeMarks(d, ink, firstBar, endBar, barWidth);
         DrawGhostRuler(d, ink, edge);
         d.Line(edge, 0, RulerHeight - 0.5, width, RulerHeight - 0.5);
+    }
+
+    /// <summary>A small red mark under the number of every visible bar where any track changes sound, effects or tempo (what F10 shows on its beats).</summary>
+    private void DrawMixChangeMarks(IDrawContext d, Func<string, UiColor> ink, int firstBar, int endBar, double barWidth)
+    {
+        if (barWidth < 6) return;
+        var red = ink("Danger");
+        for (var bar = firstBar; bar < endBar; bar++)
+            if (BeatMix.BarHasChange(_song, bar))
+                d.Rect(red, null, Math.Round(BarX(bar)) + 3, TimelinePlayheadMarks.BarNumberTop + TimelinePlayheadMarks.BarNumberSize + 1, Math.Min(12, barWidth - 5), 2, 1);
     }
 
     private void DrawSections(IDrawContext d, bool light, int activeSection)

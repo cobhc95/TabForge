@@ -2,6 +2,21 @@
 
 TabForge is actively developed; please report anything odd on the Issues page.
 
+## 0.9.6
+
+### Added
+
+- A small red mark under the bar number on the timeline for every bar where any track changes sound, effects or tempo.
+
+### Changed
+
+- The Mix Table (F10) shows every change in force at the beat, whichever track it was made from: the tempo of the bar, a gradual tempo change with its length in the Transition box, and a mix point set for all tracks. Setting a tempo writes it for every track, as a gradual change when a Transition is chosen.
+
+### Fixed
+
+- Focus track stops working part-way through a song. Before, once playback reached a volume point written in the Mix Table, the tracks it set went back to their normal level, so the selected track lost its boost and the other tracks were no longer lowered. Volume points are now scaled by Focus track like every other level.
+- A gradual tempo change (such as bar 101 of Ashen Meridian) was missing from the Mix Table.
+
 ## 0.9.5
 
 ### Added
@@ -11,7 +26,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
   - The other tracks are lowered by the same amount by default (a 20% boost lowers them by 20%). Give each group (guitars, basses, drums, other instruments) its own choice: lowered like the boost, left exactly as they are, lowered by an amount of their own, or raised by an amount of their own. Four ready-made templates fill all four groups at once: Spotlight, Keep the rhythm section, Only boost the selected track and Rhythm section up. Changing a group by hand makes the template Custom.
   - The selected track is never lowered, whatever its group says, and a boost stops at the loudest level the track can reach.
   - It follows the selected track as you select another or switch songs, and Apply changes the levels straight away, even while the song plays.
-  - It changes only what you hear: faders, the saved song, exports and renders are never touched, and another open song is not affected. It acts on MIDI playback and on plug-in tracks alike. Volume points written in the Mix Table keep their own values.
+  - It changes only what you hear: faders, the saved song, exports and renders are never touched, and another open song is not affected. It acts on MIDI playback and on plug-in tracks alike.
   - The icon is on the default left strip. A strip you arranged yourself is offered it once, next to Composer; remove it and it stays removed.
 
 ### Changed

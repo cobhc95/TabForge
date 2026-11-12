@@ -40,24 +40,25 @@ public static class MainWindowMixTable
         var measure = track.Measures[bar];
         if (measure.Cells.Count == 0) return;
         var cellIndex = Math.Clamp(score.Editor.SelectedCell, 0, measure.Cells.Count - 1);
-        var cell = measure.Cells[cellIndex];
-        var presenter = new MixTablePresenter(cell.Mix, track.MidiProgram, track.Volume, track.Pan, measure.TempoChange, project.Tempo,
-            InstrumentCatalog.All.Select(e => (e.Program, e.Name, e.IsDrumKit)));
+        var slot = BeatMix.SlotOf(measure, cellIndex);
+        // The beat shows every change in force there, whichever track it was set from: its mix point (or one set for all tracks) and the bar's tempo with its ramp.
+        var tempo = BeatMix.TempoAt(project, bar, slot);
+        var presenter = new MixTablePresenter(BeatMix.MixAt(project, trackIndex, bar, cellIndex), track.MidiProgram, track.Volume, track.Pan, tempo?.Tempo, project.Tempo,
+            InstrumentCatalog.All.Select(e => (e.Program, e.Name, e.IsDrumKit)), tempo?.TransitionBeats ?? 0);
         var result = await DialogLauncher.Ask<MixTableWindow, MixTablePresenter.Result?>(owner, () => new MixTableWindow(presenter));
         if (result is null) return;
         Apply(document, trackIndex, bar, cellIndex, result);
         score.InvalidateVisual();
     }
 
-    /// <summary>Writes the window's result to the beat (and the bar's tempo to every track) as one undo step.</summary>
+    /// <summary>Writes the window's result to the beat (and its tempo to every track) as one undo step.</summary>
     private static void Apply(TabForge.Documents.IEditableDocument document, int trackIndex, int bar, int cellIndex, MixTablePresenter.Result result) =>
         DocumentEdits.Run(document, project =>
         {
             var measure = project.Tracks[trackIndex].Measures[bar];
             measure.Cells[cellIndex].Mix = result.Mix is { IsEmpty: false } mix ? mix : null;
-            if (result.Mix is { IsEmpty: true } && result.Tempo is null) measure.TempoChange = null;
-            if (result.Tempo is int tempo)
-                foreach (var track in project.Tracks) if (bar < track.Measures.Count) track.Measures[bar].TempoChange = tempo;
+            BeatMix.SetTempo(project, bar, BeatMix.SlotOf(measure, cellIndex),
+                result.Tempo is int bpm ? new BeatTempo(bpm, result.Mix?.TransitionBeats ?? 0) : null);
             return true;
         });
 }

@@ -127,6 +127,7 @@ public sealed partial class PlaybackEngine : IDisposable
                 _activeMetronomeNotes[e.MetronomePairId] = note;
             }
         }
+        if (!e.IsMetronome) data2 = FocusedEvent(e, data2);
         data2 = MasterScaled(status, data1, data2);
         data1 = ProgramFor(status, data1);
         lock (_outputGate)
@@ -178,7 +179,7 @@ public sealed partial class PlaybackEngine : IDisposable
             var ordered = new List<ScoreEvent>(latest.Values);
             ordered.Sort(static (a, b) => a.TimeMs.CompareTo(b.TimeMs));
             foreach (var e in ordered)
-                _output.Send(e.DeviceId, e.Status, ProgramFor(e.Status, e.Data1), MasterScaled(e.Status, e.Data1, e.Data2));
+                _output.Send(e.DeviceId, e.Status, ProgramFor(e.Status, e.Data1), MasterScaled(e.Status, e.Data1, FocusedEvent(e, e.Data2)));
             SendKeyswitchesAt(timeline, startMs, timeMs, onlyTrack);   // the articulation keyswitch in force there (see PlaybackEngine.Articulations.cs)
         }
         if (Trace.IsOn(Trace.Playback)) Trace.Write(Trace.Playback, RestoreTrace.Describe(timeMs, latest.Values));

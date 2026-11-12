@@ -42,9 +42,19 @@ public sealed partial class PlaybackEngine
                 }
                 // The setup keeps the base or chased value (a loop restart begins before the mix points); what is sent is the mix point in force at the position, else the setup.
                 var sent = latest.TryGetValue(ChannelStateKey(e), out var mix) && !mix.IsSetup ? mix : e;
-                if (send) _output.Send(sent.DeviceId, sent.Status, ProgramFor(sent.Status, sent.Data1), MasterScaled(sent.Status, sent.Data1, sent.Data2));
+                if (send) _output.Send(sent.DeviceId, sent.Status, ProgramFor(sent.Status, sent.Data1), MasterScaled(sent.Status, sent.Data1, FocusedEvent(sent, sent.Data2)));
             }
         }
+    }
+
+    /// <summary>
+    /// The data byte to send for a timeline event under Focus Track. A mix-table volume point (and a chased start value) carries its own absolute level, so it is scaled here;
+    /// a plain setup message was already scaled when it was compiled or refreshed and passes through.
+    /// </summary>
+    private int FocusedEvent(ScoreEvent e, int data2)
+    {
+        if ((e.Status & 0xF0) != 0xB0 || e.Data1 != 7 || e.TrackIndex < 0 || (e.IsSetup && !e.IsChased)) return data2;
+        return Volatile.Read(ref _song)?.TrackIds is { } ids && e.TrackIndex < ids.Length ? FocusedVolume(data2, ids[e.TrackIndex]) : data2;
     }
 
     private int FocusedVolume(int level, Guid track) => Focus?.Scale(track, level) ?? level;

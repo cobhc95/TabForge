@@ -20,7 +20,7 @@ public static partial class SelfTest
         "TestEngineMessagesGolden", "TestEngineMessagesRoundTrip", "TestMalformedInputFuzz", "TestEngineFrameFuzz", "TestGp5OwnFilesImport", "TestGpifPitchCurves", "TestSyntheticGuitarProFixture", "TestGpRoundTripCounts",
         "TestTforgeCompression", "TestImportPlausibility", "TestGuitarProImportWorker", "TestSyntheticFixtures", "TestPresetFolderStoreNoOverwrite", "TestNumberedSiblingCeiling",
         "TestSaveClaimAtomic", "TestAutosaveCopies", "TestScoreClipRejectsUntrustedInput", "TestClipboardCopyPasteBytes", "TestDirectTforgeOpenRecovers", "TestPairMarkerIsUntrusted",
-        "TestPairSaveEveryStage", "TestMixPointsSurviveSeek", "TestNoHangingNotes", "TestPlaybackOrderSpec", "TestLiveAudioFidelity",
+        "TestPairSaveEveryStage", "TestMixPointsSurviveSeek", "TestBeatMixAudit", "TestNoHangingNotes", "TestPlaybackOrderSpec", "TestLiveAudioFidelity",
         "TestLiveRecordingLoudness", "TestSongExtent", "TestVideoEncoderGolden", "TestSettingsChangeDuringSaveStaysPending", "TestSettingsBadWorkspaceKeepsOtherSettings",
         "TestPluginRightsNotice", "TestRenderOutputFolderRefused",
     };

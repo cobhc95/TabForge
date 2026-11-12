@@ -1,4 +1,4 @@
-# TabForge 0.9.5
+# TabForge 0.9.6
 
 **A keyboard-driven tablature and notation editor for Windows, with experimental Linux packages.** Opens .gp3, .gp4, .gp5, .gpx, .gp and TuxGuitar (.tg) files, and saves .gp, .tg and its own .tforge projects. Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard or keyboard, a piano roll, an arrangement timeline, audio and MIDI recording, a mixer, built-in effects, VST2, VST3 and CLAP plug-ins (32-bit and 64-bit VST), and offline audio and video rendering.
 
@@ -7,15 +7,15 @@
 ## Download
 
 > [!TIP]
-> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.9.5/TabForge-0.9.5-win-setup.exe)** · no administrator rights needed
+> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.9.6/TabForge-0.9.6-win-setup.exe)** · no administrator rights needed
 >
-> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.9.5/TabForge-0.9.5-win-x64-portable.zip)** · extract and run `TabForge.exe`
+> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.9.6/TabForge-0.9.6-win-x64-portable.zip)** · extract and run `TabForge.exe`
 
 Windows 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify your download](#verify-your-download). Older versions: [Releases](https://github.com/cobhc95/TabForge/releases).
 
 ### Linux packages (experimental)
 
-The main Linux download is the AppImage ([`TabForge-0.9.5-linux-x86_64.AppImage`](https://github.com/cobhc95/TabForge/releases/download/v0.9.5/TabForge-0.9.5-linux-x86_64.AppImage)). The archive ([`TabForge-0.9.5-linux-x64.tar.gz`](https://github.com/cobhc95/TabForge/releases/download/v0.9.5/TabForge-0.9.5-linux-x64.tar.gz)) is the fallback. Both include Wine 9.21 for Windows plug-ins, FFmpeg for video export and a General MIDI SoundFont, so sound works on first run.
+The main Linux download is the AppImage ([`TabForge-0.9.6-linux-x86_64.AppImage`](https://github.com/cobhc95/TabForge/releases/download/v0.9.6/TabForge-0.9.6-linux-x86_64.AppImage)). The archive ([`TabForge-0.9.6-linux-x64.tar.gz`](https://github.com/cobhc95/TabForge/releases/download/v0.9.6/TabForge-0.9.6-linux-x64.tar.gz)) is the fallback. Both include Wine 9.21 for Windows plug-ins, FFmpeg for video export and a General MIDI SoundFont, so sound works on first run.
 
 ```bash
 chmod +x TabForge-*-linux-x86_64.AppImage
@@ -36,11 +36,19 @@ chmod +x TabForge-*-linux-x86_64.AppImage
 </tr>
 </table>
 
-**Contents:** [Download](#download) · [What's new in 0.9.5](#whats-new-in-095) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Piano roll](#piano-roll) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Plug-ins](#plug-ins) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
+**Contents:** [Download](#download) · [What's new in 0.9.6](#whats-new-in-096) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Piano roll](#piano-roll) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Plug-ins](#plug-ins) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
 
-## What's new in 0.9.5
+## What's new in 0.9.6
 
-0.9.5 is a stable release. ✨
+0.9.6 is a stable release. ✨
+
+- **Mix Table shows every change:** F10 now shows the tempo in force at the beat, including a gradual tempo change (such as the one at bar 101 of Ashen Meridian, with its length in the Transition box), and any change made from another track at that beat. Before, a gradual tempo was missing from the table.
+- **Red mark under the bar number:** the timeline shows a small red mark under the number of every bar where any track changes sound, effects or tempo, so you can find them at a glance.
+- **Focus track keeps working after a Mix Table volume change:** before, once the song reached a volume point from the Mix Table, the other tracks went back to full level and the selected track lost its boost.
+
+Full list: the [changelog](CHANGELOG.md#096).
+
+<details><summary>Earlier in 0.9.5: Focus track, accent sliders and switches</summary>
 
 - **Focus track:** a left strip icon (and View > Focus track) that plays the selected track louder so it is easy to hear while you practise. Off until you turn it on, and it stays on until you turn it off. Click it to turn it on or off; right-click it for the settings: how much louder (20% to begin with, or decibels, or a fixed level), and what the other tracks do, group by group: lowered by the same amount, left as they are, or lowered or raised by an amount of their own, with four ready-made templates. The selected track is never lowered, and your faders, song and exports are never touched.
 <p align="center"><a href="media/screenshots/0.9.5/focus-track-settings.png"><img src="media/screenshots/0.9.5/focus-track-settings.png" alt="The Focus track settings window: the selected track goes 20% louder and the other tracks follow a template" width="330"></a><br><sub>Focus track settings: how much louder the selected track goes, and what each group of other tracks does.</sub></p>
@@ -49,7 +57,7 @@ chmod +x TabForge-*-linux-x86_64.AppImage
 - **Plug-ins:** Windows shows a plug-in's own reason when it fails to load instead of mentioning Wine; VST2 plug-ins whose support files are on the system PATH, and older VST2 plug-ins that only use the original process call, now load; small plug-in editors keep their size; preset switching works for 32-bit VST2 plug-ins.
 - **Fixes:** the GM sound stays off after reopening a song with a playing VST instrument, and auditioning a Composer groove always plays the built-in drum kit.
 
-Full list: the [changelog](CHANGELOG.md#095).
+</details>
 
 <details><summary>Earlier in 0.9.4: Composer grooves, Reverb, Ctrl+Tab</summary>
 
