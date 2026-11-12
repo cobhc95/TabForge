@@ -68,7 +68,7 @@ public static partial class SettingsCatalog
                 "On: each line takes the colour of its track. Off: every line uses the master track colour below.", "master track lane lines colour track color overview", dependsOn: "timeline.mastertrack"),
             Colour(Timeline, "Track list", "timeline.mastertrackcolour", "Master track colour", v => timeline.MasterTrackColour = v, () => timeline.MasterTrackColour,
                 "The one colour of every line when the lines do not use track colours. Leave at the default to follow the theme's text colour.", "master track lane colour color overview", dependsOn: "timeline.mastertrack"),
-            Int(Timeline, "Track list", "timeline.mastertrackopacity", "Master track strength", v => timeline.MasterTrackOpacityPercent = v, () => timeline.MasterTrackOpacityPercent, 5, 50,
+            Int(Timeline, "Track list", "timeline.mastertrackopacity", "Master track strength", v => timeline.MasterTrackOpacityPercent = v, () => timeline.MasterTrackOpacityPercent, SettingRanges.MasterTrackOpacityPercentMin, SettingRanges.MasterTrackOpacityPercentMax,
                 "How strongly the master track's lines show.", "master track lane opacity transparency strength overview", unit: "%", dependsOn: "timeline.mastertrack"),
             Bool(Timeline, "Clip lanes", "timeline.removeemptylanes", "Remove empty clip lanes automatically", v => timeline.AutoRemoveEmptyLanes = v, () => timeline.AutoRemoveEmptyLanes,
                 "When a lane under a track has no clips left (you moved, cut or deleted the last one), remove it and close the lanes below it. Turn it off to keep empty lanes until you remove them yourself. A track that is armed for recording keeps its lanes.",

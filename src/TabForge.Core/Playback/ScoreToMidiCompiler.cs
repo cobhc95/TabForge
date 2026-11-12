@@ -85,7 +85,7 @@ internal sealed partial class ScoreToMidiCompiler
         var contentCache = new Dictionary<int, double>();
 
         var cursorMs = 0.0;
-        if (_opt.CountIn) for (var bar = Math.Clamp(_opt.CountInBars, 1, 4); bar > 0; bar--) cursorMs += CountInMs(order[0], cursorMs);   // every count-in bar clicks
+        if (_opt.CountIn) for (var bar = Math.Clamp(_opt.CountInBars, SettingRanges.CountInBarsMin, SettingRanges.CountInBarsMax); bar > 0; bar--) cursorMs += CountInMs(order[0], cursorMs);   // every count-in bar clicks
         _timeline.CountInMs = cursorMs;
 
         var firstBarMs = MusicTime.BarMs(_project, order[0], _speedScale);

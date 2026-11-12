@@ -39,7 +39,6 @@ public static class ClickSettingsPopups
     private static readonly string[] SubdivisionLabels = { "Quarter beats", "Eighth notes", "Eighth-note triplets", "Sixteenth notes" };
     private static readonly string[] LengthLabels = { "1 bar", "2 bars", "3 bars", "4 bars" };
     private const int MaxSubdivision = 4;
-    private const int MaxCountInBars = 4;
 
     /// <summary>The metronome popup over <paramref name="audio"/>; <paramref name="changed"/> runs after every change.</summary>
     public static TransportPopupFrame Metronome(AudioSettings audio, Action changed)
@@ -66,7 +65,7 @@ public static class ClickSettingsPopups
         var frame = new TransportPopupFrame(CountInTitle, CountInCloseTip, TransportPopupFrame.NarrowWidth);
         frame.AddPower(CountInPowerName, audio.CountIn, value => audio.CountIn = value, changed);
         frame.AddSlider(CountInVolumeText, audio.CountInVolume, value => audio.CountInVolume = value, changed, 0, defaults.CountInVolume);
-        frame.AddChoice(LengthText, LengthLabels, Math.Clamp(audio.CountInBars, 1, MaxCountInBars) - 1, index => { audio.CountInBars = index + 1; changed(); });
+        frame.AddChoice(LengthText, LengthLabels, Math.Clamp(audio.CountInBars, SettingRanges.CountInBarsMin, SettingRanges.CountInBarsMax) - 1, index => { audio.CountInBars = index + 1; changed(); });
         frame.AddChoice(ClickSoundText, ClickSoundPresets.CountIn.Select(sound => sound.Label), ClickSoundPresets.CountInIndexOf(audio),
             index => { ClickSoundPresets.ApplyCountIn(audio, index); changed(); });
         frame.AddCheck(SongStartText, audio.CountInOnlyAtSongStart, value => audio.CountInOnlyAtSongStart = value, changed, FirstCountInCheckTopMargin);

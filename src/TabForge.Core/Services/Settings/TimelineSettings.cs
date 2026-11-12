@@ -53,7 +53,10 @@ public sealed class TimelineSettings
     /// <summary>Each master track line takes its track's colour; off, every line uses <see cref="MasterTrackColour"/>.</summary>
     public bool MasterTrackColours { get; set; } = true;
     /// <summary>The one colour of the master track's lines, used when <see cref="MasterTrackColours"/> is off.</summary>
-    public string MasterTrackColour { get; set; } = "#8B939F";
+    public string MasterTrackColour { get; set; } = DefaultMasterTrackColour;
+
+    /// <summary>The master track colour of a new settings file, and the one a bad saved value falls back to (SettingsValidator).</summary>
+    public const string DefaultMasterTrackColour = "#8B939F";
     /// <summary>Opacity of the master track's lines, in percent (5-40).</summary>
     public int MasterTrackOpacityPercent { get; set; } = 25;
     /// <summary>The Band view's preferences.</summary>

@@ -29,7 +29,7 @@ public static partial class SettingsCatalog
                 "The note length outline on the cell under the cursor in the Band view cards. Separate from the score's own setting.", "band view note length outline cursor cell"),
             Bool(Timeline, "Band view", "band.continuous", "Continuous page layout", v => band.ContinuousLayout = v, () => band.ContinuousLayout,
                 "The Band view cards reflow their score to the card's width instead of fixed pages. Separate from the score's own page layout.", "band view page layout continuous page cards"),
-            Int(Timeline, "Band view", "band.rowsperscreen", "Rows per screen", v => band.RowsPerScreen = v, () => band.RowsPerScreen, 1, 5,
+            Int(Timeline, "Band view", "band.rowsperscreen", "Rows per screen", v => band.RowsPerScreen = v, () => band.RowsPerScreen, SettingRanges.BandRowsPerScreenMin, SettingRanges.BandRowsPerScreenMax,
                 "How many Band view rows fit the screen at once in a song that has not set its own (1 to 5). Songs remember their own choice.", "band view rows per screen visible count"),
             Number(Timeline, "Band view", "band.lanezoom", "Lane zoom", v => band.LaneZoom = BandChoices.ClampZoom(v), () => BandChoices.ClampZoom(band.LaneZoom), BandChoices.MinLaneZoom, BandChoices.MaxLaneZoom,
                 "How large the tab or notation is drawn in every Band view lane, as a multiple of the normal size. Ctrl + mouse wheel over a lane changes it too.", "band view lane zoom size bigger smaller tab notation", step: 0.1, decimals: 1),

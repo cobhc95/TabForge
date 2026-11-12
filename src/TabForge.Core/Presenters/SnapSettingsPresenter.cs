@@ -38,7 +38,7 @@ public static class SnapSettingsPresenter
     public static bool CommitDistance(SnapSettings snap, string text)
     {
         if (!int.TryParse(text.Trim(), out var px)) return false;
-        snap.DistancePx = Math.Clamp(px, 1, 40);
+        snap.DistancePx = Math.Clamp(px, SettingRanges.SnapDistancePxMin, SettingRanges.SnapDistancePxMax);
         return true;
     }
 }

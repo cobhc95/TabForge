@@ -102,7 +102,7 @@ public sealed partial class PlaybackEngine
         {
             // Count-in before a start inside a loop: the clock anchors at the start position only after these bars.
             _countInBeforeStart = false;
-            for (var bar = 0; bar < Math.Clamp(opts.CountInBars, 1, 4) && _running && generation == Volatile.Read(ref _generation); bar++)
+            for (var bar = 0; bar < Math.Clamp(opts.CountInBars, SettingRanges.CountInBarsMin, SettingRanges.CountInBarsMax) && _running && generation == Volatile.Read(ref _generation); bar++)
                 PlayLoopCountIn(timeline, startMs, generation);
         }
 

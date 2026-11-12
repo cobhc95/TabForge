@@ -261,7 +261,7 @@ public sealed class MainWindowBandView
         void ChangeRows(int delta)
         {
             var band = Band();
-            band.RowsPerScreen = Math.Clamp(band.RowsPerScreen + delta, RowsPerScreenMin, RowsPerScreenMax);
+            band.RowsPerScreen = Math.Clamp(band.RowsPerScreen + delta, SettingRanges.BandRowsPerScreenMin, SettingRanges.BandRowsPerScreenMax);
             Remember(band, $"Band view: {band.RowsPerScreen} row{(band.RowsPerScreen == 1 ? "" : "s")} per screen");
         }
         commands.Add(FeatureHotkeyIds.BandToggleTrackRow, () => { var view = panes.Band; if (view is not null) view.ToggleShown(view.SelectedTrackIndex); });
@@ -311,9 +311,6 @@ public sealed class MainWindowBandView
                 () => panes.Band?.ApplyChoices(new BandLayoutChoices(band.FretboardAbove, band.ColourFrame)));
         });
     }
-
-    /// <summary>The fewest and most Band rows on the screen at once.</summary>
-    private const int RowsPerScreenMin = 1, RowsPerScreenMax = 5;
 
     /// <summary>Applies a built-in or saved layout by name and records it as the last layout.</summary>
     private void SwitchTo(string name)

@@ -60,7 +60,7 @@ public sealed partial class FretboardSettingsWindow
                 Chips(dots, "NOTE DOT LABEL", "FretboardDotSays", new[] { "Fret number", "Note name" }, () => ed.ShowNoteNames ? "Note name" : "Fret number", v => ed.ShowNoteNames = v == "Note name");
                 dots.Add(new TextBlock { Text = "Labels cursor, playback and pointer-preview notes; the fret ruler and scale labels stay unchanged.", TextWrapping = global::Avalonia.Media.TextWrapping.Wrap });
                 Slide(dots, "NOTE BRIGHTNESS", "FretboardNoteBrightness", FretboardStyles.MinBrightness, FretboardStyles.MaxBrightness, FretboardStyles.BrightnessStep, e => e.FretboardNoteBrightness, v => ed.FretboardNoteBrightness = v, "%");
-                Slide(dots, "DOT AND NUMBER SIZE", "FretboardMarkerSize", 60, 160, 10, e => e.FretMarkerSizePercent, v => ed.FretMarkerSizePercent = v, "%");
+                Slide(dots, "DOT AND NUMBER SIZE", "FretboardMarkerSize", SettingRanges.FretMarkerSizePercentMin, SettingRanges.FretMarkerSizePercentMax, 10, e => e.FretMarkerSizePercent, v => ed.FretMarkerSizePercent = v, "%");
                 Chips(dots, "NUMBER SIZE", "FretboardNumberSize", FretNumberSizes.All, () => ed.FretNumberSize, v => ed.FretNumberSize = v);
                 NoteColoursCard(Card("Note colours"));
                 break;

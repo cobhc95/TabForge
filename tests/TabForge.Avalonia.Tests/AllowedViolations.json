@@ -325,7 +325,6 @@
     "Source/src/TabForge.Core/Services/Settings/AppearanceSettings.cs": 1,
     "Source/src/TabForge.Core/Services/Settings/EditingSettings.cs": 1,
     "Source/src/TabForge.Core/Services/Settings/FollowSettings.cs": 5,
-    "Source/src/TabForge.Core/Services/Settings/SettingsValidator.cs": 1,
     "Source/src/TabForge.Core/Services/Settings/TimelineSettings.cs": 1,
     "Source/src/TabForge.Core/Services/Tracks/NewTrackFactory.cs": 4
   }

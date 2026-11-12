@@ -135,7 +135,7 @@ public sealed partial class TimelineView
     /// <summary>Opacity of a plain bar block: <see cref="TimelineNoteMarks.NotesCellOpacity"/>, fading to <see cref="MutedBlockOpacity"/> with the muted-track dimming.</summary>
     private double BlockOpacity(bool muted)
     {
-        var dim = Math.Clamp(MutedTrackDimPercent, 0, 100) / 100.0;
+        var dim = Math.Clamp(MutedTrackDimPercent, TabForge.Services.SettingRanges.MutedTrackDimPercentMin, TabForge.Services.SettingRanges.MutedTrackDimPercentMax) / 100.0;
         var full = TimelineNoteMarks.NotesCellOpacity;
         return muted ? full + (MutedBlockOpacity - full) * dim : full;
     }

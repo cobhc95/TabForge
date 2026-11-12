@@ -112,7 +112,7 @@ public static partial class SettingsCatalog
                 FretNumberSizes.All,
                 "Size of the fret numbers, technique tags and note bubbles on the fretboard (Large is the standard size).",
                 "fret number size small medium large bubble label"),
-            Int(Fretboard, "Appearance", "fretboard.markersize", "Note marker size", v => ed.FretMarkerSizePercent = v, () => ed.FretMarkerSizePercent, 60, 160,
+            Int(Fretboard, "Appearance", "fretboard.markersize", "Note marker size", v => ed.FretMarkerSizePercent = v, () => ed.FretMarkerSizePercent, SettingRanges.FretMarkerSizePercentMin, SettingRanges.FretMarkerSizePercentMax,
                 "Size of the note circles and their numbers on the fretboard (90% is the standard; 100% is the original size). Large sizes stop growing at the gap between strings.",
                 "note marker size dot circle bubble number bigger smaller", "%"),
             Choice(Fretboard, "Appearance","fretboard.stringspacing", "String spacing", v => ed.FretStringSpacing = v, () => ed.FretStringSpacing,

@@ -17,7 +17,6 @@ namespace TabForge.Avalonia.Platform;
 public static class MasterLaneStrip
 {
     public const double Opacity = 0.25;
-    public const int MinOpacityPercent = 5, MaxOpacityPercent = 50;
 
     /// <summary>How the lines are coloured: by track colour, or one flat <paramref name="Colour"/> (null: the theme's text colour); <paramref name="Opacity"/> 0..1.</summary>
     public readonly record struct Look(bool ByTrack, UiColor? Colour, double Opacity)
@@ -29,7 +28,7 @@ public static class MasterLaneStrip
         {
             var chosen = Color.TryParse(settings.MasterTrackColour, out var c) && !string.Equals(settings.MasterTrackColour, new TimelineSettings().MasterTrackColour, StringComparison.OrdinalIgnoreCase)
                 ? new UiColor(c.A, c.R, c.G, c.B) : (UiColor?)null;
-            return new Look(settings.MasterTrackColours, chosen, Math.Clamp(settings.MasterTrackOpacityPercent, MinOpacityPercent, MaxOpacityPercent) / 100.0);
+            return new Look(settings.MasterTrackColours, chosen, Math.Clamp(settings.MasterTrackOpacityPercent, SettingRanges.MasterTrackOpacityPercentMin, SettingRanges.MasterTrackOpacityPercentMax) / 100.0);
         }
     }
 

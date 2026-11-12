@@ -2,7 +2,7 @@ using TabForge.Docking;
 
 namespace TabForge.Services;
 
-// Owns: bounding every settings value to its valid range.
+// Owns: bounding every settings value to its valid range (the bounds shared with the catalog rows and the windows come from SettingRanges).
 // Does not own: file access and migration.
 // Tests: TestSettingsBadWorkspaceKeepsOtherSettings.
 /// <summary>Clamps imported and persisted settings to practical UI, audio, and collection bounds.</summary>
@@ -13,8 +13,8 @@ public static class SettingsValidator
         ArgumentNullException.ThrowIfNull(settings);
         var defaults = new AppSettings();
         SettingsMigration.EnsureSections(settings);
-        settings.Appearance.TrackTintPercent = Math.Clamp(settings.Appearance.TrackTintPercent, 0, 60);
-        settings.Appearance.MutedTrackDimPercent = Math.Clamp(settings.Appearance.MutedTrackDimPercent, 0, 100);
+        settings.Appearance.TrackTintPercent = Math.Clamp(settings.Appearance.TrackTintPercent, SettingRanges.TrackTintPercentMin, SettingRanges.TrackTintPercentMax);
+        settings.Appearance.MutedTrackDimPercent = Math.Clamp(settings.Appearance.MutedTrackDimPercent, SettingRanges.MutedTrackDimPercentMin, SettingRanges.MutedTrackDimPercentMax);
         NormalizePlugins(settings);
         NormalizeRememberedFolders(settings);
         NormalizeTuningUserPresets(settings);
@@ -152,14 +152,15 @@ public static class SettingsValidator
         {
             timeline.Snap ??= new SnapSettings();
             if (!SnapSettings.Grids.Contains(timeline.Snap.Grid)) timeline.Snap.Grid = "1/4";
-            timeline.Snap.DistancePx = Math.Clamp(timeline.Snap.DistancePx, 1, 40);
+            timeline.Snap.DistancePx = Math.Clamp(timeline.Snap.DistancePx, SettingRanges.SnapDistancePxMin, SettingRanges.SnapDistancePxMax);
             timeline.PlayheadStyle = PlayheadStyles.Normalize(timeline.PlayheadStyle);
-            timeline.MasterTrackColour = Colour(timeline.MasterTrackColour, "#8B939F"); timeline.MasterTrackOpacityPercent = Math.Clamp(timeline.MasterTrackOpacityPercent, 5, 50);
+            timeline.MasterTrackColour = Colour(timeline.MasterTrackColour, TimelineSettings.DefaultMasterTrackColour);
+            timeline.MasterTrackOpacityPercent = Math.Clamp(timeline.MasterTrackOpacityPercent, SettingRanges.MasterTrackOpacityPercentMin, SettingRanges.MasterTrackOpacityPercentMax);
             timeline.Band ??= new BandSettings();
             timeline.Band.InstrumentSize = BandChoices.NormalizeSize(timeline.Band.InstrumentSize);
             timeline.Band.LaneContent = BandChoices.NormalizeContent(timeline.Band.LaneContent);
             timeline.Band.LaneLayout = BandChoices.NormalizeLayout(timeline.Band.LaneLayout);
-            timeline.Band.RowsPerScreen = Math.Clamp(timeline.Band.RowsPerScreen, 1, 5);
+            timeline.Band.RowsPerScreen = Math.Clamp(timeline.Band.RowsPerScreen, SettingRanges.BandRowsPerScreenMin, SettingRanges.BandRowsPerScreenMax);
             timeline.Band.PlayheadLine = BandChoices.NormalizePlayhead(timeline.Band.PlayheadLine);
             timeline.Band.LaneZoom = BandChoices.ClampZoom(timeline.Band.LaneZoom);
             timeline.Band.RowMinHeight = BandChoices.NormalizeRowMin(timeline.Band.RowMinHeight);
@@ -267,9 +268,9 @@ public static class SettingsValidator
     private static void NormalizeAudio(AudioSettings value)
     {
         value.Speed = InputLimits.ClampFinite(value.Speed, 0.25, 2, 1);
-        value.CountInBars = Math.Clamp(value.CountInBars, 1, 4);
-        value.PreviewLengthMs = Math.Clamp(value.PreviewLengthMs, 60, 1_200);
-        value.LetRingCapMs = Math.Clamp(value.LetRingCapMs, 400, 6_000);
+        value.CountInBars = Math.Clamp(value.CountInBars, SettingRanges.CountInBarsMin, SettingRanges.CountInBarsMax);
+        value.PreviewLengthMs = Math.Clamp(value.PreviewLengthMs, SettingRanges.PreviewLengthMsMin, SettingRanges.PreviewLengthMsMax);
+        value.LetRingCapMs = Math.Clamp(value.LetRingCapMs, SettingRanges.LetRingCapMsMin, SettingRanges.LetRingCapMsMax);
         value.NormalVibratoDepth = InputLimits.ClampFinite(value.NormalVibratoDepth, 0.05, 3, 0.38);
         value.WideVibratoDepth = InputLimits.ClampFinite(value.WideVibratoDepth, 0.05, 3, 0.94);
         value.VibratoSpeedHz = InputLimits.ClampFinite(value.VibratoSpeedHz, 1, 12, 5.5);
@@ -284,7 +285,7 @@ public static class SettingsValidator
     private static void NormalizeEditing(EditingSettings value)
     {
         value.DefaultDuration = value.DefaultDuration is 1 or 2 or 4 or 8 or 16 or 32 or 64 ? value.DefaultDuration : 4;
-        value.ScoreWheelScrollPixels = Math.Clamp(value.ScoreWheelScrollPixels, 12, 96);
+        value.ScoreWheelScrollPixels = Math.Clamp(value.ScoreWheelScrollPixels, SettingRanges.ScoreWheelScrollPixelsMin, SettingRanges.ScoreWheelScrollPixelsMax);
         value.FretboardFrets = value.FretboardFrets is 12 or 24 ? value.FretboardFrets : 24;
         var look = FretboardStyles.Normalize(new FretboardStyles.Look(value.FretboardWood, value.FretboardBinding, value.FretboardInlayShape,
             value.FretboardInlayMaterial, value.FretboardCapoLook, value.FretboardStringLook));
@@ -298,7 +299,7 @@ public static class SettingsValidator
         value.ScaleHighlightOpacity = Math.Clamp(value.ScaleHighlightOpacity, ScaleHighlightStyles.MinOpacity, ScaleHighlightStyles.MaxOpacity);
         value.ScaleHighlightCustomColour = value.ScaleHighlightCustomColour is { Length: 7 } hex && hex[0] == '#' && hex[1..].All(Uri.IsHexDigit) ? hex : "";
         value.ScaleHighlightColour = ScaleHighlightStyles.Colours.FirstOrDefault(v => string.Equals(v, value.ScaleHighlightColour, StringComparison.OrdinalIgnoreCase)) ?? "Accent";
-        value.FretMarkerSizePercent = Math.Clamp(value.FretMarkerSizePercent, 60, 160);
+        value.FretMarkerSizePercent = Math.Clamp(value.FretMarkerSizePercent, SettingRanges.FretMarkerSizePercentMin, SettingRanges.FretMarkerSizePercentMax);
         foreach (var role in FretNoteColours.Roles) FretNoteColours.Set(value, role, FretNoteColours.Get(value, role) ?? "");
         value.FretDotStyle = FretNoteColours.NormalizeStyle(value.FretDotStyle);
         value.ScaleHighlightStrength =Math.Clamp(value.ScaleHighlightStrength, ScaleHighlightStyles.MinStrength, ScaleHighlightStyles.MaxStrength);
