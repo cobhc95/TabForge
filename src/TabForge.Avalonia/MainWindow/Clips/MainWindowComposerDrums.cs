@@ -56,8 +56,7 @@ internal sealed class MainWindowComposerDrums
         MainWindowSettings? settings, Action<string> status, ScorePreviewView score)
     {
         var drums = new MainWindowComposerDrums(owner, panes, songs, playback, settings, status, score);
-        if (panes.Arrangement is { } existing) drums.Attach(existing);
-        panes.ArrangementCreated += drums.Attach;
+        panes.OnArrangement(drums.Attach);
         return new ComposerDrumHooks { Play = drums.Play, Stop = drums.Stop, Drag = drums.Drag };
     }
 

@@ -94,8 +94,7 @@ public sealed partial class MainWindow
             arrangement.Timeline.MediaApprovalRequested += () => commands.Run("Media.ManageApprovals");
             arrangement.Timeline.MixMarkClicked += bar => MainWindowMixTable.OpenBar(songs, scorePreview, this, bar);
         }
-        if (panes.Arrangement is { } shownArrangement) AskForApproval(shownArrangement);
-        panes.ArrangementCreated += AskForApproval;
+        panes.OnArrangement(AskForApproval);
     }
 
     /// <summary>Song statistics, timeline sections and bars, project settings, exports, the mixer, finders, presets and the tools and view menus.</summary>

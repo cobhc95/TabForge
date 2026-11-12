@@ -120,6 +120,14 @@ public sealed class MainWindowDocumentPanes
     /// <summary>Raised with each new arrangement pane, so its owners can apply saved view modes to it.</summary>
     public event Action<ArrangementView>? ArrangementCreated;
 
+    /// <summary>Runs <paramref name="attach"/> on the arrangement that exists now (the dock builds the first one before most of the window registers)
+    /// and on every later one: the one "attach now or later" rule of the window's arrangement hooks.</summary>
+    public void OnArrangement(Action<ArrangementView> attach)
+    {
+        if (_arrangement is { } existing) attach(existing);
+        ArrangementCreated += attach;
+    }
+
     /// <summary>A new arrangement pane for the dock, showing the shown song and following later tab changes.</summary>
     public ArrangementView NewArrangement()
     {

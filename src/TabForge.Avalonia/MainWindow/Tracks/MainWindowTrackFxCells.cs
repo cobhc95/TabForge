@@ -31,8 +31,7 @@ public static class MainWindowTrackFxCells
             panes.ArrangementCreated += arrangement => windows.TrackListChanged = () => arrangement.Header.InvalidateVisual();
         }
         // The dock builds the first arrangement before the window registers this, so that one is attached here too.
-        if (panes.Arrangement is { } existing) Attach(existing, songs, owner, playback, plugins);
-        panes.ArrangementCreated += arrangement => Attach(arrangement, songs, owner, playback, plugins);
+        panes.OnArrangement(arrangement => Attach(arrangement, songs, owner, playback, plugins));
     }
 
     /// <summary>Routes the FX and power cell requests of one arrangement to the shown song's track of that row; the master row's cells go to <see cref="MainWindowMasterLane"/>.</summary>

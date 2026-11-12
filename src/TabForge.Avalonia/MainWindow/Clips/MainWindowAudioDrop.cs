@@ -41,8 +41,7 @@ internal sealed class MainWindowAudioDrop
     public static MainWindowAudioDrop Register(MainWindowDocumentPanes panes, MainWindowTabs songs, Action<string> status, Action<ImportStatus>? showImports = null)
     {
         var drop = new MainWindowAudioDrop(panes, songs, status, showImports);
-        if (panes.Arrangement is { } existing) drop.Attach(existing);
-        panes.ArrangementCreated += drop.Attach;
+        panes.OnArrangement(drop.Attach);
         return drop;
     }
 

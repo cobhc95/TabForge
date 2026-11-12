@@ -50,8 +50,7 @@ public static class MainWindowLiveInput
             session.Changed += bar.RefreshLiveInput;
             session.MenuRequested += () => bar.LiveInputMenu?.Invoke()?.Open(bar);
         }
-        if (panes.Arrangement is { } existing) HookBar(existing);
-        panes.ArrangementCreated += HookBar;
+        panes.OnArrangement(HookBar);
         return session;
     }
 

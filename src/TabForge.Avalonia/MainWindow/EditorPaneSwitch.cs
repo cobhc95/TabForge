@@ -84,8 +84,7 @@ public sealed partial class EditorPaneSwitch
         if (settings is not null) settings.SettingsChanged += _ => PianoRoll.RefreshNeedle();   // Preferences' "Playback needle" row
         Pills.Picked += piano => SetView(piano ? TrackEditorView.PianoRoll : TrackEditorView.Score);
         songs.ActiveChanged += () => Watch(songs.Active);
-        if (panes.Arrangement is { } arrangement) Follow(arrangement);
-        panes.ArrangementCreated += Follow;
+        panes.OnArrangement(Follow);
         Watch(songs.Active);
         AttachEditingFocus(owner());
     }

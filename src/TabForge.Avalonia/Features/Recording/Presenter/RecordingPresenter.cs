@@ -107,8 +107,7 @@ internal sealed partial class RecordingPresenter(MainWindowCommands commands, Ma
                 arrangement.Transport.ShowRecording(hooks.IsRecording);
                 arrangement.Timeline.UseLiveTakes(hooks.Live);
             }
-            if (panes.Arrangement is { } existing) Attach(existing);
-            panes.ArrangementCreated += Attach;
+            panes.OnArrangement(Attach);
         }
         // The transport (Stop, Space/PlayPause, Esc) ends a recording with this, then shows the restored Record button.
         void StopFromTransport()

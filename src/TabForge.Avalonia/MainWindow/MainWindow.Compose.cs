@@ -173,8 +173,8 @@ public sealed partial class MainWindow
             RunCommand = id => state.Commands.Run(id),
             ManageLinkedAudio = owner => approvals.ShowLinkedAudioReviewAsync(owner),
             ManageQuarantine = approvals.ShowQuarantineAsync,
-            ConfigureAsio = driver => (global::Avalonia.Application.Current as App)?.Engine?.ShowAsioPanelAsync(driver) ?? Task.FromResult("The audio engine is not available."),
-            RunningAsioDevice = () => (global::Avalonia.Application.Current as App)?.Engine?.RunningAsioDevice,
+            ConfigureAsio = driver => Playback?.Engine?.ShowAsioPanelAsync(driver) ?? Task.FromResult("The audio engine is not available."),
+            RunningAsioDevice = () => Playback?.Engine?.RunningAsioDevice,   // the same client App.Engine holds (AvaloniaPlaybackHost hands it to the sessions)
         };
         DockPanel.SetDock(state.Notice, Dock.Bottom);
         DockPanel.SetDock(state.Autosave.Notice, Dock.Bottom);

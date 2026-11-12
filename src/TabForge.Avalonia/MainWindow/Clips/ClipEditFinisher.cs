@@ -48,8 +48,7 @@ internal sealed class ClipEditFinisher
             arrangement.Input.SectionMoved += (_, mapping) => AfterSectionMove(arrangement.Document, mapping, settings, playback);
             WireSectionAudio(arrangement, settings, owner);
         }
-        if (panes.Arrangement is { } existing) Attach(existing);
-        panes.ArrangementCreated += Attach;
+        panes.OnArrangement(Attach);
         return finisher;
     }
 
