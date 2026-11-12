@@ -61,4 +61,17 @@ public sealed class ViewTempoMenusTests
         Assert.Equal(119, tempo);
     }
 
+    [AvaloniaFact]
+    public void TempoPopupSliderSpansTheSongTempoRange()
+    {
+        // The slider covers the same 20-400 BPM as the menu steps and the project settings (it used to stop at 30-300).
+        var popup = (Border)ViewTempoPopups.Tempo(() => 350, _ => { });
+        var slider = ((StackPanel)popup.Child!).Children.OfType<Slider>().Single();
+        Assert.Equal(TabForge.Services.InputLimits.MinTempo, slider.Minimum);
+        Assert.Equal(TabForge.Services.InputLimits.MaxTempo, slider.Maximum);
+        Assert.Equal(20, slider.Minimum);
+        Assert.Equal(400, slider.Maximum);
+        Assert.Equal(350, slider.Value);
+    }
+
 }
