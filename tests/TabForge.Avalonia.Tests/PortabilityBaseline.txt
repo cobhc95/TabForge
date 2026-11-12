@@ -1,5 +1,6 @@
 Source/src/TabForge.Avalonia/Capture/ToolWindowCatalog.cs|1
-Source/src/TabForge.Avalonia/MainWindow/MainWindowKeyboard.cs|1
+Source/src/TabForge.Avalonia/Features/Help/HelpWindow.cs|1
+Source/src/TabForge.Avalonia/MainWindow/MainWindowKeyboard.cs|2
 Source/src/TabForge.Avalonia/Views/Fx/CommonFoldersWindow.cs|1
 Source/src/TabForge.Avalonia/Views/MidiProcessingWindow.cs|1
 Source/src/TabForge.Core/Platform/Theme/FontProvider.cs|2

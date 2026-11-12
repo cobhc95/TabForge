@@ -3,11 +3,14 @@ Source/src/TabForge.Avalonia/Features/Recording/Presenter/RecordingPresenter.Lan
 Source/src/TabForge.Avalonia/Features/Recording/Presenter/RecordingPresenter.Landing.cs|TabForge.Playback
 Source/src/TabForge.Avalonia/Features/Recording/Presenter/RecordingPresenter.Landing.cs|TabForge.Presenters
 Source/src/TabForge.Avalonia/Features/Recording/Presenter/RecordingPresenter.Landing.cs|TabForge.Services
+Source/src/TabForge.Avalonia/Features/Recording/Presenter/RecordingPresenter.Session.cs|TabForge.Documents
 Source/src/TabForge.Avalonia/Features/Recording/Presenter/RecordingPresenter.cs|TabForge.Audio
 Source/src/TabForge.Avalonia/Features/Recording/Presenter/RecordingPresenter.cs|TabForge.Avalonia.Platform
 Source/src/TabForge.Avalonia/Features/Recording/Presenter/RecordingPresenter.cs|TabForge.Avalonia.Transport
 Source/src/TabForge.Avalonia/Features/Recording/Presenter/RecordingPresenter.cs|TabForge.Avalonia.Views
+Source/src/TabForge.Avalonia/Features/Recording/Presenter/RecordingPresenter.cs|TabForge.Commands
 Source/src/TabForge.Avalonia/Features/Recording/Presenter/RecordingPresenter.cs|TabForge.Documents
+Source/src/TabForge.Avalonia/Features/Recording/Presenter/RecordingPresenter.cs|TabForge.LiveInput
 Source/src/TabForge.Avalonia/Features/Recording/Presenter/RecordingPresenter.cs|TabForge.Playback
 Source/src/TabForge.Avalonia/Features/Recording/Presenter/RecordingPresenter.cs|TabForge.Presenters
 Source/src/TabForge.Avalonia/Features/Recording/Presenter/RecordingPresenter.cs|TabForge.Services
