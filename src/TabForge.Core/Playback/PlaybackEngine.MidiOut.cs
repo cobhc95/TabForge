@@ -45,6 +45,7 @@ public sealed partial class PlaybackEngine : IDisposable
             opts.CountIn = false;
             opts.Loop = false;
             var timeline = MidiTimelineBuilder.Build(project, opts);
+            timeline.TrackIds = project.Tracks.Select(t => t.Id).ToArray();   // numbered by the live song it was compiled from (Focus Track finds its tracks by these)
             lock (_outputGate) SendChannelSetupCore(timeline);
         }
         catch { } // swallow: playback path: no logging on this path
@@ -120,7 +121,7 @@ public sealed partial class PlaybackEngine : IDisposable
         }).GetAwaiter().GetResult();
     }
 
-    /// <summary>The master knob scales everything: channel volume (CC7) of every track, the metronome and note preview.</summary>
+    /// <summary>The master knob scales everything: channel volume (CC7) of every track, the metronome and note preview. Called by Outgoing only.</summary>
     private int MasterScaled(int status, int data1, int data2)
     {
         if ((status & 0xF0) != 0xB0 || data1 != 7) return data2;
@@ -142,8 +143,7 @@ public sealed partial class PlaybackEngine : IDisposable
 
     private void SendChannelSetupCore(ScoreTimeline timeline)
     {
-        foreach (var e in timeline.ChannelSetup)
-            _output.Send(e.DeviceId, e.Status, ProgramFor(e.Status, e.Data1), MasterScaled(e.Status, e.Data1, FocusedEvent(e, e.Data2)));
+        foreach (var e in timeline.ChannelSetup) SendState(timeline, e);
     }
 
     // Preview notes: one token per (device, channel, pitch). A new preview of the same key retriggers (off, then on) and

@@ -45,6 +45,8 @@ chmod +x TabForge-*-linux-x86_64.AppImage
 - **Mix Table shows every change:** F10 now shows the tempo in force at the beat, including a gradual tempo change (such as the one at bar 101 of Ashen Meridian, with its length in the Transition box), and any change made from another track at that beat. Before, a gradual tempo was missing from the table.
 - **Red mark under the bar number:** the timeline shows a small red mark under the number of every bar where any track changes sound, effects or tempo, so you can find them at a glance.
 - **Focus track keeps working after a Mix Table volume change:** before, once the song reached a volume point from the Mix Table, the other tracks went back to full level and the selected track lost its boost.
+- **Focus track stays on after a jump:** clicking the timeline, jumping to a bar or section, a loop after an edit, or an edit while playing no longer switches its effect off.
+- **Focus track shortcut:** Ctrl+Alt+F turns it on or off, also while the mixer or a plug-in window is in front (change it in Settings > Shortcuts).
 
 Full list: the [changelog](docs/CHANGELOG.md#096).
 

@@ -5,9 +5,10 @@ namespace TabForge.Playback;
 
 /// <summary>
 /// Owns: the one live send of a running song's per-channel state (program, volume, pan, reverb and chorus sends): the channel setup the loop, seek and resume
-/// re-send is brought in line with the song as it is now, and the new values go to the output at once, each as the mix point in force at the playback position when the song has one (LatestChannelState).
+/// re-send is brought in line with the song as it is now, and the new values go to the output at once, each as the mix point in force at the playback position when the song has one (LatestChannelState);
+/// and the one choke point every timeline event's bytes pass on their way out (Outgoing: program preview, Focus Track, master).
 /// Does not own: the compiled setup (ScoreToMidiCompiler), the program preview override (PlaybackEngine.ProgramPreview.cs) or the plug-in track levels (the routing).
-/// Tests: VolPanLiveProbeTests, InstrumentChoiceTests. Thread: owner (UI) thread; the setup events are written only under the output lock, where the scheduler reads them.
+/// Tests: VolPanLiveProbeTests, InstrumentChoiceTests, TestFocusTrackSurvivesSeek. Thread: owner (UI) thread; the setup events are written only under the output lock, where the scheduler reads them.
 /// </summary>
 public sealed partial class PlaybackEngine
 {
@@ -42,22 +43,31 @@ public sealed partial class PlaybackEngine
                 }
                 // The setup keeps the base or chased value (a loop restart begins before the mix points); what is sent is the mix point in force at the position, else the setup.
                 var sent = latest.TryGetValue(ChannelStateKey(e), out var mix) && !mix.IsSetup ? mix : e;
-                if (send) _output.Send(sent.DeviceId, sent.Status, ProgramFor(sent.Status, sent.Data1), MasterScaled(sent.Status, sent.Data1, FocusedEvent(sent, sent.Data2)));
+                if (send) SendState(timeline, sent);
             }
         }
     }
 
-    /// <summary>
-    /// The data byte to send for a timeline event under Focus Track. A mix-table volume point (and a chased start value) carries its own absolute level, so it is scaled here;
-    /// a plain setup message was already scaled when it was compiled or refreshed and passes through.
-    /// </summary>
-    private int FocusedEvent(ScoreEvent e, int data2)
+    /// <summary>Sends one channel-state event of <paramref name="timeline"/> as it is now (setup, chased start value or mix point). Caller holds the output lock.</summary>
+    private void SendState(ScoreTimeline timeline, ScoreEvent e)
     {
-        if ((e.Status & 0xF0) != 0xB0 || e.Data1 != 7 || e.TrackIndex < 0 || (e.IsSetup && !e.IsChased)) return data2;
-        return Volatile.Read(ref _song)?.TrackIds is { } ids && e.TrackIndex < ids.Length ? FocusedVolume(data2, ids[e.TrackIndex]) : data2;
+        var (data1, data2) = Outgoing(timeline, e, e.Data1, e.Data2);
+        _output.Send(e.DeviceId, e.Status, data1, data2);
     }
 
-    private int FocusedVolume(int level, Guid track) => Focus?.Scale(track, level) ?? level;
+    /// <summary>
+    /// The one place a timeline event's data bytes become the bytes sent (the dispatch, the channel setup, a seek or loop restore and the live push all come here):
+    /// the program preview override, then for a song track's channel volume (CC7) Focus Track for that track (found by the timeline's own track ids) and the master.
+    /// The timeline always holds the song's own levels and nothing else scales them, so no start, seek, loop wrap, recompile or swap can lose or double Focus Track.
+    /// The metronome and count-in clicks are never focus-scaled.
+    /// </summary>
+    private (int Data1, int Data2) Outgoing(ScoreTimeline timeline, ScoreEvent e, int data1, int data2)
+    {
+        if ((e.Status & 0xF0) == 0xB0 && data1 == 7 && !e.IsMetronome && e.TrackIndex >= 0 && Focus is { IsOn: true } focus
+            && (timeline.TrackIds ?? Volatile.Read(ref _song)?.TrackIds) is { } ids && e.TrackIndex < ids.Length)
+            data2 = focus.Scale(ids[e.TrackIndex], data2);
+        return (ProgramFor(e.Status, data1), MasterScaled(e.Status, data1, data2));
+    }
 
     /// <summary>The track's value for a setup message the song models; false for the others (bend range, wheel, expression).</summary>
     private bool TryLiveValue(SongProject project, TrackModel track, ScoreEvent e, out int value)
@@ -68,7 +78,7 @@ public sealed partial class PlaybackEngine
             case 0xC0: value = track.MidiProgram; return true;
             case 0xB0 when e.Data1 == 0: value = Math.Max(0, track.MidiBankMsb); return track.MidiBankMsb >= 0;
             case 0xB0 when e.Data1 == 32: value = Math.Max(0, track.MidiBankLsb); return track.MidiBankLsb >= 0;
-            case 0xB0 when e.Data1 == 7: value = FocusedVolume(MixerGroups.Volume(project, track), track.Id); return true;   // Focus Track lowers the others here only: exports and renders read MixerGroups.Volume
+            case 0xB0 when e.Data1 == 7: value = MixerGroups.Volume(project, track); return true;   // the song's own level: Focus Track is applied when it is sent (Outgoing)
             case 0xB0 when e.Data1 == 10: value = MixerGroups.Pan(project, track); return true;
             case 0xB0 when e.Data1 == 91: value = Math.Clamp(track.Reverb, 0, MidiLimits.Max); return true;
             case 0xB0 when e.Data1 == 93: value = Math.Clamp(track.Chorus, 0, MidiLimits.Max); return true;

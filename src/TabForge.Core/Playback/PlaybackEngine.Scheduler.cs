@@ -138,7 +138,7 @@ public sealed partial class PlaybackEngine : IDisposable, IPlaybackEngine
                     staleStateDropped = false;
                 }
                 if (!CanScheduleWork(generation)) break;
-                Dispatch(e, ms, startMs, generation);
+                Dispatch(timeline, e, generation);
                 continue;
             }
             if (stale && IsChannelStateMessage(e))
@@ -160,7 +160,7 @@ public sealed partial class PlaybackEngine : IDisposable, IPlaybackEngine
                 staleStateDropped = false;
             }
             if (!CanScheduleWork(generation)) break;
-            Dispatch(e, ms, startMs, generation);
+            Dispatch(timeline, e, generation);
         }
         if (staleStateDropped) RestoreChannelStateAt(timeline, startMs, ms);
     }

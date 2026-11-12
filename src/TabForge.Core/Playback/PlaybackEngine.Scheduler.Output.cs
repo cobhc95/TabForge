@@ -88,7 +88,7 @@ public sealed partial class PlaybackEngine : IDisposable
         lock (_outputGate) return (e.Data1, e.Data2);
     }
 
-    private void Dispatch(ScoreEvent e, double streamMs, double startMs, int generation)
+    private void Dispatch(ScoreTimeline timeline, ScoreEvent e, int generation)
     {
         var status = e.Status;
         var (data1, data2) = DataOf(e);
@@ -127,9 +127,7 @@ public sealed partial class PlaybackEngine : IDisposable
                 _activeMetronomeNotes[e.MetronomePairId] = note;
             }
         }
-        if (!e.IsMetronome) data2 = FocusedEvent(e, data2);
-        data2 = MasterScaled(status, data1, data2);
-        data1 = ProgramFor(status, data1);
+        (data1, data2) = Outgoing(timeline, e, data1, data2);
         lock (_outputGate)
         {
             // A stopped run starts no note: Stop moves the generation before its device reset, which runs under this lock.
@@ -178,8 +176,7 @@ public sealed partial class PlaybackEngine : IDisposable
         {
             var ordered = new List<ScoreEvent>(latest.Values);
             ordered.Sort(static (a, b) => a.TimeMs.CompareTo(b.TimeMs));
-            foreach (var e in ordered)
-                _output.Send(e.DeviceId, e.Status, ProgramFor(e.Status, e.Data1), MasterScaled(e.Status, e.Data1, FocusedEvent(e, e.Data2)));
+            foreach (var e in ordered) SendState(timeline, e);
             SendKeyswitchesAt(timeline, startMs, timeMs, onlyTrack);   // the articulation keyswitch in force there (see PlaybackEngine.Articulations.cs)
         }
         if (Trace.IsOn(Trace.Playback)) Trace.Write(Trace.Playback, RestoreTrace.Describe(timeMs, latest.Values));

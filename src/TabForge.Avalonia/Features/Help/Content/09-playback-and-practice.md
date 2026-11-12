@@ -129,6 +129,7 @@ Focus track is off until you turn it on. Once it is on, it stays on, even after 
 - Left-click the **Focus track** icon on the left strip to turn it on or off. In the default strip it sits right after the **Composer** icon.
 - Right-click the **Focus track** icon, or choose **View > Focus track settings**, to open the settings window.
 - Choose **View > Focus track** to turn it on or off from the menu.
+- Press `Ctrl+Alt+F` to turn it on or off from the keyboard. This also works while the mixer or a plug-in window is in front. You can change the key in **Settings > Shortcuts**.
 
 Note: A strip you have arranged yourself is offered the Focus track icon once. You can also add it at any time: right-click the strip, choose **Customize strip…**, and pick **Focus track** from the Playback group. The Composer and left strip chapter explains the strip.
 
@@ -175,8 +176,9 @@ Some rules always apply:
 - A boost stops at the loudest level the track can reach. A track that is already near the top gets little extra.
 - Focus track follows the selected track. When you select another track, or show another song, it moves to that one.
 - Apply works at once, even during playback. You do not need to stop the song.
+- Focus track stays on when you jump to another part of the song, start from another bar, loop, or edit the song while it plays.
 
-Note: Focus track only changes what you hear. Faders, the saved song, exports and renders are never touched. Volume points written in the Mix Table keep their own values.
+Note: Focus track only changes what you hear. Faders, the saved song, exports and renders are never touched. Volume points written in the Mix Table are raised or lowered by Focus track like the rest of the track.
 
 ## Following the playhead
 

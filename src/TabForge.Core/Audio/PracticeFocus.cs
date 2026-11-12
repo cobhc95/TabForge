@@ -10,7 +10,7 @@ namespace TabForge.Audio;
 // Owns: Focus Track, the opt-in practice aid: while on, the selected track plays louder by the user's rule (decibels, percent or a level); the other tracks play by the template the user chose for their group (lowered like the boost, left alone, or lowered or raised by an amount of their own).
 //   The selected track is never lowered: it is the boosted one. A listening aid only: it
 //   never changes a fader, the saved song, an export or a render.
-// Does not own: the toggle, its saved state, the rules and the selection (the app, FocusTrackSettings), or sending the levels (PlaybackEngine live state, EngineMixLevels).
+// Does not own: the toggle, its saved state, the rules and the selection (the app, FocusTrackSettings), or sending the levels (PlaybackEngine.Outgoing for every MIDI channel volume, EngineMixLevels for the audio engine's track levels).
 // Tests: TabForge.Avalonia.Tests.PracticeFocusTests.
 // Threads: set and refreshed on the UI thread, read on the scheduler and audio threads through one volatile reference.
 // One instance per playback host (AvaloniaPlaybackSessions.Focus); engines and the engine sync read it, nothing is global.
@@ -18,7 +18,7 @@ public sealed class PracticeFocus
 {
     // The focused track, the factor it plays at, and for every other track of the shown song (another open song's tracks are not in the map, so they play as
     // they are) the factor it plays at: its group's lowering together with the headroom excess.
-    private sealed record State(Guid Track, double FocusFactor, Dictionary<Guid, double> Others, TrackModel Selected, FocusTrackSettings Rules);
+    private sealed record State(Guid Track, double FocusFactor, Dictionary<Guid, double> Others, FocusTrackSettings Rules);
 
     private State? _state;
 
@@ -38,9 +38,12 @@ public sealed class PracticeFocus
         return Replace(next);
     }
 
-    /// <summary>Works the factors out again after a fader, group or rule change; true when they changed.</summary>
+    /// <summary>
+    /// Works the factors out again after a fader, group, track list or rule change; true when they changed. The focused track is found by its id, so an undo
+    /// (which brings the song back as new track objects) or a track added, deleted or moved keeps it; a song without that track leaves Focus Track as it is.
+    /// </summary>
     public bool Refresh(SongProject project) =>
-        Volatile.Read(ref _state) is { } s && project.Tracks.Contains(s.Selected) && Replace(Build(project, s.Selected, s.Rules));
+        Volatile.Read(ref _state) is { } s && project.Tracks.FirstOrDefault(t => t.Id == s.Track) is { } selected && Replace(Build(project, selected, s.Rules));
 
     private bool Replace(State? next)
     {
@@ -71,7 +74,7 @@ public sealed class PracticeFocus
             };
             others[track.Id] = factor;
         }
-        return new State(selected.Id, focus, others, selected, rules);
+        return new State(selected.Id, focus, others, rules);
     }
 
     // Lowered by the same amount the selected track is raised: the same decibels, the same percentage, or (for a level) the same change in loudness.

@@ -129,6 +129,7 @@ public static partial class SelfTest
         Guard(TestNoHangingNotes);
         Guard(TestMixPointsSurviveSeek);
         Guard(TestBeatMixAudit);
+        Guard(TestFocusTrackSurvivesSeek);
         Guard(TestPlaybackEditRefresh);
         Guard(TestSeekDuringPlayback);
         Guard(TestArticulationKeyswitches);
@@ -177,7 +178,7 @@ public static partial class SelfTest
         ["TestMalformedInputFuzz"] = "fuzz", ["TestEngineFrameFuzz"] = "fuzz", ["TestSyntheticGuitarProFixture"] = "guitarpro", ["TestSyntheticFixtures"] = "synthetic", ["TestGp5OwnFilesImport"] = "guitarpro",
         ["TestGpifPitchCurves"] = "guitarpro",
         ["TestGpRoundTripCounts"] = "guitarpro", ["TestLegacyGpExport"] = "guitarpro", ["TestGuitarProImportWorker"] = "guitarpro", ["TestImportPlausibility"] = "guitarpro",
-        ["TestPlaybackOrderSpec"] = "playback", ["TestNoHangingNotes"] = "playback", ["TestMixPointsSurviveSeek"] = "playback", ["TestBeatMixAudit"] = "playback", ["TestArticulationKeyswitches"] = "playback",
+        ["TestPlaybackOrderSpec"] = "playback", ["TestNoHangingNotes"] = "playback", ["TestMixPointsSurviveSeek"] = "playback", ["TestBeatMixAudit"] = "playback", ["TestFocusTrackSurvivesSeek"] = "playback", ["TestArticulationKeyswitches"] = "playback",
         ["TestSongExtent"] = "recording", ["TestLiveAudioFidelity"] = "recording", ["TestLiveRecordingLoudness"] = "recording",
         ["TestVideoEncoderGolden"] = "recording",
         ["TestPlaybackEditRefresh"] = "playback", ["TestSeekDuringPlayback"] = "playback",

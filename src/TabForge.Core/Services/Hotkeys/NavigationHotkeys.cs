@@ -9,7 +9,7 @@ public static class NavigationHotkeys
     private static readonly HashSet<string> Ids = new(StringComparer.OrdinalIgnoreCase)
     {
         "Transport.PlayPause", "Transport.PlayFromStart", "Transport.Stop", "Transport.Record", "Transport.Loop",
-        "Transport.Metronome", "Transport.CountIn", "Transport.Panic",
+        "Transport.Metronome", "Transport.CountIn", "Transport.Panic", "Transport.FocusTrack",
         "Playback.SpeedUp", "Playback.SpeedDown", "Playback.SpeedReset",
         "Bar.First", "Bar.Last", "Section.Previous", "Section.Next", "Track.Previous", "Track.Next",
     };

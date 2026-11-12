@@ -165,6 +165,42 @@ public sealed partial class TimelineView : Control
     /// <summary>Raised when the user clicks a clip whose file waits for approval: the window opens its linked-audio review.</summary>
     public event Action? MediaApprovalRequested;
 
+    /// <summary>A click on a bar's red mix-change button in the ruler; the bar's index.</summary>
+    public event Action<int>? MixMarkClicked;
+
+    /// <summary>The red button's rectangle under a bar's number.</summary>
+    private Rect MixMarkRect(int bar) => new(Math.Round(BarX(bar)) + 3, TimelinePlayheadMarks.BarNumberTop + TimelinePlayheadMarks.BarNumberSize + 1,
+        Math.Min(14, Math.Max(4, BarX(bar + 1) - BarX(bar) - 5)), 6);
+
+    /// <summary>The bar whose red button the pointer is over (-1 none) and the bar whose button is shown pressed (-1 none).</summary>
+    private int _mixHoverBar = -1, _mixPressBar = -1;
+
+    /// <summary>How long a clicked red button stays shown pressed, in ms.</summary>
+    private const int MixPressMilliseconds = 140;
+
+    /// <summary>Sets the red button under the pointer (null for none; the pointer's position on the ruler) and redraws when it changed.</summary>
+    internal void HoverMixMark(Point? at)
+    {
+        var bar = -1;
+        if (at is { } p && p.Y < RulerHeight - 6 && BarCount > 0 && BarAtX(p.X) is var b and >= 0 && b < BarCount && BeatMix.BarHasChange(_song, b) && MixMarkRect(b).Inflate(2).Contains(p)) bar = b;
+        if (bar == _mixHoverBar) return;
+        _mixHoverBar = bar;
+        InvalidateVisual();
+    }
+
+    /// <summary>A press on a red mix-change button (its hit area is a little bigger than drawn): raises <see cref="MixMarkClicked"/>.</summary>
+    internal bool TryOpenMixMark(Point at)
+    {
+        if (MixMarkClicked is not { } clicked || at.Y >= RulerHeight - 6 || BarCount == 0) return false;
+        var bar = BarAtX(at.X);
+        if (bar < 0 || bar >= BarCount || !BeatMix.BarHasChange(_song, bar) || !MixMarkRect(bar).Inflate(2).Contains(at)) return false;
+        _mixPressBar = bar;
+        InvalidateVisual();
+        global::Avalonia.Threading.DispatcherTimer.RunOnce(() => { _mixPressBar = -1; InvalidateVisual(); }, TimeSpan.FromMilliseconds(UiMotion.DurationMilliseconds(MixPressMilliseconds)));
+        clicked(bar);
+        return true;
+    }
+
     /// <summary>A press on an audio clip whose waveform waits for approval asks for the approval (true: the press is used up).</summary>
     internal bool TryRequestApproval(Point at)
     {

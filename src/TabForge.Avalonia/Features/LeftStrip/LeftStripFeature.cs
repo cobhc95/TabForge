@@ -86,7 +86,7 @@ public sealed class LeftStripFeature
         _vertical[!Border.BorderBrushProperty] = new DynamicResourceExtension("SoftBorder");
         _vertical.ContextMenu = StripMenu();
         _vertical.AttachedToVisualTree += (_, _) => { if (TopLevel.GetTopLevel(_vertical) is Window w) { w.Deactivated -= OnDeactivated; w.Deactivated += OnDeactivated; } };
-        _composer = ComposerPanel.Build(ComposerHooks);
+        _composer = ComposerPanel.Build(ComposerHooks, () => { if (_composerOpen) ToggleComposer(); });
         DockPanel.SetDock(_vertical, Dock.Left);
         DockPanel.SetDock(_composer, Dock.Left);
         Left.Children.Add(_composer);

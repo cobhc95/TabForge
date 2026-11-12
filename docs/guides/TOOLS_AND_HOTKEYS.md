@@ -398,6 +398,8 @@ These share keys with score commands on purpose: they act only while a clip is s
 | View | Show notes in each track lane | Draw the notes of each track inside its lane in the arrangement overview (View > Show the notes in each track lane). | `View.ArrangementIndividualNotes` | — |  |
 | View | Show one line per track lane | Draw each track's lane as one continuous line in the arrangement overview (View > Show one continuous line per track lane). | `View.ArrangementContinuousBlocks` | — |  |
 | View | Show tracks in groups | Show or hide a header per mixer group in the track list (same setting as the Mixer's "Groups in track list" box and the track list's right-click menu; off by default). | `View.ShowTrackGroups` | — |  |
+| View | Focus track on / off | Turn Focus track on or off: while it is on, the selected track plays louder and the other tracks follow your settings (the same as the Focus track icon on the left strip). Also works while a tool window or plug-in editor is in front. | `Transport.FocusTrack` | Ctrl+Alt+F |  |
+| View | Focus track settings | Open the Focus track settings: how much louder the selected track goes and what the other tracks do (the same as right-clicking the Focus track icon). | `Transport.FocusTrackSettings` | — |  |
 | View | Track FX chain | Open the selected track's FX (plug-in) chain. | `Track.FxChain` | — |  |
 | View | Auto-resize track list to fit | Turn on / off growing and shrinking the track list to fit all tracks and group rows. | `View.AutoFitTrackList` | — |  |
 | View | Reset track row height | Put the track rows back to their default height (stretched by dragging the track list's splitter) and fit the track list to them. Double-click the splitter does the same. | `View.ResetTrackRowHeight` | — |  |

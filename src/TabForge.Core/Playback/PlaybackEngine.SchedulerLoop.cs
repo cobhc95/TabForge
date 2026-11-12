@@ -197,6 +197,7 @@ public sealed partial class PlaybackEngine
     {
         var waitForArrangement = false;
         var timelineRevised = false;
+        var tracksChanged = false;
         if (!Volatile.Read(ref _arrangementRefreshRequested)) return LoopStep.Proceed;   // no refresh asked: skip the lock (a request made this instant is seen next tick)
         lock (_gate)
         {
@@ -223,6 +224,7 @@ public sealed partial class PlaybackEngine
                 else
                 {
                     s.Timeline = refresh.Timeline;
+                    tracksChanged = !PublishedTrackIds.AsSpan().SequenceEqual(refresh.Snapshot.TrackIds);
                     RemapTrackState(PublishedTrackIds, refresh.Snapshot.TrackIds);
                     Publish(s.Timeline, refresh.Project, refresh.Snapshot);
                     _scheduleReuse = null;
@@ -242,6 +244,8 @@ public sealed partial class PlaybackEngine
             return LoopStep.Continue;
         }
         if (timelineRevised) { TimelineRevised?.Invoke(s.Timeline); s.SectionMs = null; }
+        // A track added, deleted or moved: every channel is brought to the state in force here (an added track's sound and level, at its Focus Track level), no note cut.
+        if (tracksChanged) RestoreChannelStateAt(s.Timeline, s.Timeline.PlayFromMs, s.Ms);
         return LoopStep.Proceed;
     }
 

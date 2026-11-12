@@ -88,7 +88,11 @@ public sealed partial class MainWindow
         {
             if (contextMenus.ClickedUnreadableClip is { } unreadable) songs.Waveforms.Retry(unreadable.File, songs.Active.Media);
         });
-        void AskForApproval(ArrangementView arrangement) => arrangement.Timeline.MediaApprovalRequested += () => commands.Run("Media.ManageApprovals");
+        void AskForApproval(ArrangementView arrangement)
+        {
+            arrangement.Timeline.MediaApprovalRequested += () => commands.Run("Media.ManageApprovals");
+            arrangement.Timeline.MixMarkClicked += bar => MainWindowMixTable.OpenBar(songs, scorePreview, this, bar);
+        }
         if (panes.Arrangement is { } shownArrangement) AskForApproval(shownArrangement);
         panes.ArrangementCreated += AskForApproval;
     }

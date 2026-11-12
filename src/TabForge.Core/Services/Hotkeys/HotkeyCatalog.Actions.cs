@@ -157,7 +157,7 @@ public static partial class HotkeyCatalog
         new("View.ShowStripOnStart", CategoryView, "Show strip on start", "", "Choose whether the left strip shows when TabForge starts (View > Show strip on start)."),
         new(FretboardSettings, CategoryView, "Fretboard settings", "", "Open the Fretboard settings window: look, notes and markers (the note colours and dot style of the legend), layout, strings and capo, scale highlight (the fretboard's right-click Fretboard settings row)."),
         new("View.Mixer", CategoryView, "Mixer", "", "Open the mixer: track and group levels, pan, pitch, sound source and FX chains."),
-        new("Transport.FocusTrack", CategoryView, "Focus track on / off", "", "Turn Focus track on or off: while it is on, the selected track plays louder and the other tracks follow your settings (the same as the Focus track icon on the left strip)."),
+        new("Transport.FocusTrack", CategoryView, "Focus track on / off", "Ctrl+Alt+F", "Turn Focus track on or off: while it is on, the selected track plays louder and the other tracks follow your settings (the same as the Focus track icon on the left strip)."),
         new("Transport.FocusTrackSettings", CategoryView, "Focus track settings", "", "Open the Focus track settings: how much louder the selected track goes and what the other tracks do (the same as right-clicking the Focus track icon)."),
         new("Track.FxChain", CategoryView, "Track FX chain", "", "Open the selected track's FX (plug-in) chain."),
         new("View.AutoFitTrackList", CategoryView, "Auto-resize track list to fit", "", "Turn on / off growing and shrinking the track list to fit all tracks and group rows."),

@@ -293,7 +293,14 @@ public sealed partial class TimelineView
         var red = ink("Danger");
         for (var bar = firstBar; bar < endBar; bar++)
             if (BeatMix.BarHasChange(_song, bar))
-                d.Rect(red, null, Math.Round(BarX(bar)) + 3, TimelinePlayheadMarks.BarNumberTop + TimelinePlayheadMarks.BarNumberSize + 1, Math.Min(12, barWidth - 5), 2, 1);
+            {
+                // A button: lighter under the pointer, darker and a pixel smaller while pressed.
+                var r = MixMarkRect(bar);
+                var pressed = bar == _mixPressBar;
+                var fill = pressed ? ThemeColours.Blend(red, new UiColor(255, 0, 0, 0), 0.3) : bar == _mixHoverBar ? ThemeColours.Blend(red, new UiColor(255, 255, 255, 255), 0.3) : red;
+                var grow = pressed ? -1 : bar == _mixHoverBar ? 1 : 0;
+                d.Rect(fill, null, r.X - grow, r.Y - grow, r.Width + 2 * grow, r.Height + 2 * grow, 3);
+            }
     }
 
     private void DrawSections(IDrawContext d, bool light, int activeSection)

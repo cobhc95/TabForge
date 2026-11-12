@@ -29,6 +29,17 @@ public static class MainWindowMixTable
     public static void Register(MainWindowCommands commands, MainWindowTabs songs, ScorePreviewView score, Window owner) =>
         commands.Add("Beat.MixTable", () => _ = EditBeatAsync(songs.Active, score, owner));
 
+    /// <summary>A click on a bar's red button on the timeline: the cursor goes to the bar's first changed beat and the Mix Table opens on it.</summary>
+    public static void OpenBar(MainWindowTabs songs, ScorePreviewView score, Window owner, int bar)
+    {
+        var document = songs.Active;
+        if (BeatMix.FirstChange(document.Project, bar, MainWindowTrackMenu.SelectedIndex(document)) is not { } at) return;
+        document.TrackIndex = at.Track;
+        score.Editor.SelectedMeasure = bar;
+        score.Editor.SelectedCell = at.Cell;
+        _ = EditBeatAsync(document, score, owner);
+    }
+
     private static async Task EditBeatAsync(TabForge.Documents.SongDocument document, ScorePreviewView score, Window owner)
     {
         var project = document.Project;
@@ -40,6 +51,15 @@ public static class MainWindowMixTable
         var measure = track.Measures[bar];
         if (measure.Cells.Count == 0) return;
         var cellIndex = Math.Clamp(score.Editor.SelectedCell, 0, measure.Cells.Count - 1);
+        // F10 on a beat with nothing, in a bar the timeline marks: the table opens on the bar's first changed beat, where the changes are.
+        if (!BeatMix.BeatHasChange(project, trackIndex, bar, cellIndex) && BeatMix.FirstChange(project, bar, trackIndex) is { } first)
+        {
+            (trackIndex, cellIndex) = first;
+            document.TrackIndex = trackIndex;
+            score.Editor.SelectedCell = cellIndex;
+            track = project.Tracks[trackIndex];
+            measure = track.Measures[bar];
+        }
         var slot = BeatMix.SlotOf(measure, cellIndex);
         // The beat shows every change in force there, whichever track it was set from: its mix point (or one set for all tracks) and the bar's tempo with its ramp.
         var tempo = BeatMix.TempoAt(project, bar, slot);

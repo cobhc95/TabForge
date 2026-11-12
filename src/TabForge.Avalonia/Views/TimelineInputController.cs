@@ -96,7 +96,7 @@ public sealed partial class TimelineInputController
         view.PointerMoved += (_, e) => Moved(e, view);
         view.PointerPressed += (_, e) => Pressed(e, view);
         view.PointerReleased += (_, e) => Released(e, view);
-        view.PointerExited += (_, _) => { if (_gesture == Gesture.None) { SetHover(-1, -1); view.HoverSectionEdge = null; } _picker.OnPointerExited(); };
+        view.PointerExited += (_, _) => { view.HoverMixMark(null); if (_gesture == Gesture.None) { SetHover(-1, -1); view.HoverSectionEdge = null; } _picker.OnPointerExited(); };
         view.PointerCaptureLost += (_, _) => Cancel();
         view.KeyDown += (_, e) =>
         {
@@ -320,6 +320,7 @@ public sealed partial class TimelineInputController
         if (source == _view || source == _header) _view.Focus();
         _pressPoint = e.GetPosition(source);
         if (ReferenceEquals(source, _view) && _view.TryRequestApproval(_pressPoint)) { e.Handled = true; return; }   // the lock on a clip: click to allow its folder
+        if (ReferenceEquals(source, _view) && _view.TryOpenMixMark(_pressPoint)) { e.Handled = true; return; }   // the red mix-change button under a bar number
         var hit = _hitTests.Hit(_pressPoint, source);
         if (hit.HeaderCell is { } cell)
         {

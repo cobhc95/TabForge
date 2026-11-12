@@ -7,6 +7,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 ### Added
 
 - A small red mark under the bar number on the timeline for every bar where any track changes sound, effects or tempo.
+- A shortcut for Focus track: Ctrl+Alt+F turns it on or off, also while the mixer or a plug-in window is in front. Change it in Settings > Shortcuts like any other shortcut.
 
 ### Changed
 
@@ -15,6 +16,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 ### Fixed
 
 - Focus track stops working part-way through a song. Before, once playback reached a volume point written in the Mix Table, the tracks it set went back to their normal level, so the selected track lost its boost and the other tracks were no longer lowered. Volume points are now scaled by Focus track like every other level.
+- Focus track switches itself off after a jump. Before, clicking the timeline or ruler, jumping to a bar or section, a loop restarting after an edit, or an edit while the song played could bring every track back to its normal level until Focus track was turned off and on again. A track added while the song played was not lowered either. Focus track is now applied to every level as it is sent, so nothing that moves the playback can lose it.
 - A gradual tempo change (such as bar 101 of Ashen Meridian) was missing from the Mix Table.
 
 ## 0.9.5

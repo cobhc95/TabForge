@@ -121,10 +121,12 @@ internal static class ArrangementRefreshCompiler
         // must keep its own setup (program, level, pan) and its pending releases: those are renumbered by track id.
         var renumber = current.TrackIds is { } playing && !playing.AsSpan().SequenceEqual(trackIds) ? OldToNew(playing, trackIds) : null;
         ScoreEvent Renumbered(ScoreEvent e) => renumber is null || e.TrackIndex < 0 ? e : e.TrackIndex < renumber.Length ? e.WithTrack(renumber[e.TrackIndex]) : e.WithTrack(-1);
+        bool StillThere(ScoreEvent e) => renumber is null || e.TrackIndex < 0 || (e.TrackIndex < renumber.Length && renumber[e.TrackIndex] >= 0);
         var revised = new ScoreTimeline
         {
             CountInMs = current.CountInMs,
             PlayFromMs = current.PlayFromMs,
+            StartedAfterMixPoints = current.StartedAfterMixPoints,
             TotalMs = boundaryMs + future.TotalMs,
             TieMerges = current.TieMerges + future.TieMerges,
             TieOrphans = current.TieOrphans + future.TieOrphans,
@@ -133,6 +135,9 @@ internal static class ArrangementRefreshCompiler
             TrackIds = trackIds
         };
         revised.ChannelSetup.AddRange(current.ChannelSetup.Select(Renumbered));
+        // A track added since the playing timeline was compiled (or one the future plays on another channel) has no setup there: it takes the one the future compiled for it.
+        var setUp = revised.ChannelSetup.Select(e => (e.TrackIndex, e.Channel)).ToHashSet();
+        revised.ChannelSetup.AddRange(future.ChannelSetup.Where(e => e.TrackIndex >= 0 && !setUp.Contains((e.TrackIndex, e.Channel))));
         revised.Bars.AddRange(current.Bars.Where(bar => bar.EndMs <= boundaryMs + 0.001));
         revised.Notes.AddRange(current.Notes.Where(note => note.OnsetMs < boundaryMs));
 
@@ -140,7 +145,8 @@ internal static class ArrangementRefreshCompiler
         var activeMetronomePairs = new HashSet<int>();
         CountSoundingBefore(current, boundaryMs, activeNotes, activeMetronomePairs);
 
-        revised.Events.AddRange(current.Events.Where(e => e.TimeMs < boundaryMs));
+        // The part already played is renumbered too (a loop wrap, a restore or Focus Track reads its track numbers against the new ids); a deleted track's events go.
+        revised.Events.AddRange(current.Events.Where(e => e.TimeMs < boundaryMs && StillThere(e)).Select(Renumbered));
         var preservedFutureReleases = KeepReleasesPastBoundary(current, boundaryMs, revised, activeNotes, activeMetronomePairs, Renumbered);
 
         AppendFuture(revised, current, future, boundaryMs, baseToCurrentBar);

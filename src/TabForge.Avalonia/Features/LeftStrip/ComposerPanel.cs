@@ -49,7 +49,8 @@ public static class ComposerPanel
         public readonly List<(Border Cell, bool On, int Step)> Cells = new();
     }
 
-    public static Border Build(ComposerDrumHooks? hooks = null)
+    /// <param name="close">What the X button beside the title does (the same as turning the Composer off); no button when null.</param>
+    public static Border Build(ComposerDrumHooks? hooks = null, Action? close = null)
     {
         hooks ??= new ComposerDrumHooks();
         var sampleRows = new List<SampleRowParts>();
@@ -81,7 +82,27 @@ public static class ComposerPanel
 
         var stack = new StackPanel { Spacing = ChromeMetrics.ComposerRowGap };
         stack.WithMargin(DialogMetrics.ComposerPanelInset);
-        stack.Children.Add(Text("Composer", ChromeMetrics.TextHeading, FontWeight.Bold, "TextPrimary"));
+        var title = Text("Composer", ChromeMetrics.TextHeading, FontWeight.Bold, "TextPrimary");
+        if (close is null) stack.Children.Add(title);
+        else
+        {
+            var glyph = new Path { Data = Geometry.Parse("M0,0 L9,9 M9,0 L0,9"), Width = 9, Height = 9, StrokeThickness = 1.4, StrokeLineCap = PenLineCap.Round };
+            glyph[!Shape.StrokeProperty] = new DynamicResourceExtension("IconDefaultBrush");
+            var x = new Button
+            {
+                Name = "ComposerCloseButton", Content = glyph, Width = 24, Height = 24, MinWidth = 24, MinHeight = 24, Padding = new Thickness(0),
+                HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top,
+                Background = AvaloniaPalette.TransparentBrush, Focusable = false,
+            };
+            ToolTip.SetTip(x, "Close Composer");
+            AutomationProperties.SetName(x, "Close Composer");
+            x.Click += (_, _) => close();
+            var header = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
+            header.Children.Add(title);
+            Grid.SetColumn(x, 1);
+            header.Children.Add(x);
+            stack.Children.Add(header);
+        }
         stack.Children.Add(Text($"{DrumSamples.All.Count} drum grooves", ChromeMetrics.TextSmall, FontWeight.Normal, "TextMuted"));
 
         var search = new TextBox { Watermark = "Search patterns...", FontSize = ChromeMetrics.TextEmphasis };

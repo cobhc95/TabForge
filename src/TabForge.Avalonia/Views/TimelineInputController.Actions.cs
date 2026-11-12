@@ -95,6 +95,7 @@ public sealed partial class TimelineInputController
         var hover = _hitTests.HoverAt(p);
         SetHover(hover.Bar, hover.Row);
         _view.SetHoveredSection(hover.Section);
+        _view.HoverMixMark(p);
         ApplyLoopCursor(p);
     }
 
