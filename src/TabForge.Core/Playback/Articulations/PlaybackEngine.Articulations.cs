@@ -28,7 +28,7 @@ public sealed partial class PlaybackEngine
         foreach (var e in LatestKeyswitches(timeline, startMs, timeMs, onlyTrack))
         {
             _output.Send(e.DeviceId, e.Status, e.Data1, e.Data2);
-            _output.Send(e.DeviceId, 0x80 | (e.Status & 0x0F), e.Data1, 0);
+            _output.Send(e.DeviceId, MidiStatus.NoteOff | (e.Status & 0x0F), e.Data1, 0);
         }
     }
 }

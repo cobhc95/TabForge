@@ -247,7 +247,7 @@ public sealed partial class PlaybackEngine : IDisposable
         }
         // The cuts go out on the output queue: a driver that is slow or busy with the scheduler never holds the UI thread.
         if (cuts.Count > 0)
-            EnqueueOutputOperation(() => { foreach (var cut in cuts) { _output.Send(cut.Device, 0xB0 | cut.Channel, 123, 0); if (releaseSustain) _output.Send(cut.Device, 0xB0 | cut.Channel, 64, 0); } });
+            EnqueueOutputOperation(() => { foreach (var cut in cuts) { _output.Send(cut.Device, MidiStatus.ControlChange | cut.Channel, MidiCc.AllNotesOff, 0); if (releaseSustain) _output.Send(cut.Device, MidiStatus.ControlChange | cut.Channel, MidiCc.Sustain, 0); } });
     }
 
     private int _loopRangeVersion;
@@ -294,7 +294,7 @@ public sealed partial class PlaybackEngine : IDisposable
         {
             var track = _soundingTrack[slot] - 1;
             if (track < 0 || (tracks is not null && (track >= tracks.Length || !tracks[track]))) continue;
-            _output.Send(_soundingDevice[slot], 0x80 | (slot >> 7), slot & 0x7F, 0);
+            _output.Send(_soundingDevice[slot], MidiStatus.NoteOff | (slot >> 7), slot & 0x7F, 0);
             _soundingTrack[slot] = 0;
         }
     }

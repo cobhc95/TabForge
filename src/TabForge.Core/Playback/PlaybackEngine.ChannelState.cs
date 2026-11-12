@@ -39,7 +39,7 @@ public sealed partial class PlaybackEngine
                 if (!timeline.StartedAfterMixPoints) e.IsChased = false;
                 if (!e.IsChased)
                 {
-                    if ((e.Status & 0xF0) == 0xC0) e.Data1 = value; else e.Data2 = value;
+                    if ((e.Status & 0xF0) == MidiStatus.ProgramChange) e.Data1 = value; else e.Data2 = value;
                 }
                 // The setup keeps the base or chased value (a loop restart begins before the mix points); what is sent is the mix point in force at the position, else the setup.
                 var sent = latest.TryGetValue(ChannelStateKey(e), out var mix) && !mix.IsSetup ? mix : e;
@@ -63,7 +63,7 @@ public sealed partial class PlaybackEngine
     /// </summary>
     private (int Data1, int Data2) Outgoing(ScoreTimeline timeline, ScoreEvent e, int data1, int data2)
     {
-        if ((e.Status & 0xF0) == 0xB0 && data1 == 7 && !e.IsMetronome && e.TrackIndex >= 0 && Focus is { IsOn: true } focus
+        if ((e.Status & 0xF0) == MidiStatus.ControlChange && data1 == MidiCc.Volume && !e.IsMetronome && e.TrackIndex >= 0 && Focus is { IsOn: true } focus
             && (timeline.TrackIds ?? Volatile.Read(ref _song)?.TrackIds) is { } ids && e.TrackIndex < ids.Length)
             data2 = focus.Scale(ids[e.TrackIndex], data2);
         return (ProgramFor(e.Status, data1), MasterScaled(e.Status, data1, data2));
@@ -75,13 +75,13 @@ public sealed partial class PlaybackEngine
         value = 0;
         switch (e.Status & 0xF0)
         {
-            case 0xC0: value = track.MidiProgram; return true;
-            case 0xB0 when e.Data1 == 0: value = Math.Max(0, track.MidiBankMsb); return track.MidiBankMsb >= 0;
-            case 0xB0 when e.Data1 == 32: value = Math.Max(0, track.MidiBankLsb); return track.MidiBankLsb >= 0;
-            case 0xB0 when e.Data1 == 7: value = MixerGroups.Volume(project, track); return true;   // the song's own level: Focus Track is applied when it is sent (Outgoing)
-            case 0xB0 when e.Data1 == 10: value = MixerGroups.Pan(project, track); return true;
-            case 0xB0 when e.Data1 == 91: value = Math.Clamp(track.Reverb, 0, MidiLimits.Max); return true;
-            case 0xB0 when e.Data1 == 93: value = Math.Clamp(track.Chorus, 0, MidiLimits.Max); return true;
+            case MidiStatus.ProgramChange: value = track.MidiProgram; return true;
+            case MidiStatus.ControlChange when e.Data1 == 0: value = Math.Max(0, track.MidiBankMsb); return track.MidiBankMsb >= 0;
+            case MidiStatus.ControlChange when e.Data1 == 32: value = Math.Max(0, track.MidiBankLsb); return track.MidiBankLsb >= 0;
+            case MidiStatus.ControlChange when e.Data1 == 7: value = MixerGroups.Volume(project, track); return true;   // the song's own level: Focus Track is applied when it is sent (Outgoing)
+            case MidiStatus.ControlChange when e.Data1 == 10: value = MixerGroups.Pan(project, track); return true;
+            case MidiStatus.ControlChange when e.Data1 == MidiCc.Reverb: value = Math.Clamp(track.Reverb, 0, MidiLimits.Max); return true;
+            case MidiStatus.ControlChange when e.Data1 == MidiCc.Chorus: value = Math.Clamp(track.Chorus, 0, MidiLimits.Max); return true;
             default: return false;
         }
     }

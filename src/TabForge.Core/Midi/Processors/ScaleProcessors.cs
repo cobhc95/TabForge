@@ -127,9 +127,9 @@ public sealed class ChordProcessor : IMidiProcessor
             var e = input.Items[i];
             var st = e.Status;
             var kind = st & 0xF0;
-            if (st >= 0xF0 || kind is not (0x80 or 0x90) || (_inCh != 0 && (st & 0x0F) != _inCh - 1)) { output.Add(e); continue; }
+            if (st >= 0xF0 || kind is not (MidiStatus.NoteOff or MidiStatus.NoteOn) || (_inCh != 0 && (st & 0x0F) != _inCh - 1)) { output.Add(e); continue; }
             var ch = st & 0x0F; var key = (ch << 7) | (e.Data1 & 0x7F);
-            if (kind == 0x90 && e.Data2 > 0)
+            if (kind == MidiStatus.NoteOn && e.Data2 > 0)
             {
                 Release(key, ch, e.Frame, output, 0);
                 var n = 0; voices[n++] = e.Data1;
@@ -150,7 +150,7 @@ public sealed class ChordProcessor : IMidiProcessor
                     if (note < 0 || note > MidiLimits.Max) continue;
                     var vel = v == 0 ? e.Data2 : (int)Math.Clamp(Math.Round(e.Data2 * _velScale), 1, MidiLimits.Max);
                     _notes[key * 5 + stored++] = (byte)note;
-                    output.Add(e.Frame, (byte)(0x90 | ch), (byte)note, (byte)vel);
+                    output.Add(e.Frame, (byte)(MidiStatus.NoteOn | ch), (byte)note, (byte)vel);
                 }
                 _cnt[key] = stored;
             }
@@ -161,7 +161,7 @@ public sealed class ChordProcessor : IMidiProcessor
 
     private void Release(int key, int ch, int frame, MidiBuffer output, int vel)
     {
-        for (var v = 0; v < _cnt[key]; v++) output.Add(frame, (byte)(0x80 | ch), _notes[key * 5 + v], (byte)vel);
+        for (var v = 0; v < _cnt[key]; v++) output.Add(frame, (byte)(MidiStatus.NoteOff | ch), _notes[key * 5 + v], (byte)vel);
         _cnt[key] = 0;
     }
 

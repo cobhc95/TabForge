@@ -91,7 +91,7 @@ public sealed class RtMidiOutputDevices : IMidiDevices
     public void ShortMessage(IntPtr handle, uint message)
     {
         var status = (byte)(message & 0xFF);
-        var length = (status & 0xF0) is 0xC0 or 0xD0 ? 2 : 3;
+        var length = (status & 0xF0) is MidiStatus.ProgramChange or MidiStatus.ChannelPressure ? 2 : 3;
         TfPortable.Current?.MidiOutSend(handle, status, (byte)((message >> 8) & 0x7F), (byte)((message >> 16) & 0x7F), length);
     }
 
@@ -100,8 +100,8 @@ public sealed class RtMidiOutputDevices : IMidiDevices
     {
         for (byte channel = 0; channel < 16; channel++)
         {
-            TfPortable.Current?.MidiOutSend(handle, (byte)(0xB0 | channel), 120, 0, 3);
-            TfPortable.Current?.MidiOutSend(handle, (byte)(0xB0 | channel), 123, 0, 3);
+            TfPortable.Current?.MidiOutSend(handle, (byte)(MidiStatus.ControlChange | channel), MidiCc.AllSoundOff, 0, 3);
+            TfPortable.Current?.MidiOutSend(handle, (byte)(MidiStatus.ControlChange | channel), MidiCc.AllNotesOff, 0, 3);
         }
     }
 

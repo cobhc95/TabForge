@@ -221,27 +221,27 @@ internal static class SmfReader
     {
         var kind = status & 0xF0;
         var channel = status & 0x0F;
-        var need = kind is 0xC0 or 0xD0 ? 1 : 2;
+        var need = kind is MidiStatus.ProgramChange or MidiStatus.ChannelPressure ? 1 : 2;
         if (pos + need > end) throw new InvalidDataException(Invalid);
         int a = d[pos], b = need == 2 ? d[pos + 1] : 0;
         pos += need;
         if ((a | b) >= 0x80) throw new InvalidDataException(Invalid);
-        if (kind == 0xB0 && track.Controllers.Count < InputLimits.MaxMidiControllerPoints)
-            track.Controllers.Add(new SmfController(tick, channel, 0xB0, a, b));
-        else if (kind == 0xE0 && track.Controllers.Count < InputLimits.MaxMidiControllerPoints)
-            track.Controllers.Add(new SmfController(tick, channel, 0xE0, 0, ((b << 7) | a) - 8192));
-        if (kind == 0xC0)
+        if (kind == MidiStatus.ControlChange && track.Controllers.Count < InputLimits.MaxMidiControllerPoints)
+            track.Controllers.Add(new SmfController(tick, channel, MidiStatus.ControlChange, a, b));
+        else if (kind == MidiStatus.PitchBend && track.Controllers.Count < InputLimits.MaxMidiControllerPoints)
+            track.Controllers.Add(new SmfController(tick, channel, MidiStatus.PitchBend, 0, ((b << 7) | a) - 8192));
+        if (kind == MidiStatus.ProgramChange)
         {
             program[channel] = a;
             if (track.ProgramChanges.Count < InputLimits.MaxMidiMetaEvents) track.ProgramChanges.Add((tick, channel, a));
         }
-        else if (kind == 0x90 && b > 0)
+        else if (kind == MidiStatus.NoteOn && b > 0)
         {
             if (++noteCount > InputLimits.MaxTotalNotes) throw new InvalidDataException("The score file contains too many notes.");
             if (!open.TryGetValue((channel, a), out var queue)) open[(channel, a)] = queue = new();
             queue.Enqueue((tick, b, program[channel]));
         }
-        else if (kind is 0x80 or 0x90 && open.TryGetValue((channel, a), out var held) && held.Count > 0)
+        else if (kind is MidiStatus.NoteOff or MidiStatus.NoteOn && open.TryGetValue((channel, a), out var held) && held.Count > 0)
         {
             var (noteStart, velocity, noteProgram) = held.Dequeue();
             track.Notes.Add(new SmfNote(noteStart, Math.Max(tick, noteStart), channel, a, velocity, noteProgram));

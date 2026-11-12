@@ -75,12 +75,12 @@ internal static class MidiExportSlices
     }
 
     // Channel messages that chase: the last value at the range start is written at tick 0.
-    private static bool IsChaseKind(int kind) => kind is 0xA0 or 0xB0 or 0xC0 or 0xD0 or 0xE0;
+    private static bool IsChaseKind(int kind) => kind is MidiStatus.PolyPressure or MidiStatus.ControlChange or MidiStatus.ProgramChange or MidiStatus.ChannelPressure or MidiStatus.PitchBend;
 
     private static (int Channel, int Key) ChaseKey(ScoreEvent e)
     {
         var kind = e.Status & 0xF0;
-        return kind is 0xC0 or 0xD0 or 0xE0 ? (e.Status & 0x0F, 0) : (e.Status & 0x0F, e.Data1 & 0x7F);
+        return kind is MidiStatus.ProgramChange or MidiStatus.ChannelPressure or MidiStatus.PitchBend ? (e.Status & 0x0F, 0) : (e.Status & 0x0F, e.Data1 & 0x7F);
     }
 
     internal static byte[] BuildTrackSlice(SongProject project, ScoreTimeline timeline, MidiExportService.TickMap map, int trackIndex,
@@ -135,7 +135,7 @@ internal static class MidiExportSlices
             {
                 var on = queue.Dequeue();
                 if (on.TimeMs < startMs - 1e-6 || on.TimeMs >= endMs - 1e-6) continue;
-                inside.Add((on, new ScoreEvent { Status = 0x80 | (on.Status & 0x0F), Channel = on.Channel, Data1 = on.Data1, Data2 = 0x40 }, true));
+                inside.Add((on, new ScoreEvent { Status = MidiStatus.NoteOff | (on.Status & 0x0F), Channel = on.Channel, Data1 = on.Data1, Data2 = 0x40 }, true));
             }
         var head = new List<(int Tick, byte[] Bytes)>();
         foreach (var e in chase.Values.OrderBy(e => e.TimeMs)) AddMessage(head, e, 0);
@@ -147,7 +147,7 @@ internal static class MidiExportSlices
                 if (!clipped.Any(pair => ReferenceEquals(pair.On, on)))
                 {
                     AddNoteOn(head, on, 0);
-                    AddNoteOff(head, map, new ScoreEvent { Status = 0x80 | (on.Status & 0x0F), Channel = on.Channel, Data1 = on.Data1, Data2 = 0 }, startMs, startTick, 0);
+                    AddNoteOff(head, map, new ScoreEvent { Status = MidiStatus.NoteOff | (on.Status & 0x0F), Channel = on.Channel, Data1 = on.Data1, Data2 = 0 }, startMs, startTick, 0);
                 }
         foreach (var (on, off) in clipped.OrderBy(n => n.On.TimeMs))
         {
@@ -190,7 +190,7 @@ internal static class MidiExportSlices
         MidiExportService.WriteVarLen(bytes, 0);
         bytes.Add((byte)(e.Status & 0xFF));
         bytes.Add((byte)(e.Data1 & 0x7F));
-        if ((e.Status & 0xF0) != 0xC0 && (e.Status & 0xF0) != 0xD0) bytes.Add((byte)(e.Data2 & 0x7F));
+        if ((e.Status & 0xF0) != MidiStatus.ProgramChange && (e.Status & 0xF0) != MidiStatus.ChannelPressure) bytes.Add((byte)(e.Data2 & 0x7F));
         items.Add((tick, bytes.ToArray()));
     }
 
@@ -214,7 +214,7 @@ internal static class MidiExportSlices
         var tick = Math.Max(onTick, map.TickOf(Math.Max(0, atMs)) - startTick);
         var bytes = new List<byte>();
         MidiExportService.WriteVarLen(bytes, 0);
-        bytes.Add((byte)((off.Status & 0xF0) == 0x90 ? 0x80 | (off.Status & 0x0F) : off.Status & 0xFF));
+        bytes.Add((byte)((off.Status & 0xF0) == MidiStatus.NoteOn ? MidiStatus.NoteOff | (off.Status & 0x0F) : off.Status & 0xFF));
         bytes.Add((byte)(off.Data1 & 0x7F));
         bytes.Add((byte)(off.Data2 & 0x7F));
         items.Add((tick, bytes.ToArray()));

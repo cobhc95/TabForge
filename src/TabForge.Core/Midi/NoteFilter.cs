@@ -86,11 +86,11 @@ public sealed class NoteFilteredProcessor : IMidiProcessor
             var st = e.Status;
             var kind = st & 0xF0;
             var go = true;
-            if (st < 0xF0 && kind is 0x80 or 0x90 or 0xA0)
+            if (st < 0xF0 && kind is MidiStatus.NoteOff or MidiStatus.NoteOn or MidiStatus.PolyPressure)
             {
                 var key = ((st & 0x0F) << 7) | (e.Data1 & 0x7F);
-                if (kind == 0x90 && e.Data2 > 0) { go = Selected(e.Data1); _decision[key] = (byte)(go ? 1 : 2); }
-                else if (_decision[key] != 0) { go = _decision[key] == 1; if (kind != 0xA0) _decision[key] = 0; }
+                if (kind == MidiStatus.NoteOn && e.Data2 > 0) { go = Selected(e.Data1); _decision[key] = (byte)(go ? 1 : 2); }
+                else if (_decision[key] != 0) { go = _decision[key] == 1; if (kind != MidiStatus.PolyPressure) _decision[key] = 0; }
                 else go = Selected(e.Data1);
             }
             if (go) _sel.Add(e); else { output.Add(e); bypassed = true; }

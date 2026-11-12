@@ -70,8 +70,8 @@ public sealed partial class PlaybackEngine : IDisposable
         foreach (var e in timeline.ChannelSetup)
         {
             var kind = e.Status & 0xF0;
-            if ((kind == 0xE0 && e.Data1 == 0 && e.Data2 == 64) ||
-                (kind == 0xB0 && e.Data1 == 1 && e.Data2 == 0))
+            if ((kind == MidiStatus.PitchBend && e.Data1 == 0 && e.Data2 == 64) ||
+                (kind == MidiStatus.ControlChange && e.Data1 == MidiCc.Modulation && e.Data2 == 0))
                 _output.Send(e.DeviceId, e.Status, e.Data1, e.Data2);
         }
     }
@@ -124,7 +124,7 @@ public sealed partial class PlaybackEngine : IDisposable
     /// <summary>The master knob scales everything: channel volume (CC7) of every track, the metronome and note preview. Called by Outgoing only.</summary>
     private int MasterScaled(int status, int data1, int data2)
     {
-        if ((status & 0xF0) != 0xB0 || data1 != 7) return data2;
+        if ((status & 0xF0) != MidiStatus.ControlChange || data1 != MidiCc.Volume) return data2;
         var scaled = Math.Clamp((int)Math.Round(data2 * Volatile.Read(ref _masterVolume) / 100.0), 0, MidiLimits.Max);
         Volatile.Write(ref _channelVolume[status & 0x0F], scaled);
         return scaled;
@@ -171,10 +171,10 @@ public sealed partial class PlaybackEngine : IDisposable
             token = ++_previewSerial;
             var retrigger = _previewTokens.ContainsKey(key);
             _previewTokens[key] = token;
-            if (retrigger) send(deviceId, 0x80 | ch, pitch, 0);
-            if (program is { } p) _output.Send(deviceId, 0xC0 | ch, Math.Clamp(p, 0, MidiLimits.Max), 0);
+            if (retrigger) send(deviceId, MidiStatus.NoteOff | ch, pitch, 0);
+            if (program is { } p) _output.Send(deviceId, MidiStatus.ProgramChange | ch, Math.Clamp(p, 0, MidiLimits.Max), 0);
             var velocity = Math.Clamp((int)Math.Round(100 * Volatile.Read(ref _masterVolume) / 100.0), 1, MidiLimits.Max);
-            send(deviceId, 0x90 | ch, pitch, velocity);
+            send(deviceId, MidiStatus.NoteOn | ch, pitch, velocity);
         }
         try { await Task.Delay(Math.Clamp(ms, 60, 8000)).ConfigureAwait(false); }
         finally
@@ -183,7 +183,7 @@ public sealed partial class PlaybackEngine : IDisposable
                 if (_previewTokens.TryGetValue(key, out var current) && current == token)
                 {
                     _previewTokens.Remove(key);
-                    send(deviceId, 0x80 | ch, pitch, 0);
+                    send(deviceId, MidiStatus.NoteOff | ch, pitch, 0);
                 }
         }
     }

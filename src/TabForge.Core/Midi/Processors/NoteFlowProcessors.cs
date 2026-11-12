@@ -31,15 +31,15 @@ public sealed class ChokeProcessor : IMidiProcessor
         {
             var e = input.Items[i];
             var st = e.Status; var kind = st & 0xF0;
-            if (st >= 0xF0 || kind is not (0x80 or 0x90) || (_inCh != 0 && (st & 0x0F) != _inCh - 1)) { output.Add(e); continue; }
+            if (st >= 0xF0 || kind is not (MidiStatus.NoteOff or MidiStatus.NoteOn) || (_inCh != 0 && (st & 0x0F) != _inCh - 1)) { output.Add(e); continue; }
             int n = e.Data1 & 0x7F, ch = st & 0x0F;
-            if (kind == 0x90 && e.Data2 > 0)
+            if (kind == MidiStatus.NoteOn && e.Data2 > 0)
             {
                 if (IsChoke(n))
                 {
                     if (!_chokeHeld[n]) { _chokeHeld[n] = true; _chokeCount++; }
                     for (var a = 0; a < 128; a++)
-                        if (_aSounding[a]) { output.Add(e.Frame, (byte)(0x80 | _aCh[a]), (byte)a, 0); _aSounding[a] = false; _swallow[a] = true; }
+                        if (_aSounding[a]) { output.Add(e.Frame, (byte)(MidiStatus.NoteOff | _aCh[a]), (byte)a, 0); _aSounding[a] = false; _swallow[a] = true; }
                     output.Add(e);
                 }
                 else if (IsAffected(n))
@@ -93,10 +93,10 @@ public sealed class ChokeGroupProcessor : IMidiProcessor
         {
             var e = input.Items[i];
             var st = e.Status; var kind = st & 0xF0;
-            if (st >= 0xF0 || kind is not (0x80 or 0x90) || (_inCh != 0 && (st & 0x0F) != _inCh - 1) || e.Data1 < _start || e.Data1 >= _start + _count) { output.Add(e); continue; }
-            if (kind == 0x90 && e.Data2 > 0)
+            if (st >= 0xF0 || kind is not (MidiStatus.NoteOff or MidiStatus.NoteOn) || (_inCh != 0 && (st & 0x0F) != _inCh - 1) || e.Data1 < _start || e.Data1 >= _start + _count) { output.Add(e); continue; }
+            if (kind == MidiStatus.NoteOn && e.Data2 > 0)
             {
-                if (_cur >= 0) output.Add(e.Frame, (byte)(0x80 | _curCh), (byte)_cur, 0);
+                if (_cur >= 0) output.Add(e.Frame, (byte)(MidiStatus.NoteOff | _curCh), (byte)_cur, 0);
                 _cur = e.Data1; _curCh = st & 0x0F;
                 output.Add(e);
             }
@@ -133,14 +133,14 @@ public sealed class NoteSanitizerProcessor : IMidiProcessor
         {
             var e = input.Items[i];
             var st = e.Status; var kind = st & 0xF0;
-            if (st >= 0xF0 || kind is not (0x80 or 0x90) || (_inCh != 0 && (st & 0x0F) != _inCh - 1)) { output.Add(e); continue; }
+            if (st >= 0xF0 || kind is not (MidiStatus.NoteOff or MidiStatus.NoteOn) || (_inCh != 0 && (st & 0x0F) != _inCh - 1)) { output.Add(e); continue; }
             var key = ((st & 0x0F) << 7) | (e.Data1 & 0x7F);
             var abs = ctx.BlockStart + e.Frame;
-            if (kind == 0x90 && e.Data2 > 0)
+            if (kind == MidiStatus.NoteOn && e.Data2 > 0)
             {
                 if (_on[key])
                 {
-                    if (_threshold > 0 && abs - _since[key] >= limit) output.Add(e.Frame, (byte)(0x80 | (st & 0x0F)), e.Data1, 0);
+                    if (_threshold > 0 && abs - _since[key] >= limit) output.Add(e.Frame, (byte)(MidiStatus.NoteOff | (st & 0x0F)), e.Data1, 0);
                     else { _extra[key]++; continue; }
                 }
                 _on[key] = true; _since[key] = abs;
@@ -183,11 +183,11 @@ public sealed class NoteHoldProcessor : IMidiProcessor
         {
             var e = input.Items[i];
             var st = e.Status; var kind = st & 0xF0;
-            if (st >= 0xF0 || kind is not (0x80 or 0x90) || (_inCh != 0 && (st & 0x0F) != _inCh - 1)) { output.Add(e); continue; }
+            if (st >= 0xF0 || kind is not (MidiStatus.NoteOff or MidiStatus.NoteOn) || (_inCh != 0 && (st & 0x0F) != _inCh - 1)) { output.Add(e); continue; }
             var ch = st & 0x0F;
-            if (kind == 0x90 && e.Data2 > 0)
+            if (kind == MidiStatus.NoteOn && e.Data2 > 0)
             {
-                if (_last[ch] >= 0) output.Add(e.Frame, (byte)(0x80 | ch), (byte)_last[ch], 0);
+                if (_last[ch] >= 0) output.Add(e.Frame, (byte)(MidiStatus.NoteOff | ch), (byte)_last[ch], 0);
                 _last[ch] = e.Data1;
                 output.Add(e);
             }

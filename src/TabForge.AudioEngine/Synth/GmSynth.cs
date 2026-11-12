@@ -115,11 +115,11 @@ public sealed class GmSynth : IPluginInstance
         for (var ch = 0; ch < 16; ch++)
         {
             // Bank select (CC0, CC32) first: a program change picks its sound from the bank that is selected when it arrives.
-            if (_cc[ch, 0] >= 0) _synth.ProcessMidiMessage(ch, 0xB0, 0, _cc[ch, 0]);
-            if (_cc[ch, 32] >= 0) _synth.ProcessMidiMessage(ch, 0xB0, 32, _cc[ch, 32]);
-            if (_program[ch] >= 0) _synth.ProcessMidiMessage(ch, 0xC0, _program[ch], 0);   // never set: the synth's own default (the drum kit on channel 10) stays
-            for (var c = 1; c < 128; c++) if (c != 32 && _cc[ch, c] >= 0) _synth.ProcessMidiMessage(ch, 0xB0, c, _cc[ch, c]);
-            if (_bend[ch] >= 0) _synth.ProcessMidiMessage(ch, 0xE0, _bend[ch] & 0x7F, _bend[ch] >> 7);
+            if (_cc[ch, 0] >= 0) _synth.ProcessMidiMessage(ch, MidiStatus.ControlChange, MidiCc.BankSelectMsb, _cc[ch, 0]);
+            if (_cc[ch, 32] >= 0) _synth.ProcessMidiMessage(ch, MidiStatus.ControlChange, MidiCc.BankSelectLsb, _cc[ch, 32]);
+            if (_program[ch] >= 0) _synth.ProcessMidiMessage(ch, MidiStatus.ProgramChange, _program[ch], 0);   // never set: the synth's own default (the drum kit on channel 10) stays
+            for (var c = 1; c < 128; c++) if (c != 32 && _cc[ch, c] >= 0) _synth.ProcessMidiMessage(ch, MidiStatus.ControlChange, c, _cc[ch, c]);
+            if (_bend[ch] >= 0) _synth.ProcessMidiMessage(ch, MidiStatus.PitchBend, _bend[ch] & 0x7F, _bend[ch] >> 7);
         }
     }
 
@@ -150,9 +150,9 @@ public sealed class GmSynth : IPluginInstance
             if (frame > at) { synth.Render(left[at..frame], right[at..frame]); at = frame; }
             var command = e.Status & 0xF0;
             var chn = e.Status & 0x0F;
-            if (command == 0xC0) _program[chn] = e.Data1;
-            else if (command == 0xB0 && e.Data1 < 120) _cc[chn, e.Data1 & 0x7F] = e.Data2;
-            else if (command == 0xE0) _bend[chn] = (e.Data1 & 0x7F) | ((e.Data2 & 0x7F) << 7);
+            if (command == MidiStatus.ProgramChange) _program[chn] = e.Data1;
+            else if (command == MidiStatus.ControlChange && e.Data1 < MidiCc.FirstChannelMode) _cc[chn, e.Data1 & 0x7F] = e.Data2;
+            else if (command == MidiStatus.PitchBend) _bend[chn] = (e.Data1 & 0x7F) | ((e.Data2 & 0x7F) << 7);
             if (command is >= 0x80 and <= 0xE0) synth.ProcessMidiMessage(e.Status & 0x0F, command, e.Data1, e.Data2);
         }
         if (at < frames) synth.Render(left[at..], right[at..]);

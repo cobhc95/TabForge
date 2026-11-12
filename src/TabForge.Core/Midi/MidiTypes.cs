@@ -164,10 +164,10 @@ public sealed class EventScheduler
     public bool Schedule(long abs, byte status, byte d1, byte d2)
     {
         var kind = status & 0xF0;
-        if (kind is 0x90 or 0x80)
+        if (kind is MidiStatus.NoteOn or MidiStatus.NoteOff)
         {
             var key = ((status & 0x0F) << 7) | (d1 & 0x7F);
-            if (kind == 0x90 && d2 > 0) _lastOn[key] = abs;
+            if (kind == MidiStatus.NoteOn && d2 > 0) _lastOn[key] = abs;
             else if (abs < _lastOn[key]) abs = _lastOn[key];
         }
         if (_n >= Capacity) return false;

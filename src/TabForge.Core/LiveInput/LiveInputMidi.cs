@@ -18,7 +18,7 @@ internal sealed class LiveInputMidi
     // Sustain off first (under it All Notes Off keeps notes sounding), then All Notes Off, Reset All Controllers, bend centre and pressure 0.
     private static readonly IReadOnlyList<(byte Status, byte Data1, byte Data2)> ResetMessages = new (byte Status, byte Data1, byte Data2)[]
     {
-        (0xB0, 64, 0), (0xB0, 123, 0), (0xB0, 121, 0), (0xE0, 0x00, 0x40), (0xD0, 0, 0)
+        (MidiStatus.ControlChange, MidiCc.Sustain, 0), (MidiStatus.ControlChange, MidiCc.AllNotesOff, 0), (MidiStatus.ControlChange, MidiCc.ResetAllControllers, 0), (MidiStatus.PitchBend, 0x00, 0x40), (MidiStatus.ChannelPressure, 0, 0)
     };
 
     private readonly AudioEngineClient _engine;
@@ -138,7 +138,7 @@ internal sealed class LiveInputMidi
         _channels = 0;
         var slot = _engine.SlotOf(_track);
         if (channels == 0 || slot < 0) return;
-        _engine.Write(new TimedMidi { Timestamp = Stopwatch.GetTimestamp() - _engine.LatencyTicks, Slot = slot, Status = 0xB0, Data1 = 123, Flags = TimedMidi.PanicFlag });
+        _engine.Write(new TimedMidi { Timestamp = Stopwatch.GetTimestamp() - _engine.LatencyTicks, Slot = slot, Status = MidiStatus.ControlChange, Data1 = MidiCc.AllNotesOff, Flags = TimedMidi.PanicFlag });
         for (var channel = 0; channel < 16; channel++)
             if ((channels & (1 << channel)) != 0)
                 foreach (var (status, data1, data2) in ResetMessages) Write(slot, (byte)(status | channel), data1, data2);

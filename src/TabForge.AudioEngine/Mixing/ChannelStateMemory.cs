@@ -27,9 +27,9 @@ public sealed class ChannelStateMemory
         var ch = status & 0x0F;
         switch (status & 0xF0)
         {
-            case 0xB0 when d1 < 120: _cc[(slot * 16 + ch) * 128 + d1] = d2; break;
-            case 0xC0: _program[slot * 16 + ch] = d1; break;
-            case 0xE0: _bend[slot * 16 + ch] = (short)(1 + (d1 | (d2 << 7))); break;
+            case MidiStatus.ControlChange when d1 < MidiCc.FirstChannelMode: _cc[(slot * 16 + ch) * 128 + d1] = d2; break;
+            case MidiStatus.ProgramChange: _program[slot * 16 + ch] = d1; break;
+            case MidiStatus.PitchBend: _bend[slot * 16 + ch] = (short)(1 + (d1 | (d2 << 7))); break;
         }
     }
 
@@ -42,14 +42,14 @@ public sealed class ChannelStateMemory
         for (var ch = 0; ch < 16; ch++)
         {
             var baseIndex = (slot * 16 + ch) * 128;
-            if (_cc[baseIndex] != 255) chain.AddEvent(0, (byte)(0xB0 | ch), 0, _cc[baseIndex]);
-            if (_cc[baseIndex + 32] != 255) chain.AddEvent(0, (byte)(0xB0 | ch), 32, _cc[baseIndex + 32]);
-            if (_program[slot * 16 + ch] != 255) chain.AddEvent(0, (byte)(0xC0 | ch), _program[slot * 16 + ch], 0);
+            if (_cc[baseIndex] != 255) chain.AddEvent(0, (byte)(MidiStatus.ControlChange | ch), MidiCc.BankSelectMsb, _cc[baseIndex]);
+            if (_cc[baseIndex + 32] != 255) chain.AddEvent(0, (byte)(MidiStatus.ControlChange | ch), MidiCc.BankSelectLsb, _cc[baseIndex + 32]);
+            if (_program[slot * 16 + ch] != 255) chain.AddEvent(0, (byte)(MidiStatus.ProgramChange | ch), _program[slot * 16 + ch], 0);
             ReplayRpn(chain, ch, baseIndex);
-            for (var cc = 1; cc < 120; cc++)
-                if (cc != 32 && !IsRpnController(cc) && _cc[baseIndex + cc] != 255) chain.AddEvent(0, (byte)(0xB0 | ch), (byte)cc, _cc[baseIndex + cc]);
+            for (var cc = 1; cc < MidiCc.FirstChannelMode; cc++)
+                if (cc != 32 && !IsRpnController(cc) && _cc[baseIndex + cc] != 255) chain.AddEvent(0, (byte)(MidiStatus.ControlChange | ch), (byte)cc, _cc[baseIndex + cc]);
             var bend = _bend[slot * 16 + ch] - 1;
-            if (bend >= 0) chain.AddEvent(0, (byte)(0xE0 | ch), (byte)(bend & 0x7F), (byte)(bend >> 7));
+            if (bend >= 0) chain.AddEvent(0, (byte)(MidiStatus.PitchBend | ch), (byte)(bend & 0x7F), (byte)(bend >> 7));
         }
     }
 
@@ -66,7 +66,7 @@ public sealed class ChannelStateMemory
 
     private void ReplayController(TrackChain chain, int ch, int baseIndex, int cc)
     {
-        if (_cc[baseIndex + cc] != 255) chain.AddEvent(0, (byte)(0xB0 | ch), (byte)cc, _cc[baseIndex + cc]);
+        if (_cc[baseIndex + cc] != 255) chain.AddEvent(0, (byte)(MidiStatus.ControlChange | ch), (byte)cc, _cc[baseIndex + cc]);
     }
 
     /// <summary>Audio thread: applies a pending <see cref="Forget"/> of the slot.</summary>

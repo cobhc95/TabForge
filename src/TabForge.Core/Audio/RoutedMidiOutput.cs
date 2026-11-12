@@ -73,7 +73,7 @@ public sealed partial class RoutedMidiOutput : IMidiOutput
         // which can be after the note a seek sends right behind the reset, and then silences or drops that first note.
         var stamp = Stopwatch.GetTimestamp() + Compensation(_engine.LatencyTicks, WindowsMidiTicks, _engine.Mixer.PlayAllThroughEngine).EngineHoldTicks;
         foreach (var slot in routes.Where(r => r >= 0).Distinct())
-            _engine.Write(new TimedMidi { Timestamp = stamp, Slot = slot, Status = 0xB0, Data1 = 123, Flags = TimedMidi.PanicFlag });
+            _engine.Write(new TimedMidi { Timestamp = stamp, Slot = slot, Status = MidiStatus.ControlChange, Data1 = MidiCc.AllNotesOff, Flags = TimedMidi.PanicFlag });
     }
 
     /// <summary>
@@ -192,7 +192,7 @@ public sealed partial class RoutedMidiOutput : IMidiOutput
         _inner.ResetAll();
         PanicOwnSlots(_routes);
         if (_engine.SlotOf(_engine.Click.Track) is var clickSlot and >= 0)
-            _engine.Write(new TimedMidi { Timestamp = Stopwatch.GetTimestamp() + Compensation(_engine.LatencyTicks, WindowsMidiTicks, _engine.Mixer.PlayAllThroughEngine).EngineHoldTicks, Slot = clickSlot, Status = 0xB0, Data1 = 123, Flags = TimedMidi.PanicFlag });
+            _engine.Write(new TimedMidi { Timestamp = Stopwatch.GetTimestamp() + Compensation(_engine.LatencyTicks, WindowsMidiTicks, _engine.Mixer.PlayAllThroughEngine).EngineHoldTicks, Slot = clickSlot, Status = MidiStatus.ControlChange, Data1 = MidiCc.AllNotesOff, Flags = TimedMidi.PanicFlag });
     }
 
     public void Close()

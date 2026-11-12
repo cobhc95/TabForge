@@ -231,9 +231,9 @@ internal static class SustainResolver
 
     private static int Priority(ScoreEvent e) => (e.Status & 0xF0) switch
     {
-        0x80 => 0,          // note off first
-        0xB0 or 0xE0 => 1,  // controllers / pitch bend
-        0x90 => 2,          // note on last
+        MidiStatus.NoteOff => 0,          // note off first
+        MidiStatus.ControlChange or MidiStatus.PitchBend => 1,  // controllers / pitch bend
+        MidiStatus.NoteOn => 2,          // note on last
         _ => 1
     };
 }

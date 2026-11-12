@@ -146,11 +146,11 @@ internal sealed partial class ScoreToMidiCompiler
     private void EmitAttackAndExpression(NoteEvent noteEvent, TrackModel track, int playBar, int cellIndex, TabCell cell, TabNote note, int midi, int velocity, double onset, double length, double writtenEndMs,
         (int track, int voice, int str) key, HashSet<string> t, int channel, int device, int trackIndex)
     {
-        Add(device, channel, 0x90, midi, velocity, onset, trackIndex);
+        Add(device, channel, MidiStatus.NoteOn, midi, velocity, onset, trackIndex);
         var offIndex = _timeline.Events.Count;
         noteEvent.OffEventIndices.Add(offIndex);
         noteEvent.SustainOffEventIndices.Add(offIndex);
-        Add(device, channel, 0x80, midi, 0, onset + length, trackIndex);
+        Add(device, channel, MidiStatus.NoteOff, midi, 0, onset + length, trackIndex);
 
         // Semi harmonic: the fundamental sounds together with the harmonic.
         if (t.Contains("SemiHarmonic") && channel != ChannelAllocator.PercussionChannel && !ArticulationSuppressed(TechniqueNames.Harmonic) &&
@@ -159,11 +159,11 @@ internal sealed partial class ScoreToMidiCompiler
             var fundamental = WrittenMidi(track, cell, note);
             if (fundamental != midi)
             {
-                Add(device, channel, 0x90, fundamental, velocity, onset, trackIndex);
+                Add(device, channel, MidiStatus.NoteOn, fundamental, velocity, onset, trackIndex);
                 var fundamentalOff = _timeline.Events.Count;
                 noteEvent.OffEventIndices.Add(fundamentalOff);
                 noteEvent.SustainOffEventIndices.Add(fundamentalOff);
-                Add(device, channel, 0x80, fundamental, 0, onset + length, trackIndex);
+                Add(device, channel, MidiStatus.NoteOff, fundamental, 0, onset + length, trackIndex);
             }
         }
 
@@ -268,7 +268,7 @@ internal sealed partial class ScoreToMidiCompiler
                 open.HoldResetIndex = -1;   // its curve ends the wheel itself; a later link holds again
                 open.CurveEndIndex = curveEnd;
             }
-            else if (originReset >= 0 && originReset < _timeline.Events.Count && _timeline.Events[originReset].Status == (0xE0 | (channel & 0x0F)))
+            else if (originReset >= 0 && originReset < _timeline.Events.Count && _timeline.Events[originReset].Status == (MidiStatus.PitchBend | (channel & 0x0F)))
                 _timeline.Events[originReset].TimeMs = Math.Max(_timeline.Events[originReset].TimeMs, end);   // no curve of its own: the origin's reset moves to the chain's real end
         }
         _timeline.TieMerges++;
@@ -289,11 +289,11 @@ internal sealed partial class ScoreToMidiCompiler
             var pitch = t.Contains("Trill") ? (k % 2 == 0 ? midi : trillTarget) : midi;
             var vel = t.Contains("TremoloPick") ? velocity * 3 / 4 : velocity;
             var s = onset + k * sub;
-            Add(device, channel, 0x90, pitch, vel, s, trackIndex);
+            Add(device, channel, MidiStatus.NoteOn, pitch, vel, s, trackIndex);
             var repeatedOffIndex = _timeline.Events.Count;
             noteEvent.OffEventIndices.Add(repeatedOffIndex);
             if (k == repeats - 1) noteEvent.SustainOffEventIndices.Add(repeatedOffIndex);
-            Add(device, channel, 0x80, pitch, 0, s + sub * 0.72, trackIndex);
+            Add(device, channel, MidiStatus.NoteOff, pitch, 0, s + sub * 0.72, trackIndex);
         }
         if (channel != ChannelAllocator.PercussionChannel)
         {
@@ -439,22 +439,22 @@ internal sealed partial class ScoreToMidiCompiler
             // later note on the channel stayed silent (expression left at 0).
             var span = Math.Max(1, length);
             for (var at = 0.0; at < span; at += FadeInSampleMs)
-                Add(device, channel, 0xB0, 11, (int)Math.Round(MidiLimits.Max * (1 - Math.Clamp(at / span, 0, 1))), onset + at, trackIndex);
-            Add(device, channel, 0xB0, 11, MidiLimits.Max, onset + span, trackIndex);
+                Add(device, channel, MidiStatus.ControlChange, MidiCc.Expression, (int)Math.Round(MidiLimits.Max * (1 - Math.Clamp(at / span, 0, 1))), onset + at, trackIndex);
+            Add(device, channel, MidiStatus.ControlChange, MidiCc.Expression, MidiLimits.Max, onset + span, trackIndex);
         }
         // The mod wheel is put back to zero when the note ends, or every later note on the channel keeps the wah's vibrato.
         if (t.Contains("WahOpen") || t.Contains("WahClose"))
         {
-            Add(device, channel, 0xB0, 1, TechniqueInfo.ControllerValueOf(t.Contains("WahOpen") ? TechniqueNames.WahOpen : TechniqueNames.WahClose), onset, trackIndex);
-            Add(device, channel, 0xB0, 1, 0, onset + Math.Max(1, length), trackIndex);
+            Add(device, channel, MidiStatus.ControlChange, MidiCc.Modulation, TechniqueInfo.ControllerValueOf(t.Contains("WahOpen") ? TechniqueNames.WahOpen : TechniqueNames.WahClose), onset, trackIndex);
+            Add(device, channel, MidiStatus.ControlChange, MidiCc.Modulation, 0, onset + Math.Max(1, length), trackIndex);
         }
         // (Skipped when there is no room before the beat: both events would clamp to time zero and the off would sort before its on.)
         // The grace's on must stay strictly before its off (onset - 2): g >= 10 and onset - g >= 0.
         if (emitLegacyGrace && (t.Contains("GraceBefore") || t.Contains("GraceOnBeat")) && onset >= 10)
         {
             var g = Math.Min(Math.Max(10, Math.Min(90, length * 0.25)), onset);
-            Add(device, channel, 0x90, Math.Max(0, midi - 1), Math.Max(1, 90 / 2), onset - g, trackIndex);
-            Add(device, channel, 0x80, Math.Max(0, midi - 1), 0, onset - 2, trackIndex);
+            Add(device, channel, MidiStatus.NoteOn, Math.Max(0, midi - 1), Math.Max(1, 90 / 2), onset - g, trackIndex);
+            Add(device, channel, MidiStatus.NoteOff, Math.Max(0, midi - 1), 0, onset - 2, trackIndex);
         }
     }
 
@@ -481,13 +481,13 @@ internal sealed partial class ScoreToMidiCompiler
             var start = envelope.Note.OnsetMs;
             var end = Math.Max(start + 1, envelope.Note.EndMs);
             var duration = end - start;
-            Add(OutputDeviceOf(envelope.Track), envelope.Channel, 0xB0, 11, 0, start, envelope.Note.TrackIndex);
+            Add(OutputDeviceOf(envelope.Track), envelope.Channel, MidiStatus.ControlChange, MidiCc.Expression, 0, start, envelope.Note.TrackIndex);
             for (var at = start + FadeInSampleMs; at < end; at += FadeInSampleMs)
             {
                 var level = (int)Math.Round(MidiLimits.Max * Math.Clamp((at - start) / duration, 0, 1));
-                Add(OutputDeviceOf(envelope.Track), envelope.Channel, 0xB0, 11, level, at, envelope.Note.TrackIndex);
+                Add(OutputDeviceOf(envelope.Track), envelope.Channel, MidiStatus.ControlChange, MidiCc.Expression, level, at, envelope.Note.TrackIndex);
             }
-            Add(OutputDeviceOf(envelope.Track), envelope.Channel, 0xB0, 11, MidiLimits.Max, end, envelope.Note.TrackIndex);
+            Add(OutputDeviceOf(envelope.Track), envelope.Channel, MidiStatus.ControlChange, MidiCc.Expression, MidiLimits.Max, end, envelope.Note.TrackIndex);
         }
     }
 }

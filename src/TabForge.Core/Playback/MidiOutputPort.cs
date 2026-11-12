@@ -58,10 +58,8 @@ public sealed class SharedMidiOutput : IMidiOutput
         (int device, int channel)[] used;
         lock (_gate) used = _used.ToArray();
         foreach (var (device, channel) in used)
-        {
-            _device.Send(device, 0xB0 | channel, 123, 0);
-            _device.Send(device, 0xB0 | channel, 120, 0);
-        }
+            foreach (var controller in MidiPanic.ResetControllers)
+                _device.Send(device, MidiStatus.ControlChange | channel, controller, 0);
     }
 
     /// <summary>The device stays open for the other tabs; this engine just goes quiet.</summary>

@@ -16,6 +16,6 @@ public sealed partial class PlaybackEngine
         if (devices.Count == 0) foreach (var d in _output.Devices) devices.Add(d.DeviceId);
         foreach (var device in devices)
             for (var channel = 0; channel < 16; channel++)
-                _output.Send(device, 0xB0 | channel, 64, 0);
+                _output.Send(device, MidiStatus.ControlChange | channel, MidiCc.Sustain, 0);
     }
 }

@@ -24,30 +24,30 @@ internal sealed partial class ScoreToMidiCompiler
             var channel = pass == 0 ? mainChannel : EffectChannelOf(trackIndex);
             if (channel < 0) break;
             // Bank select before the program change (a GM bank / VST bank beyond program 0-127); -1 leaves that part out.
-            if (track.MidiBankMsb >= 0) Setup(track, trackIndex, channel, 0xB0, 0, atMs, track.MidiBankMsb);
-            if (track.MidiBankLsb >= 0) Setup(track, trackIndex, channel, 0xB0, 32, atMs, track.MidiBankLsb);
-            Setup(track, trackIndex, channel, 0xC0, track.MidiProgram, atMs);
-            Setup(track, trackIndex, channel, 0xB0, 7, atMs, MixerGroups.Volume(_project, track));
-            Setup(track, trackIndex, channel, 0xB0, 10, atMs, MixerGroups.Pan(_project, track));
-            Setup(track, trackIndex, channel, 0xB0, 91, atMs, Math.Clamp(track.Reverb, 0, MidiLimits.Max));
-            Setup(track, trackIndex, channel, 0xB0, 93, atMs, Math.Clamp(track.Chorus, 0, MidiLimits.Max));
+            if (track.MidiBankMsb >= 0) Setup(track, trackIndex, channel, MidiStatus.ControlChange, MidiCc.BankSelectMsb, atMs, track.MidiBankMsb);
+            if (track.MidiBankLsb >= 0) Setup(track, trackIndex, channel, MidiStatus.ControlChange, MidiCc.BankSelectLsb, atMs, track.MidiBankLsb);
+            Setup(track, trackIndex, channel, MidiStatus.ProgramChange, track.MidiProgram, atMs);
+            Setup(track, trackIndex, channel, MidiStatus.ControlChange, MidiCc.Volume, atMs, MixerGroups.Volume(_project, track));
+            Setup(track, trackIndex, channel, MidiStatus.ControlChange, MidiCc.Pan, atMs, MixerGroups.Pan(_project, track));
+            Setup(track, trackIndex, channel, MidiStatus.ControlChange, MidiCc.Reverb, atMs, Math.Clamp(track.Reverb, 0, MidiLimits.Max));
+            Setup(track, trackIndex, channel, MidiStatus.ControlChange, MidiCc.Chorus, atMs, Math.Clamp(track.Chorus, 0, MidiLimits.Max));
             if (channel != ChannelAllocator.PercussionChannel)
             {
                 // Define the wheel scale instead of inheriting a synth/device default. Slides and
                 // bends below are encoded for exactly +/-12 semitones (PitchBendRangeSemitones).
-                Setup(track, trackIndex, channel, 0xB0, 101, atMs, 0); // RPN MSB 0
-                Setup(track, trackIndex, channel, 0xB0, 100, atMs, 0); // RPN LSB 0: pitch-bend sensitivity
-                Setup(track, trackIndex, channel, 0xB0, 6, atMs, PitchBendRangeSemitones);
-                Setup(track, trackIndex, channel, 0xB0, 38, atMs, 0);
-                Setup(track, trackIndex, channel, 0xB0, 101, atMs, MidiLimits.Max); // deselect RPN
-                Setup(track, trackIndex, channel, 0xB0, 100, atMs, MidiLimits.Max);
-                Setup(track, trackIndex, channel, 0xB0, 1, atMs, 0); // neutral modulation wheel on every arm
+                Setup(track, trackIndex, channel, MidiStatus.ControlChange, MidiCc.RpnMsb, atMs, 0); // RPN MSB 0
+                Setup(track, trackIndex, channel, MidiStatus.ControlChange, MidiCc.RpnLsb, atMs, 0); // RPN LSB 0: pitch-bend sensitivity
+                Setup(track, trackIndex, channel, MidiStatus.ControlChange, MidiCc.DataEntryMsb, atMs, PitchBendRangeSemitones);
+                Setup(track, trackIndex, channel, MidiStatus.ControlChange, MidiCc.DataEntryLsb, atMs, 0);
+                Setup(track, trackIndex, channel, MidiStatus.ControlChange, MidiCc.RpnMsb, atMs, MidiLimits.Max); // deselect RPN
+                Setup(track, trackIndex, channel, MidiStatus.ControlChange, MidiCc.RpnLsb, atMs, MidiLimits.Max);
+                Setup(track, trackIndex, channel, MidiStatus.ControlChange, MidiCc.Modulation, atMs, 0); // neutral modulation wheel on every arm
             }
             // Expression back to full on every channel, the percussion channel included: the fade-in ramps use CC11 there too
             // (EmitFadeInEnvelopes), so a start or seek inside one must not leave the drums quiet.
-            Setup(track, trackIndex, channel, 0xB0, 11, atMs, MidiLimits.Max);
+            Setup(track, trackIndex, channel, MidiStatus.ControlChange, MidiCc.Expression, atMs, MidiLimits.Max);
             // Pitch wheel to centre: a bend left behind on stop/pause/loop must not transpose the next passage.
-            Setup(track, trackIndex, channel, 0xE0, 0x00, atMs, 0x40);
+            Setup(track, trackIndex, channel, MidiStatus.PitchBend, 0x00, atMs, 0x40);
             }
         }
     }

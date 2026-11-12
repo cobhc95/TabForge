@@ -141,7 +141,7 @@ public sealed class MidiTakeCapture : IDisposable
                 take.Keep(type, data1, data2, heardSec, lap, _loop, _ => _startSec);
             }
             // The live overlay only needs notes (a flood of controllers would post per message for nothing). Handlers post to the UI thread.
-            if (LiveNote is { } live && type is 0x80 or 0x90 && (type == 0x80 || data2 > 0))
+            if (LiveNote is { } live && type is MidiStatus.NoteOff or MidiStatus.NoteOn && (type == MidiStatus.NoteOff || data2 > 0))
                 foreach (var (track, _, devices) in _takes)
                 {
                     if (_endedAt.ContainsKey(track) || !Hears(devices, device)) continue;

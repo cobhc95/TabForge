@@ -127,7 +127,7 @@ public sealed class MidiProcessorChain
     {
         if (_soundingCount > 0)
             for (var key = 0; key < 2048; key++)
-                if (_sounding[key]) { output.Add(0, (byte)(0x80 | (key >> 7)), (byte)(key & 0x7F), 0); _sounding[key] = false; }
+                if (_sounding[key]) { output.Add(0, (byte)(MidiStatus.NoteOff | (key >> 7)), (byte)(key & 0x7F), 0); _sounding[key] = false; }
         _soundingCount = 0;
         foreach (var p in _procs) p.Reset();
     }
@@ -159,7 +159,7 @@ public sealed class MidiProcessorChain
         foreach (var e in input)
         {
             cur.Add(e);
-            if (watching && e.Status < 0xF0 && (e.Status & 0xF0) == 0x90 && e.Data2 > 0)   // raw note-ons for the window's Learn button (stage 250)
+            if (watching && e.Status < 0xF0 && (e.Status & 0xF0) == MidiStatus.NoteOn && e.Data2 > 0)   // raw note-ons for the window's Learn button (stage 250)
                 log!.Write((float)(transport.SongSec + (double)e.Frame / _sampleRate), e.Status, e.Data1, e.Data2, 250);
         }
         for (var i = 0; i < _procs.Length; i++)
@@ -178,9 +178,9 @@ public sealed class MidiProcessorChain
             {
                 var kind = e.Status & 0xF0;
                 var key = ((e.Status & 0x0F) << 7) | (e.Data1 & 0x7F);
-                if (kind == 0x90 && e.Data2 > 0) { if (!_sounding[key]) { _sounding[key] = true; _soundingCount++; } }
-                else if (kind is 0x80 or 0x90) { if (_sounding[key]) { _sounding[key] = false; _soundingCount--; } }
-                else if (kind == 0xB0 && e.Data1 is 123 or 120) ClearChannel(e.Status & 0x0F);
+                if (kind == MidiStatus.NoteOn && e.Data2 > 0) { if (!_sounding[key]) { _sounding[key] = true; _soundingCount++; } }
+                else if (kind is MidiStatus.NoteOff or MidiStatus.NoteOn) { if (_sounding[key]) { _sounding[key] = false; _soundingCount--; } }
+                else if (kind == MidiStatus.ControlChange && e.Data1 is MidiCc.AllNotesOff or MidiCc.AllSoundOff) ClearChannel(e.Status & 0x0F);
             }
             output.Add(e);
         }

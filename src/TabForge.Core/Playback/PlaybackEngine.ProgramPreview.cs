@@ -32,7 +32,7 @@ public sealed partial class PlaybackEngine
     }
 
     private void PushChannelProgram(SongProject project, int deviceId, int channel) =>
-        PushChannelState(project, (e, _) => e.DeviceId == deviceId && (e.Status & 0x0F) == channel && (e.Status & 0xF0) == 0xC0, send: true);
+        PushChannelState(project, (e, _) => e.DeviceId == deviceId && (e.Status & 0x0F) == channel && (e.Status & 0xF0) == MidiStatus.ProgramChange, send: true);
 
     /// <summary>Drops every preview: a timeline compiled from the whole song already carries its programs.</summary>
     private void ClearProgramPreviews()
@@ -42,7 +42,7 @@ public sealed partial class PlaybackEngine
 
     private int ProgramFor(int status, int data1)
     {
-        if ((status & 0xF0) != 0xC0) return data1;
+        if ((status & 0xF0) != MidiStatus.ProgramChange) return data1;
         var p = Volatile.Read(ref _programPreview[status & 0x0F]);
         return p >= 0 ? p : data1;
     }

@@ -35,8 +35,8 @@ public sealed class MidiTake
         }
         LastSec = sec;
         var pass = Passes[lap];
-        if (type == 0x90 && velocity > 0) Held[pitch] = (sec, velocity);
-        else if (type is 0x80 or 0x90 && Held.Remove(pitch, out var held))
+        if (type == MidiStatus.NoteOn && velocity > 0) Held[pitch] = (sec, velocity);
+        else if (type is MidiStatus.NoteOff or MidiStatus.NoteOn && Held.Remove(pitch, out var held))
             pass.Notes.Add(new ClipNote(held.Start - pass.Start, Math.Max(0.01, sec - held.Start), pitch, held.Velocity));
         Passes[lap] = (pass.Start, Math.Max(pass.End, sec), pass.Notes);
     }

@@ -384,7 +384,7 @@ internal sealed partial class ScoreToMidiCompiler
                 if (effect >= 0) Add(device, effect, statusBase, data1, data2, at, index);
             }
             if (mix.Program is int program && channel != ChannelAllocator.PercussionChannel)
-                AddBoth(0xC0, Math.Clamp(program, 0, MidiLimits.Max), 0, atMs);
+                AddBoth(MidiStatus.ProgramChange, Math.Clamp(program, 0, MidiLimits.Max), 0, atMs);
             void Controller(int number, int? step, int current, bool pan = false)
             {
                 if (step is not int value) return;
@@ -397,10 +397,10 @@ internal sealed partial class ScoreToMidiCompiler
                 // Ramps used to start from the track's base level, jumping back after an earlier change.
                 if (_mixLevels.TryGetValue((index, number), out var last)) current = last;
                 _mixLevels[(index, number)] = end;
-                if (ramp == 0) { AddBoth(0xB0, number, end, atMs); return; }
+                if (ramp == 0) { AddBoth(MidiStatus.ControlChange, number, end, atMs); return; }
                 var steps = ramp * 4;
                 for (var s = 1; s <= steps; s++)
-                    AddBoth(0xB0, number, (int)Math.Round(current + (end - current) * s / (double)steps), atMs + beatMs * ramp * s / steps);
+                    AddBoth(MidiStatus.ControlChange, number, (int)Math.Round(current + (end - current) * s / (double)steps), atMs + beatMs * ramp * s / steps);
             }
             Controller(7, mix.Volume, target.Volume);
             Controller(10, mix.Pan, target.Pan, pan: true);

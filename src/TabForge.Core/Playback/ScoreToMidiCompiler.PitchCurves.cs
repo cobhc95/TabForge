@@ -161,7 +161,7 @@ internal sealed partial class ScoreToMidiCompiler
     {
         var written = _chasing ? -1 : _timeline.Events.Count;
         if (at == onset && joinIndex >= 0 && joinIndex < _timeline.Events.Count && _timeline.Events[joinIndex] is { } join &&
-            join.Status == (0xE0 | (channel & 0x0F)))
+            join.Status == (MidiStatus.PitchBend | (channel & 0x0F)))
         {
             join.TimeMs = onset;   // a cut origin (palm mute, staccato) or a grace-shifted onset leaves its reset off the join: move it here, no blip
             join.Data1 = wheel & 0x7F;   // the bend carries on through the tie: no reset to centre between the links
@@ -236,5 +236,5 @@ internal sealed partial class ScoreToMidiCompiler
     }
 
     private void AddPitchWheel(int device, int channel, int wheel, double atMs, int trackIndex) =>
-        Add(device, channel, 0xE0, wheel & 0x7F, (wheel >> 7) & 0x7F, atMs, trackIndex);
+        Add(device, channel, MidiStatus.PitchBend, wheel & 0x7F, (wheel >> 7) & 0x7F, atMs, trackIndex);
 }

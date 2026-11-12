@@ -161,7 +161,7 @@ public sealed class MidiInputMonitor : IDisposable
         foreach (var t in targets)
             if (t.Armed && t.Hears(device))
             {
-                if ((status & 0xF0) == 0x90 && data2 > 0) { t.Notes.Record(data2, Environment.TickCount64); NoteHeard?.Invoke(); }
+                if ((status & 0xF0) == MidiStatus.NoteOn && data2 > 0) { t.Notes.Record(data2, Environment.TickCount64); NoteHeard?.Invoke(); }
                 if (t.Silent) continue;
                 claimed = true;
                 Send(t, status, data1, data2);
@@ -177,16 +177,16 @@ public sealed class MidiInputMonitor : IDisposable
         else _host.WriteFallback(t.Track, s, (byte)data1, (byte)data2);
     }
 
-    private void SendProgram(Target t) { if (!t.Silent) Send(t, 0xC0, Math.Clamp(t.Program, 0, 127), 0); }
+    private void SendProgram(Target t) { if (!t.Silent) Send(t, MidiStatus.ProgramChange, Math.Clamp(t.Program, 0, 127), 0); }
 
     // Sustain off first (under it All Notes Off keeps notes sounding), then the ordered all notes off, then the bend back to centre.
     private void Silence(Target t)
     {
         if (t.Silent) return;   // it sounded nothing
-        Send(t, 0xB0, 64, 0);
-        if (t.Slot >= 0) _host.Write(t.Slot, (byte)(0xB0 | t.Channel), 123, 0, true);
-        else Send(t, 0xB0, 123, 0);
-        Send(t, 0xE0, 0, 0x40);
+        Send(t, MidiStatus.ControlChange, MidiCc.Sustain, 0);
+        if (t.Slot >= 0) _host.Write(t.Slot, (byte)(MidiStatus.ControlChange | t.Channel), MidiCc.AllNotesOff, 0, true);
+        else Send(t, MidiStatus.ControlChange, MidiCc.AllNotesOff, 0);
+        Send(t, MidiStatus.PitchBend, 0, 0x40);
     }
 
     public void Dispose()

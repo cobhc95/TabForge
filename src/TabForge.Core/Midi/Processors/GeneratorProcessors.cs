@@ -29,8 +29,8 @@ public sealed class RepeaterProcessor : IMidiProcessor
             {
                 if (!_held[key]) continue;
                 var ch = key >> 7; var note = (byte)(key & 0x7F);
-                output.Add(frame, (byte)(0x80 | ch), note, 0);
-                output.Add(frame, (byte)(0x90 | ch), note, _vel[key]);
+                output.Add(frame, (byte)(MidiStatus.NoteOff | ch), note, 0);
+                output.Add(frame, (byte)(MidiStatus.NoteOn | ch), note, _vel[key]);
             }
             output.Unsorted = true;
             _next += period;
@@ -45,11 +45,11 @@ public sealed class RepeaterProcessor : IMidiProcessor
         {
             var e = input.Items[i];
             var st = e.Status; var kind = st & 0xF0;
-            if (st >= 0xF0 || kind is not (0x80 or 0x90) || (_inCh != 0 && (st & 0x0F) != _inCh - 1)) { output.Add(e); continue; }
+            if (st >= 0xF0 || kind is not (MidiStatus.NoteOff or MidiStatus.NoteOn) || (_inCh != 0 && (st & 0x0F) != _inCh - 1)) { output.Add(e); continue; }
             var abs = ctx.BlockStart + e.Frame;
             Fire(abs, ctx.BlockStart, output, ctx, period);
             var key = ((st & 0x0F) << 7) | (e.Data1 & 0x7F);
-            if (kind == 0x90 && e.Data2 > 0)
+            if (kind == MidiStatus.NoteOn && e.Data2 > 0)
             {
                 if (!_held[key]) { _held[key] = true; _count++; }
                 _vel[key] = e.Data2;
@@ -119,9 +119,9 @@ public sealed class ArpeggiatorProcessor : IMidiProcessor
             var note2 = Math.Clamp((key & 0x7F) + (int)(pass % (_variants + 1)) * _varOffset, 0, MidiLimits.Max);
             var vel = _velocity > 0 ? _velocity : _vel[key];
             var t = (long)_next;
-            output.Add((int)Math.Clamp(t - blockStart, 0, ctx.Frames - 1), (byte)(0x90 | ch2), (byte)note2, (byte)vel);
+            output.Add((int)Math.Clamp(t - blockStart, 0, ctx.Frames - 1), (byte)(MidiStatus.NoteOn | ch2), (byte)note2, (byte)vel);
             output.Unsorted = true;
-            _sched.Schedule(t + Math.Max(1, (long)(_length * period)), (byte)(0x80 | ch2), (byte)note2, 0);
+            _sched.Schedule(t + Math.Max(1, (long)(_length * period)), (byte)(MidiStatus.NoteOff | ch2), (byte)note2, 0);
             _next += period;
         }
     }
@@ -134,11 +134,11 @@ public sealed class ArpeggiatorProcessor : IMidiProcessor
         {
             var e = input.Items[i];
             var st = e.Status; var kind = st & 0xF0;
-            if (st >= 0xF0 || kind is not (0x80 or 0x90) || (_inCh != 0 && (st & 0x0F) != _inCh - 1)) { output.Add(e); continue; }
+            if (st >= 0xF0 || kind is not (MidiStatus.NoteOff or MidiStatus.NoteOn) || (_inCh != 0 && (st & 0x0F) != _inCh - 1)) { output.Add(e); continue; }
             var abs = ctx.BlockStart + e.Frame;
             RunSteps(abs, ctx.BlockStart, output, ctx, period);
             var key = ((st & 0x0F) << 7) | (e.Data1 & 0x7F);
-            if (kind == 0x90 && e.Data2 > 0)
+            if (kind == MidiStatus.NoteOn && e.Data2 > 0)
             {
                 if (!_held[key]) { _held[key] = true; _count++; }
                 _vel[key] = e.Data2;
@@ -190,7 +190,7 @@ public sealed class ModalRandomizerProcessor : IMidiProcessor
             var e = input.Items[i];
             output.Add(e);
             var st = e.Status;
-            if (st >= 0xF0 || (st & 0xF0) != 0x90 || e.Data2 == 0 || (_inCh != 0 && (st & 0x0F) != _inCh - 1)) continue;
+            if (st >= 0xF0 || (st & 0xF0) != MidiStatus.NoteOn || e.Data2 == 0 || (_inCh != 0 && (st & 0x0F) != _inCh - 1)) continue;
             for (var n = 0; n < _notes; n++)
             {
                 var pick = -1;
@@ -202,7 +202,7 @@ public sealed class ModalRandomizerProcessor : IMidiProcessor
                 var vel = (int)Math.Clamp(Math.Round(e.Data2 * (1 - (_rng.Next() / (double)uint.MaxValue) * _velRand / 200.0)), 1, MidiLimits.Max);
                 var at = ctx.BlockStart + e.Frame + (long)(_rng.Next() / (double)uint.MaxValue * _timing / 100.0 * beat);
                 _sched.Schedule(at, st, (byte)note, (byte)vel);
-                _sched.Schedule(at + (long)(_length * beat), (byte)(0x80 | (st & 0x0F)), (byte)note, 0);
+                _sched.Schedule(at + (long)(_length * beat), (byte)(MidiStatus.NoteOff | (st & 0x0F)), (byte)note, 0);
             }
         }
         _sched.Drain(ctx.BlockStart, ctx.Frames, output);
@@ -260,8 +260,8 @@ public sealed class LfoProcessor : IMidiProcessor
 
     private void Send(MidiBuffer output, int frame, int value)
     {
-        if (_target == 0) output.Add(frame, (byte)(0xB0 | _ch), (byte)_cc, (byte)value);
-        else output.Add(frame, (byte)(0xE0 | _ch), (byte)(value & 0x7F), (byte)(value >> 7));
+        if (_target == 0) output.Add(frame, (byte)(MidiStatus.ControlChange | _ch), (byte)_cc, (byte)value);
+        else output.Add(frame, (byte)(MidiStatus.PitchBend | _ch), (byte)(value & 0x7F), (byte)(value >> 7));
         output.Unsorted = true;
     }
 
@@ -363,8 +363,8 @@ public sealed class StepSequencerProcessor : IMidiProcessor
                     var at = (long)(_grid + ((_k & 1) == 1 ? _swing / 100.0 * sl * 0.5 : 0));
                     var vel = _vel.Length > 0 && _vel[inPat % _vel.Length] > 0 ? _vel[inPat % _vel.Length] : _velDefault;
                     var gate = _gate.Length > 0 && _gate[inPat % _gate.Length] > 0 ? _gate[inPat % _gate.Length] : _gateDefault;
-                    _sched.Schedule(at, (byte)(0x90 | _ch), (byte)note, (byte)vel);
-                    _sched.Schedule(at + Math.Max(1, (long)(sl * gate / 100.0)), (byte)(0x80 | _ch), (byte)note, 0);
+                    _sched.Schedule(at, (byte)(MidiStatus.NoteOn | _ch), (byte)note, (byte)vel);
+                    _sched.Schedule(at + Math.Max(1, (long)(sl * gate / 100.0)), (byte)(MidiStatus.NoteOff | _ch), (byte)note, 0);
                 }
                 _grid += sl; _k++;
             }

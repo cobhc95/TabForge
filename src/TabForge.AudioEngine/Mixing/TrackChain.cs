@@ -291,10 +291,8 @@ public sealed partial class TrackChain : IDisposable
             // Just switched off: one last block that ends its notes (output discarded), then it is skipped.
             _synthSilence = false;
             for (var ch = 0; ch < 16; ch++)
-            {
-                _synthStop[ch * 2] = new BlockMidi { Frame = 0, Status = (byte)(0xB0 | ch), Data1 = 123 };
-                _synthStop[ch * 2 + 1] = new BlockMidi { Frame = 0, Status = (byte)(0xB0 | ch), Data1 = 120 };
-            }
+                for (var i = 0; i < MidiPanic.ResetControllers.Length; i++)
+                    _synthStop[ch * 2 + i] = new BlockMidi { Frame = 0, Status = (byte)(MidiStatus.ControlChange | ch), Data1 = (byte)MidiPanic.ResetControllers[i] };
             Enter(shared, -1, "General MIDI synth");
             _midiSynth.Process(_silence, _a, frames, _synthStop, transport);
             Leave(shared);

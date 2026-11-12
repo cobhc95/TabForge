@@ -7,7 +7,7 @@ namespace TabForge.Presenters;
 // Tests: TabForge.Avalonia.Tests.PianoRollKeyStateTests.
 public sealed class PianoRollKeyState
 {
-    private const int AllSoundOff = 120, AllNotesOff = 123;
+    private const int AllSoundOff = MidiCc.AllSoundOff, AllNotesOff = MidiCc.AllNotesOff;
     private readonly object _gate = new();
     private readonly int[] _held = new int[128];   // presses per pitch; ceiling 128 entries; guarded by _gate
 
@@ -17,10 +17,10 @@ public sealed class PianoRollKeyState
         var pitch = data1 & 0x7F;
         switch (status & 0xF0)
         {
-            case 0x90 when data2 > 0: return Press(pitch);
-            case 0x80:
-            case 0x90: return Release(pitch);
-            case 0xB0 when data1 is AllSoundOff or AllNotesOff: return Clear();
+            case MidiStatus.NoteOn when data2 > 0: return Press(pitch);
+            case MidiStatus.NoteOff:
+            case MidiStatus.NoteOn: return Release(pitch);
+            case MidiStatus.ControlChange when data1 is AllSoundOff or AllNotesOff: return Clear();
             default: return false;
         }
     }

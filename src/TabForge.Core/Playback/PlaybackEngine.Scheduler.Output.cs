@@ -23,8 +23,8 @@ public sealed partial class PlaybackEngine : IDisposable
         lock (_outputGate)
             foreach (var (device, channel) in channels)
             {
-                _output.Send(device, 0xB0 | channel, 64, 0);  // sustain off
-                _output.Send(device, 0xB0 | channel, 123, 0); // all notes off
+                _output.Send(device, MidiStatus.ControlChange | channel, MidiCc.Sustain, 0);  // sustain off
+                _output.Send(device, MidiStatus.ControlChange | channel, MidiCc.AllNotesOff, 0); // all notes off
             }
     }
 
@@ -180,8 +180,8 @@ public sealed partial class PlaybackEngine : IDisposable
 
     internal static bool IsPracticeSilencedState(ScoreEvent e) => (e.Status & 0xF0) switch
     {
-        0xC0 or 0xE0 => true,
-        0xB0 => e.Data1 is 64 or 7 or 11,
+        MidiStatus.ProgramChange or MidiStatus.PitchBend => true,
+        MidiStatus.ControlChange => e.Data1 is 64 or 7 or 11,
         _ => false
     };
 
@@ -190,8 +190,8 @@ public sealed partial class PlaybackEngine : IDisposable
         var kind = e.Status & 0xF0;
         return kind switch
         {
-            0xA0 or 0xC0 or 0xD0 or 0xE0 => true,
-            0xB0 => e.Data1 < 120, // channel-mode messages (all notes off/reset) are not state snapshots
+            MidiStatus.PolyPressure or MidiStatus.ProgramChange or MidiStatus.ChannelPressure or MidiStatus.PitchBend => true,
+            MidiStatus.ControlChange => e.Data1 < MidiCc.FirstChannelMode, // channel-mode messages (all notes off/reset) are not state snapshots
             _ => false
         };
     }
@@ -200,15 +200,15 @@ public sealed partial class PlaybackEngine : IDisposable
     {
         if (e.IsNoteOff) return true;
         var kind = e.Status & 0xF0;
-        if (kind == 0xE0 && e.Data1 == 0 && e.Data2 == 64) return true; // pitch-wheel centre
-        if (kind == 0xB0 && e.Data1 == 1 && e.Data2 == 0) return true; // modulation-wheel neutral
-        return kind == 0xB0 && e.Data1 is 120 or 121 or 123;
+        if (kind == MidiStatus.PitchBend && e.Data1 == 0 && e.Data2 == 64) return true; // pitch-wheel centre
+        if (kind == MidiStatus.ControlChange && e.Data1 == MidiCc.Modulation && e.Data2 == 0) return true; // modulation-wheel neutral
+        return kind == MidiStatus.ControlChange && e.Data1 is MidiCc.AllSoundOff or MidiCc.ResetAllControllers or MidiCc.AllNotesOff;
     }
 
     private static (int Device, int Status, int Data1) ChannelStateKey(ScoreEvent e)
     {
         var kind = e.Status & 0xF0;
-        return (e.DeviceId, e.Status, kind is 0xA0 or 0xB0 ? e.Data1 : -1);
+        return (e.DeviceId, e.Status, kind is MidiStatus.PolyPressure or MidiStatus.ControlChange ? e.Data1 : -1);
     }
 
     private void ReportPosition(double ms, ScoreTimeline timeline, int generation)

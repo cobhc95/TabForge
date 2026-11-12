@@ -50,21 +50,21 @@ internal sealed partial class ScoreToMidiCompiler
     {
         if (point.Controller == ClipController.ProgramChange)
         {
-            statusBase = 0xC0; data1 = Math.Clamp(point.Value, 0, MidiLimits.Max); data2 = 0;
+            statusBase = MidiStatus.ProgramChange; data1 = Math.Clamp(point.Value, 0, MidiLimits.Max); data2 = 0;
             return channel != ChannelAllocator.PercussionChannel;
         }
         if (point.Controller == ClipController.ChannelAftertouch)
         {
-            statusBase = 0xD0; data1 = Math.Clamp(point.Value, 0, MidiLimits.Max); data2 = 0;
+            statusBase = MidiStatus.ChannelPressure; data1 = Math.Clamp(point.Value, 0, MidiLimits.Max); data2 = 0;
             return true;
         }
         if (point.Controller == ClipController.PitchBend)
         {
             var bend = Math.Clamp(point.Value + 8192, 0, 16383);
-            statusBase = 0xE0; data1 = bend & 0x7F; data2 = bend >> 7;
+            statusBase = MidiStatus.PitchBend; data1 = bend & 0x7F; data2 = bend >> 7;
             return true;
         }
-        statusBase = 0xB0; data1 = Math.Clamp(point.Controller, 0, MidiLimits.Max); data2 = Math.Clamp(point.Value, 0, MidiLimits.Max);
+        statusBase = MidiStatus.ControlChange; data1 = Math.Clamp(point.Controller, 0, MidiLimits.Max); data2 = Math.Clamp(point.Value, 0, MidiLimits.Max);
         return true;
     }
 
@@ -104,8 +104,8 @@ internal sealed partial class ScoreToMidiCompiler
                     var pitch = Math.Clamp(note.Pitch + (int)Math.Round(clip.Pitch) + track.Transpose, 0, MidiLimits.Max);
                     var velocity = Math.Clamp((int)Math.Round(note.Velocity * Gain.FromDb(clip.GainDb)), 1, MidiLimits.Max);
                     var noteChannel = note.Channel is int own and >= 0 and <= 15 ? own : channel;   // a note's own channel (set in the piano roll)
-                    _timeline.Events.Add(new ScoreEvent { TimeMs = onMs, DeviceId = OutputDeviceOf(track), Channel = noteChannel, Status = 0x90 | (noteChannel & 0x0F), Data1 = pitch, Data2 = velocity, TrackIndex = trackIndex });
-                    _timeline.Events.Add(new ScoreEvent { TimeMs = Math.Min(offMs, _timeline.TotalMs), DeviceId = OutputDeviceOf(track), Channel = noteChannel, Status = 0x80 | (noteChannel & 0x0F), Data1 = pitch, Data2 = 0, TrackIndex = trackIndex });
+                    _timeline.Events.Add(new ScoreEvent { TimeMs = onMs, DeviceId = OutputDeviceOf(track), Channel = noteChannel, Status = MidiStatus.NoteOn | (noteChannel & 0x0F), Data1 = pitch, Data2 = velocity, TrackIndex = trackIndex });
+                    _timeline.Events.Add(new ScoreEvent { TimeMs = Math.Min(offMs, _timeline.TotalMs), DeviceId = OutputDeviceOf(track), Channel = noteChannel, Status = MidiStatus.NoteOff | (noteChannel & 0x0F), Data1 = pitch, Data2 = 0, TrackIndex = trackIndex });
                 }
                 foreach (var piece in TabForge.Services.ClipLoop.Pieces(clip))
                     EmitClipControllers(track, trackIndex, channel, clip, piece.StartSec, piece.OffsetSec, piece.SourceLengthSec, speed, offsetMs, fromMs);

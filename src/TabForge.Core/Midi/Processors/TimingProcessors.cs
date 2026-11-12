@@ -33,7 +33,7 @@ public sealed class DelayProcessor : IMidiProcessor
         for (var i = 0; i < input.Count; i++)
         {
             var e = input.Items[i];
-            var isNote = e.Status < 0xF0 && (e.Status & 0xF0) is 0x80 or 0x90 or 0xA0;
+            var isNote = e.Status < 0xF0 && (e.Status & 0xF0) is MidiStatus.NoteOff or MidiStatus.NoteOn or MidiStatus.PolyPressure;
             var delayed = e.Status < 0xF0 ? (_ch == 0 || (e.Status & 0x0F) == _ch - 1) && (!_notesOnly || isNote) : !_notesOnly;
             if (delay == 0 && !_sched.HasPending || !delayed) { output.Add(e); if (_sched.HasPending) output.Unsorted = true; continue; }
             if (!_sched.Schedule(ctx.BlockStart + e.Frame + delay, e.Status, e.Data1, e.Data2)) output.Add(e);
@@ -80,12 +80,12 @@ public sealed class HumanizeProcessor : IMidiProcessor
         {
             var e = input.Items[i];
             var st = e.Status; var d2 = e.Data2;
-            var ours = st < 0xF0 && (_ch == 0 || (st & 0x0F) == _ch - 1) && (st & 0xF0) is 0x80 or 0x90;
+            var ours = st < 0xF0 && (_ch == 0 || (st & 0x0F) == _ch - 1) && (st & 0xF0) is MidiStatus.NoteOff or MidiStatus.NoteOn;
             long shift = 0;
             if (ours)
             {
                 var key = ((st & 0x0F) << 7) | (e.Data1 & 0x7F);
-                if ((st & 0xF0) == 0x90 && d2 > 0)
+                if ((st & 0xF0) == MidiStatus.NoteOn && d2 > 0)
                 {
                     shift = (long)Math.Round((_biasMs + _rng.Bipolar() * _timingMs) * msToSamples);
                     _shift[key] = shift;

@@ -27,8 +27,8 @@ public sealed partial class TrackChain : IDisposable
         var kind = status & 0xF0;
         // The General MIDI synth handles volume / pan itself, exactly like the Windows synth; a VST instrument gets
         // them as the chain's level and pan instead (many instruments ignore CC7 / CC10).
-        if (kind == 0xB0 && data1 == 7) { _volume = data2 / 127f; return; }
-        if (kind == 0xB0 && data1 == 10) { _pan = data2 / 127f; return; }
+        if (kind == MidiStatus.ControlChange && data1 == MidiCc.Volume) { _volume = data2 / 127f; return; }
+        if (kind == MidiStatus.ControlChange && data1 == MidiCc.Pan) { _pan = data2 / 127f; return; }
         if (_eventCount < _events.Length) _events[_eventCount++] = new BlockMidi { Frame = frame, Status = status, Data1 = data1, Data2 = data2 };
         else Interlocked.Increment(ref MidiDropped);
         var route = _route;
@@ -105,17 +105,15 @@ public sealed partial class TrackChain : IDisposable
         {
             var e = buffer[i];
             var kind = e.Status & 0xF0;
-            if (kind == 0xC0 || kind == 0xE0 || (kind == 0xB0 && e.Data1 < 120)) buffer[kept++] = e;
+            if (kind == MidiStatus.ProgramChange || kind == MidiStatus.PitchBend || (kind == MidiStatus.ControlChange && e.Data1 < MidiCc.FirstChannelMode)) buffer[kept++] = e;
         }
         const int PanicEvents = 32;
         if (buffer.Length < PanicEvents) { count = 0; return; }
         if (kept > buffer.Length - PanicEvents) kept = buffer.Length - PanicEvents;
         Array.Copy(buffer, 0, buffer, PanicEvents, kept);   // overlapping copy is handled
         for (var ch = 0; ch < 16; ch++)
-        {
-            buffer[2 * ch] = new BlockMidi { Frame = 0, Status = (byte)(0xB0 | ch), Data1 = 123 };
-            buffer[2 * ch + 1] = new BlockMidi { Frame = 0, Status = (byte)(0xB0 | ch), Data1 = 120 };
-        }
+            for (var i = 0; i < MidiPanic.ResetControllers.Length; i++)
+                buffer[2 * ch + i] = new BlockMidi { Frame = 0, Status = (byte)(MidiStatus.ControlChange | ch), Data1 = (byte)MidiPanic.ResetControllers[i] };
         count = kept + PanicEvents;
     }
 

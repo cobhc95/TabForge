@@ -102,12 +102,12 @@ internal sealed partial class ScoreToMidiCompiler
         var at = Math.Max(0, onset - Math.Clamp(leadMs, 0, ArticulationMap.MaxLeadMs));
         if (rule.Action == ArticulationAction.Cc)
         {
-            AddArticulation(device, channel, 0xB0, rule.A, rule.B, at, trackIndex);
+            AddArticulation(device, channel, MidiStatus.ControlChange, rule.A, rule.B, at, trackIndex);
             return;
         }
         if (alsoGeneralMidi) return;
-        AddArticulation(device, channel, 0x90, rule.A, KeyswitchVelocity, at, trackIndex);
-        AddArticulation(device, channel, 0x80, rule.A, 0, Math.Max(at + 1, onset), trackIndex);
+        AddArticulation(device, channel, MidiStatus.NoteOn, rule.A, KeyswitchVelocity, at, trackIndex);
+        AddArticulation(device, channel, MidiStatus.NoteOff, rule.A, 0, Math.Max(at + 1, onset), trackIndex);
     }
 
     private void AddArticulation(int device, int channel, int status, int data1, int data2, double timeMs, int trackIndex)

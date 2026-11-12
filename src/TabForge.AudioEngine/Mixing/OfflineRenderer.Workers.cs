@@ -114,7 +114,7 @@ public sealed partial class OfflineRenderer
             {
                 job.EndSent = true;   // notes off at the end bound; what they leave ringing is the tail
                 var frame = (int)Math.Clamp(end - t0, 0, n - 1);
-                for (var ch = 0; ch < 16; ch++) chain.AddEvent(frame, (byte)(0xB0 | ch), 123, 0);
+                for (var ch = 0; ch < 16; ch++) chain.AddEvent(frame, (byte)(MidiStatus.ControlChange | ch), MidiCc.AllNotesOff, 0);
             }
         }
         var transport = TransportAt(job, t0, playing: deliver && t0 < end);

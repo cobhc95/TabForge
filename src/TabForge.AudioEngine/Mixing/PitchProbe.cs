@@ -37,15 +37,15 @@ public sealed class PitchProbe
         if (Stop)
         {
             // Aborted: end the test note on the plug-in (all notes off on its channel) and finish.
-            _events[0] = new BlockMidi { Frame = 0, Status = (byte)(0xB0 | Channel), Data1 = 123 };
+            _events[0] = new BlockMidi { Frame = 0, Status = (byte)(MidiStatus.ControlChange | Channel), Data1 = MidiCc.AllNotesOff };
             _done = true;
             return new ReadOnlySpan<BlockMidi>(_events, 0, 1);
         }
         for (var i = 0; i < Notes.Length && n < _events.Length - 1; i++)
         {
             long on = (long)i * period, off = on + NoteSamples;
-            if (on >= _pos && on < _pos + frames) _events[n++] = new BlockMidi { Frame = (int)(on - _pos), Status = (byte)(0x90 | Channel), Data1 = (byte)Notes[i], Data2 = 100 };
-            if (off >= _pos && off < _pos + frames) _events[n++] = new BlockMidi { Frame = (int)(off - _pos), Status = (byte)(0x80 | Channel), Data1 = (byte)Notes[i], Data2 = 0 };
+            if (on >= _pos && on < _pos + frames) _events[n++] = new BlockMidi { Frame = (int)(on - _pos), Status = (byte)(MidiStatus.NoteOn | Channel), Data1 = (byte)Notes[i], Data2 = 100 };
+            if (off >= _pos && off < _pos + frames) _events[n++] = new BlockMidi { Frame = (int)(off - _pos), Status = (byte)(MidiStatus.NoteOff | Channel), Data1 = (byte)Notes[i], Data2 = 0 };
         }
         return new ReadOnlySpan<BlockMidi>(_events, 0, n);
     }

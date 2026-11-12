@@ -194,7 +194,7 @@ public static class MidiExportService
             WriteVarLen(events, delta);
             events.Add((byte)(e.Status & 0xFF));
             events.Add((byte)(e.Data1 & 0x7F));
-            if ((e.Status & 0xF0) != 0xC0 && (e.Status & 0xF0) != 0xD0) events.Add((byte)(e.Data2 & 0x7F));
+            if ((e.Status & 0xF0) != MidiStatus.ProgramChange && (e.Status & 0xF0) != MidiStatus.ChannelPressure) events.Add((byte)(e.Data2 & 0x7F));
         }
         // every track ends with the song, so all chunks are the same length
         return BuildChunk(events, Math.Max(0, map.EndTick - cursorTick));
@@ -413,7 +413,7 @@ public static class MidiExportService
         v = Math.Max(0, v);
         var tmp = new List<byte> { (byte)(v & 0x7F) };
         v >>= 7;
-        while (v > 0) { tmp.Insert(0, (byte)((v & 0x7F) | 0x80)); v >>= 7; }
+        while (v > 0) { tmp.Insert(0, (byte)((v & 0x7F) | MidiStatus.NoteOff)); v >>= 7; }
         for (var i = 0; i < tmp.Count - 1; i++) tmp[i] |= 0x80;
         b.AddRange(tmp);
     }

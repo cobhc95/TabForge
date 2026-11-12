@@ -65,13 +65,13 @@ public sealed class AudioDrumTriggerProcessor : IMidiProcessor, IAudioAwareProce
                 var db = Gain.ToDb(Math.Max(peak, 1e-6f));
                 var t = Math.Clamp((db - _openDb) / -_openDb, 0, 1);
                 var vel = (byte)(1 + (int)Math.Round(126 * t));
-                output.Add(i, (byte)(0x90 | _ch), (byte)_note, vel); output.Unsorted = true;
+                output.Add(i, (byte)(MidiStatus.NoteOn | _ch), (byte)_note, vel); output.Unsorted = true;
                 _gate = true; _lastTrig = _pos + i; _onNote = _note;
             }
             else if (_gate && _env < _close)
             {
                 _gate = false;
-                if (_onNote >= 0) { output.Add(i, (byte)(0x80 | _ch), (byte)_onNote, 0); output.Unsorted = true; _onNote = -1; }
+                if (_onNote >= 0) { output.Add(i, (byte)(MidiStatus.NoteOff | _ch), (byte)_onNote, 0); output.Unsorted = true; _onNote = -1; }
             }
             if (_mix < 1f) { l[i] *= _mix; r[i] *= _mix; }
         }
@@ -117,11 +117,11 @@ public sealed class AudioDuckerProcessor : IMidiProcessor, IAudioAwareProcessor
     {
         if (e.Status >= 0xF0) return;
         var kind = e.Status & 0xF0;
-        if (kind is not (0x90 or 0x80)) return;
+        if (kind is not (MidiStatus.NoteOn or MidiStatus.NoteOff)) return;
         var ch = e.Status & 0x0F;
         if ((_inCh != 0 && ch + 1 != _inCh) || (_note >= 0 && e.Data1 != _note)) return;
         var key = (ch << 7) | (e.Data1 & 0x7F);
-        if (kind == 0x90 && e.Data2 > 0)
+        if (kind == MidiStatus.NoteOn && e.Data2 > 0)
         {
             if (!_held[key]) { _held[key] = true; _count++; }
             _target = _velReact ? e.Data2 / 127f : 1f;
@@ -192,9 +192,9 @@ public sealed class LoopSamplerProcessor : IMidiProcessor, IAudioAwareProcessor
     {
         if (e.Status >= 0xF0) return;
         var kind = e.Status & 0xF0;
-        if (kind is not (0x90 or 0x80)) return;
+        if (kind is not (MidiStatus.NoteOn or MidiStatus.NoteOff)) return;
         if (_inCh != 0 && (e.Status & 0x0F) + 1 != _inCh) return;
-        var on = kind == 0x90 && e.Data2 > 0;
+        var on = kind == MidiStatus.NoteOn && e.Data2 > 0;
         if (e.Data1 == _recNote)
         {
             if (on) { _recording = true; _recPos = 0; _len = 0; for (var v = 0; v < Voices; v++) _active[v] = false; }
@@ -334,7 +334,7 @@ public sealed class LooperProcessor : IMidiProcessor, IAudioAwareProcessor
 
     private void Apply(in BlockMidi e)
     {
-        if (e.Status >= 0xF0 || (e.Status & 0xF0) != 0x90 || e.Data2 == 0) return;
+        if (e.Status >= 0xF0 || (e.Status & 0xF0) != MidiStatus.NoteOn || e.Data2 == 0) return;
         if (_inCh != 0 && (e.Status & 0x0F) + 1 != _inCh) return;
         var rel = e.Data1 - _base;
         if (rel < 0) return;

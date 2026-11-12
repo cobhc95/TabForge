@@ -43,9 +43,9 @@ public sealed class ProgramBankProcessor : SenderProcessor
 
     protected override void Emit(MidiBuffer output)
     {
-        if (_msb >= 0) output.Add(0, (byte)(0xB0 | _ch), 0, (byte)_msb);
-        if (_lsb >= 0) output.Add(0, (byte)(0xB0 | _ch), 32, (byte)_lsb);
-        if (_program >= 0) output.Add(0, (byte)(0xC0 | _ch), (byte)_program, 0);
+        if (_msb >= 0) output.Add(0, (byte)(MidiStatus.ControlChange | _ch), MidiCc.BankSelectMsb, (byte)_msb);
+        if (_lsb >= 0) output.Add(0, (byte)(MidiStatus.ControlChange | _ch), MidiCc.BankSelectLsb, (byte)_lsb);
+        if (_program >= 0) output.Add(0, (byte)(MidiStatus.ProgramChange | _ch), (byte)_program, 0);
     }
 }
 
@@ -67,7 +67,7 @@ public sealed class CcSenderProcessor : SenderProcessor
 
     protected override void Emit(MidiBuffer output)
     {
-        for (var i = 0; i < 4; i++) if (_cc[i] >= 0) output.Add(0, (byte)(0xB0 | _ch), (byte)_cc[i], (byte)_val[i]);
+        for (var i = 0; i < 4; i++) if (_cc[i] >= 0) output.Add(0, (byte)(MidiStatus.ControlChange | _ch), (byte)_cc[i], (byte)_val[i]);
     }
 }
 
@@ -82,10 +82,8 @@ public sealed class PanicProcessor : IMidiProcessor
     {
         if ((ctx.PlayStopped && _onStop) || (ctx.PlayStarted && _onStart))
             for (var ch = 0; ch < 16; ch++)
-            {
-                output.Add(0, (byte)(0xB0 | ch), 123, 0);
-                output.Add(0, (byte)(0xB0 | ch), 120, 0);
-            }
+                foreach (var controller in MidiPanic.ResetControllers)
+                    output.Add(0, (byte)(MidiStatus.ControlChange | ch), (byte)controller, 0);
         for (var i = 0; i < input.Count; i++) output.Add(input.Items[i]);
     }
 
@@ -114,7 +112,7 @@ public sealed class CcMapperProcessor : IMidiProcessor
         for (var i = 0; i < input.Count; i++)
         {
             var e = input.Items[i];
-            if (e.Status < 0xF0 && (e.Status & 0xF0) == 0xB0 && e.Data1 == _src && (_ch == 0 || (e.Status & 0x0F) == _ch - 1))
+            if (e.Status < 0xF0 && (e.Status & 0xF0) == MidiStatus.ControlChange && e.Data1 == _src && (_ch == 0 || (e.Status & 0x0F) == _ch - 1))
             {
                 if (_pass && _dst != _src) output.Add(e);
                 var v = Math.Clamp((int)e.Data2, Math.Min(_lo, _hi), Math.Max(_lo, _hi));
@@ -146,8 +144,8 @@ public sealed class LogProcessor : IMidiProcessor
             output.Add(e);
             if (!watching) continue;
             var kind = e.Status & 0xF0;
-            var isNote = e.Status < 0xF0 && kind is 0x80 or 0x90 or 0xA0;
-            var isCc = e.Status < 0xF0 && kind == 0xB0;
+            var isNote = e.Status < 0xF0 && kind is MidiStatus.NoteOff or MidiStatus.NoteOn or MidiStatus.PolyPressure;
+            var isCc = e.Status < 0xF0 && kind == MidiStatus.ControlChange;
             var pass = _show switch { 1 => isNote, 2 => isCc, 3 => !isNote && !isCc, _ => true };
             if (pass) log!.Write((float)(ctx.SongSec + (double)e.Frame / ctx.SampleRate), e.Status, e.Data1, e.Data2, _stage);
         }

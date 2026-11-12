@@ -47,8 +47,8 @@ public sealed class ScoreEvent
     /// </summary>
     internal bool Dropped;
 
-    public bool IsNoteOn => (Status & 0xF0) == 0x90 && Data2 > 0;
-    public bool IsNoteOff => (Status & 0xF0) == 0x80 || ((Status & 0xF0) == 0x90 && Data2 == 0);
+    public bool IsNoteOn => (Status & 0xF0) == MidiStatus.NoteOn && Data2 > 0;
+    public bool IsNoteOff => (Status & 0xF0) == MidiStatus.NoteOff || ((Status & 0xF0) == MidiStatus.NoteOn && Data2 == 0);
 }
 
 /// <summary>

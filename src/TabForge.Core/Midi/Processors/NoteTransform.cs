@@ -27,18 +27,18 @@ public abstract class NoteTransform : IMidiProcessor
             if (st >= 0xF0) { output.Add(e); continue; }
             var kind = st & 0xF0; var ch = st & 0x0F;
             if (InCh != 0 && ch != InCh - 1) { output.Add(e); continue; }
-            if (kind == 0x90 && e.Data2 > 0)
+            if (kind == MidiStatus.NoteOn && e.Data2 > 0)
             {
                 int och = ch, note = e.Data1, vel = e.Data2;
                 if (!MapNote(ref och, ref note, ref vel)) continue;
                 note = Math.Clamp(note, 0, MidiLimits.Max); och = Math.Clamp(och, 0, 15); vel = Math.Clamp(vel, 1, MidiLimits.Max);
                 // The same key pressed again without a release: end the earlier output note first if it differs.
                 if (Held.TryGet(ch, e.Data1, out var pch, out var pnote) && (pch != och || pnote != note))
-                    output.Add(e.Frame, (byte)(0x80 | pch), (byte)pnote, 0);
+                    output.Add(e.Frame, (byte)(MidiStatus.NoteOff | pch), (byte)pnote, 0);
                 Held.Set(ch, e.Data1, och, note);
-                output.Add(e.Frame, (byte)(0x90 | och), (byte)note, (byte)vel);
+                output.Add(e.Frame, (byte)(MidiStatus.NoteOn | och), (byte)note, (byte)vel);
             }
-            else if (kind is 0x80 or 0x90)
+            else if (kind is MidiStatus.NoteOff or MidiStatus.NoteOn)
             {
                 if (Held.TryGet(ch, e.Data1, out var pch, out var pnote))
                 {
@@ -51,9 +51,9 @@ public abstract class NoteTransform : IMidiProcessor
                     if (MapNote(ref och, ref note, ref vel)) output.Add(e.Frame, (byte)(kind | Math.Clamp(och, 0, 15)), (byte)Math.Clamp(note, 0, MidiLimits.Max), e.Data2);
                 }
             }
-            else if (kind == 0xA0)
+            else if (kind == MidiStatus.PolyPressure)
             {
-                if (Held.TryGet(ch, e.Data1, out var pch, out var pnote)) output.Add(e.Frame, (byte)(0xA0 | pch), (byte)pnote, e.Data2);
+                if (Held.TryGet(ch, e.Data1, out var pch, out var pnote)) output.Add(e.Frame, (byte)(MidiStatus.PolyPressure | pch), (byte)pnote, e.Data2);
                 else output.Add(e);
             }
             else
