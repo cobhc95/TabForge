@@ -43,6 +43,8 @@ chmod +x TabForge-*-linux-x86_64.AppImage
 0.9.5 is a stable release. ✨
 
 - **Focus track:** a left strip icon (and View > Focus track) that plays the selected track louder so it is easy to hear while you practise. Off until you turn it on, and it stays on until you turn it off. Click it to turn it on or off; right-click it for the settings: how much louder (20% to begin with, or decibels, or a fixed level), and what the other tracks do, group by group: lowered by the same amount, left as they are, or lowered or raised by an amount of their own, with four ready-made templates. The selected track is never lowered, and your faders, song and exports are never touched.
+<p align="center"><a href="docs/media/screenshots/0.9.5/focus-track-settings.png"><img src="docs/media/screenshots/0.9.5/focus-track-settings.png" alt="The Focus track settings window: the selected track goes 20% louder and the other tracks follow a template" width="330"></a><br><sub>Focus track settings: how much louder the selected track goes, and what each group of other tracks does.</sub></p>
+
 - **Accent sliders and switches:** every slider fills with the accent colour up to its thumb, as the mixer faders do, and every On/Off switch uses the accent colour while on.
 - **Plug-ins:** Windows shows a plug-in's own reason when it fails to load instead of mentioning Wine; VST2 plug-ins whose support files are on the system PATH, and older VST2 plug-ins that only use the original process call, now load; small plug-in editors keep their size; preset switching works for 32-bit VST2 plug-ins.
 - **Fixes:** the GM sound stays off after reopening a song with a playing VST instrument, and auditioning a Composer groove always plays the built-in drum kit.
@@ -384,6 +386,7 @@ Play along with a metronome and count-in, loop any section, and let the speed tr
 - MIDI playback with per-track mute, solo, volume and pan, including bends, slides, let ring, palm mute and swing.
 - **Metronome and count-in** with their own sounds, levels and subdivisions.
 - **Looping** of the song, a section or a selection; a **speed trainer**; skip areas.
+- **Focus track** plays the selected track louder so it is easy to hear while you practise (a left strip icon, off until you turn it on). Choose how much louder, and what the other tracks do, group by group.
 - **Zoom, speed and tempo** sit in the **View and tempo** pane at the bottom of the side panel (speed 25 to 200%).
 - **Status bar** shows Playing, Paused, Stopped or Recording, the playhead's bar, beat and time while a song plays (the edit cursor otherwise), the tempo in force at that position, and the likely scale of the section (click it for alternatives and settings).
 
