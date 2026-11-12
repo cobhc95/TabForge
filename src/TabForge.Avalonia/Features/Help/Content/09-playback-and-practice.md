@@ -11,6 +11,7 @@ If you feel lost, start with the section called Play, pause and stop. Once you c
 - Speed, which changes how fast a song plays without changing its written tempo.
 - Loop, which repeats a stretch of the song.
 - The metronome and the count-in, which give you a steady click.
+- Focus track, a practice aid that plays the selected track louder so it stands out.
 - Following the playhead, so the score scrolls with the music.
 - Keyboard mode, the practice view with falling notes and a wait-for-me option.
 - Recording audio and MIDI, live input, and video recording.
@@ -118,6 +119,64 @@ The count-in plays a few bars of click before the song starts. It gives you time
 - The count-in can play only at the start of the song, before every section, or before every loop repeat. Choose the setting that suits your practice.
 
 Tip: Turn the count-in on when you loop a part. A count-in before each loop repeat gives you a clean start every time.
+
+## Focus track
+
+Focus track is a practice aid. It plays the selected track louder, so that part is easy to hear against the rest of the song. The other tracks stay in the mix, but they step back a little.
+
+Focus track is off until you turn it on. Once it is on, it stays on, even after you close and open TabForge, until you turn it off.
+
+- Left-click the **Focus track** icon on the left strip to turn it on or off. In the default strip it sits right after the **Composer** icon.
+- Right-click the **Focus track** icon, or choose **View > Focus track settings**, to open the settings window.
+- Choose **View > Focus track** to turn it on or off from the menu.
+
+Note: A strip you have arranged yourself is offered the Focus track icon once. You can also add it at any time: right-click the strip, choose **Customize strip…**, and pick **Focus track** from the Playback group. The Composer and left strip chapter explains the strip.
+
+Step by step to make one part stand out:
+
+1. Click the track row of the part you want to learn, so it is the selected track.
+2. Left-click the **Focus track** icon to turn it on. By default the selected track is raised by 20%.
+3. Press `Space` to play the song and listen.
+4. To change how much louder the track is, right-click the **Focus track** icon and adjust the settings.
+
+Tip: Keep the default of 20% at first. Raise it a little at a time, and only as far as the part is clear.
+
+### The settings window
+
+The settings window has these parts, from top to bottom:
+
+- An **On** and **Off** switch at the top. It does the same job as the icon on the strip.
+- **Selected track: how much louder**. Choose how the boost is measured, then move the slider. The three ways are **Decibels**, which is a standard unit of loudness, **Percent**, which raises the track by that share, and **Level**, which plays the track at one fixed level from 0 to 127. **Percent** at 20% is the default.
+- **Other tracks: what they do**. This sets how the rest of the song changes. The next part explains it.
+- The buttons at the bottom. **Reset** puts every setting back to its default. **Cancel** closes the window without changes. **Apply** keeps your choices.
+
+### What happens to the other tracks
+
+By default, every other track is lowered by the same amount that the selected track is raised. A 20% boost lowers the others by 20%, so the selected track stands out from the rest.
+
+Use the template dropdown to set all four groups at once:
+
+- **Spotlight** is the default. The other tracks are lowered by the same amount as the boost.
+- **Keep the rhythm section** leaves the drums and bass unchanged.
+- **Only boost the selected track** changes nothing else. Nothing else is lowered.
+- **Rhythm section up** raises the drums and bass by 3 dB, and lowers the other tracks.
+- **Custom** appears once you change a group by hand.
+
+Each group can be set on its own. The groups are Guitars, Basses, Drums and Other instruments. For each group, choose one of these:
+
+- **Lowered like the boost** lowers the group by the same amount as the selected track is raised.
+- **Left as it is** leaves the group unchanged.
+- **Lowered by...** lowers the group by an amount you enter. The amount can be decibels, a percent, or a cap level, which is the highest level the group may reach.
+- **Raised by...** raises the group by an amount you enter.
+
+Some rules always apply:
+
+- The selected track is never lowered.
+- A boost stops at the loudest level the track can reach. A track that is already near the top gets little extra.
+- Focus track follows the selected track. When you select another track, or show another song, it moves to that one.
+- Apply works at once, even during playback. You do not need to stop the song.
+
+Note: Focus track only changes what you hear. Faders, the saved song, exports and renders are never touched. Volume points written in the Mix Table keep their own values.
 
 ## Following the playhead
 
@@ -300,6 +359,9 @@ Fix: Right-click the Loop button and set the number of loops, or clear the setti
 Problem: The count-in is too quiet to hear.
 Fix: Right-click the Count-in button and raise its volume. The default is 70%. You can also choose a longer length, up to 4 bars.
 
+Problem: Focus track is on, but the part does not sound louder.
+Fix: Check that the part's track row is the selected track. Then right-click the Focus track icon and look at the boost. A track that is already near its loudest level can only rise a little. Set the boost to Level if you want one fixed loudness.
+
 Problem: Pauses and crackles appear while the song plays.
 Fix: Raise the Buffer size on the Audio & Plug-ins page, one step at a time. Turn off other programs that use a lot of processor power, and close any unused plug-in windows.
 
@@ -320,7 +382,10 @@ Answer: No. The click is a guide for your ears. It is not part of the recorded t
 Question: Why does the score scroll away from the playhead?
 Answer: Follow is probably off, or Pause following when I scroll by hand is on in Preferences > Playback & Practice. Press Ctrl+Shift+F to turn following on.
 
+Question: Does Focus track change my saved song or my exports?
+Answer: No. It changes only what you hear while the song plays. The faders, the saved song, and every export or render are left as they are.
+
 Question: Where do I change the audio driver?
 Answer: Open Preferences > Audio & Plug-ins and choose the Audio driver. Choose WASAPI shared if you are not sure.
 
-Related: Keyboard and fretboard tools, Settings, themes and hotkeys, Troubleshooting and FAQ
+Related: Keyboard and fretboard tools, Composer and left strip, Settings, themes and hotkeys, Troubleshooting and FAQ

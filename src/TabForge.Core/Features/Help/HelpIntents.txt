@@ -73,6 +73,7 @@ plugin | plug-in | vst | vsti | vst3 | effect | effects chain | fx | amp sim => 
 soundfont | patch | instrument sound | sound engine | gm | general midi | change sound | change instrument => instrument sound engine track patch
 fretboard | neck | frets | fingering => fretboard instrument view
 keyboard mode | falling notes | learn mode | piano roll => keyboard mode falling notes wait
+focus track | focus | combo amp | make a track louder | louder track | hear one part | hear my part | solo my part => focus track practice playback volume selected
 
 # ---- files and export ----
 save | saving | save as | autosave | backup | lose work | lost my work | lost work | recover | recovery => save recovery backup file

@@ -40,6 +40,9 @@ When TabForge starts with the default layout, the strip shows these icons from t
 - **Redo** puts back the last edit you undid.
 - A second line separates the editing group from the Composer toggle.
 - **Composer** shows or hides the Composer panel. It is described below.
+- **Focus track** turns the practice aid on or off. It makes the selected track louder so it is easy to hear. Left-click it to turn it on or off, and right-click it to open its settings. The Playback and practice chapter explains it in full.
+
+Note: A strip you have arranged yourself is offered the Focus track icon once. You can also add it from the Customize strip window, in the Playback group. The Playback and practice chapter describes what Focus track does.
 
 Step by step to use the icons:
 
@@ -134,7 +137,7 @@ The catalogue holds more than forty icons. They are grouped as follows. The grou
 
 - **File**: Open, Save, Save as, Render, New, Import audio, Print, Export PDF and Export MIDI.
 - **Edit**: Undo, Redo, Copy, Paste, Add bar, Add track and Go to bar.
-- **Playback**: Play, Stop, Loop, Metronome, Count-in, Record, Mixer and Tuner.
+- **Playback**: Play, Stop, Loop, Metronome, Count-in, Record, Mixer, Tuner and Focus track.
 - **Song**: Tempo, Time signature, Key signature, Transpose, Tuning, and Lyrics.
 - **View**: Zoom in, Zoom out, Band view, Compact mode, Fretboard and Hotkeys.
 - **App**: Chord finder, Scale finder, Preferences, About and Composer.
