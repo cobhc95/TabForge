@@ -7,7 +7,7 @@ namespace TabForge.Presets;
 // Owns: the preset an object was last given (its name, kind and the values as applied) and the comparison that says whether the object was
 //   edited since. One record for every selector; it is stored as an optional property beside the values, so old files load unchanged.
 // Does not own: the preset stores or the files, any window, or how a selector draws its rows (the Avalonia PresetCombo does that).
-// Tests: AppliedPresetTests, PresetMemoryTests.
+// Tests: PresetMemoryTests.
 /// <summary>The preset last applied to an object, with a canonical snapshot of the values it gave it.</summary>
 public sealed record AppliedPreset(string Name, string Kind, string Snapshot)
 {

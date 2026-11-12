@@ -8,7 +8,7 @@ namespace TabForge.Documents;
 
 // Owns: capturing a song as a ProjectState and restoring one into a song, reusing every unchanged chunk of the previous state.
 // Does not own: the undo stack (UndoHistory) and the bar bytes (BarCodec, BarWriter, BarReader).
-// Tests: TestUndoDeltaStates.
+// Tests: no dedicated test class.
 // Long method: EncodeLocked is about 75 lines because its bar loop is one local function (EncodeBars) that reads the previous state
 //   and writes only its own slots; the chunk reuse rules stay beside that loop instead of being passed through fields.
 /// <summary>

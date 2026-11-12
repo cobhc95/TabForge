@@ -4,7 +4,7 @@ namespace TabForge.Services;
 
 // Owns: the Fretboard part of the settings catalogue (rows in Preferences order).
 // Does not own: page layout (SettingsCatalog.Layout) or the stored values (AppSettings).
-// Tests: TestSettingsFileSplitSnapshots.
+// Tests: no dedicated test class.
 public static partial class SettingsCatalog
 {
     private static List<SettingDescriptor> FretboardRows(AppSettings s)

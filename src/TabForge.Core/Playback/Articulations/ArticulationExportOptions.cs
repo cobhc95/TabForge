@@ -7,7 +7,7 @@ namespace TabForge.Playback;
 //   without a rule keep their own sound or are left out, and the counts of the techniques each choice met. Any track can carry an override,
 //   including a built-in-sound track whose map is for another program.
 // Does not own: the map and its rules (ArticulationMap, ArticulationRule), the presets (ArticulationPresets) or the export file (MidiExportService).
-// Tests: MidiTechniqueExportTests.
+// Tests: no dedicated test class.
 /// <summary>The articulation choices of one MIDI export. Null everywhere else, so playback and the default export are unchanged.</summary>
 public sealed class ArticulationExportOptions
 {

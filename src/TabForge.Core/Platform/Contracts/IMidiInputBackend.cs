@@ -3,7 +3,7 @@ namespace TabForge.Platform.Contracts;
 // Owns: the port for the system's MIDI input devices: list them, open one, and receive its short messages. The output side is IMidiDevices (Playback).
 // Does not own: the adapters (Platform/Windows/WinMmMidiInput.cs on Windows, Platform/Portable/RtMidiBackend.cs elsewhere), sharing the open devices between listeners
 //   (MidiInputHub) or naming and rescanning them (MidiInputCapture).
-// Tests: PortableBackendTests (the choice per OS, the RtMidi adapter's list), TestKeyboardModeMidiListener (through a fake device set).
+// Tests: PortableBackendTests (the choice per OS, the RtMidi adapter's list).
 
 /// <summary>The MIDI input devices of a MIDI stack (winmm on Windows, RtMidi: CoreMIDI / ALSA elsewhere).</summary>
 public interface IMidiInputBackend

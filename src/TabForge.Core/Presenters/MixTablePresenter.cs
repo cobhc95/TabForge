@@ -5,6 +5,7 @@
 //       writes it through DocumentEdits.Run).
 // Tests: no dedicated test class.
 using TabForge.Models;
+using TabForge.Services;
 
 namespace TabForge.Presenters;
 
@@ -26,8 +27,6 @@ public sealed class MixTablePresenter
     public const int ScaleMax = 16;
     public const int PanMin = -8;
     public const int PanMax = 8;
-    public const int TempoMin = 20;
-    public const int TempoMax = 400;
     public const int MaxTransitionBeats = 8;
 
     public const string Title = "Mix Table";
@@ -136,7 +135,7 @@ public sealed class MixTablePresenter
             Reverb = Picked(edits.Reverb), Phaser = Picked(edits.Phaser), Tremolo = Picked(edits.Tremolo),
             TransitionBeats = edits.TransitionIndex, AllTracks = edits.AllTracks,
         };
-        int? tempo = edits.TempoOn && int.TryParse(edits.TempoText.Trim(), out var bpm) ? Math.Clamp(bpm, TempoMin, TempoMax) : null;
+        int? tempo = edits.TempoOn && int.TryParse(edits.TempoText.Trim(), out var bpm) ? Math.Clamp(bpm, InputLimits.MinTempo, InputLimits.MaxTempo) : null;
         return new Result(mix, tempo);
     }
 

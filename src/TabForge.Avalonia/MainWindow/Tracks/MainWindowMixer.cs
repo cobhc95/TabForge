@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using TabForge.Avalonia.Views;
 using TabForge.Documents;
 using TabForge.Models;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia;
 
@@ -15,7 +16,7 @@ namespace TabForge.Avalonia;
 public static class MainWindowMixer
 {
     /// <summary>The menu command ids this class handles.</summary>
-    public static readonly IReadOnlyList<string> Commands = new[] { "View.Mixer", MultitrackCommandId, "Mixer.MasterFx", "Mixer.MonitorFx", "Mixer.GroupFx", "Mixer.GroupRules" };
+    public static readonly IReadOnlyList<string> Commands = new[] { CommandIds.View.Mixer, MultitrackCommandId, "Mixer.MasterFx", "Mixer.MonitorFx", "Mixer.GroupFx", "Mixer.GroupRules" };
 
     /// <summary>The View menu row that shows the track list (the mixer with every track).</summary>
     private const string MultitrackCommandId = "View.Multitrack";
@@ -31,7 +32,7 @@ public static class MainWindowMixer
     public static void Register(MainWindowCommands commands, MainWindowTabs songs, Window owner, TabForge.Avalonia.Transport.AvaloniaPlaybackSessions? playback, MainWindowSettings? settings, Action<string>? status = null)
     {
         var tools = new Views.ToolWindows();
-        commands.Add("View.Mixer", () => ShowMixer(tools, songs, owner, playback, settings));
+        commands.Add(CommandIds.View.Mixer, () => ShowMixer(tools, songs, owner, playback, settings));
         commands.Add(MultitrackCommandId, () => { ShowMixer(tools, songs, owner, playback, settings); status?.Invoke(MultitrackText); });
         commands.Add("Mixer.MasterFx", () => ShowMixer(tools, songs, owner, playback, settings).OpenMasterFx());
         commands.Add("Mixer.MonitorFx", () => ShowMixer(tools, songs, owner, playback, settings).OpenMonitorFx());

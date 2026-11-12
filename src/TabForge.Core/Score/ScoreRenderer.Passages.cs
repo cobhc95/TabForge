@@ -8,7 +8,7 @@ using TabForge.Services;
 namespace TabForge.Views.Score;
 
 // ScoreRenderer: the fade and palm-mute passages that span bars.
-// Owns: drawing of those two passage kinds. Does not own: passage detection (ScorePassages) or the bar drawing. Tests: render identity, TestTabEditorRenderInvariance.
+// Owns: drawing of those two passage kinds. Does not own: passage detection (ScorePassages) or the bar drawing. Tests: no dedicated test class.
 
 internal sealed partial class ScoreRenderer
 {

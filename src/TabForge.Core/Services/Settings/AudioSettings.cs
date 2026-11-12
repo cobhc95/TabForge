@@ -4,7 +4,7 @@ namespace TabForge.Services;
 
 // Owns: the playback preferences data: metronome, count-in, preview and linked-audio folders.
 // Does not own: loading, saving and validating (AppSettingsStore, SettingsValidator) or the Preferences rows (SettingsCatalog).
-// Tests: TestSettingsFileSplitSnapshots.
+// Tests: no dedicated test class.
 public sealed class AudioSettings
 {
     /// <summary>Folders (network or removable) the user allowed a song to read linked audio from; revoked in the "Linked audio" review window.</summary>

@@ -6,7 +6,7 @@ namespace TabForge.Playback;
 
 // Owns: the compact text a "Keep techniques for TabForge" export writes into a TF1 marker meta event, and reading it back onto a note.
 // Does not own: writing the meta event (MidiExportService), parsing it from the file (SmfReader) or applying it during import (MidiToSong).
-// Tests: MidiTechniqueMarkerTests.
+// Tests: no dedicated test class.
 /// <summary>
 /// A marker's payload: the node's technique ids, then the numbers they need. Format (versioned so older files keep loading):
 /// <c>TF1:&lt;channel&gt;:&lt;pitch&gt;:&lt;ids&gt;|&lt;key=value;...&gt;</c>. Ids are comma separated; the numbers are

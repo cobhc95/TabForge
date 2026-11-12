@@ -370,7 +370,7 @@ public static partial class ProjectService
         return project;
     }
 
-    public static SongProject RestoreBytes(byte[] snapshot) => RestoreBytes(snapshot, out _);
+    public static SongProject RestoreBytes(byte[] snapshot) => RestoreBytes(snapshot, out _, out _);
 
     /// <summary>Overload that also reports the fused root flag so callers skip the second scan (additive).</summary>
     internal static SongProject RestoreBytes(byte[] snapshot, out byte[] json, out bool hasFormatVersion)
@@ -392,27 +392,6 @@ public static partial class ProjectService
         }
         json = output.ToArray();
         return DeserializeAndValidate(json, "undo snapshot", CompactOptions, out hasFormatVersion);
-    }
-
-    private static SongProject RestoreBytes(byte[] snapshot, out byte[] json)
-    {
-        ArgumentNullException.ThrowIfNull(snapshot);
-        if (snapshot.LongLength > InputLimits.MaxTforgeFileBytes)
-            throw new InvalidDataException("The undo snapshot exceeds the compressed size limit.");
-        using var input = new MemoryStream(snapshot, writable: false);
-        using var gzip = new GZipStream(input, CompressionMode.Decompress);
-        using var output = new MemoryStream();
-        var buffer = new byte[64 * 1024];
-        while (true)
-        {
-            var read = gzip.Read(buffer, 0, buffer.Length);
-            if (read == 0) break;
-            if (output.Length + read > InputLimits.MaxTforgeFileBytes)
-                throw new InvalidDataException("The undo snapshot exceeds the decompressed size limit.");
-            output.Write(buffer, 0, read);
-        }
-        json = output.ToArray();
-        return DeserializeAndValidate(json, "undo snapshot", CompactOptions);
     }
 
     private static SongProject DeserializeAndValidate(byte[] json, string description,

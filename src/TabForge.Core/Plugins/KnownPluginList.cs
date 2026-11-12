@@ -7,7 +7,7 @@ namespace TabForge.Plugins;
 /// Every plug-in TabForge knows: the remembered list, this run's scan, identified and approved plug-ins and the ones the open song already uses.
 /// Being listed here only lets a chain entry find its file; loading stays subject to plug-in trust.
 /// Owns: building that list from the settings. Does not own: matching entries to it (ReaperChainImporter), trust (PluginTrust).
-/// Tests: none dedicated(full suite), TabForge.Avalonia.Tests.FxRfxChainTests.
+/// Tests: none dedicated(full suite).
 /// </summary>
 public static class KnownPluginList
 {

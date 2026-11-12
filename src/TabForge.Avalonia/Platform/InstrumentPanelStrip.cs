@@ -13,6 +13,7 @@ using TabForge.Models;
 using TabForge.Presenters;
 using TabForge.Services;
 using TabForge.Views.Score;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia.Platform;
 
@@ -406,7 +407,7 @@ public sealed class InstrumentPanelStrip : Grid
     private static Button CustomizeButton()
     {
         var button = LegendButton("FretboardCustomizeButton", "Modify", FretboardChromeMetrics.PillIconPath);
-        HotkeyTip.Set(button, "View.InstrumentPanel", "Customize the fretboard's wood, inlays, capo, strings and vibration");
+        HotkeyTip.Set(button, CommandIds.View.InstrumentPanel, "Customize the fretboard's wood, inlays, capo, strings and vibration");
         return button;
     }
 
@@ -456,7 +457,7 @@ public sealed class InstrumentPanelStrip : Grid
             HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top,
             Background = AvaloniaPalette.TransparentBrush, BorderThickness = FretboardChromeMetrics.NoBorder, Focusable = false,
         }.WithPadding(0, 0).WithMargin(0, FretboardChromeMetrics.CloseMarginTop, FretboardChromeMetrics.CloseMarginRight, 0);
-        HotkeyTip.Set(button, "View.InstrumentPanel", "Hide fretboard / keyboard");
+        HotkeyTip.Set(button, CommandIds.View.InstrumentPanel, "Hide fretboard / keyboard");
         button.Click += (_, _) => close?.Invoke();
         return button;
     }

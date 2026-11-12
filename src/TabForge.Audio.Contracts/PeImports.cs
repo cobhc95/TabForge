@@ -4,8 +4,8 @@ using System.Text;
 namespace TabForge.Audio.Contracts;
 
 // Owns: the local DLL dependency closure of a Windows PE plug-in, read from its import/delay-import tables without loading it,
-//   and one stable hash over the local dependency files. Does not own: the trust decision (PluginTrust) or the load (PluginIdentity).
-// Tests: PluginDependencyTests.
+//   and one stable hash over the local dependency files. Does not own: the PE headers and section table (PeImage), the trust decision (PluginTrust) or the load (PluginIdentity).
+// Tests: PluginDependencyTests, TestPeHeaderReaders.
 /// <summary>
 /// Reads a PE file's import and delay-import tables and returns the DLLs that would be resolved from the plug-in's own folder
 /// (the folder is what <c>LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR</c> searches first). The closure is recursive, capped and bounded.
@@ -85,45 +85,10 @@ public static class PeImports
             using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete,
                 4096, FileOptions.RandomAccess);
             using var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true);
-            if (stream.Length < 64 || reader.ReadUInt16() != 0x5A4D) return names;   // "MZ"
-            stream.Seek(0x3C, SeekOrigin.Begin);
-            var peOffset = reader.ReadInt32();
-            if (peOffset <= 0 || peOffset > stream.Length - 24) return names;
-            stream.Seek(peOffset, SeekOrigin.Begin);
-            if (reader.ReadUInt32() != 0x00004550) return names;   // "PE\0\0"
-            var machine = reader.ReadUInt16();
-            if (machine is not (0x14C or 0x8664)) return names;
-            var sections = reader.ReadUInt16();
-            stream.Position += 12;
-            var optionalSize = reader.ReadUInt16();
-            stream.Position += 2;
-            var optionalStart = stream.Position;
-            var magic = reader.ReadUInt16();
-            var pe32Plus = magic == 0x20B;
-            if (!pe32Plus && magic != 0x10B) return names;
-
-            stream.Seek(optionalStart + (pe32Plus ? 24 : 28), SeekOrigin.Begin);
-            var imageBase = pe32Plus ? reader.ReadUInt64() : reader.ReadUInt32();
-            var dataDirectories = optionalStart + (pe32Plus ? 112 : 96);
-            stream.Seek(optionalStart + optionalSize, SeekOrigin.Begin);
-            var table = new List<(uint Va, uint Size, uint Raw)>();
-            for (var i = 0; i < Math.Min((int)sections, 96); i++)
-            {
-                stream.Position += 8;
-                var virtualSize = reader.ReadUInt32();
-                var virtualAddress = reader.ReadUInt32();
-                var rawSize = reader.ReadUInt32();
-                var rawPointer = reader.ReadUInt32();
-                stream.Position += 16;
-                table.Add((virtualAddress, Math.Max(virtualSize, rawSize), rawPointer));
-            }
-
-            long Offset(uint rva)
-            {
-                foreach (var (va, size, raw) in table)
-                    if (rva >= va && rva < (long)va + size) return raw + (long)(rva - va);
-                throw new InvalidDataException("RVA outside sections");
-            }
+            if (PeImage.Read(stream, reader, minLength: 64, peOffsetMargin: 24) is not { } image) return names;
+            var imageBase = image.ImageBase;
+            var dataDirectories = image.DataDirectories;
+            long Offset(uint rva) => image.Offset(rva);
 
             string? ReadName(uint rva)
             {

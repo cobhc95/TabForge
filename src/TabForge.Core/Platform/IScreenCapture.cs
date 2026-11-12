@@ -4,7 +4,7 @@ namespace TabForge.Platform;
 
 // Owns: the screen pixel questions the app asks the operating system: open a frame of a fixed size, copy a screen rectangle into it, clear it, read its pixels.
 // Does not own: choosing the region, fitting it into the frame (ScreenRegionGrabber.Fit), timing, encoding, or the native handles (the platform adapter).
-// Tests: none dedicated(a cleared frame reads back black at the requested size), TestLiveVideoRecord.
+// Tests: none dedicated(a cleared frame reads back black at the requested size).
 /// <summary>The screen capture port that the GDI video grabber copies pixels through. The adapter is supplied by the host app.</summary>
 public interface IScreenCapture
 {

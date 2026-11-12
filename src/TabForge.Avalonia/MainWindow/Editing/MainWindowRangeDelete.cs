@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using TabForge.Documents;
 using TabForge.Models;
 using TabForge.Services;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia;
 
@@ -17,7 +18,7 @@ namespace TabForge.Avalonia;
 internal static class MainWindowRangeDelete
 {
     /// <summary>The command id of Delete; Cut and Copy are <see cref="EditRouting.RangeCutId"/> and <see cref="EditRouting.RangeCopyId"/>.</summary>
-    public const string DeleteId = "Range.Delete";
+    public const string DeleteId = CommandIds.Range.Delete;
 
     public static void Register(MainWindowCommands commands, MainWindowTabs songs, MainWindowDocumentPanes panes, ClipboardService clipboard, Action<string> notice,
         MainWindowTimelineBars.DeletePrompt askDelete, Func<EditingSettings> editing, Action saveSettings)

@@ -42,7 +42,7 @@ public sealed record SaveOutcome(bool Saved, bool Cancelled, string Message, boo
 // Owns: the save and export sequences of one explicit document: which questions are asked, plug-in state collection and the
 //     write.
 // Does not own: the file formats (ProjectService, exporters) and the dialogs.
-// Tests: TestSaveFlowCharacterization, TabForge.Avalonia.Tests.MainWindowSaveTests.
+// Tests: TabForge.Avalonia.Tests.MainWindowSaveTests.
 /// <summary>
 /// The save and export sequences for one explicit document: which questions are asked (and only when something would be lost), the plug-in states
 /// are collected asynchronously, and only then is the file written as a snapshot of the model. Everything it needs is an argument (the document, the
@@ -164,27 +164,9 @@ public sealed class DocumentSaveFlow
     {
         var folder = Path.GetDirectoryName(path) ?? "";
         var stem = Path.GetFileNameWithoutExtension(path); var ext = Path.GetExtension(path);
-        // One listing covers both files and directories; falls back to per-candidate stats when it cannot be read.
-        HashSet<string>? existing = null;
-        try
-        {
-            if (!string.IsNullOrEmpty(folder) && Directory.Exists(folder))
-                existing = new HashSet<string>(
-                    Directory.EnumerateFileSystemEntries(folder).Select(e => Path.GetFileName(e)!),
-                    StringComparer.OrdinalIgnoreCase);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { existing = null; }
-        bool Exists(string candidate) => existing is not null
-            ? existing.Contains(Path.GetFileName(candidate))
-            : File.Exists(candidate) || Directory.Exists(candidate);
-        var candidate = path;
         // Ceiling: 1000 numbered names; past it the folder is treated as broken and the save fails loudly instead of looping.
-        for (var i = 2; Exists(candidate); i++)
-        {
-            if (i > maxSiblings) throw new IOException($"More than {maxSiblings} numbered copies of {Path.GetFileName(path)} exist");
-            candidate = Path.Combine(folder, $"{stem} ({i}){ext}");
-        }
-        return candidate;
+        return FreeSiblingName.FirstFree(folder, path, i => $"{stem} ({i}){ext}", maxSiblings)
+            ?? throw new IOException($"More than {maxSiblings} numbered copies of {Path.GetFileName(path)} exist");
     }
 
     /// <summary>

@@ -13,7 +13,7 @@ using TabForge.Services;
 
 namespace TabForge.Avalonia;
 
-// Owns: the track row menu's Convert to instrument track row on an audio track (ContextMenuHost.ClickedTrack): the instrument picker, then the
+// Owns: the track row menu's Convert to instrument track row on an audio track (ContextMenuHost.Target.Track): the instrument picker, then the
 //   clip question (or the remembered answer, which it saves when ticked), then the one-step conversion.
 // Does not own: the conversion and its bar lookup (AudioToInstrumentConversion), the clip question texts (PromptTextsPresenter), the menu rows
 //   (TrackRowMenus) and the window refresh after the edit.
@@ -29,7 +29,7 @@ public static class MainWindowConvertToInstrument
     /// <param name="settings">The current settings; the remembered clip answer is read and written here.</param>
     /// <param name="saveSettings">Saves the settings after a remembered answer is ticked.</param>
     public static void Register(MainWindowCommands commands, MainWindowTabs songs, Window owner, ContextMenuHost rows, Func<AppSettings> settings, Action saveSettings) =>
-        commands.Add(TrackRowMenus.Convert, () => _ = ConvertAsync(songs.Active, owner, rows.ClickedTrack, settings(), saveSettings));
+        commands.Add(TrackRowMenus.Convert, () => _ = ConvertAsync(songs.Active, owner, rows.Target.Track, settings(), saveSettings));
 
     private static async Task ConvertAsync(IEditableDocument document, Window owner, int index, AppSettings appSettings, Action saveSettings)
     {

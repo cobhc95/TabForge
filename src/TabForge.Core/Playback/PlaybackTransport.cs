@@ -7,7 +7,7 @@ namespace TabForge.Playback;
 // Owns: one document's transport over an IPlaybackEngine (play, stop, pause and resume, seek, loop, speed), the newest scheduler report handed to
 //     the UI frame, and the playhead fields a frame draws (time, bar, cell, fraction).
 // Does not own: the frame timer (the host calls ApplyFrame once per frame), the song (passed in per call), MIDI, the views.
-// Tests: TabForge.Avalonia.Tests.PlaybackTransportTests (fake engine).
+// Tests: no dedicated test class.
 // Threads: transport commands, ApplyFrame and Dispose run on the UI thread. ReportPosition and MarkFinished (the engine's callbacks) run on
 //     the scheduler thread; they reach the UI only through PendingPlayheadSlot's lock. ApplyFrame allocates nothing in steady state.
 

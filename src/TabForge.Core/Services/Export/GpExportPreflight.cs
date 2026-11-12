@@ -182,22 +182,7 @@ public static class GpExportPreflight
     {
         var folder = Path.GetDirectoryName(path) ?? "";
         var stem = Path.GetFileNameWithoutExtension(path); var ext = Path.GetExtension(path);
-        // Single directory listing instead of a File.Exists sweep per candidate (same result, no TOCTOU change).
-        HashSet<string>? existing = null;
-        try
-        {
-            if (!string.IsNullOrEmpty(folder) && Directory.Exists(folder))
-                existing = new HashSet<string>(
-                    Directory.EnumerateFileSystemEntries(folder).Select(e => Path.GetFileName(e)!),
-                    StringComparer.OrdinalIgnoreCase);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { existing = null; }
-        bool Exists(string candidate) => existing is not null
-            ? existing.Contains(Path.GetFileName(candidate))
-            : File.Exists(candidate) || Directory.Exists(candidate);
-        var candidate = Path.Combine(folder, $"{stem} ({label}){ext}");
-        for (var i = 2; Exists(candidate); i++) candidate = Path.Combine(folder, $"{stem} ({label} {i}){ext}");
-        return candidate;
+        return FreeSiblingName.FirstFree(folder, Path.Combine(folder, $"{stem} ({label}){ext}"), i => $"{stem} ({label} {i}){ext}")!;   // no ceiling: it always finds one
     }
 
     public static GpExportPlan Plan(GpPreflightReport report, GpExportChoice choice, GpExportKind kind, string targetGpPath, string? documentPath)

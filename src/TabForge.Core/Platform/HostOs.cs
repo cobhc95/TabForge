@@ -2,7 +2,7 @@ namespace TabForge.Platform;
 
 // Owns: the operating-system family the portable rules switch on (folders, shell commands, path comparison), and the one place this process asks which it is.
 // Does not own: what each rule does per family (AppFolderLayout, ShellCommands, PathComparer).
-// Tests: AppFoldersTests, ShellCommandsTests, PathComparerTests.
+// Tests: no dedicated test class.
 /// <summary>The operating-system families TabForge distinguishes.</summary>
 public enum HostOs
 {

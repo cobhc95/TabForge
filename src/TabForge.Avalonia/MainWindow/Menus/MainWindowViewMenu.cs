@@ -8,6 +8,7 @@ using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Views.Docking;
 using TabForge.Docking;
 using TabForge.Services;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia;
 
@@ -35,7 +36,7 @@ public static class MainWindowViewMenu
     private const string PlayingBarCommandId = "View.PlayingBar";
 
     /// <summary>The View menu row and toolbar button that show and hide the instrument panel.</summary>
-    private const string InstrumentPanelCommandId = "View.InstrumentPanel";
+    private const string InstrumentPanelCommandId = CommandIds.View.InstrumentPanel;
 
     /// <summary>The toolbar button that hides the side panel or brings it back.</summary>
     private const string SidePanelCommandId = "View.SidePanel";

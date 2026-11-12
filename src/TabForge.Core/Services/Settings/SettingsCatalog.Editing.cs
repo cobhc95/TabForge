@@ -1,11 +1,12 @@
 using TabForge.Documents;
 using TabForge.Models;
+using TabForge.Menus;
 
 namespace TabForge.Services;
 
 // Owns: the Editing part of the settings catalogue (rows in Preferences order).
 // Does not own: page layout (SettingsCatalog.Layout) or the stored values (AppSettings).
-// Tests: TestSettingsFileSplitSnapshots.
+// Tests: no dedicated test class.
 public static partial class SettingsCatalog
 {
     private static List<SettingDescriptor> EditingRows(AppSettings s)
@@ -29,7 +30,7 @@ public static partial class SettingsCatalog
             Choice(Editing, "Entry", "editing.deleteleaves", "When deleting notes, leave", v => ed.MergeRestsOnDelete = v == "Merged rests", () => ed.MergeRestsOnDelete ? "Merged rests" : "A rest of the same length",
                 new[] { "A rest of the same length", "Merged rests" }, "Used with \"Fill incomplete bars with rests\". A rest of the same length keeps the deleted note's value. Merged rests join the deleted notes and the rests beside them into the fewest rests that fill the bar (a cleared bar becomes one whole-bar rest).", "delete notes rest merge whole bar clear"),
             Bool(Editing, "Safety", "editing.confirmdelete", "Confirm before deleting a bar", v => ed.ConfirmDeleteBar = v, () => ed.ConfirmDeleteBar,
-                "Ask before deleting a bar and shifting later content.", "confirm delete bar prompt", hotkey: "Bar.Delete"),
+                "Ask before deleting a bar and shifting later content.", "confirm delete bar prompt", hotkey: CommandIds.Bar.Delete),
             Choice(Editing, "Safety", "editing.edittarget", "Copy, cut, delete and paste act on", v => ed.EditTarget = EditTargetRule.ToChoice(EditTargetRule.FromChoice(v)), () => EditTargetRule.ToChoice(EditTargetRule.FromChoice(ed.EditTarget)),
                 EditTargetRule.Choices.ToArray(), "When the grey timeline highlight and a selection both exist: whichever you clicked last (default), always the highlight, or always the selection.", "edit target highlight selection copy cut delete paste last clicked wins grey cells"),
             Bool(Editing, "Safety", "editing.confirmhighlightclear", "Confirm before clearing highlighted bars", v => ed.ConfirmHighlightClear = v, () => ed.ConfirmHighlightClear,

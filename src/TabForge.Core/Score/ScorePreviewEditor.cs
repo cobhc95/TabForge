@@ -6,6 +6,7 @@ using TabForge.Presenters;
 using TabForge.Services;
 using TabForge.Shell;
 using TabForge.ScoreEditing;
+using TabForge.Menus;
 
 namespace TabForge.Views.Score;
 
@@ -115,9 +116,9 @@ internal sealed partial class ScorePreviewEditor : IScoreEditContext, ISelection
         if (PaletteToolCatalog.EditorToolOfCommand(id) is { } tool) return RunPaletteTool(tool);
         return id switch
         {
-            "Edit.Undo" => Undo(),
-            "Edit.Redo" => Redo(),
-            "Bar.Insert" or "Bar.Delete" or "Bar.Duplicate" => RunBarCommand(id),
+            CommandIds.Edit.Undo => Undo(),
+            CommandIds.Edit.Redo => Redo(),
+            CommandIds.Bar.Insert or CommandIds.Bar.Delete or CommandIds.Bar.Duplicate => RunBarCommand(id),
             _ => _commands.TryRunNoteCommand(id),
         };
     }
@@ -151,12 +152,12 @@ internal sealed partial class ScorePreviewEditor : IScoreEditContext, ISelection
     internal Action<string>? Notice { get; set; }
 
     /// <summary>Runs Bar.Delete on <paramref name="measure"/> after the host confirmed it. False when nothing changed.</summary>
-    internal bool DeleteBarConfirmed(int measure) => RunBarEdit("Bar.Delete", measure);
+    internal bool DeleteBarConfirmed(int measure) => RunBarEdit(CommandIds.Bar.Delete, measure);
 
     private bool RunBarCommand(string id)
     {
         var bar = SelectedMeasure;
-        if (id == "Bar.Delete")
+        if (id == CommandIds.Bar.Delete)
         {
             if (ScoreBarCommands.DeleteRefusal(_document) is { } refusal)
             {

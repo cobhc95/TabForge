@@ -5,7 +5,7 @@ namespace TabForge.Audio.Contracts;
 /// <summary>
 /// Named shared memory of the net10.0 build (macOS, Linux): the file-backed mapping of <see cref="PortableSharedMemory"/>, found by name.
 /// Owns: choosing that backend for this target. Does not own: the layout inside the block (<see cref="SharedBlock"/>).
-/// Tests: PortableIpcTests (the backend itself, also run on Windows).
+/// Tests: no dedicated test class.
 /// Compiled into net10.0 only; the Windows build uses NamedSharedMemory.Windows.cs.
 /// </summary>
 internal static class NamedSharedMemory

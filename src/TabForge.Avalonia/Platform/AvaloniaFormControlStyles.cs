@@ -162,23 +162,7 @@ public static partial class AvaloniaFormControlStyles
     private static Style[] PrefsButtonStyles() => new Style[]
     {
         // Preferences action buttons: the Core look "PrefsActionButton" (class) plus these sizes; the Secondary and Reset classes refine it.
-        new Style(x => x.OfType<Button>().Class("PrefsActionButton"))
-        {
-            Setters =
-            {
-                Bound(TemplatedControl.BackgroundProperty, "Panel3Brush"),
-                Bound(TemplatedControl.BorderBrushProperty, "BorderBrush"),
-                Bound(TemplatedControl.ForegroundProperty, "TextBrush"),
-                new Setter(TemplatedControl.BorderThicknessProperty, new Thickness(BorderThickness)),
-                new Setter(TemplatedControl.CornerRadiusProperty, ControlCornerRadius),
-                new Setter(TemplatedControl.PaddingProperty, PrefsActionPadding),
-                new Setter(TemplatedControl.FontSizeProperty, PrefsActionFontSize),
-                new Setter(Layoutable.MinWidthProperty, PrefsActionMinWidth),
-                new Setter(Layoutable.MinHeightProperty, PrefsFieldHeight),
-                new Setter(ContentControl.HorizontalContentAlignmentProperty, HorizontalAlignment.Center),
-                new Setter(ContentControl.VerticalContentAlignmentProperty, VerticalAlignment.Center),
-            },
-        },
+        ActionButtonLook("PrefsActionButton", "BorderBrush", "TextBrush"),
         // The Preferences default (OK) button takes the PrefsPrimary blue (PrimaryActionButton): a compound selector outranks the PrefsActionButton fill for it.
         new Style(x => x.OfType<Button>().Class("PrefsActionButton").Class("AccentButton"))
         {
@@ -216,22 +200,25 @@ public static partial class AvaloniaFormControlStyles
             },
         },
         // A destructive action: danger ink and edge on the normal button fill; the DangerButton look supplies the accent hover/press states.
-        new Style(x => x.OfType<Button>().Class(DangerButtonClass))
+        ActionButtonLook(DangerButtonClass, "Danger", "Danger"),
+    };
+
+    /// <summary>The look the Preferences action button and the danger button share: the normal button fill, a border and ink colour of the caller's, and the action sizes.</summary>
+    private static Style ActionButtonLook(string className, string borderKey, string foregroundKey) => new Style(x => x.OfType<Button>().Class(className))
+    {
+        Setters =
         {
-            Setters =
-            {
-                Bound(TemplatedControl.BackgroundProperty, "Panel3Brush"),
-                Bound(TemplatedControl.BorderBrushProperty, "Danger"),
-                Bound(TemplatedControl.ForegroundProperty, "Danger"),
-                new Setter(TemplatedControl.BorderThicknessProperty, new Thickness(BorderThickness)),
-                new Setter(TemplatedControl.CornerRadiusProperty, ControlCornerRadius),
-                new Setter(TemplatedControl.PaddingProperty, PrefsActionPadding),
-                new Setter(TemplatedControl.FontSizeProperty, PrefsActionFontSize),
-                new Setter(Layoutable.MinWidthProperty, PrefsActionMinWidth),
-                new Setter(Layoutable.MinHeightProperty, PrefsFieldHeight),
-                new Setter(ContentControl.HorizontalContentAlignmentProperty, HorizontalAlignment.Center),
-                new Setter(ContentControl.VerticalContentAlignmentProperty, VerticalAlignment.Center),
-            },
+            Bound(TemplatedControl.BackgroundProperty, "Panel3Brush"),
+            Bound(TemplatedControl.BorderBrushProperty, borderKey),
+            Bound(TemplatedControl.ForegroundProperty, foregroundKey),
+            new Setter(TemplatedControl.BorderThicknessProperty, new Thickness(BorderThickness)),
+            new Setter(TemplatedControl.CornerRadiusProperty, ControlCornerRadius),
+            new Setter(TemplatedControl.PaddingProperty, PrefsActionPadding),
+            new Setter(TemplatedControl.FontSizeProperty, PrefsActionFontSize),
+            new Setter(Layoutable.MinWidthProperty, PrefsActionMinWidth),
+            new Setter(Layoutable.MinHeightProperty, PrefsFieldHeight),
+            new Setter(ContentControl.HorizontalContentAlignmentProperty, HorizontalAlignment.Center),
+            new Setter(ContentControl.VerticalContentAlignmentProperty, VerticalAlignment.Center),
         },
     };
 

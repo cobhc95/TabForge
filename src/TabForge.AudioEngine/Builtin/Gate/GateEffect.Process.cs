@@ -5,7 +5,7 @@ namespace TabForge.AudioEngine.Builtin.Gate;
 // Owns: the noise gate audio path: a stereo-linked peak follower, an open threshold with 3 dB of hysteresis for closing, the hold time, the gain gliding to
 //   unity (attack) or to the range (release) in a one-pole, a fading bypass, and the readouts (open, input level) once per block.
 // Does not own: the parameter list (GateEffect.cs).
-// Tests: BuiltinDynamicsTests.
+// Tests: BuiltinGateTests.
 public sealed partial class GateEffect
 {
     private const double HysteresisDb = 3, FollowerFallMs = 5, BypassFadeMs = 10, MeterFallMs = 300;

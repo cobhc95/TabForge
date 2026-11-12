@@ -7,7 +7,7 @@ namespace TabForge.Avalonia.Shell.Win32;
 // Owns: the Windows calls that dock a plug-in editor: the plain child window the engine process parents the editor to, finding the engine editor
 //   popup of a window, placing that popup over the host area, showing and hiding it.
 // Does not own: when any of it happens (FxChainWindow, FxEditorArea), the engine editor window itself.
-// Tests: none headless (needs a real window and an engine); TabForge.Avalonia.Tests.FxEditorFitTests covers the arithmetic.
+// Tests: none headless (needs a real window and an engine).
 // Threads: UI thread only. Windows only; every call returns at once when not on Windows.
 public static class PluginEditorWin32
 {

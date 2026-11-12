@@ -38,9 +38,6 @@ public sealed class HelpSearchIndex
     private readonly double _averageLength;
     private readonly HelpIntentMap _intents;
 
-    /// <summary>How many chapters, sections and blocks are searchable.</summary>
-    public int EntryCount => _entries.Length;
-
     /// <summary>How many distinct word stems the index holds.</summary>
     public int TermCount => _vocabulary.Length;
 

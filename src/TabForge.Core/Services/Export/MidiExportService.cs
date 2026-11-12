@@ -424,7 +424,7 @@ public static class MidiExportService
     }
 
     private static void WriteTempo(List<byte> b, int delta, int bpm)
-        => WriteTempoMpq(b, delta, (int)Math.Round(60_000_000.0 / Math.Clamp(bpm, 20, 400)));
+        => WriteTempoMpq(b, delta, (int)Math.Round(60_000_000.0 / Math.Clamp(bpm, InputLimits.MinTempo, InputLimits.MaxTempo)));
 
     internal static void WriteTempoMpq(List<byte> b, int delta, int mpq)
     {

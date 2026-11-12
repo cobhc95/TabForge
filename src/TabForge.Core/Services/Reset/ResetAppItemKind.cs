@@ -2,7 +2,7 @@ namespace TabForge.Services.Reset;
 
 // Owns: the eight owner-approved ticks of "Reset entire app" and their wording.
 // Does not own: what each tick maps to (ResetAppPlan) or the dialog (ResetAppWindow).
-// Tests: ResetAppPlanTests, ResetAppPromptTests.
+// Tests: ResetAppPlanTests.
 /// <summary>One group of app stores the reset dialog can wipe.</summary>
 public enum ResetAppItemKind
 {

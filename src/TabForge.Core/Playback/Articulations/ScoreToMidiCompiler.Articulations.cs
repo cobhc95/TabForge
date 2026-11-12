@@ -7,7 +7,7 @@ namespace TabForge.Playback;
 //   latched state per track and channel. A track played by an instrument plug-in that has a map takes part, and so does a built-in-sound track whose
 //   map the export explicitly picked; every other track compiles exactly as before.
 // Does not own: the map and presets (ArticulationMap, ArticulationPresets), the note output (ScoreToMidiCompiler.Techniques.cs) or the UI.
-// Tests: TestArticulationKeyswitches, MidiTechniqueExportTests.
+// Tests: TestArticulationKeyswitches.
 
 internal sealed partial class ScoreToMidiCompiler
 {

@@ -85,8 +85,8 @@ public sealed partial class PreferencesWindow
         {
             case SettingsCatalog.ActionResetPage: Platform.UiTasks.Forget(ResetPageAsync(), "Reset page", text => _status.Text = text); break;
             case SettingsCatalog.ActionResetAll: Platform.UiTasks.Forget(ResetAllAsync(), "Reset all settings", text => _status.Text = text); break;
-            case SettingsCatalog.ActionImport: ImportSettingsFromDialog(); break;
-            case SettingsCatalog.ActionExport: ExportSettingsToDialog(); break;
+            case SettingsCatalog.ActionImport: Platform.UiTasks.Forget(ImportSettingsFromDialog(), "Import settings", text => _status.Text = text); break;
+            case SettingsCatalog.ActionExport: Platform.UiTasks.Forget(ExportSettingsToDialog(), "Export settings", text => _status.Text = text); break;
             case SettingsCatalog.ActionCancel: Platform.UiTasks.Forget(CancelAsync(), "Cancel", text => _status.Text = text); break;
             case SettingsCatalog.ActionApply: Apply(); break;
             case SettingsCatalog.ActionOk: Apply(); Close(); break;   // Apply only takes the values; the owner's save and broadcast are deferred, so the window is gone in this frame

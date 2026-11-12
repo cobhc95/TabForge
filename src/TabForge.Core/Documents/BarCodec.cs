@@ -4,7 +4,7 @@ namespace TabForge.Documents;
 
 // Owns: the exact binary form of one bar: every JSON property of a bar except its number, written and read in one fixed field order.
 // Does not own: the bar number (TrackState keeps it) and the byte primitives (BarWriter, BarReader).
-// Tests: TestUndoDeltaStates.
+// Tests: no dedicated test class.
 // Long methods: WriteCells (66 lines) and ReadCells (74 lines) follow the fixed field order of each cell and note, one flag word and
 //   one field at a time; that order is the format, so each stays one method rather than helpers that would scatter it.
 /// <summary>

@@ -71,8 +71,4 @@ public static partial class ProjectService
 
     internal static TrackModel RestoreUndoTrackHeader(byte[] json) =>
         JsonSerializer.Deserialize<TrackModel>(json, UndoHeaderOptions) ?? throw new InvalidDataException("The undo state is damaged.");
-
-    /// <summary>Compact in-memory JSON of any model object (self-tests compare the undo bar codec against it).</summary>
-    internal static byte[] CompactJson<T>(T value) => JsonSerializer.SerializeToUtf8Bytes(value, CompactOptions);
-
 }

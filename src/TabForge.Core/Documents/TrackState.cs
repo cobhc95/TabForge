@@ -3,7 +3,7 @@ namespace TabForge.Documents;
 // Owns: the track level of an undo state: the header chunk, one chunk per bar, and the bar numbers, which stay outside the chunks so
 //   renumbering bars after an insert or move does not re-store them.
 // Does not own: the bar bytes (BarCodec) and the reuse of chunks between states (ProjectStateEncoder).
-// Tests: TestUndoDeltaStates.
+// Tests: no dedicated test class.
 /// <summary>A track of a <see cref="ProjectState"/>: its header chunk, one chunk per bar, and the bar numbers (kept outside the
 /// chunks so renumbering bars after an insert or move does not re-store them).</summary>
 internal sealed class TrackState

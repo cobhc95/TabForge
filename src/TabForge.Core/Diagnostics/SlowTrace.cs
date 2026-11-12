@@ -4,10 +4,6 @@ using Trace = TabForge.Services.Trace;
 
 namespace TabForge.Views;
 
-// Owns: timing of the expensive UI-thread funnels for the "ui" trace; input latency is SlowTraceInput's, in the app.
-// Does not own: any behaviour (no-op when the trace is off).
-// Tests: no dedicated test class.
-
 /// <summary>
 /// Owns: timing of a few expensive UI-thread funnels (full renders, row rebuilds, engine sync, score relayout), written to the "ui" trace when <c>TABFORGE_TRACE=ui</c> is set. Does not own: any behaviour (no-op when off).
 /// Tests: no dedicated test class.

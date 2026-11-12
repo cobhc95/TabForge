@@ -3,7 +3,7 @@ namespace TabForge.AudioEngine.Builtin.Reverb;
 // Owns: the room the reverb convolves with: two decorrelated, progressively darkening, exponentially decaying noise channels with sparse early
 //   reflections and a smooth attack, scaled by the Size knob. Deterministic (seeded) so the same size builds the same room every time.
 // Does not own: processing (ReverbEffect), the editor.
-// Tests: BuiltinReverbIrTests.
+// Tests: no dedicated test class.
 
 // The synthesized room: two equal-length channels and how loudly the tail peaks relative to a unit impulse.
 public readonly record struct SynthesizedIr(float[] Left, float[] Right, double TailPeakDb);

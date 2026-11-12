@@ -5,9 +5,6 @@ using TabForge.Platform;
 
 namespace TabForge.Avalonia.Platform;
 
-// Owns: playhead cues (arrow, bar-number flag) on the arrangement timeline.
-// Does not own: the playhead line or its position (TimelineView).
-
 /// <summary>
 /// Owns the playhead's cues on the arrangement timeline: the white arrow on the line at the lane's middle,
 /// and the amber bar number and flag in the ruler. Does not own the playhead line or its position (TimelineView). Tests: TimelineSelectedRowTests.

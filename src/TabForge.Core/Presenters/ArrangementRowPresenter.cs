@@ -52,18 +52,6 @@ public static class ArrangementRowPresenter
         return -1;
     }
 
-    /// <summary>The group header at <paramref name="y"/>: the first track of its run, or -1.</summary>
-    public static int GroupHeaderAt<T>(T rows, double y) where T : IArrangementRowSource
-    {
-        for (var i = 0; i < rows.Count; i++)
-        {
-            if (!rows.StartsGroup(i)) continue;
-            var top = RowTop(rows, i) - rows.HeaderHeight;
-            if (y >= top && y < top + rows.HeaderHeight) return i;
-        }
-        return -1;
-    }
-
     /// <summary>Bottom of the last row; <paramref name="emptyHeight"/> with no tracks.</summary>
     public static double RowsHeight<T>(T rows, double emptyHeight) where T : IArrangementRowSource
         => rows.Count == 0 ? emptyHeight : RowTop(rows, rows.Count - 1) + rows.HeightOf(rows.Count - 1);

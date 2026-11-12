@@ -8,7 +8,7 @@ namespace TabForge.AudioEngine.Plugins.Clap;
 
 // Owns: the saved state of a CLAP plug-in (clap.state through memory streams) and its parameter list / setter (clap.params).
 // Does not own: the process call (ClapPlugin.cs), where the state is stored (the song, like every other plug-in format).
-// Tests: ClapHostTests (state round trip, parameters), ClapProtocolTests.
+// Tests: ClapHostTests (state round trip, parameters).
 public sealed unsafe partial class ClapPlugin
 {
     private const uint ParamHidden = 1u << 2, ParamReadOnly = 1u << 3, ParamStepped = 1u << 0;

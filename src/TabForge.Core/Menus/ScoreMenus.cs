@@ -1,7 +1,7 @@
 // Owns: the score editor's empty-area right-click menu as data (paste, standard notation, note length outline, zoom, page layout and the one
 //   "Score settings..." door), the main score's "Show in piano roll (this track)" row, and the ids and captions its rows carry.
 // Does not own: opening the menu or running its rows (the score host, the Avalonia ScorePreviewView) or the Preferences pages it points to.
-// Tests: SelfTestMenuGolden, TabForge.Avalonia.Tests.ContextMenuTests.
+// Tests: TabForge.Avalonia.Tests.ContextMenuTests.
 
 namespace TabForge.Menus;
 
@@ -33,8 +33,8 @@ public static class ScoreMenus
         var list = new List<MenuSpec>();
         if (s.OverBeat && s.CanPaste)
         {
-            list.Add(new MenuSpec { Id = PasteId, Header = "Paste", Shortcut = key("Edit.Paste") });
-            list.Add(new MenuSpec { Id = PasteSpecialId, Header = "Paste special…", Shortcut = key("Edit.PasteSpecial") });
+            list.Add(new MenuSpec { Id = PasteId, Header = "Paste", Shortcut = key(CommandIds.Edit.Paste) });
+            list.Add(new MenuSpec { Id = PasteSpecialId, Header = "Paste special…", Shortcut = key(CommandIds.Edit.PasteSpecial) });
             list.Add(MenuSpec.Separator());
         }
         list.Add(new MenuSpec { Id = NotationId, Header = ShowNotation, Checkable = true, Checked = s.ShowNotation, SettingKey = "score.defaultnotation" });
@@ -44,8 +44,8 @@ public static class ScoreMenus
             Header = Zoom,
             Children = new List<MenuSpec>
             {
-                new() { Id = ZoomInId, Header = "Zoom in", Shortcut = key("View.ZoomIn") },
-                new() { Id = ZoomOutId, Header = "Zoom out", Shortcut = key("View.ZoomOut") },
+                new() { Id = ZoomInId, Header = "Zoom in", Shortcut = key(CommandIds.View.ZoomIn) },
+                new() { Id = ZoomOutId, Header = "Zoom out", Shortcut = key(CommandIds.View.ZoomOut) },
                 new() { Id = FitWidthId, Header = "Fit width" },
             }
         });

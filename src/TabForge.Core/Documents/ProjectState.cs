@@ -6,7 +6,7 @@ namespace TabForge.Documents;
 // Owns: one immutable undo state of a song: the header chunk and one chunk per bar, shared with the previous state when unchanged, and
 //   the content fingerprint and equality. The chunk encoder is ProjectStateEncoder; the bar bytes are BarCodec.
 // Does not own: the undo stack that keeps the states, and the song model (Models).
-// Tests: TestUndoDeltaStates (its CheckUndoBarCodecRoundTrip and CheckUndoFingerprints checks).
+// Tests: no dedicated test class.
 /// <summary>
 /// One immutable undo state of a song. The song header and each track header are compact JSON; every bar is a
 /// separate binary chunk. Chunks whose content did not change are shared with the previous state, so an edit stores (and later

@@ -158,12 +158,12 @@ public sealed partial class TrackPropertiesWindow
         _presetButton.Content = TuningPresetMenu.Label(_draft.Tunings, IsBass, CurrentUserEntries()) + " ▾";
     }
 
-    private void ChangeCount(int count) => EditStructure(_draft.SlotsDroppedBy(count), draft => draft.ResizeTo(count));
+    private void ChangeCount(int count) => Platform.UiTasks.Forget(EditStructure(_draft.SlotsDroppedBy(count), draft => draft.ResizeTo(count)), "Changing the string count", text => _error.Text = text);
 
     // A change in how many strings there are. The edit runs on a copy, so the warning is judged against the final strings (a preset can retune the kept strings too);
     // strings that hold notes ask first (Yes moves notes and keeps the copy, No leaves the open draft as it was); nothing is dropped silently.
     // With no notes at stake the copy replaces the draft at once, without waiting.
-    private async void EditStructure(IReadOnlyList<int> dropped, Action<TrackTuningDraft> edit)
+    private async Task EditStructure(IReadOnlyList<int> dropped, Action<TrackTuningDraft> edit)
     {
         var signature = DraftSignature();
         var origins = dropped.Where(s => s >= 0 && s < _draft.Count).Select(s => _draft.Origin[s]).Where(o => o >= 0).ToHashSet();
@@ -221,7 +221,7 @@ public sealed partial class TrackPropertiesWindow
     }
 
     /// <summary>Takes a preset from the menu: its strings replace the working ones (a preset with another string count resizes at the low end).</summary>
-    internal void ApplyPreset(TuningMenuEntry preset) => EditStructure(_draft.SlotsDroppedBy(preset.Strings), draft => draft.Apply(preset.HighToLow));
+    internal void ApplyPreset(TuningMenuEntry preset) => Platform.UiTasks.Forget(EditStructure(_draft.SlotsDroppedBy(preset.Strings), draft => draft.Apply(preset.HighToLow)), "Applying the tuning preset", text => _error.Text = text);
 
     // The preset menu: a search box, the all-counts switch, the presets grouped by instrument, and the save row for the person's own tunings.
     private Flyout BuildPresetFlyout()

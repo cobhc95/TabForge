@@ -4,8 +4,6 @@ using System.Threading;
 
 namespace TabForge;
 
-// Owns: bounded poll loop for self-test conditions.
-
 /// <summary>
 /// Bounded wait for a self-test condition. Owns: the poll loop. Does not own: assertions (the caller's Check reports a timeout).
 /// Used instead of a fixed sleep when the test means "wait until X happens".

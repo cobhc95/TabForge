@@ -5,7 +5,7 @@ namespace TabForge.AudioEngine.Plugins;
 
 // Owns: turning a plug-in path into a loaded native module per operating system (binary lookup by the bundle layout, then NativeLibrary).
 // Does not own: trust (PluginIdentity.Hold runs before this), the VST3 module the tfvst3 shim loads itself, VST2 (Vst2Plugin keeps LoadLibraryEx; Windows only).
-// Tests: PluginModuleLoaderTests (path resolution per injected OS).
+// Tests: no dedicated test class.
 
 /// <summary>Loads the native module of a plug-in file or bundle. VST2 is not behind it: VST2 hosting is Windows-only by decision.</summary>
 public interface IPluginModuleLoader

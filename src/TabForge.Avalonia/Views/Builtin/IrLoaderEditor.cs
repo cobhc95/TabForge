@@ -117,7 +117,7 @@ public sealed partial class IrLoaderEditor : UserControl
         var browseButton = new Button { Content = "Browse…", Name = "IrBrowse" + key, Classes = { AvaloniaDefaultLooks.ButtonLook } };
         DialogMetrics.WithPadding(browseButton, DialogMetrics.IrButtonPadding);
         ToolTip.SetTip(browseButton, "Open the file browser to pick a WAV impulse response.");
-        browseButton.Click += (_, _) => Browse(key);
+        browseButton.Click += (_, _) => Platform.UiTasks.Forget(Browse(key), "Browse for an impulse response", text => _status.Text = text);
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions($"{DialogMetrics.IrLabelWidth},*,Auto") };
         var name = new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center };
         Grid.SetColumn(path, 1);
@@ -129,7 +129,7 @@ public sealed partial class IrLoaderEditor : UserControl
     }
 
     // The picker belongs to the window that shows this editor (embedded in the FX chain window or in its own); it opens without blocking the UI.
-    private async void Browse(string key)
+    private async Task Browse(string key)
     {
         if (TopLevel.GetTopLevel(this) is not { } top) return;
         try

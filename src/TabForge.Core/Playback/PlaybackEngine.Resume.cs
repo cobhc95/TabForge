@@ -6,7 +6,7 @@ namespace TabForge.Playback;
 /// Restart in place: a recompile that keeps the run's start (mixer, routing, plug-in steps) resumes at the exact
 /// position in the new timeline and skips every event already sent, so no note is played twice or rewound.
 /// Owns: the captured resume point and its mapping onto the new timeline. Does not own: compiling or dispatch.
-/// Tests: SelfTestInteractionsPlugins (I-5 "no note is sent twice"), TestEngineSync*.
+/// Tests: no dedicated test class.
 /// </summary>
 public sealed partial class PlaybackEngine
 {

@@ -4,7 +4,7 @@ namespace TabForge.Services;
 
 // Owns: the live input row of the settings catalogue (Audio & Plug-ins page); LiveInputFeatureModule hands it to the catalogue.
 // Does not own: page layout (SettingsCatalog.Layout) or the stored values (PluginSettings.LiveInput).
-// Tests: TestSettingsFileSplitSnapshots, LiveInputStripTests.
+// Tests: LiveInputStripTests.
 public static partial class SettingsCatalog
 {
     internal const string LiveInputGroup = "Live input";

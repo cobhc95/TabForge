@@ -16,7 +16,7 @@ namespace TabForge.Avalonia.Views.TransportPopups;
 // Owns: the FRETBOARD LOOK section of the fretboard popup: the style chips, the colour swatches (Custom… opens the colour picker),
 //   the opacity slider, the extras and the Clear highlight / Done buttons. Every change is written to the editing settings and applies live to the fretboard and keyboard.
 // Does not own: the drawing (InstrumentPanelView), the settings types (EditingSettings, ScaleHighlightStyles).
-// Tests: TabForge.Avalonia.Tests.ScaleLookPopupTests.
+// Tests: no dedicated test class.
 // Threads: UI thread only.
 public sealed class FretboardLookSection
 {

@@ -2,6 +2,7 @@ using TabForge.Documents;
 using TabForge.Services;
 using TabForge.Views;
 using TabForge.Views.Score;
+using TabForge.Menus;
 
 namespace TabForge.ScoreEditing;
 
@@ -15,8 +16,8 @@ public static class ScoreBarCommands
     /// <summary>The note value (1, 2, 4 .. 64) a Note.Whole..Note.SixtyFourth command sets, or null for any other id.</summary>
     public static int? Denominator(string id) => id switch
     {
-        "Note.Whole" => 1, "Note.Half" => 2, "Note.Quarter" => 4, "Note.Eighth" => 8,
-        "Note.Sixteenth" => 16, "Note.ThirtySecond" => 32, "Note.SixtyFourth" => 64,
+        CommandIds.Note.Whole => 1, CommandIds.Note.Half => 2, CommandIds.Note.Quarter => 4, CommandIds.Note.Eighth => 8,
+        CommandIds.Note.Sixteenth => 16, CommandIds.Note.ThirtySecond => 32, CommandIds.Note.SixtyFourth => 64,
         _ => null,
     };
 
@@ -39,15 +40,15 @@ public static class ScoreBarCommands
         var bar = Math.Clamp(cursorBar, 0, bars - 1);
         switch (id)
         {
-            case "Bar.Insert":
+            case CommandIds.Bar.Insert:
                 if (selectedBars is not null || !BarStructureEdits.InsertBar(document, bar, fillRests).Changed) return false;
                 cursorBar = bar;
                 return true;
-            case "Bar.Delete":
+            case CommandIds.Bar.Delete:
                 if (!BarStructureEdits.DeleteBar(document, bar, -1, allTracks: true).Changed) return false;
                 cursorBar = Math.Max(0, bar - 1);
                 return true;
-            case "Bar.Duplicate":
+            case CommandIds.Bar.Duplicate:
                 var (first, last) = Range(selectedBars, bar, bars);
                 if (BarStructureEdits.DuplicateBars(document, first, last).Value is null) return false;
                 cursorBar = Math.Min(last + 1, BarRangeEditor.MaxMeasures(document.Project) - 1);

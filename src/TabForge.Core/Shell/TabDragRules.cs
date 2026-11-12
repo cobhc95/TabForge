@@ -2,7 +2,7 @@
 //       midpoints, the reorder destination and its neighbour slide offsets, the tear-off action for a tab count, the tear-off band
 //       around the strip, and the window whose tab strip a drop lands on.
 // Does not own: pointer capture, window moves and the live tear-off (src/TabForge.Avalonia/Shell/DocumentTabDragFlow.cs).
-// Tests: TabForge.Avalonia.Tests.TabDragRulesTests (fake rectangles), TestChromeHitRules, TestBrowserTabShell.
+// Tests: TabForge.Avalonia.Tests.TabDragRulesTests (fake rectangles).
 using System.Collections.Generic;
 using System.Linq;
 using TabForge.Platform;

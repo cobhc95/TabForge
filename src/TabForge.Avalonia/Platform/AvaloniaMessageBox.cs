@@ -13,8 +13,8 @@ namespace TabForge.Avalonia.Platform;
 
 /// <summary>
 /// The themed message box of the Avalonia app.
-/// Owns: building the window from MessageBoxPresenter (buttons, Enter default, Esc button, close-box answer, icon glyph and tone).
-/// Does not own: the labels, answers and tones (MessageBoxPresenter) or showing it (AvaloniaDialogHost).
+/// Owns: building the window from MessageBoxPresenter (buttons, Enter default, Esc button, close-box answer, check box).
+/// Does not own: the body layout with the icon (MessageBoxBody, below), the labels, answers and tones (MessageBoxPresenter) or showing it (AvaloniaDialogHost).
 /// Tests: AvaloniaDialogTests.
 /// </summary>
 public sealed class AvaloniaMessageBox : Window
@@ -41,37 +41,15 @@ public sealed class AvaloniaMessageBox : Window
         MaxWidth = 560;
         this[!BackgroundProperty] = new DynamicResourceExtension("WindowBackground");
 
-        var (glyph, tone) = MessageBoxPresenter.Icon(icon);
-        var body = new DockPanel { Margin = new Thickness(20, 18, 20, 14), LastChildFill = true };
-        var content = new StackPanel();
-        var row = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+        var (body, row, actions) = MessageBoxBody.Build(icon, text, ChromeMetrics.TextDialog, 500, new Thickness(14, 0, 0, 0));
         // The check box sits at the lower left and the buttons at the lower right, on one row.
-        var actions = new DockPanel { LastChildFill = true, Margin = new Thickness(0, 18, 0, 0) };
         if (checkText is not null)
         {
             check = new CheckBox { Name = "RememberCheck", Content = checkText.Replace("_", "", StringComparison.Ordinal), IsChecked = false, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0) };
             check[!ContentControl.ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
             DockPanel.SetDock(check, Dock.Left);
-            actions.Children.Add(check);
+            actions.Children.Insert(0, check);
         }
-        actions.Children.Add(row);
-        if (glyph.Length > 0)
-        {
-            var ring = new Ellipse { Width = 30, Height = 30, StrokeThickness = 2 };
-            ring[!Shape.StrokeProperty] = new DynamicResourceExtension(TonePaletteName(tone));
-            var mark = new TextBlock { Text = glyph, FontSize = ChromeMetrics.TextTitle, FontWeight = FontWeight.Bold, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-            mark[!TextBlock.ForegroundProperty] = new DynamicResourceExtension(TonePaletteName(tone));
-            var iconPanel = new Grid { Name = "IconGlyph", Width = 30, Height = 30, VerticalAlignment = VerticalAlignment.Top };
-            iconPanel.Children.Add(ring);
-            iconPanel.Children.Add(mark);
-            DockPanel.SetDock(iconPanel, Dock.Left);
-            body.Children.Add(iconPanel);
-        }
-        var message = new TextBlock { Name = "MessageText", Text = text, TextWrapping = TextWrapping.Wrap, FontSize = ChromeMetrics.TextDialog, MaxWidth = 500, Margin = new Thickness(14, 0, 0, 0) };
-        message[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
-        content.Children.Add(message);
-        content.Children.Add(actions);
-        body.Children.Add(content);
 
         var enter = MessageBoxPresenter.DefaultAnswer(buttons, defaultAnswer);
         foreach (var (label, answer) in MessageBoxPresenter.Buttons(buttons))
@@ -116,6 +94,46 @@ public sealed class AvaloniaMessageBox : Window
         var box = new AvaloniaMessageBox(text, caption, buttons, icon, defaultAnswer, checkText);
         var shown = await host.ShowModal<MessageBoxAnswer?>(box, owner);
         return (shown ?? box.Result, box.Ticked);
+    }
+}
+
+/// <summary>
+/// The body every message-style dialog shares: the tone ring with its glyph, the message text and the action row under it.
+/// Owns: that layout and the tone colour names. Does not own: the buttons (the caller fills the row), the window or the answers (MessageBoxPresenter).
+/// Tests: AvaloniaDialogTests, HelpMenuTests.
+/// </summary>
+internal static class MessageBoxBody
+{
+    /// <summary>
+    /// The dialog body: <c>Body</c> to become the window's content, <c>ButtonRow</c> for the caller's buttons (right aligned) and <c>Actions</c>, the row that holds it
+    /// (a caller may insert a left-docked control before the buttons).
+    /// </summary>
+    public static (DockPanel Body, StackPanel ButtonRow, DockPanel Actions) Build(MessageBoxIcon icon, string text, double fontSize, double maxWidth, Thickness messageMargin)
+    {
+        var (glyph, tone) = MessageBoxPresenter.Icon(icon);
+        var body = new DockPanel { Margin = new Thickness(20, 18, 20, 14), LastChildFill = true };
+        var content = new StackPanel();
+        var row = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+        var actions = new DockPanel { LastChildFill = true, Margin = new Thickness(0, 18, 0, 0) };
+        actions.Children.Add(row);
+        if (glyph.Length > 0)
+        {
+            var ring = new Ellipse { Width = 30, Height = 30, StrokeThickness = 2 };
+            ring[!Shape.StrokeProperty] = new DynamicResourceExtension(TonePaletteName(tone));
+            var mark = new TextBlock { Text = glyph, FontSize = ChromeMetrics.TextTitle, FontWeight = FontWeight.Bold, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            mark[!TextBlock.ForegroundProperty] = new DynamicResourceExtension(TonePaletteName(tone));
+            var iconPanel = new Grid { Name = "IconGlyph", Width = 30, Height = 30, VerticalAlignment = VerticalAlignment.Top };
+            iconPanel.Children.Add(ring);
+            iconPanel.Children.Add(mark);
+            DockPanel.SetDock(iconPanel, Dock.Left);
+            body.Children.Add(iconPanel);
+        }
+        var message = new TextBlock { Name = "MessageText", Text = text, TextWrapping = TextWrapping.Wrap, FontSize = fontSize, MaxWidth = maxWidth, Margin = messageMargin };
+        message[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
+        content.Children.Add(message);
+        content.Children.Add(actions);
+        body.Children.Add(content);
+        return (body, row, actions);
     }
 
     // The warning icon's amber, with a dark and a light value.

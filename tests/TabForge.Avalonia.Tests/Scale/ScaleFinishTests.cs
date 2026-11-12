@@ -50,7 +50,7 @@ public sealed class ScaleFinishTests
         // Select the Chorus bars (4-7) while the cursor stays in the Verse.
         rig.Document.Selection.SetRange(0, 4, 7, SelectionOrigin.Command);
         rig.Status.Refresh();
-        Assert.True(scale.HasSelection);
+        Assert.True(scale.Pick.HasSelection);
         var popup = new ScalePanel(scale.BarHost());
         var window = Open(popup);
         var selection = popup.Frame.Rows.GetLogicalDescendants().OfType<ToggleButton>().Single(b => b.Name == "ReadFromSelection");

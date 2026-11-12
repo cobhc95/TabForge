@@ -1,7 +1,7 @@
 // Owns: the export preflight window's wording and buttons as plain data: the title, headline, intro, advice (for a Save or an Export),
 //       the list text and its automation name, and the three buttons with their labels, the choice each gives, and the default (Enter) and Esc roles.
 // Does not own: what is lost and how the files are written (Services/GpExportPreflight), or the window and its automation ids (Views/GpExportPreflightDialog).
-// Tests: none dedicated(through the window), TestGpPreflightWarnings.
+// Tests: none dedicated(through the window).
 using TabForge.Services;
 
 namespace TabForge.Presenters;

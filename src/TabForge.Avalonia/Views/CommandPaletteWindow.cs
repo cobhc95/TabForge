@@ -12,6 +12,7 @@ using TabForge.Platform.Theme;
 using TabForge.Presenters;
 using TabForge.Services;
 using TabForge.Avalonia.Views.Dialogs;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia.Views;
 
@@ -49,12 +50,12 @@ public sealed class CommandPaletteWindow : Window
         var defaults = new HotkeySettings();
         return
         [
-            new("File.Save", "File: Save", HotkeyCatalog.DisplayAll(defaults, "File.Save"), "Save the song"),
-            new("File.SaveAs", "File: Save as…", HotkeyCatalog.DisplayAll(defaults, "File.SaveAs"), "Save the song under a new name"),
-            new("Edit.Undo", "Edit: Undo", HotkeyCatalog.DisplayAll(defaults, "Edit.Undo"), "Undo the last edit"),
-            new("Edit.Redo", "Edit: Redo", HotkeyCatalog.DisplayAll(defaults, "Edit.Redo"), "Redo the last undone edit"),
-            new("Tools.ChordFinder", "Tools: Chord finder", HotkeyCatalog.DisplayAll(defaults, "Tools.ChordFinder"), "Show the notes of a chord"),
-            new("Tools.GlobalTuning", "Tools: Global tuning", HotkeyCatalog.DisplayAll(defaults, "Tools.GlobalTuning"), "Retune every tab track"),
+            new(CommandIds.File.Save, "File: Save", HotkeyCatalog.DisplayAll(defaults, CommandIds.File.Save), "Save the song"),
+            new(CommandIds.File.SaveAs, "File: Save as…", HotkeyCatalog.DisplayAll(defaults, CommandIds.File.SaveAs), "Save the song under a new name"),
+            new(CommandIds.Edit.Undo, "Edit: Undo", HotkeyCatalog.DisplayAll(defaults, CommandIds.Edit.Undo), "Undo the last edit"),
+            new(CommandIds.Edit.Redo, "Edit: Redo", HotkeyCatalog.DisplayAll(defaults, CommandIds.Edit.Redo), "Redo the last undone edit"),
+            new(CommandIds.Tools.ChordFinder, "Tools: Chord finder", HotkeyCatalog.DisplayAll(defaults, CommandIds.Tools.ChordFinder), "Show the notes of a chord"),
+            new(CommandIds.Tools.GlobalTuning, "Tools: Global tuning", HotkeyCatalog.DisplayAll(defaults, CommandIds.Tools.GlobalTuning), "Retune every tab track"),
         ];
     }
 

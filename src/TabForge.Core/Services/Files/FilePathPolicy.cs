@@ -4,7 +4,7 @@ namespace TabForge.Services;
 
 // Owns: the safe file operations: atomic writes, leftover sweeps, reserved-name checks and bounded reads.
 // Does not own: the contents of the files written.
-// Tests: TestSecurityInputBoundaries.
+// Tests: no dedicated test class.
 /// <summary>Validates user-selected file boundaries without narrowing Unicode or long-path support.</summary>
 public static partial class FilePathPolicy
 {

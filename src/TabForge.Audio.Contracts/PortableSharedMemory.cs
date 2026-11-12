@@ -7,7 +7,7 @@ namespace TabForge.Audio.Contracts;
 // Owns: the portable shared-memory backend: a file-backed memory-mapped file in a private per-user folder, opened by the other process by the same name.
 // The creating side removes the file when it closes (FileOptions.DeleteOnClose); on Unix the folder is 0700 and the file 0600.
 // Does not own: the layout inside the block (SharedBlock), or the Windows page-file mapping (NamedSharedMemory.Windows), which stays the default on Windows.
-// Tests: PortableIpcTests (headless round trip, run on Windows too), CrossPlatformStage2Tests.
+// Tests: CrossPlatformStage2Tests.
 internal static class PortableSharedMemory
 {
     private const string FolderName = "tabforge-shm";

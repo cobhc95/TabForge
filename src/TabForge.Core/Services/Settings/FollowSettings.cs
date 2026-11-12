@@ -4,7 +4,7 @@ namespace TabForge.Services;
 
 // Owns: the follow (scrolling while playing) and playing-highlight settings and the FollowModes names.
 // Does not own: loading, saving and validating (AppSettingsStore, SettingsValidator) or the Preferences rows (SettingsCatalog).
-// Tests: TestSettingsFileSplitSnapshots.
+// Tests: no dedicated test class.
 /// <summary>
 /// Keeping the score under the player's eyes while they play: a jump mode with anticipation, a smooth
 /// mode paced to the music, no scrolling once the end is already on screen, and "stop following if the

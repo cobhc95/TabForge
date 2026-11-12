@@ -6,7 +6,7 @@ namespace TabForge.Plugins;
 
 // Owns: discovering VST3 bundles and VST2 DLLs by file inspection, without loading plug-in code.
 // Does not own: plug-in trust decisions (PluginTrust) and hosting.
-// Tests: CheckVstReparseLoop, MixerWindowTests.
+// Tests: MixerWindowTests.
 /// <summary>
 /// Discovers VST3 bundles and VST2 DLLs; it never loads or executes plug-in code (a DLL counts as VST2 only when
 /// its export table lists the VST2 entry point, read straight from the file).

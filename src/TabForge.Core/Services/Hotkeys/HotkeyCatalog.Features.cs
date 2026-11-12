@@ -3,6 +3,7 @@
 // Does not own: the ids (FeatureHotkeyIds, FxChainIds), the commands and handlers (the feature modules, MainWindow.Commands.cs), the presets.
 // Tests: no dedicated test class.
 using TabForge.Services.Features;
+using TabForge.Menus;
 
 namespace TabForge.Services;
 
@@ -11,7 +12,7 @@ public static partial class HotkeyCatalog
     /// <summary>The feature rows with the catalogue row each one follows. Band rows follow one another, so each anchors on the row before it.</summary>
     private static (HotkeyAction Action, string AfterId)[] FeatureRows() => new (HotkeyAction Action, string AfterId)[]
     {
-        (new HotkeyAction(FeatureHotkeyIds.BandToggleTrackRow, HotkeyCatalog.CategoryView, "Band view: show / hide the selected track's row", "", "Add the selected track's row to the Band view, or take it out (the same as clicking its pill at the top of the Band view)."), "View.BandView"),
+        (new HotkeyAction(FeatureHotkeyIds.BandToggleTrackRow, HotkeyCatalog.CategoryView, "Band view: show / hide the selected track's row", "", "Add the selected track's row to the Band view, or take it out (the same as clicking its pill at the top of the Band view)."), CommandIds.View.BandView),
         (new HotkeyAction(FeatureHotkeyIds.BandRowsMore, HotkeyCatalog.CategoryView, "Band view: more rows per screen", "", "Show one more Band view row on the screen at once (1 to 5, 3 by default); further rows scroll."), FeatureHotkeyIds.BandToggleTrackRow),
         (new HotkeyAction(FeatureHotkeyIds.BandRowsFewer, HotkeyCatalog.CategoryView, "Band view: fewer rows per screen", "", "Show one fewer Band view row on the screen at once (1 to 5, 3 by default), so each row is taller."), FeatureHotkeyIds.BandRowsMore),
         (new HotkeyAction(FeatureHotkeyIds.BandCycleLaneContent, HotkeyCatalog.CategoryView, "Band view: lane content (Tab / Notation / Both)", "", "Switch what the Band view lanes show: the tab, the notation, or both."), FeatureHotkeyIds.BandRowsFewer),
@@ -21,9 +22,9 @@ public static partial class HotkeyCatalog
         (new HotkeyAction(FeatureHotkeyIds.BandResetRowHeights, HotkeyCatalog.CategoryView, "Band view: reset row heights", "", "Give every Band view row the shared height again (undoes rows resized one by one)."), FeatureHotkeyIds.BandToggleSmoothFollow),
         (new HotkeyAction(FeatureHotkeyIds.BandToggleFretboardAbove, HotkeyCatalog.CategoryView, "Band view: switch fretboard beside / above tab", "", "Switch every Band view row between the instrument beside its tab and the instrument above its tab at the full row width."), FeatureHotkeyIds.BandResetRowHeights),
         (new HotkeyAction(FeatureHotkeyIds.BandToggleColourFrame, HotkeyCatalog.CategoryView, "Band view: track colour frame", "", "Show or hide the rounded frame and dim glow in the track's colour around every Band view row."), FeatureHotkeyIds.BandToggleFretboardAbove),
-        (new HotkeyAction(FeatureHotkeyIds.ExportVideo, HotkeyCatalog.CategoryFile, "Export video (MP4)", "", "Export the song as an MP4 video of the score, its instrument and the Band view, with the full audio mix, in 1080p or 4K at 30, 60 or 120 frames per second."), "File.Render"),
-        (new HotkeyAction(FeatureHotkeyIds.RecordVideo, HotkeyCatalog.CategoryTransport, "Record video", "Ctrl+Alt+V", "Record the screen and the sound to an MP4 (press again to finish; playback keeps playing or stays stopped)."), "Transport.Record"),
-        (new HotkeyAction(FeatureHotkeyIds.SaveAsTemplate, HotkeyCatalog.CategoryFile, "Save as template", "", "Save a copy of the active score as a template in the templates folder."), "File.NewFromTemplate"),
+        (new HotkeyAction(FeatureHotkeyIds.ExportVideo, HotkeyCatalog.CategoryFile, "Export video (MP4)", "", "Export the song as an MP4 video of the score, its instrument and the Band view, with the full audio mix, in 1080p or 4K at 30, 60 or 120 frames per second."), CommandIds.File.Render),
+        (new HotkeyAction(FeatureHotkeyIds.RecordVideo, HotkeyCatalog.CategoryTransport, "Record video", "Ctrl+Alt+V", "Record the screen and the sound to an MP4 (press again to finish; playback keeps playing or stays stopped)."), CommandIds.Transport.Record),
+        (new HotkeyAction(FeatureHotkeyIds.SaveAsTemplate, HotkeyCatalog.CategoryFile, "Save as template", "", "Save a copy of the active score as a template in the templates folder."), CommandIds.File.NewFromTemplate),
         (new HotkeyAction(FeatureHotkeyIds.ExportPdf, HotkeyCatalog.CategoryFile, "Export PDF", "", "Export the engraved score (notation and tab) as a PDF file."), "File.CancelImport"),
         (new HotkeyAction(FeatureHotkeyIds.ExportMusicXml, HotkeyCatalog.CategoryFile, "Export MusicXML", "", "Export the song as uncompressed MusicXML (.musicxml): a part per track with notation and a tab staff."), FeatureHotkeyIds.ExportPdf),
         (new HotkeyAction(FeatureHotkeyIds.ExportMidi, HotkeyCatalog.CategoryFile, "Export MIDI", "", "Export the song as a standard MIDI file (File > Export MIDI)."), FeatureHotkeyIds.ExportMusicXml),
@@ -47,9 +48,9 @@ public static partial class HotkeyCatalog
         (new HotkeyAction(FeatureHotkeyIds.CompactMode, HotkeyCatalog.CategoryView, "Compact mode", "Ctrl+Alt+C",
             "Hide every track row and show the master track lane at twice its height, so the score and the other panes get the room; again brings the tracks back (same as View > Compact mode)."), FeatureHotkeyIds.LearnPopout),
         (new HotkeyAction(FeatureHotkeyIds.LiveInput, HotkeyCatalog.CategoryTransport, "Live input", "",
-            "Hear your instrument (the chosen audio input) through the live FX chain and the master, without a track and without recording; again turns it off. One for the whole program: it stays on across tabs and windows."), "Transport.Record"),
+            "Hear your instrument (the chosen audio input) through the live FX chain and the master, without a track and without recording; again turns it off. One for the whole program: it stays on across tabs and windows."), CommandIds.Transport.Record),
         (new HotkeyAction(FeatureHotkeyIds.PresetManager, HotkeyCatalog.CategoryView, "Preset manager", "",
-            "Open the preset manager: every saved plug-in preset, FX chain, container, MIDI chain, MIDI processor preset and drum map in one window, to rename, copy, reorder, delete and search (same as Tools > Preset manager)."), "Tools.Tuner"),
+            "Open the preset manager: every saved plug-in preset, FX chain, container, MIDI chain, MIDI processor preset and drum map in one window, to rename, copy, reorder, delete and search (same as Tools > Preset manager)."), CommandIds.Tools.Tuner),
         (new HotkeyAction(FxChainIds.AddPlugin, HotkeyCatalog.CategoryFxChain, "Add plug-in", "", "Add a plug-in to the end of this FX chain."), "View.Fullscreen"),
         (new HotkeyAction(FxChainIds.RemovePlugin, HotkeyCatalog.CategoryFxChain, "Remove plug-in", "Delete", "Remove the selected plug-ins from this FX chain (while the plug-in list has the focus)."), "View.Fullscreen"),
         (new HotkeyAction(FxChainIds.CutPlugins, HotkeyCatalog.CategoryFxChain, "Cut plug-ins", "Ctrl+X", "Copy the selected plug-ins with their settings, then remove them from this FX chain (while the plug-in list has the focus)."), "View.Fullscreen"),

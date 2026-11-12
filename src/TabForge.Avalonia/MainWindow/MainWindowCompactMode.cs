@@ -7,6 +7,7 @@ using TabForge.Avalonia.Platform.Controls;
 using TabForge.Docking;
 using TabForge.Documents;
 using TabForge.Presenters;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia;
 
@@ -24,7 +25,7 @@ public sealed class MainWindowCompactMode
     /// <summary>The View menu command ids this class handles.</summary>
     public static readonly IReadOnlyList<string> Commands = new[] { CommandId };
 
-    private const string CommandId = "View.CompactMode";
+    private const string CommandId = CommandIds.View.CompactMode;
 
     /// <summary>The fretboard / keyboard pane, which keeps its pixel height while compact mode is on.</summary>
     private const string InstrumentPanelId = "instrument";

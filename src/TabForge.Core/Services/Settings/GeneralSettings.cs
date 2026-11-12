@@ -4,7 +4,7 @@ namespace TabForge.Services;
 
 // Owns: the General preferences data: updates, files, window and confirmations.
 // Does not own: loading, saving and validating (AppSettingsStore, SettingsValidator) or the Preferences rows (SettingsCatalog).
-// Tests: TestSettingsFileSplitSnapshots.
+// Tests: no dedicated test class.
 public sealed class GeneralSettings
 {
     /// <summary>Songs opened from Explorer while TabForge runs: "A new tab" (default) or "A new window".</summary>

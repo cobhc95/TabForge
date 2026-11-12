@@ -3,7 +3,7 @@ namespace TabForge.Playback;
 // Owns: the per-frame playback decisions: which clock the frame draws (live audible clock or the newest report), the bar remap, and which
 //     views one frame refreshes (bar change, note boundary, score and instrument fallback cadences); the audible-time maths.
 // Does not own: the views, the engine clock, the pending report slot (PendingPlayheadSlot).
-// Tests: CheckMixFadeAndAudiblePlayhead.
+// Tests: no dedicated test class.
 // Threads: the static members are pure and run on any thread; an instance belongs to one window's UI thread (the frame tick) and is not
 //     locked. Decide allocates nothing.
 

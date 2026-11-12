@@ -6,7 +6,7 @@ namespace TabForge.AudioEngine.Builtin.Limiter;
 //   gain over the last D - Delay + 2 samples is taken, released with a one-pole (fixed or automatic time), and averaged over D - Delay + 1 samples. That makes the gain arrive
 //   at its value before the peak leaves the delay, so the output never passes the ceiling. A fading bypass, the meters (gain reduction, output level).
 // Does not own: the parameter list (LimiterEffect.cs), the peak detector (TruePeakDetector), the window minimum (SlidingMinimum).
-// Tests: BuiltinDynamicsTests.
+// Tests: BuiltinLimiterTests.
 public sealed partial class LimiterEffect
 {
     private const double GainGlideMs = 5, BypassFadeMs = 5, MeterFallMs = 500, SustainMs = 600, AutoFastMs = 20, AutoSlowMs = 400, SustainedBelow = 0.98, MarginDb = 0.1;

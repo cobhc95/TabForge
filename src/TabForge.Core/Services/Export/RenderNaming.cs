@@ -5,7 +5,7 @@ namespace TabForge.Services;
 
 // Owns: the file names of rendered audio files.
 // Does not own: the render itself.
-// Tests: CheckRenderNaming.
+// Tests: no dedicated test class.
 /// <summary>File names for File > Render: wildcards $project $track $tracknumber $date $time $bpm, plus a safe "increment if it exists".</summary>
 public static class RenderNaming
 {

@@ -3,7 +3,7 @@ namespace TabForge.Services.Reset;
 // Owns: the tick state of the first dialog step (all ticked by default, Select all/none, the "Wipe N items" count) and the
 //   second step's typed RESET word.
 // Does not own: the plan's paths (ResetAppPlan) or the Avalonia controls (ResetAppWindow).
-// Tests: ResetAppPromptTests.
+// Tests: no dedicated test class.
 /// <summary>The dialog's eight ticks; all ticked until the user changes them.</summary>
 public sealed class ResetAppSelection
 {

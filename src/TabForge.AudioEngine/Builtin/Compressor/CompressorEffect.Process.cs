@@ -5,7 +5,7 @@ namespace TabForge.AudioEngine.Builtin.Compressor;
 // Owns: the compressor audio path: stereo-linked peak detection in dB, the static curve, attack and release of the gain reduction (one pole each, in dB),
 //   makeup (manual or automatic, glided), a fading bypass, and the two meters (gain reduction and input level, written once per block, falling slowly).
 // Does not own: the parameter list (CompressorEffect.cs), the curve (CompressorCurve).
-// Tests: BuiltinDynamicsTests.
+// Tests: BuiltinCompressorTests.
 public sealed partial class CompressorEffect
 {
     private const double MakeupGlideMs = 30, BypassFadeMs = 10, MeterFallMs = 300;

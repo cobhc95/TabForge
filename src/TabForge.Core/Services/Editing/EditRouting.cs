@@ -1,4 +1,5 @@
 ﻿using TabForge.Models;
+using TabForge.Menus;
 
 namespace TabForge.Services;
 
@@ -41,15 +42,15 @@ public sealed class EditRouting
     // The score has the Edit.* commands; the loop region (Loop focus, set by a ruler press) has its own copy, cut, paste, paste special and delete; clips and track rows have their own.
     private readonly Dictionary<(FocusTarget, EditVerb), string> _table = new()
     {
-        [(FocusTarget.ScoreSelection, EditVerb.Copy)] = "Edit.Copy",
-        [(FocusTarget.ScoreSelection, EditVerb.Cut)] = "Edit.Cut",
-        [(FocusTarget.ScoreSelection, EditVerb.Paste)] = "Edit.Paste",
-        [(FocusTarget.ScoreSelection, EditVerb.PasteSpecial)] = "Edit.PasteSpecial",
+        [(FocusTarget.ScoreSelection, EditVerb.Copy)] = CommandIds.Edit.Copy,
+        [(FocusTarget.ScoreSelection, EditVerb.Cut)] = CommandIds.Edit.Cut,
+        [(FocusTarget.ScoreSelection, EditVerb.Paste)] = CommandIds.Edit.Paste,
+        [(FocusTarget.ScoreSelection, EditVerb.PasteSpecial)] = CommandIds.Edit.PasteSpecial,
         [(FocusTarget.Loop, EditVerb.Copy)] = RangeCopyId,
         [(FocusTarget.Loop, EditVerb.Cut)] = RangeCutId,
         [(FocusTarget.Loop, EditVerb.Paste)] = RangePasteId,
         [(FocusTarget.Loop, EditVerb.PasteSpecial)] = RangePasteSpecialId,
-        [(FocusTarget.Loop, EditVerb.Delete)] = "Range.Delete",
+        [(FocusTarget.Loop, EditVerb.Delete)] = CommandIds.Range.Delete,
         [(FocusTarget.Loop, EditVerb.Duplicate)] = RangeDuplicateId,
         // The bar-range edits (Clear / Remove / Insert gap) act on the selected bars, in the score or on the timeline; both run TimelineRangeEdit.
         [(FocusTarget.ScoreSelection, EditVerb.ClearBars)] = "Range.Clear",
@@ -65,21 +66,21 @@ public sealed class EditRouting
         [(FocusTarget.Clips, EditVerb.RemoveBars)] = "Range.Remove",
         [(FocusTarget.Clips, EditVerb.InsertBarsBefore)] = "Range.InsertBefore",
         [(FocusTarget.Clips, EditVerb.InsertBarsAfter)] = "Range.InsertAfter",
-        [(FocusTarget.Clips, EditVerb.Copy)] = "Clip.Copy",
-        [(FocusTarget.Clips, EditVerb.Cut)] = "Clip.Cut",
-        [(FocusTarget.Clips, EditVerb.Paste)] = "Clip.Paste",
-        [(FocusTarget.Clips, EditVerb.Delete)] = "Clip.Delete",
-        [(FocusTarget.Clips, EditVerb.Duplicate)] = "Clip.Duplicate",
+        [(FocusTarget.Clips, EditVerb.Copy)] = CommandIds.Clip.Copy,
+        [(FocusTarget.Clips, EditVerb.Cut)] = CommandIds.Clip.Cut,
+        [(FocusTarget.Clips, EditVerb.Paste)] = CommandIds.Clip.Paste,
+        [(FocusTarget.Clips, EditVerb.Delete)] = CommandIds.Clip.Delete,
+        [(FocusTarget.Clips, EditVerb.Duplicate)] = CommandIds.Clip.Duplicate,
         [(FocusTarget.TrackRow, EditVerb.Copy)] = "TrackRow.Copy",
         [(FocusTarget.TrackRow, EditVerb.Cut)] = "TrackRow.Cut",
         [(FocusTarget.TrackRow, EditVerb.Paste)] = "TrackRow.Paste",
         [(FocusTarget.TrackRow, EditVerb.Delete)] = "TrackRow.Delete",
         [(FocusTarget.TrackRow, EditVerb.Duplicate)] = "TrackRow.Duplicate",
         // The timeline bar highlight (grey cells) has its own copy, cut, paste and delete; nothing else applies to it.
-        [(FocusTarget.BarHighlight, EditVerb.Copy)] = "Highlight.Copy",
-        [(FocusTarget.BarHighlight, EditVerb.Cut)] = "Highlight.Cut",
-        [(FocusTarget.BarHighlight, EditVerb.Paste)] = "Highlight.Paste",
-        [(FocusTarget.BarHighlight, EditVerb.Delete)] = "Highlight.Delete",
+        [(FocusTarget.BarHighlight, EditVerb.Copy)] = CommandIds.Highlight.Copy,
+        [(FocusTarget.BarHighlight, EditVerb.Cut)] = CommandIds.Highlight.Cut,
+        [(FocusTarget.BarHighlight, EditVerb.Paste)] = CommandIds.Highlight.Paste,
+        [(FocusTarget.BarHighlight, EditVerb.Delete)] = CommandIds.Highlight.Delete,
     };
 
     /// <summary>The focus target and verb of a command id, or null when the id is not a routed edit. A shared Edit.* id reports the score.</summary>

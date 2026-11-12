@@ -38,9 +38,5 @@
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
       <_Parameter1>TabForge.Avalonia.Tests</_Parameter1>
     </AssemblyAttribute>
-    <!-- The TabForge app shows the demo score through the same Core score host. -->
-    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
-      <_Parameter1>TabForge.Avalonia</_Parameter1>
-    </AssemblyAttribute>
   </ItemGroup>
 </Project>

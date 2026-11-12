@@ -323,7 +323,7 @@ public sealed class EditKeyRoutingTests
     {
         var rig = Open();
         var before = rig.Song.Project.Tracks.Count;
-        rig.Timeline.ContextMenus.ClickedTrack = 1;
+        rig.Timeline.ContextMenus.Aim(rig.Timeline.ContextMenus.Target with { Track = 1 });
         rig.Commands.Run("TrackRow.Cut");
         var prompt = Prompt(rig);
         Assert.NotNull(prompt);

@@ -2,7 +2,7 @@ namespace TabForge.Services.Video;
 
 // Owns: the constant-frame-rate slot maths of a live recording and the "capture cannot keep up" decision. Pure: the clock is passed in.
 // Does not own: grabbing or encoding frames (LiveVideoSession), the notice (LiveVideoRecordController).
-// Tests: LiveVideoRecordTests (VideoFrameSlotsTests).
+// Tests: no dedicated test class.
 /// <summary>Frame slot n = floor(audioMs * fps / 1000). A slot is taken once; a skipped slot is filled by repeating the last frame.</summary>
 public sealed class VideoFrameSlots
 {

@@ -3,7 +3,7 @@
 //   entry-plus-buttons row, the adaptive label-plus-control grid, and the wrapped tooltip helper. One place, used by the
 //   MIDI processing window, the note-map rows, the preset bars and the Articulations pane.
 // Does not own: what a processor does (MidiProcessorCatalog), the learning state itself (MidiLearn), or the window layout.
-// Tests: MidiClipLayoutTests (wrap and toggle look), MidiLearnGuardTests (no raw Learn button outside this file).
+// Tests: MidiClipLayoutTests (wrap and toggle look).
 using System;
 using Avalonia;
 using Avalonia.Controls;

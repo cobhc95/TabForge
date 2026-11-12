@@ -1,6 +1,6 @@
 ﻿// Owns: the arrangement-timeline right-click menus as data: the bar, loop region, ruler, section and clip menus, and the command each row runs (TimelineCommand).
 // Does not own: opening the menus or running their commands (the Avalonia timeline menu).
-// Tests: SelfTestMenuGolden, SelfTestSelection, SelfTestBarDeleteGuards, SelfTestTimelineClips.
+// Tests: no dedicated test class.
 
 namespace TabForge.Menus;
 
@@ -78,15 +78,15 @@ public static class TimelineMenus
         var thisTrack = several ? " (this track)" : "";
         var list = new List<MenuSpec>
         {
-            Item(TimelineCommand.CopyBar, "Copy bar" + thisTrack, key("Edit.Copy"), s.HasBar && s.HasTrack, "Copies this bar of the selected track"),
-            Item(TimelineCommand.PasteBar, "Paste bar" + thisTrack, key("Edit.Paste"), s.HasBar && s.HasTrack && s.CanPaste),
-            Item(TimelineCommand.DeleteBar, "Delete bar…", key("Range.Delete"), s.HasBar && s.HasTrack, "Asks what to do: leave the bar empty or remove it and close the gap; all tracks or this track"),
+            Item(TimelineCommand.CopyBar, "Copy bar" + thisTrack, key(CommandIds.Edit.Copy), s.HasBar && s.HasTrack, "Copies this bar of the selected track"),
+            Item(TimelineCommand.PasteBar, "Paste bar" + thisTrack, key(CommandIds.Edit.Paste), s.HasBar && s.HasTrack && s.CanPaste),
+            Item(TimelineCommand.DeleteBar, "Delete bar…", key(CommandIds.Range.Delete), s.HasBar && s.HasTrack, "Asks what to do: leave the bar empty or remove it and close the gap; all tracks or this track"),
         };
         if (s.HasBar)
         {
             list.Add(MenuSpec.Separator());
             list.Add(Sub("Insert bar",
-                Item(TimelineCommand.InsertBarBefore, "Before this bar", key("Bar.Insert")),
+                Item(TimelineCommand.InsertBarBefore, "Before this bar", key(CommandIds.Bar.Insert)),
                 Item(TimelineCommand.InsertBarAfter, "After this bar")));
             if (s.InSection)
                 list.Add(Sub("Section",
@@ -111,7 +111,7 @@ public static class TimelineMenus
     /// <summary>Right-click on the bar-number ruler: the loop region's menu. Each loop change is one undo step.</summary>
     public static List<MenuSpec> Ruler(RulerMenuState s, Func<string, string> key) => new()
     {
-        Check(TimelineCommand.RulerLoop, "Loop", s.Looping, "transport state (not saved as a preference)", key("Transport.Loop"), "Repeats the loop region (or the whole song) while on; the region stays when it is turned off"),
+        Check(TimelineCommand.RulerLoop, "Loop", s.Looping, "transport state (not saved as a preference)", key(CommandIds.Transport.Loop), "Repeats the loop region (or the whole song) while on; the region stays when it is turned off"),
         Item(TimelineCommand.RulerClearLoop, "Clear loop", "Esc twice", s.HasLoop, "Removes the loop region; the Loop button stays as it is (Ctrl+Z brings it back)"),
         MenuSpec.Separator(),
         Item(TimelineCommand.RulerLoopSection, "Loop this section", enabled: s.InSection, toolTip: "Loops the bars of the section under the click"),
@@ -132,12 +132,12 @@ public static class TimelineMenus
         var items = new List<MenuSpec>
         {
             new() { Header = s.Label, IsLabel = true, Enabled = false },
-            Item(TimelineCommand.CopySelection, "Copy", key("Edit.Copy"), toolTip: "Copies the looped bars of every track"),
-            Item(TimelineCommand.CutSelection, "Cut", key("Edit.Cut"), toolTip: "Cut copies the bars, then removes them and closes the gap (every track) or clears them (one track)"),
-            Item(TimelineCommand.PasteSelection, "Paste", key("Edit.Paste"), s.CanPaste, "Bars of every track are inserted in front of the selection; one track's bars go onto the selected track"),
-            Item(TimelineCommand.DeleteSelection, "Delete…", key("Range.Delete"), toolTip: "Asks what to do: clear the bars, remove them and close the gap, or insert a gap (all tracks or this track)"),
+            Item(TimelineCommand.CopySelection, "Copy", key(CommandIds.Edit.Copy), toolTip: "Copies the looped bars of every track"),
+            Item(TimelineCommand.CutSelection, "Cut", key(CommandIds.Edit.Cut), toolTip: "Cut copies the bars, then removes them and closes the gap (every track) or clears them (one track)"),
+            Item(TimelineCommand.PasteSelection, "Paste", key(CommandIds.Edit.Paste), s.CanPaste, "Bars of every track are inserted in front of the selection; one track's bars go onto the selected track"),
+            Item(TimelineCommand.DeleteSelection, "Delete…", key(CommandIds.Range.Delete), toolTip: "Asks what to do: clear the bars, remove them and close the gap, or insert a gap (all tracks or this track)"),
             MenuSpec.Separator(),
-            Check(TimelineCommand.LoopSelection, "Loop", s.Looping, "transport state (not saved as a preference)", key("Transport.Loop")),
+            Check(TimelineCommand.LoopSelection, "Loop", s.Looping, "transport state (not saved as a preference)", key(CommandIds.Transport.Loop)),
             new MenuSpec { Header = "Arrange", Children = arrange },
             MenuSpec.Separator(),
             Item(TimelineCommand.ClearSelection, "Clear loop", "Esc twice"),
@@ -154,10 +154,10 @@ public static class TimelineMenus
     public static List<MenuSpec> Highlight(HighlightMenuState s, Func<string, string> key) => new()
     {
         new() { Header = s.Label, IsLabel = true, Enabled = false },
-        Item(TimelineCommand.HighlightCopy, "Copy", key("Highlight.Copy"), toolTip: "Copies exactly the highlighted cells"),
-        Item(TimelineCommand.HighlightCut, "Cut", key("Highlight.Cut"), toolTip: "Copies the highlighted cells, then clears their notes (the bars stay)"),
-        Item(TimelineCommand.HighlightClear, "Clear", key("Highlight.Delete"), toolTip: "Clears the notes in the highlighted cells (the bars stay)"),
-        Item(TimelineCommand.HighlightPaste, "Paste", key("Highlight.Paste"), s.CanPaste, "Pastes the copied cells from the top-left highlighted cell"),
+        Item(TimelineCommand.HighlightCopy, "Copy", key(CommandIds.Highlight.Copy), toolTip: "Copies exactly the highlighted cells"),
+        Item(TimelineCommand.HighlightCut, "Cut", key(CommandIds.Highlight.Cut), toolTip: "Copies the highlighted cells, then clears their notes (the bars stay)"),
+        Item(TimelineCommand.HighlightClear, "Clear", key(CommandIds.Highlight.Delete), toolTip: "Clears the notes in the highlighted cells (the bars stay)"),
+        Item(TimelineCommand.HighlightPaste, "Paste", key(CommandIds.Highlight.Paste), s.CanPaste, "Pastes the copied cells from the top-left highlighted cell"),
         MenuSpec.Separator(),
         Item(TimelineCommand.HighlightSelectBars, "Loop these bars", toolTip: "Makes the highlighted bars the loop region"),
     };
@@ -166,7 +166,7 @@ public static class TimelineMenus
     /// <paramref name="gap"/> (the empty run of bars before the next section) exists, and the settings.</summary>
     public static List<MenuSpec> SectionGap(int bar, bool canPaste, (int First, int Last)? gap, Func<string, string> key)
     {
-        var list = new List<MenuSpec> { Item(TimelineCommand.AddSectionHere, $"Add section at bar {bar + 1}", key("Section.Add")) };
+        var list = new List<MenuSpec> { Item(TimelineCommand.AddSectionHere, $"Add section at bar {bar + 1}", key(CommandIds.Section.Add)) };
         if (gap is var (first, last))
         {
             var close = Item(TimelineCommand.CloseSectionGap, $"Close gap (bars {first + 1}–{last + 1})",
@@ -174,7 +174,7 @@ public static class TimelineMenus
             close.HoverBars = (first, last);
             list.Add(close);
         }
-        list.Add(Item(TimelineCommand.PasteSectionAtBar, "Paste section", key("Edit.Paste"), canPaste));
+        list.Add(Item(TimelineCommand.PasteSectionAtBar, "Paste section", key(CommandIds.Edit.Paste), canPaste));
         list.Add(MenuSpec.Separator());
         list.Add(SettingsEntry(TimelineCommand.TimelineSettings));
         return list;
@@ -186,17 +186,17 @@ public static class TimelineMenus
         var list = new List<MenuSpec>();
         if (s.AddAtBar is int bar)
         {
-            list.Add(Item(TimelineCommand.AddSectionHere, $"Add section at bar {bar + 1}", key("Section.Add")));
+            list.Add(Item(TimelineCommand.AddSectionHere, $"Add section at bar {bar + 1}", key(CommandIds.Section.Add)));
             list.Add(MenuSpec.Separator());
         }
-        list.Add(Item(TimelineCommand.CopySectionMenu, "Copy section", key("Edit.Copy")));
-        list.Add(Item(TimelineCommand.CutSection, "Cut section", key("Edit.Cut")));
-        list.Add(Item(TimelineCommand.PasteSectionAfter, "Paste section", key("Edit.Paste"), s.CanPaste));
+        list.Add(Item(TimelineCommand.CopySectionMenu, "Copy section", key(CommandIds.Edit.Copy)));
+        list.Add(Item(TimelineCommand.CutSection, "Cut section", key(CommandIds.Edit.Cut)));
+        list.Add(Item(TimelineCommand.PasteSectionAfter, "Paste section", key(CommandIds.Edit.Paste), s.CanPaste));
         list.Add(Item(TimelineCommand.DuplicateSection, "Duplicate section"));
         list.Add(Item(TimelineCommand.RemoveSectionLabel, "Remove label (keep bars)", toolTip: "Removes only the section name and marker; all bars, notes and clips stay and the previous section extends over them. Undo restores it."));
         list.Add(Item(TimelineCommand.DeleteSection, "Delete section and its bars…", toolTip: "Removes the section marker and its bars and notes from every track. Asks first (Preferences > Timeline and Tracks > Confirm section deletion); Undo restores it. To remove only the marker use Remove in the Sections panel."));
         list.Add(MenuSpec.Separator());
-        list.Add(Check(TimelineCommand.LoopSection, "Loop section", s.Looped, "transport state (not saved as a preference)", key("Transport.Loop")));
+        list.Add(Check(TimelineCommand.LoopSection, "Loop section", s.Looped, "transport state (not saved as a preference)", key(CommandIds.Transport.Loop)));
         list.Add(Item(TimelineCommand.RenameSection, "Rename / recolour section…"));
         list.Add(Item(TimelineCommand.GoToSection, "Go to section"));
         list.Add(Check(TimelineCommand.ToggleSectionLock, "Lock section position", s.Locked, "state of one section (saved in the song)"));
@@ -217,10 +217,10 @@ public static class TimelineMenus
         var list = new List<MenuSpec>();
         if (s.HasClip)
         {
-            list.Add(Item(TimelineCommand.ClipCopy, "Copy", key("Clip.Copy")));
-            list.Add(Item(TimelineCommand.ClipCut, "Cut", key("Clip.Cut")));
+            list.Add(Item(TimelineCommand.ClipCopy, "Copy", key(CommandIds.Clip.Copy)));
+            list.Add(Item(TimelineCommand.ClipCut, "Cut", key(CommandIds.Clip.Cut)));
         }
-        list.Add(Item(TimelineCommand.ClipPaste, "Paste", key("Clip.Paste"), s.CanPaste));
+        list.Add(Item(TimelineCommand.ClipPaste, "Paste", key(CommandIds.Clip.Paste), s.CanPaste));
         if (s.HasClip && s.IsGrouped)
         {
             list.Add(Item(TimelineCommand.ClipReRecordPass, "Re-record this pass",
@@ -236,11 +236,11 @@ public static class TimelineMenus
         }
         if (s.HasClip)
         {
-            list.Add(Item(TimelineCommand.ClipDuplicate, "Duplicate", key("Clip.Duplicate")));
+            list.Add(Item(TimelineCommand.ClipDuplicate, "Duplicate", key(CommandIds.Clip.Duplicate)));
             list.Add(Item(TimelineCommand.ClipSplit, "Split at cursor", key("Clip.Split")));
             list.Add(Item(TimelineCommand.ClipGlue, "Glue", key("Clip.Glue")));
             if (!s.IsMidi) list.Add(Item(TimelineCommand.ClipFadeReset, "Reset fade in / out", key("Clip.FadeReset")));
-            list.Add(Item(TimelineCommand.ClipDelete, "Delete", key("Clip.Delete")));
+            list.Add(Item(TimelineCommand.ClipDelete, "Delete", key(CommandIds.Clip.Delete)));
             list.Add(MenuSpec.Separator());
             list.Add(Check(TimelineCommand.ClipMute, "Mute", s.Muted, "state of one clip (saved in the song)", key("Clip.Mute")));
             list.Add(Item(TimelineCommand.ClipProperties, "Properties…", key("Clip.Properties")));
@@ -260,7 +260,7 @@ public static class TimelineMenus
     {
         var list = new List<MenuSpec>
         {
-            Item(TimelineCommand.LanePasteClip, "Paste clip here", key("Clip.Paste"), s.CanPaste, "Pastes the copied clip at the clicked position (snapped like a clip drag)"),
+            Item(TimelineCommand.LanePasteClip, "Paste clip here", key(CommandIds.Clip.Paste), s.CanPaste, "Pastes the copied clip at the clicked position (snapped like a clip drag)"),
         };
         if (s.CanNewMidiClip)
             list.Add(Item(TimelineCommand.LaneNewMidiClip, "New empty MIDI clip here", toolTip: "Adds an empty clip one bar long at the clicked position"));

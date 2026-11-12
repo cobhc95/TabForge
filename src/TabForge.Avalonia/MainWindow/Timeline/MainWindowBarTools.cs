@@ -8,6 +8,7 @@ using TabForge.Avalonia.Views;
 using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Presenters;
 using TabForge.Services;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia;
 
@@ -22,7 +23,7 @@ public static class MainWindowBarTools
     /// <summary>The command ids registered here.</summary>
     public static readonly IReadOnlyList<string> Commands = new[]
     {
-        "Bar.Check", "Bar.TimeSignature", "Bar.KeySignature", "Bar.Directions", "Section.Add",
+        "Bar.Check", CommandIds.Bar.TimeSignature, CommandIds.Bar.KeySignature, "Bar.Directions", CommandIds.Section.Add,
         "Tool.gp:custom_ntuplet", "Tool.gp:sound_duration", "Tool.composition:tempo", "Tool.gp:marker_list",
     };
 
@@ -34,10 +35,10 @@ public static class MainWindowBarTools
         void Say(string text) => score.Editor.Notice?.Invoke(text);
         void Ask(string id, Func<Task> run) => commands.Add(id, () => UiTasks.Forget(run(), id, Say));
         Ask("Bar.Check", () => CheckBars(score, owner));
-        Ask("Bar.TimeSignature", () => TimeSignature(score, owner));
-        Ask("Bar.KeySignature", () => KeySignature(score, owner));
+        Ask(CommandIds.Bar.TimeSignature, () => TimeSignature(score, owner));
+        Ask(CommandIds.Bar.KeySignature, () => KeySignature(score, owner));
         Ask("Bar.Directions", () => Directions(score, owner));
-        Ask("Section.Add", async () => { if (await AddSection(score, owner)) afterInsert?.Invoke(); });
+        Ask(CommandIds.Section.Add, async () => { if (await AddSection(score, owner)) afterInsert?.Invoke(); });
         Ask("Tool.gp:custom_ntuplet", () => Tuplet(score, owner));
         Ask("Tool.gp:sound_duration", () => SoundDuration(score, owner));
         Ask("Tool.composition:tempo", () => TempoChange(score, owner));

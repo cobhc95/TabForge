@@ -176,7 +176,7 @@ public class TrackMeterTests
         var (view, window) = Shown();
         Click(window, view.Header.TranslatePoint(view.Header.CellRect(0, TrackRowCells.Cell.Meter).Center, window)!.Value, MouseButton.Right);
         Assert.True(view.TrackMeters.MenuOpen);
-        Assert.Equal(-1, view.Timeline.ContextMenus.ClickedTrack);
+        Assert.Equal(-1, view.Timeline.ContextMenus.Target.Track);
         window.Close();
     }
 
@@ -188,7 +188,7 @@ public class TrackMeterTests
         Click(window, view.Header.TranslatePoint(view.Header.CellRect(0, TrackRowCells.Cell.Meter).Center, window)!.Value, MouseButton.Right);
         Assert.True(view.TrackMeters.MenuOpen);
         Assert.False(panelMenu.IsOpen);
-        Assert.Equal(-1, view.Timeline.ContextMenus.ClickedTrack);
+        Assert.Equal(-1, view.Timeline.ContextMenus.Target.Track);
         window.Close();
     }
 
@@ -209,7 +209,7 @@ public class TrackMeterTests
         var panelMenu = new ContextMenu { Items = { new MenuItem { Header = "Reset this panel to default position" } } };
         var (view, window) = Shown(panelMenu);
         Click(window, view.Header.TranslatePoint(view.Header.CellRect(0, TrackRowCells.Cell.Mute).Center, window)!.Value, MouseButton.Right);
-        Assert.Equal(0, view.Timeline.ContextMenus.ClickedTrack);
+        Assert.Equal(0, view.Timeline.ContextMenus.Target.Track);
         Assert.False(view.TrackMeters.MenuOpen);
         Assert.False(panelMenu.IsOpen);
         window.Close();

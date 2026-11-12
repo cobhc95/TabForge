@@ -7,7 +7,7 @@ namespace TabForge.AudioEngine.Editors;
 
 // Owns: the plug-in editor diagnostics (what an editor was opened on, then its idle and process rate every ~2 s), for finding frozen meters.
 // Does not own: the engine log (EngineLogWriter), the counters' owners (TrackChain.Effect.ProcessCalls, the plug-in host's audio loop).
-// Tests: PluginEditorHostTests.
+// Tests: no dedicated test class.
 // Threads: main thread only; the audio thread only increments its own Interlocked counters, which are read here.
 
 /// <summary>Describes a plug-in instance for the engine log: kind, managed instance id and native handle.</summary>

@@ -8,8 +8,6 @@ using System.Text.Json;
 
 namespace TabForge;
 
-// Owns: sharded/measured run options parsing (--timing, --core-shard).
-
 /// <summary>
 /// Runner options for sharded and measured runs (owns the parsing and file formats; does not own test selection beyond the core shard).
 /// <c>--timing &lt;csv&gt;</c> records wall-clock, checks and failures of every test and area (columns area,test,ms,checks,failed;

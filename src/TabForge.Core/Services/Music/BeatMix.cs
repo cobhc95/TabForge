@@ -1,7 +1,7 @@
 // Owns: where a beat's mix changes live, across every track: the mix point on the cell, the bar's tempo (a bar tempo or a tempo point at the beat's slot, with its
 //       ramp) and the question "does this bar change anything" for the timeline's marker. Also the write of a tempo to a beat for every track.
 // Does not own: the dialog (MixTableWindow / MixTablePresenter), playback of the points (ScoreToMidiCompiler), reading them from files (the importers).
-// Tests: run headlessly by the audit self-test (SelfTestMixTableAudit).
+// Tests: no dedicated test class.
 using TabForge.Models;
 
 namespace TabForge.Services;

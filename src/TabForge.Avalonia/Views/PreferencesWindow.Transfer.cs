@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using System.IO;
 using System.Text.Json;
 using TabForge.Avalonia.Platform;
@@ -21,7 +22,7 @@ public sealed partial class PreferencesWindow
     private const string SettingsFileFilter = "TabForge settings (*.json)|*.json";
 
     /// <summary>Import settings…: picks a settings file and stages it.</summary>
-    private async void ImportSettingsFromDialog()
+    private async Task ImportSettingsFromDialog()
     {
         var chosen = await _dialogs.OpenFileAsync(new FileDialogOptions { Key = TabForge.Services.DialogKeys.SettingsImport, Title = "Import TabForge settings", Filter = SettingsFileFilter, CheckFileExists = true }, this);
         if (chosen is not null) ImportSettingsFrom(chosen);
@@ -49,7 +50,7 @@ public sealed partial class PreferencesWindow
     }
 
     /// <summary>Export settings…: picks a file and writes the working settings to it.</summary>
-    private async void ExportSettingsToDialog()
+    private async Task ExportSettingsToDialog()
     {
         var chosen = await _dialogs.SaveFileAsync(new FileDialogOptions
         {

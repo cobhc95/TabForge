@@ -1,4 +1,5 @@
 using System.Linq;
+using TabForge.Menus;
 
 namespace TabForge.Services;
 
@@ -88,8 +89,8 @@ public static partial class HotkeyCatalog
     /// <summary>Commands that still belong to the app while a text box has focus.</summary>
     private static readonly HashSet<string> TextBoxSafe = new(StringComparer.OrdinalIgnoreCase)
     {
-        "File.New", "File.Open", "File.OpenInNewTab", "File.Save", "File.SaveAs", "File.Print", "File.PrintPreview",
-        "Tab.Close", "Tab.Duplicate", "Tab.Next", "Tab.Previous", "App.Preferences", "App.CommandPalette",
+        CommandIds.File.New, CommandIds.File.Open, "File.OpenInNewTab", CommandIds.File.Save, CommandIds.File.SaveAs, "File.Print", "File.PrintPreview",
+        CommandIds.Tab.Close, "Tab.Duplicate", "Tab.Next", "Tab.Previous", CommandIds.App.Preferences, "App.CommandPalette",
         "FxChain.Save", "FxChain.Load"
     };
 
@@ -307,19 +308,19 @@ public static class HotkeyPresets
     // TuxGuitar 1.6 defaults (Tools → Shortcuts). "" = not bound in TuxGuitar.
     private static readonly Dictionary<string, string> TuxGuitarOverrides = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["File.SaveAs"] = "F12",
-        ["App.Preferences"] = "F7",
-        ["Bar.First"] = "Ctrl+Shift+Left",
-        ["Bar.Last"] = "Ctrl+Shift+Right",
-        ["Section.Previous"] = "Alt+Left",
-        ["Section.Next"] = "Alt+Right",
-        ["Note.Dot"] = "Multiply",
-        ["Note.FadeIn"] = "F",
-        ["Note.Fermata"] = "",
-        ["Note.RepeatBeat"] = "",
-        ["Transport.Loop"] = "F9",
+        [CommandIds.File.SaveAs] = "F12",
+        [CommandIds.App.Preferences] = "F7",
+        [CommandIds.Bar.First] = "Ctrl+Shift+Left",
+        [CommandIds.Bar.Last] = "Ctrl+Shift+Right",
+        [CommandIds.Section.Previous] = "Alt+Left",
+        [CommandIds.Section.Next] = "Alt+Right",
+        [CommandIds.Note.Dot] = "Multiply",
+        [CommandIds.Note.FadeIn] = "F",
+        [CommandIds.Note.Fermata] = "",
+        [CommandIds.Note.RepeatBeat] = "",
+        [CommandIds.Transport.Loop] = "F9",
         ["Tab.Duplicate"] = "",
-        ["Edit.PasteSpecial"] = "",
+        [CommandIds.Edit.PasteSpecial] = "",
     };
 
     /// <summary>The preset's Hotkey 1 for an action, or null when the preset uses the catalogue default.</summary>
@@ -328,9 +329,9 @@ public static class HotkeyPresets
     /// <summary>The preset's key for one slot of an action, or null when the preset uses the catalogue default. The Classic layout keeps Add track on its familiar key as Hotkey 1.</summary>
     public static string? Override(string? preset, string id, int slot)
     {
-        if (preset == GuitarPro5 && id == "Track.Add") return slot == 2 ? "Ctrl+T" : "Ctrl+Shift+Insert";
+        if (preset == GuitarPro5 && id == CommandIds.Track.Add) return slot == 2 ? "Ctrl+T" : "Ctrl+Shift+Insert";
         // TuxGuitar puts Save as on F12, so Preferences loses its default Hotkey 2 there.
-        if (preset == TuxGuitar && id == "App.Preferences" && slot == 2) return "";
+        if (preset == TuxGuitar && id == CommandIds.App.Preferences && slot == 2) return "";
         if (slot == 2) return null;
         var map = preset switch
         {
@@ -344,7 +345,7 @@ public static class HotkeyPresets
     /// <summary>Every action id the preset rebinds (for consistency checks).</summary>
     public static IEnumerable<string> OverriddenIds(string preset) =>
         (preset == TuxGuitar ? TuxGuitarOverrides.Keys : preset == GuitarPro5 ? GuitarPro5Overrides.Keys : Enumerable.Empty<string>())
-        .Concat(preset == GuitarPro5 ? new[] { "Track.Add" } : Array.Empty<string>());
+        .Concat(preset == GuitarPro5 ? new[] { CommandIds.Track.Add } : Array.Empty<string>());
 
     /// <summary>Switches to a preset, dropping the user's own changes.</summary>
     public static void Apply(HotkeySettings settings, string preset)

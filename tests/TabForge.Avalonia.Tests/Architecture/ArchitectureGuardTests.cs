@@ -22,7 +22,7 @@ public sealed class ArchitectureGuardTests
     private static readonly Regex UsingStaticPattern = new(@"^\s*(?:global\s+)?using\s+static\b", RegexOptions.Compiled);
     private static readonly Regex ThreadStaticPattern = new(@"ThreadStatic", RegexOptions.Compiled);
     private static readonly char[] FieldTerminators = { '=', ';', '{' };
-    private static readonly Regex MemberModifierPattern = new(@"\b(?:public|private|protected|internal|static|readonly|volatile|unsafe|new|required)b\s*", RegexOptions.Compiled);
+    private static readonly Regex MemberModifierPattern = new(@"\b(?:public|private|protected|internal|static|readonly|volatile|unsafe|new|required)\b\s*", RegexOptions.Compiled);
     private static readonly Regex DelegateTypePattern = new(@"^(?:Func|Action|Predicate|Comparison|Converter)\b", RegexOptions.Compiled);
     // Mutable by construction: growable collections, builders and arrays (elements stay writable after init).
     private static readonly Regex MutableTypePattern = new(
@@ -166,6 +166,7 @@ public sealed class ArchitectureGuardTests
     [InlineData("    private static readonly IReadOnlyList<(string Name, int Id)> Rows = Make();", false)]
     [InlineData("    private static (int, int) Pair(int x) { return (x, x); }", false)]
     [InlineData("    public static Task<List<int>> Load(int x) => null;", false)]
+    [InlineData("    private static readonly Func<List<int>> Make;", false)]
     public void StaticStateRuleClassifiesPatterns(string line, bool expectedHit)
     {
         Assert.Equal(expectedHit, IsStaticStateLine(line, null));

@@ -4,7 +4,7 @@ namespace TabForge.Plugins;
 
 // Owns: the plug-in format names ("VST2", "VST3", "CLAP") and the one rule that names the format of a plug-in file by its extension.
 // Does not own: scanning (VstScannerService), hosting (the engine's PluginFactory).
-// Tests: PluginScanFolderTests.
+// Tests: no dedicated test class.
 
 /// <summary>The plug-in formats TabForge knows. CLAP is opt-in (Settings > Plug-ins, or the Add plug-in window); VST2 is Windows-only.</summary>
 public static class PluginFormats

@@ -9,7 +9,7 @@ public enum BarRangeAction { Clear, Remove, InsertBefore, InsertAfter }
 // Owns: the model half of the timeline's bar-range commands: clear the bars (leave a gap), remove them (close the gap), insert an empty gap
 //     before or after them, for every track or for one track; clips follow the bars (shifted, cut at an edge or removed).
 // Does not own: the undo step (DocumentEdits), the prompt, the selection afterwards (BarRangeFlow).
-// Tests: TestBarRangeGaps.
+// Tests: no dedicated test class.
 /// <summary>
 /// Whole-track or one-track bar-range edits. Every track keeps the same bar count. Clips are positioned in seconds of song time, so a closed gap moves the
 /// clips after the range earlier by the range's duration, removes the clips inside it and cuts the clips that cross an edge; an inserted gap moves the clips

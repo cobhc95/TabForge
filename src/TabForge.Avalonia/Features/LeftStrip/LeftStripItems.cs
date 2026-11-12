@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using TabForge.Platform.Theme;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia.Features.LeftStrip;
 
@@ -54,34 +55,34 @@ public static class LeftStripItems
     /// <summary>Every icon the strip can show, in the Available list's order.</summary>
     public static readonly IReadOnlyList<Item> All = new Item[]
     {
-        new("File.Open", "Open", "File", Open), new("File.Save", "Save", "File", Save), new("File.SaveAs", "Save as", "File", SaveAs),
-        new("File.Render", "Render", "File", Render), new("File.New", "New", "File", New), new("Insert.AudioFile", "Import audio", "File", Import),
+        new(CommandIds.File.Open, "Open", "File", Open), new(CommandIds.File.Save, "Save", "File", Save), new(CommandIds.File.SaveAs, "Save as", "File", SaveAs),
+        new(CommandIds.File.Render, "Render", "File", Render), new(CommandIds.File.New, "New", "File", New), new("Insert.AudioFile", "Import audio", "File", Import),
         new("File.Print", "Print", "File", Print), new("File.ExportPdf", "Export PDF", "File", Pdf), new("File.ExportMidi", "Export MIDI", "File", Midi),
-        new("Edit.Undo", "Undo", "Edit", Undo), new("Edit.Redo", "Redo", "Edit", Redo), new("Edit.Copy", "Copy", "Edit", Copy), new("Edit.Paste", "Paste", "Edit", Paste),
-        new("Bar.Append", "Add bar", "Edit", AddBar), new("Track.Add", "Add track", "Edit", AddTrack), new("Bar.GoTo", "Go to bar", "Edit", GoTo),
-        new("Transport.PlayPause", "Play", "Playback", Play), new("Transport.Stop", "Stop", "Playback", Stop), new("Transport.Loop", "Loop", "Playback", Loop),
+        new(CommandIds.Edit.Undo, "Undo", "Edit", Undo), new(CommandIds.Edit.Redo, "Redo", "Edit", Redo), new(CommandIds.Edit.Copy, "Copy", "Edit", Copy), new(CommandIds.Edit.Paste, "Paste", "Edit", Paste),
+        new("Bar.Append", "Add bar", "Edit", AddBar), new(CommandIds.Track.Add, "Add track", "Edit", AddTrack), new("Bar.GoTo", "Go to bar", "Edit", GoTo),
+        new(CommandIds.Transport.PlayPause, "Play", "Playback", Play), new(CommandIds.Transport.Stop, "Stop", "Playback", Stop), new(CommandIds.Transport.Loop, "Loop", "Playback", Loop),
         new("Transport.Metronome", "Metronome", "Playback", Metronome), new("Transport.CountIn", "Count-in", "Playback", CountIn),
-        new("Transport.Record", "Record", "Playback", Record), new("View.Mixer", "Mixer", "Playback", Mixer),
-        new(MainWindowFocusTrack.CommandId, "Focus track", "Playback", FocusTrack, IsToggle: true),new("Tools.Tuner", "Tuner", "Playback", Tuner),
-        new("Tool.composition:tempo", "Tempo", "Song", Tempo), new("Bar.TimeSignature", "Time signature", "Song", TimeSig),
-        new("Bar.KeySignature", "Key signature", "Song", KeySig), new("Tools.Transpose", "Transpose", "Song", Transpose),
-        new("Tools.GlobalTuning", "Tuning", "Song", Tuning), new("Insert.Lyrics", "Lyrics", "Song", Lyrics),
-        new("View.ZoomIn", "Zoom in", "View", IconGeometry.ZoomIn), new("View.ZoomOut", "Zoom out", "View", IconGeometry.ZoomOut),
-        new("View.BandView", "Band view", "View", IconGeometry.BandView, IsToggle: true), new("View.CompactMode", "Compact mode", "View", IconGeometry.CompactMode, IsToggle: true),
-        new("View.LearnMode", "Keyboard mode (experimental)", "View", IconGeometry.LearnMode, IsToggle: true),
-        new("View.InstrumentPanel", "Fretboard", "View", IconGeometry.Fretboard),
-        new("Tools.ChordFinder", "Chord finder", "App", ChordFinder), new("Tools.ScaleFinder", "Scale finder", "App", IconGeometry.ScaleSteps),
-        new("App.Preferences", "Preferences", "App", IconGeometry.Prefs), new("Help.About", "About", "App", About),
+        new(CommandIds.Transport.Record, "Record", "Playback", Record), new(CommandIds.View.Mixer, "Mixer", "Playback", Mixer),
+        new(MainWindowFocusTrack.CommandId, "Focus track", "Playback", FocusTrack, IsToggle: true),new(CommandIds.Tools.Tuner, "Tuner", "Playback", Tuner),
+        new("Tool.composition:tempo", "Tempo", "Song", Tempo), new(CommandIds.Bar.TimeSignature, "Time signature", "Song", TimeSig),
+        new(CommandIds.Bar.KeySignature, "Key signature", "Song", KeySig), new("Tools.Transpose", "Transpose", "Song", Transpose),
+        new(CommandIds.Tools.GlobalTuning, "Tuning", "Song", Tuning), new("Insert.Lyrics", "Lyrics", "Song", Lyrics),
+        new(CommandIds.View.ZoomIn, "Zoom in", "View", IconGeometry.ZoomIn), new(CommandIds.View.ZoomOut, "Zoom out", "View", IconGeometry.ZoomOut),
+        new(CommandIds.View.BandView, "Band view", "View", IconGeometry.BandView, IsToggle: true), new(CommandIds.View.CompactMode, "Compact mode", "View", IconGeometry.CompactMode, IsToggle: true),
+        new(CommandIds.View.LearnMode, "Keyboard mode (experimental)", "View", IconGeometry.LearnMode, IsToggle: true),
+        new(CommandIds.View.InstrumentPanel, "Fretboard", "View", IconGeometry.Fretboard),
+        new(CommandIds.Tools.ChordFinder, "Chord finder", "App", ChordFinder), new("Tools.ScaleFinder", "Scale finder", "App", IconGeometry.ScaleSteps),
+        new(CommandIds.App.Preferences, "Preferences", "App", IconGeometry.Prefs), new("Help.About", "About", "App", About),
         new(LeftStripFeature.ToggleComposerId, "Composer", "App", Composer, IsToggle: true),
     };
 
     /// <summary>The strip as it comes: New, Open, Save, Save as, Render | Undo, Redo | Composer, Focus track | Band view, Compact mode, Keyboard mode.</summary>
     public static readonly IReadOnlyList<string> Default = new[]
     {
-        "File.New", "File.Open", "File.Save", "File.SaveAs", "File.Render", SeparatorId,
-        "Edit.Undo", "Edit.Redo", SeparatorId,
+        CommandIds.File.New, CommandIds.File.Open, CommandIds.File.Save, CommandIds.File.SaveAs, CommandIds.File.Render, SeparatorId,
+        CommandIds.Edit.Undo, CommandIds.Edit.Redo, SeparatorId,
         LeftStripFeature.ToggleComposerId, MainWindowFocusTrack.CommandId, SeparatorId,
-        "View.BandView", "View.CompactMode", "View.LearnMode",
+        CommandIds.View.BandView, CommandIds.View.CompactMode, CommandIds.View.LearnMode,
     };
 
     /// <summary>The catalog item for <paramref name="id"/>, or null (a separator, or an id no longer in the catalog).</summary>

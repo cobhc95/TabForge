@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
@@ -171,7 +172,7 @@ public sealed partial class TrackPropertiesWindow : Window
     {
         var ok = new Button { Name = "OkButton", Content = "OK", Width = 92, IsDefault = true, Margin = new Thickness(0, 0, 8, 0), HorizontalContentAlignment = HorizontalAlignment.Center };
         var cancel = new Button { Name = "CancelButton", Content = "Cancel", Width = 92, IsCancel = true, HorizontalContentAlignment = HorizontalAlignment.Center };
-        ok.Click += (_, _) => OnOk();
+        ok.Click += (_, _) => Platform.UiTasks.Forget(OnOk(), "Applying the track properties", text => _error.Text = text);
         cancel.Click += (_, _) => Close();
         var footer = new DockPanel { Margin = new Thickness(12, 6, 12, 8), LastChildFill = true };
         DockPanel.SetDock(cancel, Dock.Right);
@@ -184,7 +185,7 @@ public sealed partial class TrackPropertiesWindow : Window
 
     private void UpdateChannelHint() => _channelHint.IsVisible = _track.Kind == TrackKind.Drums || Typed(_channel) == "9";
 
-    private async void OnOk()
+    private async Task OnOk()
     {
         // A question or the instrument picker still owns the working copies; OK must not commit behind it.
         if (_committing || _pendingTuningDialogs > 0 || _pickerRunning || _askingDiscard) return;
@@ -373,11 +374,11 @@ public sealed partial class TrackPropertiesWindow : Window
         var changes = PendingChanges();
         if (changes.Count == 0) return;
         e.Cancel = true;
-        if (!_askingDiscard) AskDiscard(changes);
+        if (!_askingDiscard) Platform.UiTasks.Forget(AskDiscard(changes), "Discard question", text => _error.Text = text);
     }
 
-    // async void: the question is answered after the close was cancelled; an exception reaches the UI thread's handler instead of vanishing.
-    private async void AskDiscard(IReadOnlyList<string> changes)
+    // The question is answered after the close was cancelled; UiTasks.Forget shows an exception instead of letting it vanish.
+    private async Task AskDiscard(IReadOnlyList<string> changes)
     {
         _askingDiscard = true;
         PromptButton? answer;

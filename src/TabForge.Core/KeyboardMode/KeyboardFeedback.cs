@@ -21,7 +21,7 @@ public struct KeyMask : IEquatable<KeyMask>
 // Owns: what the keyboard view shows about the player: the keys held now (correct or extra) with a version that moves only when it changes, and the latest grade flash (Perfect / Good / Early / Late / Miss)
 //   read from the judge's resolved notes, with its fade. A pure state machine: judge results and key events in, state out; the clock is a number the caller passes.
 // Does not own: judging (KeyboardModeJudge), the totals (KeyboardModeScore), where events come from (KeyboardModeKeyboardSession) or drawing.
-// Tests: TestKeyboardModeKeyView.
+// Tests: no dedicated test class.
 public sealed class KeyboardFeedback
 {
     /// <summary>A hit within this many milliseconds of the onset reads Good; a hit farther off reads Early or Late.</summary>

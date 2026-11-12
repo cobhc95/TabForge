@@ -5,7 +5,7 @@ namespace TabForge.Services;
 
 // Owns: turning conductor-track marker/cue texts into song sections on MIDI import.
 // Does not own: reading the file (SmfReader) or the score notes (MidiToSong).
-// Tests: MidiSectionImportTests (Import/).
+// Tests: no dedicated test class.
 /// <summary>Song sections from a MIDI file's conductor-track markers.</summary>
 internal static class MidiSectionImport
 {

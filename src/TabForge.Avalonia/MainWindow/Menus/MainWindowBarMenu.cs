@@ -7,6 +7,7 @@ using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Views;
 using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Presenters;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia;
 
@@ -27,7 +28,7 @@ public static class MainWindowBarMenu
     private const string TripletFeelToolId = "gp:triplet_feel";
 
     /// <summary>The command ids this class handles.</summary>
-    public static readonly IReadOnlyList<string> Commands = new[] { "Bar.First", "Bar.Last", "Bar.GoTo", "Bar.EmptyBar", "Bar.TripletFeel", "Bar.Clef", "Bar.ScoreInfo", ReadBarCommandId, ReadPositionCommandId };
+    public static readonly IReadOnlyList<string> Commands = new[] { CommandIds.Bar.First, CommandIds.Bar.Last, "Bar.GoTo", "Bar.EmptyBar", "Bar.TripletFeel", "Bar.Clef", "Bar.ScoreInfo", ReadBarCommandId, ReadPositionCommandId };
 
     /// <summary>The screen reader rows: the current bar and the cursor position.</summary>
     private const string ReadBarCommandId = "Reader.ReadBar";
@@ -37,8 +38,8 @@ public static class MainWindowBarMenu
     /// <param name="owner">The window the Go to prompt and the Score information dialog open over.</param>
     public static void Register(MainWindowCommands commands, ScorePreviewView score, Window owner)
     {
-        commands.Add("Bar.First", () => MoveToBar(score, 0));
-        commands.Add("Bar.Last", () => MoveToLastWrittenBeat(score));
+        commands.Add(CommandIds.Bar.First, () => MoveToBar(score, 0));
+        commands.Add(CommandIds.Bar.Last, () => MoveToLastWrittenBeat(score));
         commands.Add("Bar.GoTo", () => _ = GoToAsync(score, owner));
         commands.Add("Bar.EmptyBar", () => { score.Editor.Effects.EmptyBar(); score.Editor.Notice?.Invoke(EmptiedText); });
         commands.Add("Bar.TripletFeel", () => score.Run(TripletFeelToolId));

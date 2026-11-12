@@ -4,7 +4,7 @@ namespace TabForge.Services;
 
 // Owns: the two-file pair save (staged writes, the pending marker, crash recovery of an interrupted pair).
 // Does not own: single-file atomic writes, staging and commit (FilePathPolicy.cs) or the contents of the files written.
-// Tests: TestSecurityInputBoundaries.
+// Tests: no dedicated test class.
 public static partial class FilePathPolicy
 {
     /// <summary>

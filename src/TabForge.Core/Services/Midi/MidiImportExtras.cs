@@ -4,7 +4,7 @@ namespace TabForge.Services;
 
 // Owns: the MIDI import's non-note data: a MIDI track's one clip (notes, controller / pitch-bend points), the count of points a tab track drops, and the keyswitch notes kept out of the score.
 // Does not own: reading the file (SmfReader), the score notes (MidiToSong) or the lane model (AudioClipModel.ClipController).
-// Tests: MidiImportExtrasTests, MidiTechniqueMarkerTests.
+// Tests: no dedicated test class.
 internal static class MidiImportExtras
 {
     /// <summary>Pitch ceiling of a keyswitch note: below any normal guitar/bass part's playable range.</summary>

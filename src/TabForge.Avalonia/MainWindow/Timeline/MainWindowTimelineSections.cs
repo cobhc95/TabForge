@@ -11,7 +11,7 @@ using TabForge.Services;
 namespace TabForge.Avalonia;
 
 // Owns: the timeline section menu's Add section here, Copy, Cut, Paste, Duplicate, Delete, Rename / recolour and Go to section rows for the Avalonia
-//   window, on the right-clicked section (ContextMenuHost.ClickedSection) or bar (ContextMenuHost.ClickedBar). Copy records no undo step and remembers
+//   window, on the right-clicked section (ContextMenuHost.Target.Section) or bar (ContextMenuHost.Target.Bar). Copy records no undo step and remembers
 //   the copied section, so Paste brings it back with its title and colour; every edit is one undo step through DocumentEdits.Run. Delete asks first
 //   (General.ConfirmDeleteSection) and again when audio clips lie under the bars.
 // Does not own: the edits (Core SectionMenuEdits), the menu rows (TimelineMenus), the row-to-id mapping (ContextMenuRows), the clipboard
@@ -63,13 +63,13 @@ public static class MainWindowTimelineSections
         commands.Add(ContextMenuRows.SectionCutId, () => _ = CutAsync(songs.Active, menus, notice, prompts, copied));
         commands.Add(ContextMenuRows.SectionPasteAfterId, () => PasteAfter(songs.Active, menus, notice, copied));
         commands.Add(ContextMenuRows.SectionPasteAtBarId, () => PasteAtBar(songs.Active, menus, notice, copied));
-        commands.Add(ContextMenuRows.SectionCloseGapId, () => { if (SectionGapEdits.Find(songs.Active.Project, menus.ClickedBar) is var (first, last)) _ = CloseGapAsync(songs.Active, first, last, prompts.AskGapClose, notice); });
+        commands.Add(ContextMenuRows.SectionCloseGapId, () => { if (SectionGapEdits.Find(songs.Active.Project, menus.Target.Bar) is var (first, last)) _ = CloseGapAsync(songs.Active, first, last, prompts.AskGapClose, notice); });
         commands.Add(ContextMenuRows.SectionDuplicateId, () => Edit(songs.Active, menus, notice, (p, m) => SectionMenuEdits.Duplicate(p, m) is not null, "Duplicated section", label: "Duplicate section"));
         commands.Add(ContextMenuRows.SectionRemoveLabelId, () => Edit(songs.Active, menus, notice, SectionMenuEdits.RemoveLabel, "Removed label of section", label: "Remove section label"));
         commands.Add(ContextMenuRows.SectionDeleteId,() => _ = DeleteAsync(songs.Active, menus, notice, prompts));
-        commands.Add(ContextMenuRows.MovePlayheadHereId, () => { if (menus.ClickedBar < 0) return; menus.MovePlayhead?.Invoke(menus.ClickedBar); moveToBar?.Invoke(menus.ClickedBar); });
+        commands.Add(ContextMenuRows.MovePlayheadHereId, () => { if (menus.Target.Bar < 0) return; menus.MovePlayhead?.Invoke(menus.Target.Bar); moveToBar?.Invoke(menus.Target.Bar); });
         commands.Add(ContextMenuRows.SectionGoToId, () => { if (Clicked(songs.Active, menus) is { } marker) moveToBar?.Invoke(marker.MeasureIndex); });
-        commands.Add(ContextMenuRows.SectionAddHereId, () => _ = AddHereAsync(songs.Active, menus.ClickedBar, notice, prompts));
+        commands.Add(ContextMenuRows.SectionAddHereId, () => _ = AddHereAsync(songs.Active, menus.Target.Bar, notice, prompts));
         commands.Add(ContextMenuRows.SectionRenameId, () => { if (Clicked(songs.Active, menus) is { } marker) _ = RenameAsync(songs.Active, marker, prompts); });
     }
 
@@ -80,7 +80,7 @@ public static class MainWindowTimelineSections
         var clip = menus.Clipboard?.TryGetClip(out _);
         var section = copied.For(clip);
         var changed = DocumentEdits.Run(document, project => SectionMenuEdits.TryBounds(project, marker, out _, out var end)
-            && SectionMenuEdits.PasteAt(project, end, clip, Math.Max(0, menus.ClickedTrack), section) is not null, label: "Paste section").Changed;
+            && SectionMenuEdits.PasteAt(project, end, clip, Math.Max(0, menus.Target.Track), section) is not null, label: "Paste section").Changed;
         notice(!changed ? NothingToPasteNotice : section is not null ? $"Pasted section '{section.Title}'" : $"Pasted bars after section '{marker.Title}'");
     }
 
@@ -109,11 +109,11 @@ public static class MainWindowTimelineSections
     /// <summary>Pastes the clipboard's bars at the clicked bar of an empty part of the section strip as one undo step.</summary>
     public static void PasteAtBar(IEditableDocument document, ContextMenuHost menus, Action<string> notice, CopiedSection copied)
     {
-        var bar = menus.ClickedBar;
+        var bar = menus.Target.Bar;
         if (bar < 0) return;
         var clip = menus.Clipboard?.TryGetClip(out _);
         var section = copied.For(clip);
-        var changed = DocumentEdits.Run(document, project => SectionMenuEdits.PasteAt(project, bar, clip, Math.Max(0, menus.ClickedTrack), section) is not null, label: "Paste section").Changed;
+        var changed = DocumentEdits.Run(document, project => SectionMenuEdits.PasteAt(project, bar, clip, Math.Max(0, menus.Target.Track), section) is not null, label: "Paste section").Changed;
         notice(!changed ? NothingToPasteNotice : section is not null ? $"Pasted section '{section.Title}'" : $"Pasted bars at bar {bar + 1}");
     }
 
@@ -163,7 +163,7 @@ public static class MainWindowTimelineSections
     }
 
     private static MarkerModel? Clicked(IEditableDocument document, ContextMenuHost menus) =>
-        menus.ClickedSection >= 0 && menus.ClickedSection < document.Project.Markers.Count ? document.Project.Markers[menus.ClickedSection] : null;
+        menus.Target.Section >= 0 && menus.Target.Section < document.Project.Markers.Count ? document.Project.Markers[menus.Target.Section] : null;
 
     private static bool Copy(IEditableDocument document, ContextMenuHost menus, Action<string> notice, CopiedSection copied)
     {

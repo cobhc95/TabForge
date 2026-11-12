@@ -3,6 +3,8 @@ using System;
 using System.Globalization;
 using System.Linq;
 using Avalonia.Controls;
+using TabForge.Services;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia.Views;
 
@@ -12,10 +14,8 @@ namespace TabForge.Avalonia.Views;
 // Tests: TabForge.Avalonia.Tests.ViewTempoMenusTests.
 public static class ViewTempoMenus
 {
-    public const int MinimumTempo = 20;
-    public const int MaximumTempo = 400;
-    public const string TimeSignatureCommandId = "Bar.TimeSignature";
-    public const string KeySignatureCommandId = "Bar.KeySignature";
+    public const string TimeSignatureCommandId = CommandIds.Bar.TimeSignature;
+    public const string KeySignatureCommandId = CommandIds.Bar.KeySignature;
 
     private const string CurrentMark = "✓ ";
     private const string MinusSign = "−";
@@ -32,7 +32,7 @@ public static class ViewTempoMenus
             menu.Items.Add(Item(bpm == current ? CurrentMark + bpm : bpm.ToString(CultureInfo.InvariantCulture), () => setTempo(bpm)));
         menu.Items.Add(new Separator());
         foreach (var step in TempoSteps)
-            menu.Items.Add(Item((step < 0 ? MinusSign : "+") + Math.Abs(step), () => setTempo(Math.Clamp(current + step, MinimumTempo, MaximumTempo))));
+            menu.Items.Add(Item((step < 0 ? MinusSign : "+") + Math.Abs(step), () => setTempo(Math.Clamp(current + step, InputLimits.MinTempo, InputLimits.MaxTempo))));
         return menu;
     }
 

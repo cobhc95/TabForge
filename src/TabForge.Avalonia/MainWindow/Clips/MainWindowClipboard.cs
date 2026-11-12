@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Services;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia;
 
@@ -18,7 +19,7 @@ namespace TabForge.Avalonia;
 public sealed class MainWindowClipboard
 {
     /// <summary>The command ids this class handles.</summary>
-    public static readonly IReadOnlyList<string> Commands = new[] { "Edit.Copy", "Edit.Cut", "Edit.Paste", "Edit.PasteSpecial" };
+    public static readonly IReadOnlyList<string> Commands = new[] { CommandIds.Edit.Copy, CommandIds.Edit.Cut, CommandIds.Edit.Paste, CommandIds.Edit.PasteSpecial };
 
     private readonly Func<ScorePreviewView> _active;
     private ScorePreviewView _score => _active();

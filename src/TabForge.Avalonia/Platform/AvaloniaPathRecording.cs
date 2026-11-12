@@ -5,9 +5,6 @@ using TabForge.Platform;
 
 namespace TabForge.Avalonia.Platform;
 
-// Owns: path-geometry recording key encoding (PathShapeKey equality + PathRecorder op encoding).
-// Does not own: the geometry (AvaloniaPathsAndText) or its cache.
-
 /// <summary>
 /// The content of one built path: its fill rule and every figure's points and flags as 64-bit patterns, so two keys are equal only when the
 /// geometry built from them is identical. Owns: the key's equality. Does not own: the geometry (<see cref="AvaloniaPathsAndText"/>) or its cache.

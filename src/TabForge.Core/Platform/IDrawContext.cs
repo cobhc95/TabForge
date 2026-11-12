@@ -33,7 +33,7 @@ public interface IUiImage { }
 /// Drawing as a port: rectangles, lines, paths, text with measuring, images, clips and transforms, in DIPs. Colours are values; the adapter keeps
 /// one frozen brush or pen per colour, so drawing a frame allocates nothing beyond the text layouts it asks for.
 /// Owns: the drawing contract. Does not own: colours (theme table), layout, when a layer is redrawn.
-/// Tests: TestDrawContextPort.
+/// Tests: no dedicated test class.
 /// </summary>
 public interface IDrawContext : IDrawHandles
 {

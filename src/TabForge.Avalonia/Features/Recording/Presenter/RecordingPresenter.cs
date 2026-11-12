@@ -13,6 +13,7 @@ using TabForge.Models;
 using TabForge.Playback;
 using TabForge.Presenters;
 using TabForge.Services;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia.Features.Recording.Presenter;
 
@@ -31,7 +32,7 @@ internal sealed partial class RecordingPresenter(MainWindowCommands commands, Ma
     Func<SnapSettings?>? snap = null, Action<LiveTakes>? rollLive = null, Action? recordingChanged = null)
 {
     /// <summary>The command id of Transport.Record (the Record button runs it too).</summary>
-    public const string CommandId = "Transport.Record";
+    public const string CommandId = CommandIds.Transport.Record;
 
     /// <returns>The window's recording state; disposing it (the window closed) ends a recording in progress and detaches the hooks.</returns>
     internal RecordingSession Register()

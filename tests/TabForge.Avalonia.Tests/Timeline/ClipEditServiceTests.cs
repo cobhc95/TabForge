@@ -29,7 +29,7 @@ public class ClipEditServiceTests
     public void BeatSecondsIsTheTempoBeatButNeverFasterThanTheMinimumTempo()
     {
         Assert.Equal(0.5, ClipEditService.BeatSeconds(120), 9);
-        Assert.Equal(60.0 / ClipEditService.MinimumTempo, ClipEditService.BeatSeconds(1), 9);
+        Assert.Equal(60.0 / InputLimits.MinTempo, ClipEditService.BeatSeconds(1), 9);
     }
 
     [Fact]

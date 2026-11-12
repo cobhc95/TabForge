@@ -7,7 +7,7 @@ namespace TabForge.AudioEngine.Output;
 // Owns: the engine's audio device seam: the one interface the engine session opens its output and input through, the device list shape, and the
 //   choice of backend (Windows NAudio WASAPI/ASIO/DirectSound by default; miniaudio on every other OS, and on Windows only when the dev switch asks).
 // Does not own: the backends (WindowsAudioBackend, MiniaudioBackend), the mix, or the settings UI.
-// Tests: PortableBackendTests (the choice per OS, the miniaudio backend on its null device), AudioBackendSelectionTests.
+// Tests: PortableBackendTests (the choice per OS, the miniaudio backend on its null device).
 
 /// <summary>One audio device a backend lists.</summary>
 public sealed record AudioDeviceInfo(string Name, bool IsDefault, int MaxChannels, int NativeRate);

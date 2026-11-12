@@ -8,7 +8,7 @@ namespace TabForge.Avalonia.Views.Presets;
 // Owns: the one label rule of every preset selector (edited " *", deleted " (missing)") and the debounced watch that refreshes a selector when
 //   the object's values stop matching the preset it was given. The existing "★ " prefix stays the caller's (a user's own preset), never the marker.
 // Does not own: the rows, the stores or what picking a preset does.
-// Tests: PresetComboTests, PresetMemoryTests.
+// Tests: PresetMemoryTests.
 /// <summary>The shared preset selector behaviour: the remembered preset, its label and the live edited marker.</summary>
 public static class PresetCombo
 {

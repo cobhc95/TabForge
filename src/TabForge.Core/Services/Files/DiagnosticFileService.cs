@@ -5,7 +5,7 @@ namespace TabForge.Services;
 
 // Owns: size-capped writes and appends of diagnostic files.
 // Does not own: what is diagnosed and where the call sites are.
-// Tests: TestSecurityInputBoundaries.
+// Tests: no dedicated test class.
 /// <summary>Small bounded log helpers. Runtime diagnostics are opt-in and never include score bodies.</summary>
 public static class DiagnosticFileService
 {

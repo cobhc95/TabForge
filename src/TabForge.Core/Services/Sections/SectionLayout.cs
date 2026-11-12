@@ -4,7 +4,7 @@ namespace TabForge.Services;
 
 // Owns: the one rule for where a section starts and ends.
 // Does not own: the timeline drawing and section edits.
-// Tests: CheckSectionLayout.
+// Tests: no dedicated test class.
 /// <summary>
 /// The one rule for where a section starts and ends. A section runs from its marker to the next marker,
 /// unless it was resized (<see cref="MarkerModel.LengthBars"/>) to stop earlier; the bars after it up to

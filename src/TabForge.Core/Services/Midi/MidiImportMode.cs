@@ -6,7 +6,7 @@ namespace TabForge.Services;
 // Owns: how a MIDI file becomes tracks: the two import modes (tab and notation tracks, or MIDI tracks), the stored setting values, the look at a file
 //   before the question (track count, which mode fits), and the import's report line.
 // Does not own: the conversion (MidiToSong), the question window (MidiImportPromptWindow) or the setting row (SettingsCatalog.Tabs).
-// Tests: MidiImportModeTests.
+// Tests: no dedicated test class.
 /// <summary>Whether a MIDI file's tracks become tab and notation tracks or MIDI tracks (piano roll). Never both for the same notes.</summary>
 public enum MidiImportMode { Tab, Midi }
 

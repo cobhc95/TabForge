@@ -2,7 +2,7 @@ namespace TabForge.Platform;
 
 // Owns: where the app keeps its own files per operating system: settings, data, cache, logs, temp, plug-in cache and the SoundFont folder.
 // Does not own: the --profile redirect or the files inside the folders (UserPaths and its callers), the user's Music and Videos folders.
-// Tests: AppFoldersTests.
+// Tests: no dedicated test class.
 /// <summary>The app's own folders on this system. Windows keeps the paths the app always used.</summary>
 public interface IAppFolders
 {

@@ -6,7 +6,7 @@ namespace TabForge.LiveInput;
 // Owns: what the live input strip's tuner shows: the note name, the cents needle position and the "+8 cents · 82.4 Hz · sharp" text, steadied by the
 //   tuner presenter's smoothing and hidden (NaN cents) when no clear pitch has come for a while.
 // Does not own: the reading (the engine), the note and smoothing rules (TunerPresenter) or the drawing.
-// Tests: TabForge.Avalonia.Tests.LiveTunerReadoutTests.
+// Tests: no dedicated test class.
 /// <summary>The strip tuner's display state. UI thread only.</summary>
 public sealed class LiveTunerReadout
 {

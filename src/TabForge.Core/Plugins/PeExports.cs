@@ -1,11 +1,12 @@
 using System.IO;
 using System.Text;
+using TabForge.Audio.Contracts;
 
 namespace TabForge.Plugins;
 
 // Owns: DLL export-name reading from the PE file (VST2 detect, bounded, never loads).
-// Does not own: plug-in loading or trust (PluginTrust).
-// Tests: plug-in scan tests.
+// Does not own: the PE headers and section table (PeImage in Contracts), plug-in loading or trust (PluginTrust).
+// Tests: TestPeHeaderReaders.
 
 /// <summary>
 /// Reads a DLL's export names straight from the file (PE format) without loading it, to tell a VST2 plug-in
@@ -52,58 +53,26 @@ public static class PeExports
     {
         var result = new HashSet<string>(StringComparer.Ordinal);
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, 4096);
-        if (stream.Length < 512) return result;
         using var reader = new BinaryReader(stream);
-        if (reader.ReadUInt16() != 0x5A4D) return result; // "MZ"
-        stream.Position = 0x3C;
-        var peOffset = reader.ReadInt32();
-        if (peOffset <= 0 || peOffset > stream.Length - 256) return result;
-        stream.Position = peOffset;
-        if (reader.ReadUInt32() != 0x00004550) return result; // "PE\0\0"
-        var machine = reader.ReadUInt16();
-        if (machine != (x86 ? 0x14C : 0x8664)) return result; // only the bitness asked for: 32-bit uses the 32-bit helper, 64-bit is native or the Wine helper
-        var sections = reader.ReadUInt16();
-        stream.Position += 12;
-        var optionalSize = reader.ReadUInt16();
-        stream.Position += 2;
-        var optionalStart = stream.Position;
-        if (reader.ReadUInt16() != (x86 ? 0x10B : 0x20B)) return result; // PE32 / PE32+
-        stream.Position = optionalStart + (x86 ? 96 : 112); // data directories
+        if (PeImage.Read(stream, reader, minLength: 512, peOffsetMargin: 256) is not { } image) return result;
+        // Only the bitness asked for: 32-bit uses the 32-bit helper, 64-bit is native or the Wine helper (PE32 / PE32+).
+        if (image.Machine != (x86 ? 0x14C : 0x8664) || image.Magic != (x86 ? 0x10B : 0x20B)) return result;
+        stream.Position = image.DataDirectories;
         var exportRva = reader.ReadUInt32();
         var exportSize = reader.ReadUInt32();
         if (exportRva == 0 || exportSize == 0) return result;
 
-        stream.Position = optionalStart + optionalSize;
-        var table = new List<(uint va, uint size, uint raw)>();
-        for (var i = 0; i < Math.Min((int)sections, 96); i++)
-        {
-            stream.Position += 8; // name
-            var virtualSize = reader.ReadUInt32();
-            var virtualAddress = reader.ReadUInt32();
-            var rawSize = reader.ReadUInt32();
-            var rawPointer = reader.ReadUInt32();
-            stream.Position += 16;
-            table.Add((virtualAddress, Math.Max(virtualSize, rawSize), rawPointer));
-        }
-        long Offset(uint rva)
-        {
-            // Sums in long: a section that ends near the top of the 32-bit range must not wrap around to a small offset.
-            foreach (var (va, size, raw) in table)
-                if (rva >= va && rva < (long)va + size) return raw + (long)(rva - va);
-            throw new InvalidDataException("RVA outside sections");
-        }
-
-        stream.Position = Offset(exportRva) + 24;
+        stream.Position = image.Offset(exportRva) + 24;
         var nameCount = Math.Min(reader.ReadUInt32(), MaxExports);
         stream.Position += 4; // address of functions
         var namesRva = reader.ReadUInt32();
         var nameOffsets = new uint[nameCount];
-        stream.Position = Offset(namesRva);
+        stream.Position = image.Offset(namesRva);
         for (var i = 0; i < nameCount; i++) nameOffsets[i] = reader.ReadUInt32();
         var buffer = new byte[64];
         foreach (var rva in nameOffsets)
         {
-            stream.Position = Offset(rva);
+            stream.Position = image.Offset(rva);
             var read = stream.Read(buffer, 0, buffer.Length);
             var end = Array.IndexOf(buffer, (byte)0, 0, read);
             if (end > 0) result.Add(Encoding.ASCII.GetString(buffer, 0, end));

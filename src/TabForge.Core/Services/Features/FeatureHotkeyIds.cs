@@ -1,3 +1,4 @@
+using TabForge.Menus;
 namespace TabForge.Services.Features;
 
 // Owns: the ids of the hotkey rows the feature modules add to the catalogue (the rows are in HotkeyCatalog.Features.cs), and the ids of the FX chain window's commands.
@@ -5,9 +6,9 @@ namespace TabForge.Services.Features;
 // Tests: no dedicated test class.
 public static class FeatureHotkeyIds
 {
-    public const string LearnMode = "View.LearnMode", LearnToggleWait = "Learn.ToggleWait", LearnWaitSkip = "Learn.WaitSkip",
+    public const string LearnMode = CommandIds.View.LearnMode, LearnToggleWait = "Learn.ToggleWait", LearnWaitSkip = "Learn.WaitSkip",
         LearnLookAheadLonger = "Learn.LookAheadLonger", LearnLookAheadShorter = "Learn.LookAheadShorter", LearnPopout = "View.LearnPopout",
-        CompactMode = "View.CompactMode", LiveInput = "Transport.LiveInput", PresetManager = "Tools.PresetManager",
+        CompactMode = CommandIds.View.CompactMode, LiveInput = "Transport.LiveInput", PresetManager = "Tools.PresetManager",
         ExportVideo = "File.ExportVideo", RecordVideo = "Transport.RecordVideo",
         SaveAsTemplate = "File.SaveAsTemplate", ExportPdf = "File.ExportPdf", ExportMusicXml = "File.ExportMusicXml",
         ExportMidi = "File.ExportMidi", ExportAscii = "File.ExportAscii", ExportGuitarPro = "File.ExportGuitarPro",

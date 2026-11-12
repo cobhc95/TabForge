@@ -6,7 +6,7 @@ namespace TabForge.Services;
 
 // Owns: normalising settings files written by older versions.
 // Does not own: validation of values and file access.
-// Tests: CheckDocumentContextLeftovers.
+// Tests: no dedicated test class.
 /// <summary>Normalizes current and legacy settings documents without discarding unknown supported fields.</summary>
 public static class SettingsMigration
 {

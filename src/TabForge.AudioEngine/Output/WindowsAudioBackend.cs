@@ -7,7 +7,7 @@ namespace TabForge.AudioEngine.Output;
 // Owns: the Windows adapter of IAudioBackend: every call goes to the code that was always used (AudioOutputFactory for WASAPI/ASIO/DirectSound and the
 //   headless output, InputCapture for the WASAPI/ASIO input). No behaviour of its own.
 // Does not own: the device code itself.
-// Tests: AudioBackendSelectionTests.
+// Tests: no dedicated test class.
 
 /// <summary>The default backend on Windows (and the headless output everywhere): NAudio WASAPI, ASIO and DirectSound exactly as before the seam existed.</summary>
 public sealed class WindowsAudioBackend : IAudioBackend

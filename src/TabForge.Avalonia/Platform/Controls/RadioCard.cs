@@ -26,7 +26,7 @@ public sealed class RadioCardGroup
 //   (not just the circle), with hover (soft fill, stronger border), pressed, selected (accent border and tint) and keyboard-focus states; Left/Up and Right/Down
 //   move between the cards of the group and select, Space selects. Colours are theme keys; the pointer shape never changes.
 // Does not own: what the choice means or the dialog around it (the window), the words (the caller / its presenter).
-// Tests: TabForge.Avalonia.Tests.RadioCardTests, MediaCollectPromptTests, SectionAudioMoveTests, ClipLaneOverlapTests.
+// Tests: MediaCollectPromptTests, SectionAudioMoveTests, ClipLaneOverlapTests.
 /// <summary>One choice card of a <see cref="RadioCardGroup"/>. UI thread only.</summary>
 public sealed class RadioCard : Border
 {

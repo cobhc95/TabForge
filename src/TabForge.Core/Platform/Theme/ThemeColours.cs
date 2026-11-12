@@ -2,10 +2,6 @@ using TabForge.Services;
 
 namespace TabForge.Platform.Theme;
 
-// Owns: the brush-name to colour table and the Dark / Light presets (mirrors the summary below).
-// Does not own: writing brushes into a toolkit or reading the system theme.
-// Tests: ThemeTests.
-
 /// <summary>
 /// The theme brushes worked out from the appearance settings: which brush name gets which colour in the dark and the light theme,
 /// with the accent and panel mixing. Owns: the brush-name to colour table and the Dark / Light presets.

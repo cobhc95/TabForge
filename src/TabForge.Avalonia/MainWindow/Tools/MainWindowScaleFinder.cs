@@ -15,12 +15,11 @@ public sealed class MainWindowScaleFinder
     public static readonly IReadOnlyList<string> Commands = new[] { "Tools.ScaleFinder" };
 
     private readonly Window _owner;
+    private readonly StatusScaleReadout _scale;
 
     /// <param name="owner">The main window; the popup anchors to it when no Scales button is on screen.</param>
-    public MainWindowScaleFinder(Window owner) => _owner = owner;
-
-    /// <summary>The status bar scale readout that holds the shared pick and opens the popup (set once the status bar exists).</summary>
-    internal StatusScaleReadout? Scale { get; set; }
+    /// <param name="scale">The status bar scale readout, which holds the shared pick and opens the popup.</param>
+    internal MainWindowScaleFinder(Window owner, StatusScaleReadout scale) => (_owner, _scale) = (owner, scale);
 
     /// <summary>The control the popup opens above: the Scales button of the shown instrument pane, or null for the window.</summary>
     internal Func<Control?>? Anchor { get; set; }
@@ -29,8 +28,8 @@ public sealed class MainWindowScaleFinder
     public void Register(MainWindowCommands commands) => commands.Add("Tools.ScaleFinder", () => Open());
 
     /// <summary>Opens the popup above the Scales button (or the window).</summary>
-    /// <returns>False when nothing opened (no readout yet, or a drum track).</returns>
-    public bool Open() => Scale is { } scale && scale.OpenForFretboard(Anchor?.Invoke() is { IsVisible: true } anchor ? anchor : _owner);
+    /// <returns>False when nothing opened (no reading yet, or a drum track).</returns>
+    public bool Open() => _scale.OpenForFretboard(Anchor?.Invoke() is { IsVisible: true } anchor ? anchor : _owner);
 
     /// <summary>Opens the popup (the Scales button's callback).</summary>
     public System.Threading.Tasks.Task OpenAsync()

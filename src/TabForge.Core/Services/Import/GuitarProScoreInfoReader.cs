@@ -15,7 +15,7 @@ namespace TabForge.Services;
 
 // Owns: reading the master-bar information of an imported file: section colours, double bars, tempo ramps, repeat endings.
 // Does not own: track and beat conversion.
-// Tests: CheckMixFadeAndAudiblePlayhead.
+// Tests: no dedicated test class.
 // Long on purpose: one reader class for the master-bar block of the score file.
 /// <summary>Reads the score-level facts of a Guitar Pro file: tempo, time signature and the master bars (repeats, endings, sections, tempo map, key signatures).</summary>
 internal static class GuitarProScoreInfoReader

@@ -7,7 +7,7 @@ namespace TabForge.Platform.Windows;
 // Owns: the Win32 call that reads a file's final path (GetFinalPathNameByHandleW), and the walk that finds the first link on a path
 //   without following it (link flag read, target text read through the file system, never the target opened).
 // Does not own: the \\?\ prefix handling or any trust decision (the callers keep those).
-// Tests: TestPathResolverAdapter (full suite), TabForge.Avalonia.Tests.WindowsPathResolverTests, TabForge.Avalonia.Tests.MediaLinkJudgementTests.
+// Tests: TabForge.Avalonia.Tests.WindowsPathResolverTests, TabForge.Avalonia.Tests.MediaLinkJudgementTests.
 /// <summary>
 /// <see cref="IPathResolver"/> over Win32. Each component is checked top-down, so no link target is opened: a remote, removable or device
 /// target is returned as text for the caller to judge. A link whose target text cannot be read, or that leads to a device form, raises

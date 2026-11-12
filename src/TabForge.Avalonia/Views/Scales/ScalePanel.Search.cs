@@ -16,7 +16,7 @@ namespace TabForge.Avalonia.Views.TransportPopups;
 //   family headers, the starred Favourites first; name, notes, the confidence the detected cards show, the fit as a short text and a star to favourite the scale type) and the keyboard (type to filter, Up/Down, Enter picks).
 //   Choosing a scale is a manual pick and the list stays open.
 // Does not own: the filter itself (ScaleSearch in Core), the ranking (SectionScaleDetector), the pick (the host), the rest of the popup (ScalePanel).
-// Tests: TabForge.Avalonia.Tests.ScaleSearchPopupTests, PickAnotherListTests.
+// Tests: PickAnotherListTests.
 // Threads: UI thread only. The list is filtered over a cached list of every scale, so a key press is a few hundred string checks.
 public sealed partial class ScalePanel
 {

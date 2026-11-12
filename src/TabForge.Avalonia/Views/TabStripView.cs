@@ -19,6 +19,7 @@ using TabForge.Platform.Theme;
 using TabForge.Presenters;
 using TabForge.Services;
 using TabForge.Shell;
+using TabForge.Menus;
 
 // Owns: building the document tabs and their layout; the press, move past TabDragRules.DragThreshold and release that make a tab drag; the
 //   drop preview over the strip (the accent highlight and the insertion marker), the neighbour slide of an in-strip reorder and the tab hidden
@@ -87,7 +88,7 @@ public sealed partial class TabStripView : UserControl
         var add = GlyphButton("NewTab", "TabBarPlusButton", NewTabButtonWidth, TabStripPresenter.CornerRadius(Settings), Glyph(IconGeometry.Plus, 14));
         _add = add;
         add.Margin = new Thickness(6, 0, 0, 0);
-        TabForge.Avalonia.Platform.Controls.HotkeyTip.Set(add, "File.New", "New tab");
+        TabForge.Avalonia.Platform.Controls.HotkeyTip.Set(add, CommandIds.File.New, "New tab");
         AutomationProperties.SetName(add, "New tab");
         add.Click += (_, _) => NewTabRequested?.Invoke();
         // The strip is transparent so the title row's chrome colour shows behind it; tabs start 8 px in and hang from the top edge.
@@ -283,7 +284,7 @@ public sealed partial class TabStripView : UserControl
         var cross = GlyphButton("TabClose", "TabBarCloseButton", 20, 10, Glyph(IconGeometry.Close, 10));
         cross.Margin = new Thickness(6, 0, 0, 0);
         cross.IsVisible = close.Always || ((close.OnHover || close.ActiveOnly) && active);
-        TabForge.Avalonia.Platform.Controls.HotkeyTip.Set(cross, "Tab.Close", "Close tab");
+        TabForge.Avalonia.Platform.Controls.HotkeyTip.Set(cross, CommandIds.Tab.Close, "Close tab");
         AutomationProperties.SetName(cross, "Close tab");
         DockPanel.SetDock(cross, Dock.Right);
         var speaker = NewPlayingIcon(document);

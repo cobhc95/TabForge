@@ -5,7 +5,7 @@ namespace TabForge.AudioEngine.Builtin.Compressor;
 // Owns: the compressor parameter list (ids and keys are saved in songs and presets: never change them), the readouts the editor shows (gain reduction and input
 //   level, polled like any parameter), and the value texts.
 // Does not own: the audio path (CompressorEffect.Process.cs), the gain computer (CompressorCurve), the factory presets (BuiltinPresets in Contracts), the window.
-// Tests: BuiltinDynamicsTests.
+// Tests: BuiltinCompressorTests.
 // Threads: parameters and state on the engine main thread; Process on the audio thread (it writes the two readouts once per block).
 
 /// <summary>Feed-forward peak compressor with a soft knee, stereo linked, attack and release in the gain-reduction domain, makeup (or automatic makeup).</summary>

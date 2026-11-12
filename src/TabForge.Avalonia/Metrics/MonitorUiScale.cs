@@ -8,7 +8,7 @@ namespace TabForge.Avalonia;
 // Owns: reading the monitor a window is on (working area in DIPs and display scaling) for the interface-size recommendation, and applying
 //     that recommendation while the user has not chosen a size of their own.
 // Does not own: the heuristic (UiScaleRecommendation), applying a scale to a window (ThemeSettingsBinding), or the Settings button (PreferencesWindow).
-// Tests: TabForge.Avalonia.Tests.MonitorUiScaleTests.
+// Tests: UiScaleRecommendationTests.
 /// <summary>The interface size recommended for a window's monitor, and the automatic default that follows it.</summary>
 public static class MonitorUiScale
 {

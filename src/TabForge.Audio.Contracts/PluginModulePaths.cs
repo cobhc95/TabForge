@@ -2,7 +2,7 @@ namespace TabForge.Audio.Contracts;
 
 // Owns: where the loadable binary of a plug-in lies per operating system (VST3 bundle layout, CLAP file or bundle), from an injected system and file view.
 // Does not own: loading it (IPluginModuleLoader in the engine), trust (PluginIdentity hashes whatever this returns).
-// Tests: PluginModulePathsTests.
+// Tests: PluginPortabilityTests.
 
 /// <summary>The operating-system families a plug-in binary layout depends on.</summary>
 public enum ModuleOs

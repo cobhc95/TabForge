@@ -70,13 +70,13 @@ public sealed partial class TransportBarView : Border
     public static readonly IReadOnlyList<Item> Items = new Item[]
     {
         new("Rewind to beginning", "Rewind to beginning", null, "rewind_to_beginning", "PlaybarRewind", "PlaybarRewindBorder", false),
-        new("Stop playback", "Stop playback", "Transport.Stop", "stop", "PlaybarStop", "PlaybarStopBorder", false),
-        new(RecordItemName, "Record every armed track (the red button on a track row) while the song plays; press again to stop", "Transport.Record", null, "PlaybarStop", "PlaybarStopBorder", false),
-        new("Play or pause", "Play / pause", "Transport.PlayPause", "play", "PlaybarPlay", "PlaybarPlayBorder", false),
+        new("Stop playback", "Stop playback", CommandIds.Transport.Stop, "stop", "PlaybarStop", "PlaybarStopBorder", false),
+        new(RecordItemName, "Record every armed track (the red button on a track row) while the song plays; press again to stop", CommandIds.Transport.Record, null, "PlaybarStop", "PlaybarStopBorder", false),
+        new("Play or pause", "Play / pause", CommandIds.Transport.PlayPause, "play", "PlaybarPlay", "PlaybarPlayBorder", false),
         new("Next section", "Next section", NextSectionId, "next_section", "PlaybarNext", "PlaybarNextBorder", false),
         new("Click and beat count-in", "Count-in · click to toggle, right-click for count-in settings", MainWindowTransportToggles.CountInId, "click_beat", "PlaybarSurface", "PlaybarBorder", true),
         new("Metronome", "Metronome · click to toggle, right-click for metronome settings", MainWindowTransportToggles.MetronomeId, "metronome", "PlaybarSurface", "PlaybarBorder", true),
-        new("Loop enable", "Loop · click to toggle, right-click for loop settings", "Transport.Loop", "loop", "PlaybarSurface", "PlaybarBorder", true),
+        new("Loop enable", "Loop · click to toggle, right-click for loop settings", CommandIds.Transport.Loop, "loop", "PlaybarSurface", "PlaybarBorder", true),
     };
 
     /// <summary>The timeline zoom pair, top to bottom: zoom in, then zoom out.</summary>
@@ -87,7 +87,7 @@ public sealed partial class TransportBarView : Border
     };
 
     /// <summary>The mixer button after the tuning fork and the snap magnet.</summary>
-    public static readonly Item MixerItem = new("Mixer", "Mixer: track and group levels, pan, pitch, sound source and FX chains", "View.Mixer", "mixer", "PlaybarSurface", "PlaybarBorder", false);
+    public static readonly Item MixerItem = new("Mixer", "Mixer: track and group levels, pan, pitch, sound source and FX chains", CommandIds.View.Mixer, "mixer", "PlaybarSurface", "PlaybarBorder", false);
 
     /// <summary>The live input button, left of the playback group (the left-most header button): a press runs Transport.LiveInput, a right press opens the input menu; lit while live input is on.</summary>
     public static readonly Item LiveInputItem = new("Live input", "Live input: hear your instrument through the live FX chain", "Transport.LiveInput", "mic", "PlaybarSurface", "PlaybarBorder", false);
@@ -107,7 +107,7 @@ public sealed partial class TransportBarView : Border
     };
 
     // The command the Next section button runs: the score's Section.Next (the same id the Section and Bar menus use).
-    private const string NextSectionId = "Section.Next";
+    private const string NextSectionId = CommandIds.Section.Next;
 
     /// <summary>The window command each timeline zoom button, the mixer button, the Next section button the two toggles and Record run, by button name: the score's zoom rows, the Mixer command, Section.Next and the Transport toggles.</summary>
     private static readonly IReadOnlyDictionary<string, string> WindowCommandIds = new Dictionary<string, string>
@@ -120,7 +120,7 @@ public sealed partial class TransportBarView : Border
         ["Next section"] = NextSectionId,
         ["Metronome"] = MainWindowTransportToggles.MetronomeId,
         ["Click and beat count-in"] = MainWindowTransportToggles.CountInId,
-        [LoopItemName] = "Transport.Loop",   // the window's loop link: the score or timeline selection, the no-area scope and the status line
+        [LoopItemName] = CommandIds.Transport.Loop,   // the window's loop link: the score or timeline selection, the no-area scope and the status line
     };
 
     private readonly List<TransportButton> _buttons = new();

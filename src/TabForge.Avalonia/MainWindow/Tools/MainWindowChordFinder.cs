@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Avalonia.Controls;
 using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Views;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia;
 
@@ -13,13 +14,13 @@ namespace TabForge.Avalonia;
 public static class MainWindowChordFinder
 {
     /// <summary>The menu command ids this class handles.</summary>
-    public static readonly IReadOnlyList<string> Commands = new[] { "Tools.ChordFinder" };
+    public static readonly IReadOnlyList<string> Commands = new[] { CommandIds.Tools.ChordFinder };
 
     /// <param name="commands">The window's command table that receives the handler.</param>
     /// <param name="owner">The window the dialog opens over.</param>
     /// <param name="score">The score Insert name writes to; null keeps the finder's no-beat report (the Compose call leaves it unset).</param>
     public static void Register(MainWindowCommands commands, Window owner, ScorePreviewView? score = null) =>
-        commands.Add("Tools.ChordFinder", () => new ChordFinderWindow(name => InsertChordName(score, name)).ShowDialog(owner));
+        commands.Add(CommandIds.Tools.ChordFinder, () => new ChordFinderWindow(name => InsertChordName(score, name)).ShowDialog(owner));
 
     /// <summary>Attaches a chord name to the beat under the score cursor, as one undo step; false when there is no beat or no score.</summary>
     public static bool InsertChordName(ScorePreviewView? score, string name) =>

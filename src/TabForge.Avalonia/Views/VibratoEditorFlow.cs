@@ -6,6 +6,7 @@ using TabForge.Avalonia.Platform;
 using TabForge.Models;
 using TabForge.Services;
 using TabForge.Views.EffectEditors;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia.Views;
 
@@ -32,7 +33,7 @@ public sealed class VibratoEditorFlow
     /// <summary>The vibrato button or hotkey: opens the window when a cursor note has vibrato, else toggles it on as usual.</summary>
     public Task<bool> OpenOrToggle()
     {
-        if (!_score.Editor.Effects.EffectNotes().Any(VibratoEdits.Has)) return Task.FromResult(_score.Run("Note.Vibrato"));
+        if (!_score.Editor.Effects.EffectNotes().Any(VibratoEdits.Has)) return Task.FromResult(_score.Run(CommandIds.Note.Vibrato));
         return Open();
     }
 

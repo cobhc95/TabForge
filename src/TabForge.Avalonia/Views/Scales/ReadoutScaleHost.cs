@@ -6,13 +6,13 @@ namespace TabForge.Avalonia.Views.TransportPopups;
 
 // Owns: the part of a scale host that reads the status bar's scale readout (the section at the playhead, the one shared pick): the readout, the settings, the
 //   refresh event and the pick calls. The status bar and the fretboard hosts derive from it and add their extras, their greyed sections and how a pick is kept.
-// Does not own: the detection and picks (StatusScaleReadout, ScaleReadoutEngine), the panel (ScalePanel).
+// Does not own: the detection and picks (ScalePick, ScaleReadoutEngine), the panel (ScalePanel).
 // Tests: TabForge.Avalonia.Tests.ScalePanelHostTests.
 internal abstract class ReadoutScaleHost : IScalePanelHost
 {
-    protected ReadoutScaleHost(StatusScaleReadout readout, ScaleHostLinks links) => (Readout, Links) = (readout, links);
+    protected ReadoutScaleHost(ScalePick readout, ScaleHostLinks links) => (Readout, Links) = (readout, links);
 
-    protected StatusScaleReadout Readout { get; }
+    protected ScalePick Readout { get; }
 
     protected ScaleHostLinks Links { get; }
 

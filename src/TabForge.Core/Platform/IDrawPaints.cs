@@ -15,7 +15,7 @@ public interface IUiDrawing { }
 /// <summary>
 /// The handle form of the drawing port, for looks that colour values cannot carry (gradients, dashes, caps, cached drawings, any transform).
 /// Owns: the handle-based drawing calls. Does not own: how handles are made (the adapter's factories).
-/// Tests: TestDrawContextPort.
+/// Tests: no dedicated test class.
 /// </summary>
 public interface IDrawHandles
 {
@@ -29,7 +29,7 @@ public interface IDrawHandles
     void PushOpacity(double opacity);
 }
 
-/// <summary>Unwraps port handles inside an adapter. Owns: rejecting another adapter's handle. Tests: TestDrawContextPort.</summary>
+/// <summary>Unwraps port handles inside an adapter. Owns: rejecting another adapter's handle. Tests: no dedicated test class.</summary>
 public static class UiHandles
 {
     /// <summary>The adapter's own handle, or null for null; throws on a handle of another type instead of silently drawing nothing.</summary>

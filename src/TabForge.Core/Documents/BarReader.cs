@@ -5,7 +5,7 @@ namespace TabForge.Documents;
 
 // Owns: reading one encoded bar back: the exact mirror of BarWriter.
 // Does not own: the field order of a bar (BarCodec.Read) and the writing side (BarWriter).
-// Tests: TestUndoDeltaStates.
+// Tests: no dedicated test class.
 internal ref struct BarReader
 {
     private readonly ReadOnlySpan<byte> _data;

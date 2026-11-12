@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using TabForge.Audio;
 using TabForge.Avalonia.Views;
 using TabForge.Models;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia;
 
@@ -15,7 +16,7 @@ namespace TabForge.Avalonia;
 public static class MainWindowTuner
 {
     /// <summary>The menu command ids this class handles.</summary>
-    public static readonly IReadOnlyList<string> Commands = new[] { "Tools.Tuner" };
+    public static readonly IReadOnlyList<string> Commands = new[] { CommandIds.Tools.Tuner };
 
     /// <param name="commands">The window's command table that receives the handler.</param>
     /// <param name="owner">The window the tuner opens over.</param>
@@ -25,6 +26,6 @@ public static class MainWindowTuner
     public static void Register(MainWindowCommands commands, Window owner, AudioEngineClient? engine, Func<TrackModel?> selectedTrack, SharedMeterTick? meter = null)
     {
         var tools = new Views.ToolWindows();
-        commands.Add("Tools.Tuner", () => tools.OpenOrActivate("Tuner", null, () => new TunerWindow(selectedTrack, engine, meter), owner));
+        commands.Add(CommandIds.Tools.Tuner, () => tools.OpenOrActivate("Tuner", null, () => new TunerWindow(selectedTrack, engine, meter), owner));
     }
 }

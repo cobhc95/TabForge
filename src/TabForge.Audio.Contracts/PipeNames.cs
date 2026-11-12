@@ -6,7 +6,7 @@ namespace TabForge.Audio.Contracts;
 // Owns: the pipe name a process uses on this system. Windows keeps the name as written. Elsewhere a .NET named pipe is a Unix domain socket whose path
 // (temp folder + "CoreFxPipe_" + name) must stay under 104 bytes on macOS, so the name becomes a short fixed-length one.
 // Does not own: creating the pipe or the token check (PipeAuth).
-// Tests: PortableIpcTests.
+// Tests: no dedicated test class.
 public static class PipeNames
 {
     /// <summary>The name for this system: unchanged on Windows, shortened elsewhere.</summary>

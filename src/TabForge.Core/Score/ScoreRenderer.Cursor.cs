@@ -8,7 +8,7 @@ using TabForge.Services;
 namespace TabForge.Views.Score;
 
 // ScoreRenderer: the edit cursor and cell highlight rectangles.
-// Owns: cursor/highlight geometry. Does not own: drawing the cursor. Tests: render identity, TestTabEditorRenderInvariance.
+// Owns: cursor/highlight geometry. Does not own: drawing the cursor. Tests: no dedicated test class.
 
 internal sealed partial class ScoreRenderer
 {

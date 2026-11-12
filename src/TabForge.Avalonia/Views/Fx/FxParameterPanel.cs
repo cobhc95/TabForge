@@ -13,6 +13,7 @@ using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Platform.Controls;
 using TabForge.Platform.Theme;
 using TabForge.Services;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia.Views.Fx;
 
@@ -56,8 +57,8 @@ public sealed class FxParameterPanel : DockPanel
         _rows.Children.Add(_empty);
         _rows.Children.Add(_more);
         Children.Add(new ScrollViewer { Content = _rows, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, Name = "ParameterScroll" });
-        HotkeyTip.Set(_undo, "Edit.Undo", "Take back the last parameter change");
-        HotkeyTip.Set(_redo, "Edit.Redo", "Do the last undone parameter change again");
+        HotkeyTip.Set(_undo, CommandIds.Edit.Undo, "Take back the last parameter change");
+        HotkeyTip.Set(_redo, CommandIds.Edit.Redo, "Do the last undone parameter change again");
         _search.TextChanged += (_, _) => { if (_building) return; _model.Search = _search.Text ?? ""; Rebuild(); };
         _undo.Click += (_, _) => Step(_model.Undo());
         _redo.Click += (_, _) => Step(_model.Redo());
@@ -222,7 +223,7 @@ public sealed class FxParameterPanel : DockPanel
         e.Handled = true;
     }
 
-    private const string UndoCommand = "Edit.Undo", RedoCommand = "Edit.Redo";
+    private const string UndoCommand = CommandIds.Edit.Undo, RedoCommand = CommandIds.Edit.Redo;
 
     /// <summary>Edit.Undo or Edit.Redo when the key press is one of that command's bindings (the live hotkey settings, so a rebind works); else null.</summary>
     private string? CommandOf(Key key, KeyModifiers modifiers)

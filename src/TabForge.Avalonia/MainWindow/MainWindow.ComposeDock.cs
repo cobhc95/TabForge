@@ -289,7 +289,7 @@ public sealed partial class MainWindow
             () => scorePreview.Editor.Project is { Tracks.Count: > 0 } ? scorePreview.Editor.Track : null);
         compose.FretboardMenu = fretboardMenu;
         var fretboard = new FretboardSettingsBinding(settings?.Settings ?? fretboardDefaults, d.Compose.FretboardMode);
-        var scaleFinder = new MainWindowScaleFinder(this);
+        var scaleFinder = new MainWindowScaleFinder(this, d.StatusBarCreated.Scale);
         // Perf E2b (H4/H5): the instrument pane is reused across Shows (was a fresh InstrumentPanelStrip per Show).
         // The strip itself is untouched; only its registration caches the control and detaches it on rebuild.
         InstrumentPanelStrip? cachedInstrument = null;

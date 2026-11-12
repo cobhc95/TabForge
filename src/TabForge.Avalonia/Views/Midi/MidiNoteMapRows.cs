@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Nodes;
@@ -72,8 +73,8 @@ public sealed class MidiNoteMapRows
         {
             var edit = Push("Edit map…", NoteMapEditEntry.EditButtonTip, "NoteMapEdit");
             var create = Push("New map…", "Make your own map: type the note your instrument needs for each drum", "NoteMapNew");
-            edit.Click += (_, _) => Edit(DrumMapLibrary.Find(Value("To")));
-            create.Click += (_, _) => Edit(null);
+            edit.Click += (_, _) => Platform.UiTasks.Forget(Edit(DrumMapLibrary.Find(Value("To"))), "Drum map edit", text => _summary.Text = text);
+            create.Click += (_, _) => Platform.UiTasks.Forget(Edit(null), "Drum map edit", text => _summary.Text = text);
             var buttons = new WrapPanel { Orientation = Orientation.Horizontal };
             buttons.WithMargin(DialogMetrics.MidiBarGap);
             buttons.Children.Add(edit); buttons.Children.Add(create);
@@ -101,7 +102,7 @@ public sealed class MidiNoteMapRows
         return button;
     }
 
-    private async void Edit(DrumMap? map)
+    private async Task Edit(DrumMap? map)
     {
         try
         {

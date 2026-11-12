@@ -4,7 +4,7 @@ namespace TabForge.Services;
 
 // Owns: bounding every settings value to its valid range.
 // Does not own: file access and migration.
-// Tests: TestSecurityInputBoundaries, TestSettingsBadWorkspaceKeepsOtherSettings.
+// Tests: TestSettingsBadWorkspaceKeepsOtherSettings.
 /// <summary>Clamps imported and persisted settings to practical UI, audio, and collection bounds.</summary>
 public static class SettingsValidator
 {

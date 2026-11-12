@@ -7,7 +7,7 @@ namespace TabForge.Services;
 
 // Owns: reading and writing settings.json with bounded, atomic file access.
 // Does not own: the in-memory settings object (AppSettingsStore) and migration.
-// Tests: TestSecurityInputBoundaries.
+// Tests: no dedicated test class.
 /// <summary>Bounded settings import and same-directory atomic persistence.</summary>
 public static class SettingsFileService
 {

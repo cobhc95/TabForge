@@ -16,6 +16,7 @@ using TabForge.Platform;
 using TabForge.Platform.Theme;
 using TabForge.Services.Features;
 using TabForge.Shell;
+using TabForge.Menus;
 using Buttons = TabForge.Avalonia.Shell.CaptionButtons;
 
 namespace TabForge.Avalonia.Shell;
@@ -32,7 +33,7 @@ public sealed class TitleBarView : Border, ICaptionButtonRects
 {
     /// <summary>The command the Record video button runs: the live recording toggle (the export window is File > Export video).</summary>
     public const string RecordCommandId = FeatureHotkeyIds.RecordVideo;
-    private const string SettingsCommandId = "App.Preferences";
+    private const string SettingsCommandId = CommandIds.App.Preferences;
 
     // The buttons Windows answers natively (HTMINBUTTON, HTMAXBUTTON, HTCLOSE).
     private static readonly IReadOnlyList<(string Name, ChromeHit Kind)> NativeButtons = new (string Name, ChromeHit Kind)[]

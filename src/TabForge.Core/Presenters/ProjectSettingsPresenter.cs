@@ -1,6 +1,8 @@
 // Owns: the project settings dialog's logic without UI types: the key and time-signature choices, the checks on tempo and beats per bar, the edited values as a result, the read-only summary (tracks, bars, sections, approximate length) and the list of pending changes against the song as it was opened.
 // Does not own: the window and its tabs, the text boxes and combo boxes, the discard prompt, or applying the result to the song with undo (the caller does that).
 // Tests: no dedicated test class.
+using TabForge.Services;
+
 namespace TabForge.Presenters;
 
 /// <summary>Edited values from the project settings dialog; the caller applies them with undo.</summary>
@@ -34,8 +36,6 @@ public sealed class ProjectSettingsPresenter
 {
     /// <summary>The key index that means C major (no sharps or flats); <see cref="SignatureChoices.KeyNames"/> is ordered from seven flats to seven sharps.</summary>
     private const int KeyIndexOffset = 7;
-    private const int MinTempo = 20;
-    private const int MaxTempo = 400;
     private const int MaxBeatsPerBar = 32;
 
     private readonly ProjectSettingsResult _original;
@@ -74,8 +74,8 @@ public sealed class ProjectSettingsPresenter
     /// <summary>The first problem that stops the draft being applied, or null when it can be applied.</summary>
     public ProjectSettingsProblem? FindProblem(ProjectSettingsDraft draft)
     {
-        if (!int.TryParse(draft.TempoText.Trim(), out var bpm) || bpm is < MinTempo or > MaxTempo)
-            return new ProjectSettingsProblem($"Tempo must be a whole number from {MinTempo} to {MaxTempo}.", ProjectSettingsField.Tempo);
+        if (!int.TryParse(draft.TempoText.Trim(), out var bpm) || bpm is < InputLimits.MinTempo or > InputLimits.MaxTempo)
+            return new ProjectSettingsProblem($"Tempo must be a whole number from {InputLimits.MinTempo} to {InputLimits.MaxTempo}.", ProjectSettingsField.Tempo);
         if (!int.TryParse(draft.BeatsPerBarText.Trim(), out var beats) || beats is < 1 or > MaxBeatsPerBar)
             return new ProjectSettingsProblem($"Beats per bar must be from 1 to {MaxBeatsPerBar}.", ProjectSettingsField.BeatsPerBar);
         return null;

@@ -21,7 +21,7 @@ public sealed class MainWindowCommands : TabForge.Avalonia.Views.IMenuCommandRun
     /// preview's sample state, as the other preview entries do; a row not listed here stays disabled.</summary>
     private static readonly IReadOnlyDictionary<string, string> PreviewHeaderOfCommand = new Dictionary<string, string>(StringComparer.Ordinal)
     {
-        ["App.Preferences"] = "Settings…",
+        [CommandIds.App.Preferences] = "Settings…",
         ["View.LearnPopout"] = "Keyboard mode: view…",
     };
 

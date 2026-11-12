@@ -24,7 +24,7 @@ public static class MainWindowClipKeys
     /// <summary>The command ids this class handles.</summary>
     public static readonly IReadOnlyList<string> Commands = new[]
     {
-        "Clip.Deselect", "Clip.Delete", "Clip.Copy", "Clip.Cut", "Clip.Paste", "Clip.Duplicate",
+        "Clip.Deselect", CommandIds.Clip.Delete, CommandIds.Clip.Copy, CommandIds.Clip.Cut, CommandIds.Clip.Paste, CommandIds.Clip.Duplicate,
         "Clip.NudgeLeft", "Clip.NudgeRight", "Clip.NudgeLeftFine", "Clip.NudgeRightFine", "Clip.LaneUp", "Clip.LaneDown", TimelineMenus.TakeId,
     };
 
@@ -49,11 +49,11 @@ public static class MainWindowClipKeys
             target.Timeline.SelectedClip = null;
             target.Timeline.LaneCursor = null;   // the lane edit cursor belongs to the clip context
         });
-        Add(commands, songs, panes, "Clip.Delete", target => Delete(target, trimEmptyBarsAtEnd));
-        Add(commands, songs, panes, "Clip.Copy", Copy);
-        Add(commands, songs, panes, "Clip.Cut", target => Cut(target, trimEmptyBarsAtEnd));
-        Add(commands, songs, panes, "Clip.Paste", Paste, () => ClipClipboard.HasClip);
-        Add(commands, songs, panes, "Clip.Duplicate", Duplicate);
+        Add(commands, songs, panes, CommandIds.Clip.Delete, target => Delete(target, trimEmptyBarsAtEnd));
+        Add(commands, songs, panes, CommandIds.Clip.Copy, Copy);
+        Add(commands, songs, panes, CommandIds.Clip.Cut, target => Cut(target, trimEmptyBarsAtEnd));
+        Add(commands, songs, panes, CommandIds.Clip.Paste, Paste, () => ClipClipboard.HasClip);
+        Add(commands, songs, panes, CommandIds.Clip.Duplicate, Duplicate);
         Add(commands, songs, panes, "Clip.NudgeLeft", target => Nudge(target, -ClipEditService.BeatSeconds(target.Document.Project.Tempo), trimEmptyBarsAtEnd));
         Add(commands, songs, panes, "Clip.NudgeRight", target => Nudge(target, ClipEditService.BeatSeconds(target.Document.Project.Tempo), () => false));
         Add(commands, songs, panes, "Clip.NudgeLeftFine", target => Nudge(target, -FineNudgeSec, trimEmptyBarsAtEnd));

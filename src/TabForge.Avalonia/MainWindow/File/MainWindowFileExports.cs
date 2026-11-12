@@ -10,6 +10,7 @@ using TabForge.Platform;
 using TabForge.Rendering;
 using TabForge.Services;
 using TabForge.Services.Video;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia;
 
@@ -22,7 +23,7 @@ namespace TabForge.Avalonia;
 public sealed class MainWindowFileExports
 {
     /// <summary>The menu command ids this class handles.</summary>
-    public static readonly IReadOnlyList<string> Commands = new[] { "File.Render", "File.ExportVideo" };
+    public static readonly IReadOnlyList<string> Commands = new[] { CommandIds.File.Render, "File.ExportVideo" };
 
     private readonly RenderSettings _renderSettings;
     private readonly VideoSettings _videoSettings;
@@ -61,7 +62,7 @@ public sealed class MainWindowFileExports
             Notice = notice,
             Activity = activity,
         };
-        commands.Add("File.Render", () => exports.ShowRender(songs.Active, owner));
+        commands.Add(CommandIds.File.Render, () => exports.ShowRender(songs.Active, owner));
         commands.Add("File.ExportVideo", () => exports.ShowVideo(songs.Active, owner));
     }
 

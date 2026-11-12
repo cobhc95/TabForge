@@ -104,25 +104,25 @@ public sealed partial class PianoRollView
         return panel.Frame;
     }
 
-    /// <summary>How this roll's panel reaches the fretboard panel (the window sets it).</summary>
-    internal ScaleHostLinks Links { get; } = new();
+    /// <summary>How this roll's panel reaches the fretboard panel: the shared pick's links (the window sets them once).</summary>
+    internal ScaleHostLinks Links => Shared().Links;
 
     /// <summary>True when the roll shows and the scale button can open the panel.</summary>
     internal bool CanOpenScalePanel => IsEffectivelyVisible && _scaleButton.IsEffectivelyEnabled;
 
-    internal PianoRollScaleHost ScaleHost => _scaleHost ??= new PianoRollScaleHost(Shared(), Links, _host.Editing, () => _document, SyncScaleControls);
+    internal PianoRollScaleHost ScaleHost => _scaleHost ??= new PianoRollScaleHost(Shared(), Shared().Links, _host.Editing, () => _document, SyncScaleControls);
 
-    /// <summary>The window's status bar scale readout (the one shared pick); the window sets it. Without it the roll keeps a readout of its own.</summary>
-    internal Func<StatusScaleReadout?> SharedReadout { get; set; } = () => null;
+    /// <summary>The window's one shared scale pick (the status bar and the fretboard read it too); the window sets it. Without it the roll keeps a pick of its own.</summary>
+    internal ScalePick? SharedPick { get; set; }
 
-    private StatusScaleReadout? _own;
-    private StatusScaleReadout? _hooked;
+    private ScalePick? _own;
+    private ScalePick? _hooked;
     private bool _sharedBusy;
 
-    // The readout every scale feature reads: the window's, else this roll's own (so a roll shown alone behaves the same).
-    private StatusScaleReadout Shared()
+    // The pick every scale feature reads: the window's, else this roll's own (so a roll shown alone behaves the same).
+    private ScalePick Shared()
     {
-        var readout = SharedReadout() ?? (_own ??= new StatusScaleReadout(new StatusBarView(), () => _host.Editing(), () => _document!, () => _document!.Project, _host.SaveSettings));
+        var readout = SharedPick ?? (_own ??= new ScalePick(() => _host.Editing(), () => _document!, () => _document!.Project, _host.SaveSettings));
         if (!ReferenceEquals(readout, _hooked))
         {
             if (_hooked is not null) _hooked.Refreshed -= OnSharedScaleChanged;
@@ -142,7 +142,7 @@ public sealed partial class PianoRollView
     }
 
     // The readout with the track shown read (null without a song, a track or on a drum track). The window's readout follows the status bar; a roll's own one reads bar 0.
-    private StatusScaleReadout? SharedReadout_()
+    private ScalePick? SharedReadout_()
     {
         if (_document is null || Presenter.Track is not { } track || track.IsDrumTrack || track.MidiChannel == 9) return null;
         var readout = Shared();
@@ -160,7 +160,7 @@ public sealed partial class PianoRollView
     private bool SharedAuto() => SharedReadout_() is { } readout && readout.Current.IsAuto;
 
     // An old saved piano roll manual pick is applied once to the shared pick, only when this section and track has no pick yet.
-    private void MigrateOldPick(StatusScaleReadout readout)
+    private void MigrateOldPick(ScalePick readout)
     {
         var editing = _host.Editing();
         if (editing.PianoRollScalePickMigrated) return;

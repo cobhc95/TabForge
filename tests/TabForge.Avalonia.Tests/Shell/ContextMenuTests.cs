@@ -136,8 +136,9 @@ public class ContextMenuTests
     {
         Assert.Equal(ContextMenuRows.InsertBarBeforeId, ContextMenuRows.CommandIdOf(new MenuSpec { Command = TimelineCommand.InsertBarBefore }));
         Assert.Equal(ContextMenuRows.InsertBarAfterId, ContextMenuRows.CommandIdOf(new MenuSpec { Command = TimelineCommand.InsertBarAfter }));
-        var host = new ContextMenuHost { ClickedBar = 3 };
-        Assert.Equal(3, host.ClickedBar);
+        var host = new ContextMenuHost();
+        host.Aim(MenuTarget.None with { Bar = 3 });
+        Assert.Equal(3, host.Target.Bar);
     }
 
     [AvaloniaFact]

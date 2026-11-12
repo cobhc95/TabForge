@@ -5,7 +5,7 @@ namespace TabForge.AudioEngine.Builtin.Limiter;
 // Owns: the limiter parameter list (ids and keys are saved in songs and presets: never change them), the readouts the editor shows (gain reduction, output
 //   level, latency), the look-ahead length and the latency it reports to the host.
 // Does not own: the audio path (LimiterEffect.Process.cs), the peak detector (TruePeakDetector), the window.
-// Tests: BuiltinDynamicsTests.
+// Tests: BuiltinLimiterTests.
 // Threads: parameters and state on the engine main thread; Process on the audio thread (it writes the readouts once per block).
 
 /// <summary>Look-ahead true-peak limiter: input gain, ceiling in dBTP, release (or automatic release); about 1.5 ms of look-ahead, reported as latency.</summary>

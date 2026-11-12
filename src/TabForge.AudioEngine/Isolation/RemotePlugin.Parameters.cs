@@ -5,7 +5,7 @@ namespace TabForge.AudioEngine.Isolation;
 
 // Owns: the parameter list and setter of an isolated plug-in over the control pipe (additive messages CmdListParams / CmdSetParam, reply MsgParams).
 // Does not own: the parameter model (IPluginParameters, ClapPlugin), the wire layout (PluginParameterWire), the pipe (PluginControlChannel).
-// Tests: ClapProtocolTests (wire round trip).
+// Tests: no dedicated test class.
 public sealed partial class RemotePlugin : IPluginParameters
 {
     public IReadOnlyList<PluginParameterInfo> GetParameters()

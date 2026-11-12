@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
@@ -96,7 +97,7 @@ public sealed class ProjectSettingsWindow : Window
 
         KeyDown += (_, e) => { if (e.Key == Key.Escape) Close(); };
         Opened += (_, _) => _title.Focus();
-        Closing += OnClosing;
+        Closing += (sender, e) => Platform.UiTasks.Forget(OnClosing(sender, e), "Project settings closing question");
     }
 
     private void FillEditors(ProjectSettingsResult o)
@@ -259,8 +260,8 @@ public sealed class ProjectSettingsWindow : Window
     }
 
     /// <summary>Closing with changes asks first; the window stays open unless the person discards them.</summary>
-    // async void: started from the Closing event, which cannot wait; an exception from the question surfaces on the UI thread.
-    private async void OnClosing(object? sender, WindowClosingEventArgs e)
+    // Started from the Closing event, which cannot wait: UiTasks.Forget logs an exception from the question. Cancel is set before the first await.
+    private async Task OnClosing(object? sender, WindowClosingEventArgs e)
     {
         if (_mayClose) return;
         var changes = _presenter.PendingChanges(ReadDraft());

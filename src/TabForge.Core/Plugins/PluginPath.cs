@@ -4,7 +4,7 @@ namespace TabForge.Plugins;
 
 // Owns: the one spelling of a plug-in path used for trust and approval comparisons (full path, no trailing separator).
 // Does not own: the trust decision (PluginTrust), scanning, approval lists.
-// Tests: TestSecurityInputBoundaries.
+// Tests: no dedicated test class.
 /// <summary>Plug-in path normalisation shared by the settings bounds and plug-in trust.</summary>
 public static class PluginPath
 {

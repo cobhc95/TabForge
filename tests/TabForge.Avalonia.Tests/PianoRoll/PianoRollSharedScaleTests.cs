@@ -24,7 +24,7 @@ public sealed class PianoRollSharedScaleTests
     {
         var rig = new StatusBarTransportTests.Rig(song: SectionScaleDetectorTests.TwoSections());
         editing ??= new EditingSettings { PianoRollScalePickMigrated = true };
-        var view = new PianoRollView(new PianoRollHost { Document = () => rig.Document, Editing = () => editing }) { SharedReadout = () => rig.Status.Scale };
+        var view = new PianoRollView(new PianoRollHost { Document = () => rig.Document, Editing = () => editing }) { SharedPick = rig.Status.Scale.Pick };
         var window = new Window { Width = 2000, Height = 700, Content = view };
         window.Show();
         var track = rig.Document.Project.FirstNotationTrack;
@@ -115,7 +115,7 @@ public sealed class PianoRollSharedScaleTests
         var track = rig2.Document.Project.FirstNotationTrack;
         rig2.Status.Scale.Show(rig2.Document.Project, 0, track);
         rig2.Status.Scale.BarHost().Pick(ScaleReadoutEngine.Parse("C Major")!);
-        var view2 = new PianoRollView(new PianoRollHost { Document = () => rig2.Document, Editing = () => kept }) { SharedReadout = () => rig2.Status.Scale };
+        var view2 = new PianoRollView(new PianoRollHost { Document = () => rig2.Document, Editing = () => kept }) { SharedPick = rig2.Status.Scale.Pick };
         var window2 = new Window { Content = view2 };
         window2.Show();
         try

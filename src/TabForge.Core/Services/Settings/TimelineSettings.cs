@@ -4,7 +4,7 @@ namespace TabForge.Services;
 
 // Owns: the timeline and section preferences data and the name lists of the fretboard and playhead styles.
 // Does not own: loading, saving and validating (AppSettingsStore, SettingsValidator) or the Preferences rows (SettingsCatalog).
-// Tests: TestSettingsFileSplitSnapshots.
+// Tests: no dedicated test class.
 /// <summary>Timeline and section presentation/interaction preferences.</summary>
 public sealed class TimelineSettings
 {

@@ -1,6 +1,6 @@
 // Owns: the row shape every right-click menu is built from (plain data: caption, shortcut text, tick, one-of-several choice, the Preferences row it mirrors, submenus, separators).
 // Does not own: the menu contents (TimelineMenus, TrackRowMenus, ScoreMenus, and the instrument and band menus) or the toolkit builders (Avalonia ContextMenuBuilder).
-// Tests: SelfTestMenuGolden, SelfTestTrackRowMenu, TabForge.Avalonia.Tests.ContextMenuTests.
+// Tests: TabForge.Avalonia.Tests.ContextMenuTests.
 
 namespace TabForge.Menus;
 

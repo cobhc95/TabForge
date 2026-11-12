@@ -4,13 +4,9 @@ using TabForge.Plugins;
 
 namespace TabForge.Playback;
 
-// Owns: the checks that decide whether a compiled playback schedule can be reused, and the seek target it resolves.
-// Does not own: the compile (ScoreToMidiCompiler) and the engine (PlaybackEngine, app).
-// Tests: PlaybackStartOrderTests.
-
 /// <summary>
 /// Owns immutable checks for reusing a compiled playback schedule and resolving a seek target.
-/// Does not own the live timeline, scheduler thread, or MIDI output. Tests: TestPlaybackScheduleReuse, PlaybackStartOrderTests.
+/// Does not own the live timeline, scheduler thread, or MIDI output. Tests: PlaybackStartOrderTests.
 /// </summary>
 internal sealed class PlaybackScheduleReuse
 {

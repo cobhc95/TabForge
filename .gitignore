@@ -5,8 +5,7 @@ build/
 *.user
 .vs/
 
-# Local-only: source backups and copyrighted sample songs (see THIRD_PARTY.md)
-backup/*.zip
+# Local-only: copyrighted sample songs (see THIRD_PARTY.md)
 Tabs/
 
 # Diagnostics written by the app or tools
@@ -25,12 +24,6 @@ third_party/
 
 # Local audit kits, reference data, recordings and tools (outside the product; copyrighted songs and personal recordings)
 work/
-
-# WPF temporary build projects
-*_wpftmp.csproj
-backup/night-*/
-
-backup/archive/
 
 # Local screenshots and the private plug-in test list: never published
 shots-before/

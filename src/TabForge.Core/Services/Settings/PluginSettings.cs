@@ -4,7 +4,7 @@ namespace TabForge.Services;
 
 // Owns: the audio output, recording input and plug-in hosting preferences data, the known-plug-in records and the driver names.
 // Does not own: loading, saving and validating (AppSettingsStore, SettingsValidator) or the Preferences rows (SettingsCatalog).
-// Tests: TestSettingsFileSplitSnapshots.
+// Tests: no dedicated test class.
 /// <summary>Audio engine (plug-in playback) and plug-in folders. Windows MIDI playback does not use these.</summary>
 public sealed class PluginSettings
 {

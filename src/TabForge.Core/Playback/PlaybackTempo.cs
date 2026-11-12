@@ -14,7 +14,7 @@ public static class PlaybackTempo
     /// <summary>The tempo at <paramref name="ms"/> of the compiled <paramref name="timeline"/>: the performed bar's start tempo (repeats, jumps and carried changes included) moved on by that bar's mid-bar changes and ramps.</summary>
     public static int AtTime(SongProject project, ScoreTimeline timeline, double ms)
     {
-        if (timeline.Bars.Count == 0) return Math.Clamp(project.Tempo, 20, 400);
+        if (timeline.Bars.Count == 0) return Math.Clamp(project.Tempo, InputLimits.MinTempo, InputLimits.MaxTempo);
         var bar = timeline.BarAt(ms);
         var slot = bar.SlotFraction(ms) * bar.Slots;
         return MusicTime.TempoAtSlot(MusicTime.BarOf(project, bar.Bar), slot, bar.Tempo);

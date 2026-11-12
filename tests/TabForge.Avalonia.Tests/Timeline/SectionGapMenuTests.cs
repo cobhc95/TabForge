@@ -55,8 +55,8 @@ public sealed class SectionGapMenuTests
         Assert.Equal("Add section at bar 6", rows[0].Header);
         Assert.False(string.IsNullOrEmpty(rows[0].Shortcut));
         Assert.False(rows[2].Enabled);   // nothing on the clipboard
-        Assert.Equal(-1, view.ContextMenus.ClickedSection);
-        Assert.Equal(5, view.ContextMenus.ClickedBar);
+        Assert.Equal(-1, view.ContextMenus.Target.Section);
+        Assert.Equal(5, view.ContextMenus.Target.Bar);
         Assert.Contains(ContextMenuRows.CommandIdOf(rows[2]), MainWindowTimelineSections.Commands);
     }
 
@@ -71,7 +71,25 @@ public sealed class SectionGapMenuTests
         Assert.Contains(TimelineCommand.DeleteSection, commands);
         Assert.Contains(TimelineCommand.RenameSection, commands);
         Assert.DoesNotContain(TimelineCommand.PasteSectionAtBar, commands);
-        Assert.Equal(0, view.ContextMenus.ClickedSection);
+        Assert.Equal(0, view.ContextMenus.Target.Section);
+    }
+
+    /// <summary>A menu path sets only what it names: the section and gap menus leave the track of the bar menu opened before them (Paste section uses it).</summary>
+    [AvaloniaFact]
+    public void ASectionMenuKeepsTheTrackTheLastBarMenuLeft()
+    {
+        var view = Open(out var project);
+        project.Tracks.Add(new TrackModel { Name = "Bass", Measures = Enumerable.Range(0, Bars).Select(bar => new MeasureModel { Number = bar + 1 }).ToList() });
+        view.Reload(project);
+        view.ContextMenus.Aim(view.ContextMenus.Target with { Track = 1 });   // the bar menu of a lane on the second track
+
+        ContextMenuRows.TimelineAt(view, OnStrip(view, 2)).ToList();
+        Assert.Equal(1, view.ContextMenus.Target.Track);
+        Assert.Equal(0, view.ContextMenus.Target.Section);
+
+        ContextMenuRows.TimelineAt(view, OnStrip(view, 5)).ToList();
+        Assert.Equal(1, view.ContextMenus.Target.Track);
+        Assert.Equal(-1, view.ContextMenus.Target.Section);
     }
 
     [AvaloniaFact]
@@ -83,11 +101,11 @@ public sealed class SectionGapMenuTests
         var prompts = new MainWindowTimelineSections.SectionMenuPrompts((_, _) => Task.FromResult(true),
             (_, _, _, _) => Task.FromResult<MarkerAnswer?>(new MarkerAnswer("Bridge", "#FF0000")), () => new AppSettings());
 
-        await MainWindowTimelineSections.AddHereAsync(document, view.ContextMenus.ClickedBar, _ => { }, prompts);
+        await MainWindowTimelineSections.AddHereAsync(document, view.ContextMenus.Target.Bar, _ => { }, prompts);
         Assert.Single(project.Markers, m => m.MeasureIndex == 5 && m.Title == "Bridge");
 
         var clip = SectionMenuEdits.Copy(project, project.Markers.First(m => m.Title == "Verse"));
-        Assert.NotNull(SectionMenuEdits.PasteAt(project, view.ContextMenus.ClickedBar, clip, 0, project.Markers.First(m => m.Title == "Verse")));
+        Assert.NotNull(SectionMenuEdits.PasteAt(project, view.ContextMenus.Target.Bar, clip, 0, project.Markers.First(m => m.Title == "Verse")));
         Assert.Equal(Bars + 4, project.Tracks[0].Measures.Count);
         Assert.Single(project.Markers, m => m.MeasureIndex == 5 && m.Title == "Verse");
     }

@@ -17,7 +17,7 @@ public enum UiFillRule { EvenOdd, Nonzero }
 /// <summary>
 /// Receives one geometry's figures, in DIPs. Every segment is stroked and joins sharply unless it asks for a smooth join.
 /// Owns: the path-building contract. Does not own: drawing (<see cref="IDrawContext.Path"/>) or the geometry object (the adapter's).
-/// Tests: TestDrawContextPort, AvaloniaPortsTests (Avalonia).
+/// Tests: AvaloniaPortsTests (Avalonia).
 /// </summary>
 public interface IPathSink
 {
@@ -33,7 +33,7 @@ public interface IPathSink
 
 /// <summary>
 /// Builds frozen <see cref="IUiPath"/> geometries from figures given to an <see cref="IPathSink"/>.
-/// Owns: geometry creation and bounds. Does not own: drawing. Tests: TestDrawContextPort, AvaloniaPortsTests.
+/// Owns: geometry creation and bounds. Does not own: drawing. Tests: AvaloniaPortsTests.
 /// </summary>
 public interface IPathFactory
 {
@@ -50,7 +50,7 @@ public readonly record struct UiTextMetrics(double Width, double Height, double 
 /// <summary>
 /// Text measuring without drawing.
 /// Owns: text size and line metrics, font availability. Does not own: text caches (the callers') or drawing (<see cref="IDrawContext.Text"/>).
-/// Tests: TestDrawContextPort, AvaloniaPortsTests.
+/// Tests: AvaloniaPortsTests.
 /// </summary>
 public interface ITextMeasure
 {

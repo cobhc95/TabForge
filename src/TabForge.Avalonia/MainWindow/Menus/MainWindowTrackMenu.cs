@@ -9,13 +9,14 @@ using TabForge.Documents;
 using TabForge.Models;
 using TabForge.Presenters;
 using TabForge.Services;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia;
 
 // Owns: the handlers of the Track menu on the shown song and the Insert > Track rows: Add track (the Track properties window in add mode), Add Bass, Add Drums,
 //   Add Keys and Add Audio / MIDI track (a new track of that kind at the end), Delete track (after the Delete prompt; the last track stays), Move track up / down, and
 //   Track.Next / Track.Previous (the selected track one row down / up).
-//   The track row menu's Delete and Properties rows act on the track under the last track row right-click (ContextMenuHost.ClickedTrack).
+//   The track row menu's Delete and Properties rows act on the track under the last track row right-click (ContextMenuHost.Target.Track).
 //   The edits run through DocumentEdits; a new track is built by NewTrackFactory (TabForge.Core).
 // Does not own: the menu rows (MainMenuTable in Core), the commands table (MainWindowCommands), the track list rows (MainWindowTrackListRows),
 //   the Add track strip of the arrangement (ArrangementView).
@@ -24,7 +25,7 @@ namespace TabForge.Avalonia;
 public static class MainWindowTrackMenu
 {
     /// <summary>The undo key the Delete track prompt names; the default preset's Undo gesture.</summary>
-    internal const string UndoCommandId = "Edit.Undo";
+    internal const string UndoCommandId = CommandIds.Edit.Undo;
 
     /// <summary>The status notice deleting the last track shows.</summary>
     private const string CannotDeleteLastTrackText = "Cannot delete the last track";
@@ -35,7 +36,7 @@ public static class MainWindowTrackMenu
     /// <param name="status">The status notice deleting the last track shows; null stays silent (the Compose call leaves it unset).</param>
     /// <param name="picker">How the Track properties window's Change instrument button sounds the choice; null stays silent.</param>
     /// <summary>The Track menu command ids this class handles, and the track row menu's Delete and Properties ids.</summary>
-    public static readonly IReadOnlyList<string> Commands = new[] { "Track.Add", "Track.Properties", "Track.AddBass", "Track.AddDrums", "Track.AddKeys", "Track.AddAudio", "Track.Delete", "Track.MoveUp", "Track.MoveDown", "Track.Next", "Track.Previous", "TrackRow.Delete", "TrackRow.Properties" };
+    public static readonly IReadOnlyList<string> Commands = new[] { CommandIds.Track.Add, "Track.Properties", "Track.AddBass", "Track.AddDrums", "Track.AddKeys", "Track.AddAudio", "Track.Delete", "Track.MoveUp", "Track.MoveDown", "Track.Next", "Track.Previous", "TrackRow.Delete", "TrackRow.Properties" };
 
     /// <param name="landed">Called with the new track after an add landed (the shared insert refresh: the rows reload, the track is shown); null does nothing more.</param>
     /// <param name="playback">The sessions a string ring sounds through; null keeps the Add and Properties windows silent.</param>
@@ -45,7 +46,7 @@ public static class MainWindowTrackMenu
     {
         Action<string> say = status ?? (_ => { });
         void Adding(Func<TrackModel?> add) { if (add() is { } track) landed?.Invoke(track); }
-        commands.Add("Track.Add", () => UiTasks.Forget(AddAndShowAsync(songs.Active, owner, landed, playback, settingsGetter, saveSettings), "Add track", say));
+        commands.Add(CommandIds.Track.Add, () => UiTasks.Forget(AddAndShowAsync(songs.Active, owner, landed, playback, settingsGetter, saveSettings), "Add track", say));
         commands.Add("Track.Properties", () => UiTasks.Forget(ShowTrackPropertiesAsync(songs.Active, owner, SelectedIndex(songs.Active), picker, playback, settingsGetter, saveSettings), "Track properties", say));
         commands.Add("Track.AddBass", () => Adding(() => AddTrack(songs.Active, TrackKind.Bass, DefaultChainOf(owner))));
         commands.Add("Track.AddDrums", () => Adding(() => AddTrack(songs.Active, TrackKind.Drums, DefaultChainOf(owner))));
@@ -57,8 +58,8 @@ public static class MainWindowTrackMenu
         commands.Add("Track.Next", () => StepSelectedTrack(songs.Active, 1));
         commands.Add("Track.Previous", () => StepSelectedTrack(songs.Active, -1));
         // A track row key runs on the selected track (ArrangementView points ClickedTrack at the clicked row); the row menu sets it too.
-        commands.Add("TrackRow.Delete", () => UiTasks.Forget(DeleteTrackAsync(songs.Active, owner, rows.ClickedTrack >= 0 ? rows.ClickedTrack : SelectedIndex(songs.Active), rows, status), "Delete track", say));
-        commands.Add("TrackRow.Properties", () => UiTasks.Forget(ShowTrackPropertiesAsync(songs.Active, owner, rows.ClickedTrack >= 0 ? rows.ClickedTrack : SelectedIndex(songs.Active), picker, playback, settingsGetter, saveSettings), "Track properties", say));
+        commands.Add("TrackRow.Delete", () => UiTasks.Forget(DeleteTrackAsync(songs.Active, owner, rows.Target.Track >= 0 ? rows.Target.Track : SelectedIndex(songs.Active), rows, status), "Delete track", say));
+        commands.Add("TrackRow.Properties", () => UiTasks.Forget(ShowTrackPropertiesAsync(songs.Active, owner, rows.Target.Track >= 0 ? rows.Target.Track : SelectedIndex(songs.Active), picker, playback, settingsGetter, saveSettings), "Track properties", say));
     }
 
     /// <summary>Adds a new track of <paramref name="kind"/> at the end of the song, one undo step; returns the new track.</summary>

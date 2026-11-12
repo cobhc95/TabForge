@@ -28,8 +28,8 @@ public static class MainWindowScoreRows
         // The zoom rows and the View zoom hotkeys (Ctrl+plus and Ctrl+minus, numpad too) share one step about the viewport's middle.
         commands.Add(ScoreMenus.ZoomInId, () => score.ZoomStep(1));
         commands.Add(ScoreMenus.ZoomOutId, () => score.ZoomStep(-1));
-        commands.Add("View.ZoomIn", () => ZoomHotkey(score, bandMenu, 1));
-        commands.Add("View.ZoomOut", () => ZoomHotkey(score, bandMenu, -1));
+        commands.Add(CommandIds.View.ZoomIn, () => ZoomHotkey(score, bandMenu, 1));
+        commands.Add(CommandIds.View.ZoomOut, () => ZoomHotkey(score, bandMenu, -1));
         commands.Add(ScoreMenus.FitWidthId, score.FitWidth);
         commands.Add(ContextMenuRows.ScoreLayoutIdPrefix + "page", () => SetContinuous(score, settings, false));
         commands.Add(ContextMenuRows.ScoreLayoutIdPrefix + "continuous", () => SetContinuous(score, settings, true));

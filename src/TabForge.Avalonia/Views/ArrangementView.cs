@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
@@ -61,7 +62,7 @@ public sealed partial class ArrangementView : UserControl
         // Arming from the track row's record cell changes the rows (the armed sub-row), and the timeline is not marked for that edit, so the rows reload here.
         Input.TrackArmToggled += row => { _trackRows.ReloadRows(); TrackArmChanged?.Invoke(row); };
         _trackRows.WatchTimeline();
-        AddTrackBar.Clicked += OnAddTrackClicked;
+        AddTrackBar.Clicked += () => Platform.UiTasks.Forget(OnAddTrackClicked(), "Add track");
         Header.DoubleTapped += (_, e) =>
         {
             var row = Header.NameRowAt(e.GetPosition(Header));
@@ -275,7 +276,7 @@ public sealed partial class ArrangementView : UserControl
         // The track row's keyboard commands (TrackRow.*) act on the selected row through the same host field the right-click menu uses.
         // A Ctrl+click that dropped the clicked track from the selection leaves the TrackRow.* keys on the tracks still selected, never on the one just deselected.
         var picked = song.Selection.Tracks.Rows(song.Project.Tracks);
-        Timeline.ContextMenus.ClickedTrack = Timeline.TrackRowFocused && picked.Count > 0 && !picked.Contains(row) ? picked[^1] : row;
+        Timeline.ContextMenus.Aim(Timeline.ContextMenus.Target with { Track = Timeline.TrackRowFocused && picked.Count > 0 && !picked.Contains(row) ? picked[^1] : row });
         _trackRows.SyncSelectedRow();
     }
 
@@ -416,7 +417,7 @@ public sealed partial class ArrangementView : UserControl
     /// <summary>Writes the settings after the Add track window saves a tuning; null writes nothing.</summary>
     public Action? SaveSettings { get; set; }
 
-    private async void OnAddTrackClicked()
+    private async Task OnAddTrackClicked()
     {
         try
         {

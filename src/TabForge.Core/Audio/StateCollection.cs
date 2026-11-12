@@ -7,7 +7,7 @@ namespace TabForge.Audio;
 
 // Owns: the per-plug-in result of reading plug-in states before a save, and the save warning it makes.
 // Does not own: reading the states (AudioEngineClient.CollectStates).
-// Tests: TestSaveFlowCharacterization.
+// Tests: no dedicated test class.
 
 /// <summary>What happened to one plug-in's state when states were collected before a save.</summary>
 public enum PluginStateOutcome { Captured, Unchanged, TimedOut, Failed, TooLarge }

@@ -2,7 +2,7 @@
 //   the single muted explanation line, the footer row (Remember choice left, small right-aligned actions: primary accent + secondary outline) and the action button.
 //   Choice cards are RadioCard. A new prompt builds its body from these parts and inherits the style.
 // Does not own: a dialog's content, its answer or its keys (the window), the sizes (DialogMetrics), the colours (theme keys).
-// Tests: TabForge.Avalonia.Tests.PromptChromeTests, plus each prompt's own tests.
+// Tests: no dedicated test class.
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Markup.Xaml.MarkupExtensions;

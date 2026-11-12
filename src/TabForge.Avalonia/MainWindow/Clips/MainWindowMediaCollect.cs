@@ -63,7 +63,7 @@ public sealed class MainWindowMediaCollect
     {
         commands.Add("File.CollectMedia", () => _ = CollectAsync());
         commands.Add("File.FindMissingMedia", () => _ = RelinkAsync());
-        commands.Add(ContextMenuRows.LocateMediaId, () => { if (clicked?.ClickedUnreadableClip is { } clip) _ = LocateAsync(clip.File); });
+        commands.Add(ContextMenuRows.LocateMediaId, () => { if (clicked?.Target.UnreadableClip is { } clip) _ = LocateAsync(clip.File); });
         commands.Add(ContextMenuRows.FindMissingMediaId, () => _ = RelinkAsync());
     }
 

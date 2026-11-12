@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
@@ -121,7 +122,7 @@ public sealed partial class FxChainWindow
         ActualThemeVariantChanged += (_, _) => UpdateOverlay();
         _cpuTimer.Tick += (_, _) => { FollowEditor(); UpdateOverlay(); };
         _cpuTimer.Start();
-        Closed += (_, _) => OnClosed();
+        Closed += (_, _) => Platform.UiTasks.Forget(OnClosed(), "Closing the FX chain window");
     }
 
     // Moving the window moves the docked editor (an engine-owned popup) in the same event, so it neither lags nor flashes while dragging.
@@ -151,7 +152,7 @@ public sealed partial class FxChainWindow
         Close();
     }
 
-    private async void OnClosed()
+    private async Task OnClosed()
     {
         _closed = true;
         _activeOnPopup?.Close();

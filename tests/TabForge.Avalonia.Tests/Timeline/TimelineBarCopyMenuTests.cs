@@ -48,7 +48,8 @@ public sealed class TimelineBarCopyMenuTests
         for (var bar = 0; bar < 3; bar++) track.Measures.Add(new MeasureModel { Number = bar + 1 });
         project.Tracks.Add(track);
         var document = new TabForge.Documents.SongDocument(() => null) { Project = project };
-        var menus = new ContextMenuHost { ClickedBar = 1, ClickedTrack = 0 };
+        var menus = new ContextMenuHost();
+        menus.Aim(MenuTarget.None with { Bar = 1, Track = 0 });
         var editing = new EditingSettings { BarRangeDelete = BarRangePromptText.Store(BarRangeAction.Remove, allTracks: true) };
         var asked = false;
 
@@ -67,7 +68,8 @@ public sealed class TimelineBarCopyMenuTests
         for (var bar = 0; bar < 3; bar++) track.Measures.Add(new MeasureModel { Number = bar + 1 });
         project.Tracks.Add(track);
         var document = new TabForge.Documents.SongDocument(() => null) { Project = project };
-        var menus = new ContextMenuHost { ClickedBar = 0, ClickedTrack = 0 };
+        var menus = new ContextMenuHost();
+        menus.Aim(MenuTarget.None with { Bar = 0, Track = 0 });
         var editing = new EditingSettings();
         var saved = 0;
 

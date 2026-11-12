@@ -3,7 +3,7 @@ namespace TabForge.Presenters;
 // Owns: the piano roll's keyboard split and glue: cut every selected note a beat crosses (S), and join the selected notes of one pitch and voice that
 //       touch, overlap or lie within a gap of each other (Ctrl+Shift+G). Each returns how many cuts / joins it made so the caller can say "Nothing to glue".
 // Does not own: the pointer-driven split line and glue paint (PianoRollEdits.cs, PianoRollEdits.More.cs) or the commit (PianoRollPresenter).
-// Tests: TabForge.Avalonia.Tests.PianoRollSplitGlueTests.
+// Tests: no dedicated test class.
 public static partial class PianoRollEdits
 {
     /// <summary>True when a cut at <paramref name="at"/> falls strictly inside <paramref name="note"/> (not at an edge): the one rule the split key and the cut marker share.</summary>

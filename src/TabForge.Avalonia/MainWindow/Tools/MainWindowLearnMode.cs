@@ -6,6 +6,7 @@ using TabForge.Avalonia.Views.Docking;
 using TabForge.Docking;
 using TabForge.KeyboardMode;
 using TabForge.Services;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia;
 
@@ -21,7 +22,7 @@ public sealed class MainWindowLearnMode
     /// <summary>The View menu command ids this class handles.</summary>
     public static readonly IReadOnlyList<string> Commands = new[] { CommandId, ToggleWaitCommandId, WaitSkipCommandId, LookAheadLongerCommandId, LookAheadShorterCommandId };
 
-    private const string CommandId = "View.LearnMode";
+    private const string CommandId = CommandIds.View.LearnMode;
 
     /// <summary>The Keyboard mode hotkeys: waiting for the right notes, skipping the awaited chord and the look-ahead steps.</summary>
     private const string ToggleWaitCommandId = "Learn.ToggleWait";

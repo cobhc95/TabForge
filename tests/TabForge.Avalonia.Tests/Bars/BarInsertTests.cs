@@ -182,7 +182,7 @@ public sealed class BarInsertTests
     public void TheTimelineBarMenuRowsUseTheSameInsert(string id, int clicked, int at)
     {
         var rig = new Rig();
-        rig.Menus.ClickedBar = clicked;
+        rig.Menus.Aim(rig.Menus.Target with { Bar = clicked });
         rig.InsertAndUndo(id, 0, at, 1, at);
     }
 

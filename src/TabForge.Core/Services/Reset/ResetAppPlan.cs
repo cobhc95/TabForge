@@ -6,7 +6,7 @@ namespace TabForge.Services.Reset;
 
 // Owns: building the data-only wipe plan: one item per owner tick, each with its concrete paths and cheap counts.
 // Does not own: deleting (ResetAppWipe), the backup zip (ResetAppBackup) or the dialog (ResetAppWindow).
-// Tests: ResetAppPlanTests, ResetAppStoreCoverageTests.
+// Tests: ResetAppPlanTests.
 /// <summary>Every path "Reset entire app" can touch, grouped by the owner's eight ticks.</summary>
 public sealed class ResetAppPlan
 {

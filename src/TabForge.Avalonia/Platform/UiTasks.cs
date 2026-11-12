@@ -1,6 +1,7 @@
 using TabForge.Avalonia.Views;
 using System;
 using System.Threading.Tasks;
+using TabForge.Services;
 
 namespace TabForge.Avalonia.Platform;
 
@@ -11,6 +12,9 @@ namespace TabForge.Avalonia.Platform;
 public static class UiTasks
 {
     // async void: the caller cannot wait; every exception is caught and reported inside.
+    /// <summary>As the overload below for a caller with no status line: the failure goes to the "ui" trace log.</summary>
+    public static void Forget(Task task, string what) => Forget(task, what, text => Trace.Error(Trace.Ui, text));
+
     /// <summary>Awaits <paramref name="task"/> and reports "{what} failed: message" through <paramref name="report"/>, which the caller supplies.</summary>
     public static async void Forget(Task task, string what, Action<string> report)
     {

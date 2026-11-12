@@ -19,7 +19,7 @@ public interface IMidiDeviceSet : IMidiInputSource
 
 // Owns: the MIDI input handles (through the IMidiInputBackend port: winmm on Windows, RtMidi elsewhere): opening, closing and rescanning them, and stamping each message with its device name.
 // Does not own: sharing the handles between listeners (<see cref="MidiInputHub"/>) or what a message means.
-// Tests: none dedicated(through a fake device set), TestKeyboardModeMidiListener.
+// Tests: none dedicated(through a fake device set).
 /// <summary>
 /// MIDI input for tracks armed with the MIDI input: every MIDI input device, open only while such a track is
 /// armed (closed otherwise, so nothing runs for users without MIDI gear). Messages arrive on the driver's thread

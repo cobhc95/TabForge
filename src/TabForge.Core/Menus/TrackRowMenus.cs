@@ -1,7 +1,7 @@
 // Owns: the contents of the track row's right-click menu (plain data, one menu for every track kind), and the master track row's menu item (its
 //   header, command id and setting key).
 // Does not own: opening the menu and running the commands (the Avalonia track header).
-// Tests: SelfTestTrackRowMenu, SelfTestMasterLane, TabForge.Avalonia.Tests.ContextMenuTests.
+// Tests: TabForge.Avalonia.Tests.ContextMenuTests.
 namespace TabForge.Menus;
 
 /// <summary>What the track row menu needs to know about the track it opens on.</summary>
@@ -16,7 +16,7 @@ public static class TrackRowMenus
 {
     public const string Cut = "TrackRow.Cut", Copy = "TrackRow.Copy", Paste = "TrackRow.Paste", Duplicate = "TrackRow.Duplicate",
         Delete = "TrackRow.Delete", Rename = "TrackRow.Rename", Colour = "TrackRow.Colour", Properties = "TrackRow.Properties",
-        Convert = "TrackRow.Convert", ConvertToAudio = "Track.ConvertToAudio", AddTrack = "Track.Add";
+        Convert = "TrackRow.Convert", ConvertToAudio = "Track.ConvertToAudio", AddTrack = CommandIds.Track.Add;
 
     /// <summary>The master track row's menu item: its caption, command id and Preferences row.</summary>
     public const string MasterLaneHeader = "Show master track", MasterLaneCommandId = "View.MasterTrack", MasterLaneSettingKey = "timeline.mastertrack";

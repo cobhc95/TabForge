@@ -6,7 +6,7 @@ namespace TabForge.Avalonia.Views.TransportPopups;
 
 // Owns: the status bar's view of the master scale panel: its extras (keep my choice for this section, musical key names, prefer common scales) and the muted
 //   fretboard and piano roll sections with their links. A pick is kept in the song only when "Keep my choice" is ticked, else for this session.
-// Does not own: the shared sections (ScalePanel), the readout (StatusScaleReadout).
+// Does not own: the shared sections (ScalePanel), the pick (ScalePick).
 // Tests: TabForge.Avalonia.Tests.ScalePanelHostTests, StatusBarScaleTests.
 internal sealed class StatusBarScaleHost : ReadoutScaleHost
 {
@@ -14,7 +14,7 @@ internal sealed class StatusBarScaleHost : ReadoutScaleHost
     private const string PreferText = "Prefer common scales when it is close", KeepText = "Keep my choice for this section", MusicalText = "Use musical key names (E♭ instead of D#)";
     public const string Footnote = "Your pick sticks to this section and track; Auto returns to detection.";
 
-    public StatusBarScaleHost(StatusScaleReadout readout, ScaleHostLinks links) : base(readout, links) { }
+    public StatusBarScaleHost(ScalePick readout, ScaleHostLinks links) : base(readout, links) { }
 
     public override void Pick(ScaleMatch scale) => Readout.PickFor(scale, keep: Readout.KeepChoice, fromFretboard: false);
 

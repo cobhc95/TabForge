@@ -2,7 +2,7 @@
 //       window edge or corner a pointer is on for a borderless resize, and the leading room the tab strip keeps per OS.
 // Does not own: reading the pointer or the window rectangle (the UI-toolkit adapters), the native WM_NCHITTEST reply,
 //       the tab geometry (the tab views).
-// Tests: TestChromeHitRules.
+// Tests: no dedicated test class.
 using TabForge.Platform;
 
 namespace TabForge.Shell;

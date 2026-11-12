@@ -11,7 +11,7 @@ namespace TabForge.Documents;
 //     per-tab state. Saving and the edit pipeline take it explicitly.
 // Does not own: playback and engine chains (the app's AvaloniaPlaybackSessions adds them), the tabs (DocumentManager, MainWindowTabs), writing files
 //     (DocumentController, DocumentSaveFlow).
-// Tests: TestSaveFlowCharacterization, MainWindowDocumentsTests, TabForge.Avalonia.Tests.MainWindowSaveTests.
+// Tests: MainWindowDocumentsTests, TabForge.Avalonia.Tests.MainWindowSaveTests.
 /// <summary>
 /// One open song. Holds everything that is per-document so several songs can be open at once: the score, the file, undo history and the editor's
 /// own state. UI thread only.

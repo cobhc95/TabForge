@@ -10,6 +10,7 @@ using TabForge.Avalonia.Platform;
 using TabForge.ScoreEditing;
 using TabForge.Services;
 using TabForge.Views.EffectEditors;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia;
 
@@ -25,17 +26,17 @@ public static class MainWindowEdit
     /// <summary>The command ids ScorePreviewEditor.RunCommand handles (a test runs each, so the list cannot drift from ScoreEditCommands).</summary>
     public static readonly IReadOnlyList<string> Commands = new[]
     {
-        "Edit.Undo", "Edit.Redo", "Edit.InsertBeat", "Edit.DeleteBeats", "Note.RepeatBeat",
-        "Note.Longer", "Note.Shorter", "Note.Dot", "Note.DoubleDot", "Note.Triplet", "Note.Tie", "Note.Rest",
-        "Note.Fermata", "Note.Accent", "Note.Staccato", "Note.Tenuto",
-        "Note.PitchUp", "Note.PitchDown", "Note.MoveStringUp", "Note.MoveStringDown",
-        "Note.Dead", "Note.Ghost", "Note.PalmMute", "Note.LetRing", "Note.HammerPull", "Note.Slide", "Note.Vibrato", "Note.FadeIn", "Note.FadeOut",
-        "Note.Bend", "Note.ShiftSlide", "Note.WideVibrato", "Note.TremoloBar", "Note.TremoloPicking",
-        "Note.ArtificialHarmonic", "Note.Tapping", "Note.Slap", "Note.Pop", "Note.WahOpen", "Note.WahClose",
-        "Note.BrushDown", "Note.BrushUp", "Note.ArpeggioDown", "Note.ArpeggioUp",
-        "Bar.RepeatOpen", "Bar.RepeatClose", "Bar.Insert", "Bar.Delete", "Bar.Duplicate",
-        "Note.Whole", "Note.Half", "Note.Quarter", "Note.Eighth", "Note.Sixteenth", "Note.ThirtySecond", "Note.SixtyFourth",
-        "Bar.DoubleBar", "Bar.RepeatOneBar", "Bar.RepeatTwoBars", "Section.Previous", "Section.Next",
+        CommandIds.Edit.Undo, CommandIds.Edit.Redo, "Edit.InsertBeat", "Edit.DeleteBeats", CommandIds.Note.RepeatBeat,
+        "Note.Longer", "Note.Shorter", CommandIds.Note.Dot, CommandIds.Note.DoubleDot, CommandIds.Note.Triplet, CommandIds.Note.Tie, "Note.Rest",
+        CommandIds.Note.Fermata, CommandIds.Note.Accent, CommandIds.Note.Staccato, "Note.Tenuto",
+        CommandIds.Note.PitchUp, CommandIds.Note.PitchDown, CommandIds.Note.MoveStringUp, CommandIds.Note.MoveStringDown,
+        CommandIds.Note.Dead, CommandIds.Note.Ghost, CommandIds.Note.PalmMute, CommandIds.Note.LetRing, CommandIds.Note.HammerPull, CommandIds.Note.Slide, CommandIds.Note.Vibrato, CommandIds.Note.FadeIn, "Note.FadeOut",
+        CommandIds.Note.Bend, "Note.ShiftSlide", "Note.WideVibrato", CommandIds.Note.TremoloBar, CommandIds.Note.TremoloPicking,
+        "Note.ArtificialHarmonic", CommandIds.Note.Tapping, CommandIds.Note.Slap, CommandIds.Note.Pop, "Note.WahOpen", "Note.WahClose",
+        CommandIds.Note.BrushDown, CommandIds.Note.BrushUp, "Note.ArpeggioDown", "Note.ArpeggioUp",
+        CommandIds.Bar.RepeatOpen, CommandIds.Bar.RepeatClose, CommandIds.Bar.Insert, CommandIds.Bar.Delete, CommandIds.Bar.Duplicate,
+        CommandIds.Note.Whole, CommandIds.Note.Half, CommandIds.Note.Quarter, CommandIds.Note.Eighth, CommandIds.Note.Sixteenth, CommandIds.Note.ThirtySecond, CommandIds.Note.SixtyFourth,
+        "Bar.DoubleBar", "Bar.RepeatOneBar", "Bar.RepeatTwoBars", CommandIds.Section.Previous, CommandIds.Section.Next,
     };
 
     /// <summary>The Structure, Rhythm and Layout tools the editor runs without a question, under their palette command ids (those with no menu row of their own).</summary>
@@ -63,17 +64,17 @@ public static class MainWindowEdit
             ["Note.Trill"] = () => _ = ornaments.OpenTrill(),
             ["Note.Grace"] = () => _ = ornaments.OpenGrace(),
             ["Note.Harmonic"] = () => _ = ornaments.OpenOrRemoveHarmonic(),
-            ["Note.Vibrato"] = () => _ = vibrato.OpenOrToggle(),
+            [CommandIds.Note.Vibrato] = () => _ = vibrato.OpenOrToggle(),
         };
         foreach (var id in Commands.Concat(ToolCommands).Concat(ornamentRows.Keys).Distinct())
         {
             var commandId = id;
-            if (seekPlayback is not null && commandId is "Section.Previous" or "Section.Next")
+            if (seekPlayback is not null && commandId is CommandIds.Section.Previous or CommandIds.Section.Next)
             {   // the transport and keyboard section jumps seek playback to the section start too, without starting or pausing it
                 commands.Add(commandId, () => { if (score.Run(commandId)) seekPlayback(score.Editor.SelectedMeasure); });
                 continue;
             }
-            if (commandId == "Bar.Insert") { commands.Add(commandId, () => { if (score.Run(commandId)) afterInsert?.Invoke(); }); continue; }
+            if (commandId == CommandIds.Bar.Insert) { commands.Add(commandId, () => { if (score.Run(commandId)) afterInsert?.Invoke(); }); continue; }
             commands.Add(commandId, ornamentRows.TryGetValue(commandId, out var open) ? open : () => score.Run(commandId));
         }
         commands.Add("Note.TrillEditor", () => _ = ornaments.OpenTrill());
@@ -88,8 +89,8 @@ public static class MainWindowEdit
         var writeSettings = saveSettings ?? (() => { });
         commands.Add("Note.BendEditor", () => _ = EffectCurveFlow.Open(score, owner, new AvaloniaDialogHost(), readSettings, writeSettings, EffectEditorKind.Bend));
         commands.Add("Note.TremoloBarEditor", () => _ = EffectCurveFlow.Open(score, owner, new AvaloniaDialogHost(), readSettings, writeSettings, EffectEditorKind.TremoloBar));
-        commands.Add(ContextMenuRows.InsertBarBeforeId, () => { if (score.InsertBarAt(contextMenus.ClickedBar)) afterInsert?.Invoke(); });
-        commands.Add(ContextMenuRows.InsertBarAfterId, () => { if (score.InsertBarAt(contextMenus.ClickedBar + 1)) afterInsert?.Invoke(); });
+        commands.Add(ContextMenuRows.InsertBarBeforeId, () => { if (score.InsertBarAt(contextMenus.Target.Bar)) afterInsert?.Invoke(); });
+        commands.Add(ContextMenuRows.InsertBarAfterId, () => { if (score.InsertBarAt(contextMenus.Target.Bar + 1)) afterInsert?.Invoke(); });
     }
 
     // The question (ConfirmDeleteBar): Yes deletes the bar from every track, No (the default) leaves the song as it is.

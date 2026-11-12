@@ -32,7 +32,7 @@ public sealed record PlacementResult(bool Ok, string? Error, int FirstBar, int L
 
 // Owns: the paste placement engine: absolute slot positions, replace and insert placement, bar-line splitting and ties.
 // Does not own: clipboard capture (ClipboardService) and the editor's selection.
-// Tests: TestPasteCommands.
+// Tests: no dedicated test class.
 /// <summary>
 /// Copy/paste placement engine (design C2): absolute slot positions, beat placement in Replace/Insert mode with bar-line
 /// splitting and ties, tuplet-straddle refusal, bars appended at the end, and the bar-level Overwrite/Insert operations.

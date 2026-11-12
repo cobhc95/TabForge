@@ -5,7 +5,7 @@ namespace TabForge.Plugins;
 
 // Owns: the standard plug-in folders per operating system (VST3, and CLAP when the user opted in), from explicit inputs so every system can be checked on any machine.
 // Does not own: scanning (VstScannerService), the user's own folders (PluginSettings), the app folders (IAppFolders).
-// Tests: PluginScanFolderTests.
+// Tests: no dedicated test class.
 
 /// <summary>The inputs the folder rules read; <see cref="Current"/> takes them from this machine.</summary>
 public sealed record PluginScanInputs(HostOs Os, string Home, string CommonProgramFiles, string ProgramFiles, string UserPluginRoot,

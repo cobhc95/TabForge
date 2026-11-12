@@ -6,7 +6,7 @@ namespace TabForge.Services.Reset;
 // Owns: executing a reset plan: refusing paths outside the app roots or through reparse points, deleting files/folders and
 //   applying the settings.json groups, with a dry run that only counts.
 // Does not own: building the plan (ResetAppPlan) or the backup (ResetAppBackup).
-// Tests: ResetAppPlanTests, ResetAppStoreCoverageTests.
+// Tests: ResetAppPlanTests.
 /// <summary>What a wipe (or its dry run) removed or refused.</summary>
 public sealed record ResetAppWipeResult(
     bool DryRun,

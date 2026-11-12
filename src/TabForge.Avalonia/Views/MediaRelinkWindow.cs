@@ -69,7 +69,7 @@ public sealed class MediaRelinkWindow : Window
 
         var cancel = PromptChrome.Action("CancelButton", CancelText, primary: false, isCancel: true);
         cancel.Click += (_, _) => Close();
-        _browse.Click += (_, _) => Browse();
+        _browse.Click += (_, _) => Platform.UiTasks.Forget(Browse(), "Choose a search folder");
         _search.Click += (_, _) => { if (_running is null) _ = SearchAsync(_folder.Text ?? ""); else _running.Cancel(); };
         _relink.Click += (_, _) => { foreach (var (path, found) in _fixes) _result[path] = found; Close(); };
         Content = new StackPanel { Children = { PromptChrome.Heading(TitleText), intro, pick, frame, _summary, PromptChrome.Footer(null, null, cancel, _relink) } }.WithMargin(DialogMetrics.PromptInset);
@@ -103,7 +103,7 @@ public sealed class MediaRelinkWindow : Window
         status.WithMargin(DialogMetrics.MediaStatusGap);
         ToolTip.SetTip(status, item.Folder);
         var locate = new Button { Content = LocateText }.WithPadding(DialogMetrics.ActionButtonPadding);
-        locate.Click += (_, _) => Locate(item);
+        locate.Click += (_, _) => Platform.UiTasks.Forget(Locate(item), "Locate a file");
         Grid.SetColumn(status, 1);
         Grid.SetColumn(locate, 2);
         grid.Children.Add(name);
@@ -113,7 +113,7 @@ public sealed class MediaRelinkWindow : Window
         return grid;
     }
 
-    private async void Browse()
+    private async Task Browse()
     {
         var picked = await _dialogs.PickFolderAsync(new FileDialogOptions { Key = TabForge.Services.DialogKeys.MediaSearchFolder, Title = "Search this folder (and below) for the missing audio" }, this);
         if (picked is null) return;
@@ -122,7 +122,7 @@ public sealed class MediaRelinkWindow : Window
     }
 
     // One file located by hand: it is fixed, and so is every other missing file found beside it.
-    private async void Locate(MissingMedia item)
+    private async Task Locate(MissingMedia item)
     {
         var picked = await _dialogs.OpenFileAsync(LocateOptions(item), this);
         if (picked is null) return;

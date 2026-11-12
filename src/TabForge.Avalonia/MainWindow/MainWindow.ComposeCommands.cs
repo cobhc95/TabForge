@@ -7,6 +7,7 @@ using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Avalonia.Video;
 using TabForge.Presenters;
 using TabForge.Services;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia;
 
@@ -86,7 +87,7 @@ public sealed partial class MainWindow
         // A clip whose audio could not be read: Retry reads it again; a click on the lock of an unapproved clip opens the linked-audio review.
         commands.Add(ContextMenuRows.RetryReadId, () =>
         {
-            if (contextMenus.ClickedUnreadableClip is { } unreadable) songs.Waveforms.Retry(unreadable.File, songs.Active.Media);
+            if (contextMenus.Target.UnreadableClip is { } unreadable) songs.Waveforms.Retry(unreadable.File, songs.Active.Media);
         });
         void AskForApproval(ArrangementView arrangement)
         {
@@ -131,17 +132,16 @@ public sealed partial class MainWindow
             compose.StatusBar.Activity);
         MainWindowMixer.Register(commands, songs, this, playback, settings, showStatus);
         MainWindowFocusTrack.Register(commands, this, songs, playback, settings);
-        scaleFinder.Scale = compose.StatusBar.Scale;
         scaleFinder.Anchor = () => compose.InstrumentStrip?.ScalesAnchor;
         scaleFinder.Register(commands);
         // The master scale panel's muted sections link to the other hosts: the fretboard's Scales button and the piano roll's scale arrow.
         var pianoRoll = compose.EditorPane.PianoRoll;
-        var statusLinks = compose.StatusBar.Scale.Links;
-        statusLinks.FretboardAvailable = pianoRoll.Links.FretboardAvailable = () => compose.InstrumentStrip?.ScalesAnchor is { IsEffectivelyVisible: true };
-        statusLinks.OpenFretboard = pianoRoll.Links.OpenFretboard = () => scaleFinder.Open();
-        pianoRoll.SharedReadout = () => compose.StatusBar.Scale;   // the piano roll reads and writes the same scale pick as the status bar and the fretboard
-        statusLinks.PianoRollAvailable = () => compose.EditorPane.ShowsPianoRoll && pianoRoll.CanOpenScalePanel;
-        statusLinks.OpenPianoRoll = () => pianoRoll.OpenScalePopup();
+        var scalePick = compose.StatusBar.Scale.Pick;
+        pianoRoll.SharedPick = scalePick;   // the piano roll reads and writes the same scale pick as the status bar and the fretboard
+        scalePick.Links.FretboardAvailable = () => compose.InstrumentStrip?.ScalesAnchor is { IsEffectivelyVisible: true };
+        scalePick.Links.OpenFretboard = () => scaleFinder.Open();
+        scalePick.Links.PianoRollAvailable = () => compose.EditorPane.ShowsPianoRoll && pianoRoll.CanOpenScalePanel;
+        scalePick.Links.OpenPianoRoll = () => pianoRoll.OpenScalePopup();
         MainWindowChordFinder.Register(commands, this, scorePreview);
         MainWindowTuner.Register(commands, this, playback?.Engine, () => System.Linq.Enumerable.ElementAtOrDefault(songs.Active.Project.Tracks, MainWindowTrackMenu.SelectedIndex(songs.Active)), compose.Registry.Services.MeterTick);
         MainWindowPresetManager.Register(commands, this, () => settings?.Settings, () => settings?.SaveSettings());
@@ -224,7 +224,7 @@ public sealed partial class MainWindow
         MainWindowScoreRows.Register(commands, scorePreview, settings, this, () => MainWindowBandView.ActiveScoreMenu(dock, panes));
         compose.EditorPane.Register(commands);   // Show in piano roll / Show in score mode (this track)
         // The piano roll holds the instrument panel closed while it is shown (a transient hold that never changes the user's own toggle); the score gives it back as the user had it.
-        var instrumentGate = new InstrumentPanelGate(dock, shown => MainWindowViewMenu.SetRowChecks(this, "View.InstrumentPanel", shown),
+        var instrumentGate = new InstrumentPanelGate(dock, shown => MainWindowViewMenu.SetRowChecks(this, CommandIds.View.InstrumentPanel, shown),
             compose.FretboardMode, mode => settings?.RememberedFretboard(mode), (mode, shown) => settings?.RememberFretboard(mode, shown));
         compose.EditorPane.ModeChanged = instrumentGate.RollChanged;
         if (compose.EditorPane.ShowsPianoRoll) compose.EditorPane.ModeChanged(true);
@@ -257,8 +257,8 @@ public sealed partial class MainWindow
         compose.Media.Register(commands, compose.ContextMenus);
         commands.Add("Tab.Duplicate", () => songs.Duplicate(songs.ActiveIndex));
         MainWindowTabMenu.Register(commands, this, showStatus);
-        commands.Add("File.New", songs.New);
-        commands.Add("File.Open", () => _ = files.Open());
+        commands.Add(CommandIds.File.New, songs.New);
+        commands.Add(CommandIds.File.Open, () => _ = files.Open());
         commands.Add("File.OpenInNewTab", () => _ = files.Open(inNewTab: true));
         // The local files closure, not the _files field: the field is assigned after this method returns, so the drop
         // handler would capture null and every dropped song would fail inside its fire-and-forget open.
@@ -307,7 +307,7 @@ public sealed partial class MainWindow
         commands.Add("File.ExportAscii", () => _ = files.ExportAscii());
         commands.Add("File.ExportMusicXml", () => _ = files.ExportMusicXml());
         MainWindowScorePdf.Register(commands, scorePreview, songs, dialogs, this, settings, showStatus);
-        commands.Add("File.NewFromTemplate", () => _ = files.NewFromTemplate());
+        commands.Add(CommandIds.File.NewFromTemplate, () => _ = files.NewFromTemplate());
         commands.Add("File.SaveAsTemplate", () => _ = files.SaveAsTemplate());
     }
 
@@ -391,11 +391,11 @@ public sealed partial class MainWindow
         MainWindowTrackRowEdits.Register(commands, songs, panes, this, contextMenus, clipboard, showStatus, editRouting);
         MainWindowTrackRowOptions.Register(panes, songs, this, instrumentPicker, playback);
         MainWindowConvertToInstrument.Register(commands, songs, this, contextMenus, () => settings?.Settings ?? new TabForge.Services.AppSettings(), () => settings?.SaveSettings());
-        commands.Add("Tab.Close", () => Platform.UiTasks.Forget(songs.CloseActive(), "Closing the tab", showStatus));
+        commands.Add(CommandIds.Tab.Close, () => Platform.UiTasks.Forget(songs.CloseActive(), "Closing the tab", showStatus));
         commands.Add("Tab.Next", () => songs.SwitchNext());
         commands.Add("Tab.Previous", () => songs.SwitchPrevious());
-        commands.Add("File.Save", () => _ = saving.Save(songs.Active));
-        commands.Add("File.SaveAs", () => _ = saving.SaveAs(songs.Active));
+        commands.Add(CommandIds.File.Save, () => _ = saving.Save(songs.Active));
+        commands.Add(CommandIds.File.SaveAs, () => _ = saving.SaveAs(songs.Active));
         var keyboard = new MainWindowKeyboard(settings?.Settings.Hotkeys ?? new TabForge.Services.HotkeySettings(), commands, recordingHooks.StopRecording, () => editTargets.Focus, editRouting);
         compose.Keyboard = keyboard;
         if (settings is not null)

@@ -157,29 +157,20 @@ public static class DocumentEdits
     public static ProjectState CurrentState(IEditableDocument document) => document.Undo.Snapshot(document.Project).State;
 
     /// <summary>Undo one step. Returns the restored state (the view then refreshes), or null when there is nothing to undo.</summary>
-    public static UndoSnapshot? Undo(IEditableDocument document)
-    {
-        if (!document.Undo.CanUndo) return null;
-        var current = document.Undo.Snapshot(document.Project) with { RestoresLoopRepeat = document.Undo.Latest?.RestoresLoopRepeat == true };   // its redo gives the button back too
-        if (!document.Undo.TryUndo(current, out var target)) return null;
-        document.RememberBarMapping(current);
-        document.RememberTuningShift(current.State);
-        document.RememberSelection(current.State, document.Selection.Snapshot());
-        document.RememberSkipRangesForReturn(current.State, target.State);
-        Restore(document, current, target);
-        document.RestoreTuningShift(target.State);
-        document.RestoreSkipRanges(target.State);
-        document.RestoreSelection(target.State);
-        document.NotifyRestored();
-        return target;
-    }
+    public static UndoSnapshot? Undo(IEditableDocument document) =>
+        document.Undo.CanUndo ? Step(document, document.Undo.Latest?.RestoresLoopRepeat == true, document.Undo.TryUndo) : null;
 
     /// <summary>Redo one step; see <see cref="Undo"/>.</summary>
-    public static UndoSnapshot? Redo(IEditableDocument document)
+    public static UndoSnapshot? Redo(IEditableDocument document) =>
+        document.Undo.CanRedo ? Step(document, document.Undo.NextRedo?.RestoresLoopRepeat == true, document.Undo.TryRedo) : null;
+
+    private delegate bool TryStep(UndoSnapshot current, out UndoSnapshot target);
+
+    /// <summary>The one restore sequence of an undo and a redo: the state it leaves is remembered for the way back, then the target comes back in a fixed order.</summary>
+    private static UndoSnapshot? Step(IEditableDocument document, bool restoresLoopRepeat, TryStep tryStep)
     {
-        if (!document.Undo.CanRedo) return null;
-        var current = document.Undo.Snapshot(document.Project) with { RestoresLoopRepeat = document.Undo.NextRedo?.RestoresLoopRepeat == true };
-        if (!document.Undo.TryRedo(current, out var target)) return null;
+        var current = document.Undo.Snapshot(document.Project) with { RestoresLoopRepeat = restoresLoopRepeat };   // its way back gives the button back too
+        if (!tryStep(current, out var target)) return null;
         document.RememberBarMapping(current);
         document.RememberTuningShift(current.State);
         document.RememberSelection(current.State, document.Selection.Snapshot());

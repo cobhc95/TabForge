@@ -12,7 +12,7 @@ namespace TabForge.Avalonia.Platform;
 /// colour at <see cref="Opacity"/>, on the board background with faint bar lines. Geometry comes from <see cref="MasterLaneRules"/>.
 /// Owns: drawing the lane and the "does this track play in this bar" test. Does not own: whether the lane shows, its height (TimelineView),
 /// its header cell (TrackHeaderColumn), audio clips in a line and the compact mode of the lane.
-/// Tests: TabForge.Avalonia.Tests.MasterLaneTests.
+/// Tests: no dedicated test class.
 /// </summary>
 public static class MasterLaneStrip
 {

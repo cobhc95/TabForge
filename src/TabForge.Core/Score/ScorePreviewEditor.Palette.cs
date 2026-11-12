@@ -154,7 +154,7 @@ internal sealed partial class ScorePreviewEditor
     /// <summary>Sets a tempo change on the cursor bar (20 to 400 beats per minute).</summary>
     internal bool SetTempoChange(int tempo)
     {
-        tempo = Math.Clamp(tempo, 20, 400);
+        tempo = Math.Clamp(tempo, InputLimits.MinTempo, InputLimits.MaxTempo);
         var bar = SelectedMeasure;
         if (!DocumentEdits.Run(_document, project => MeasureProperties.SetTempoChange(project, bar, tempo)).Changed) return true;
         _probe.ReplaceSong(_document.Project);

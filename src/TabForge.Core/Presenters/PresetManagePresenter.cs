@@ -1,7 +1,7 @@
 // Owns: the preset manage panel's rules without UI types: the plan of an inline rename (the name's error, a rename to the same name, the
 //       other preset a rename would replace) and the moves of a run of chosen presets (BlockSteps).
 // Does not own: the store and its files (IPresetStore), the list, the messages and questions (PresetManagePanel), or the undo.
-// Tests: TestPresetManagePanel.
+// Tests: no dedicated test class.
 namespace TabForge.Presenters;
 
 /// <summary>

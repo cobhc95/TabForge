@@ -13,7 +13,7 @@ using TabForge.Services;
 
 namespace TabForge.Avalonia;
 
-// Owns: the track row right-click rows that act on the track under the last track row right-click (ContextMenuHost.ClickedTrack): Copy, Cut (which asks the Delete track question first),
+// Owns: the track row right-click rows that act on the track under the last track row right-click (ContextMenuHost.Target.Track): Copy, Cut (which asks the Delete track question first),
 //   Paste (after that track), Duplicate, Colour (one row per palette swatch; the row's argument is its hex), Rename (opens the inline name editor
 //   on the latest arrangement) and Convert to audio track (after its prompt). Each edit is one undo step through DocumentEdits; copy and paste go
 // through ClipboardService.
@@ -42,13 +42,13 @@ public static class MainWindowTrackRowEdits
     public static void Register(MainWindowCommands commands, MainWindowTabs songs, MainWindowDocumentPanes panes, Window owner, ContextMenuHost rows,
         ClipboardService clipboard, Action<string>? status = null, EditRouting? routing = null)
     {
-        commands.Add(TrackRowMenus.Copy, () => Copy(songs.Active, clipboard, rows.ClickedTrack));
+        commands.Add(TrackRowMenus.Copy, () => Copy(songs.Active, clipboard, rows.Target.Track));
         Action<string> say = status ?? (_ => { });
         commands.Add(TrackRowMenus.Cut, () => UiTasks.Forget(CutAsync(songs.Active, owner, rows, clipboard, status), "Cut track", say));
-        commands.Add(TrackRowMenus.Paste, () => { if (!RunRangePaste(commands, panes.Selection.Model, clipboard, routing)) Paste(songs.Active, clipboard, rows.ClickedTrack, say); });
-        commands.Add(TrackRowMenus.Duplicate, () => Duplicate(songs.Active, rows.ClickedTrack));
-        commands.AddWithArgument(TrackRowMenus.Colour, hex => SetColour(songs.Active, rows.ClickedTrack, hex));
-        commands.Add(TrackRowMenus.Rename, () => panes.Arrangement?.BeginTrackRename(rows.ClickedTrack));
+        commands.Add(TrackRowMenus.Paste, () => { if (!RunRangePaste(commands, panes.Selection.Model, clipboard, routing)) Paste(songs.Active, clipboard, rows.Target.Track, say); });
+        commands.Add(TrackRowMenus.Duplicate, () => Duplicate(songs.Active, rows.Target.Track));
+        commands.AddWithArgument(TrackRowMenus.Colour, hex => SetColour(songs.Active, rows.Target.Track, hex));
+        commands.Add(TrackRowMenus.Rename, () => panes.Arrangement?.BeginTrackRename(rows.Target.Track));
         commands.Add(TrackRowMenus.ConvertToAudio, () => UiTasks.Forget(ConvertToAudioAsync(songs.Active, owner, rows), "Convert to audio/MIDI track", say));
     }
 
@@ -69,7 +69,7 @@ public static class MainWindowTrackRowEdits
     /// <summary>Asks the Delete track question once; only on OK copies the track(s) and removes them (one undo step). Cancel leaves the song and the clipboard as they were. The last track stays.</summary>
     private static async Task CutAsync(IEditableDocument document, Window owner, ContextMenuHost rows, ClipboardService clipboard, Action<string>? status)
     {
-        var targets = MainWindowTrackMenu.TargetsOf(document, rows.ClickedTrack);
+        var targets = MainWindowTrackMenu.TargetsOf(document, rows.Target.Track);
         if (!await MainWindowTrackMenu.ConfirmDeleteAsync(document, owner, targets, rows, status)) return;
         var cut = targets.Select(i => document.Project.Tracks[i]).ToList();
         if (MainWindowTrackMenu.RemoveTracks(document, targets.ToList()).Changed) clipboard.CopyTracks(cut);   // the clipboard changes only when the tracks really went
@@ -106,7 +106,7 @@ public static class MainWindowTrackRowEdits
     /// <summary>Track.ConvertToAudio: an instrument track becomes an audio track after the prompt (one undo step).</summary>
     private static async Task ConvertToAudioAsync(IEditableDocument document, Window owner, ContextMenuHost rows)
     {
-        if (TrackAt(document, index: rows.ClickedTrack) is not { IsAudio: false } track) return;
+        if (TrackAt(document, index: rows.Target.Track) is not { IsAudio: false } track) return;
         var undoHint = HotkeyCatalog.DisplayAll(rows.Hotkeys(), MainWindowTrackMenu.UndoCommandId);
         var outcome = await PromptWindow.AskAsync(owner, PromptTextsPresenter.ConvertTrackToAudio(track.Name, undoHint));
         if (PromptTextsPresenter.IsConfirmed(outcome.Answer)) TrackEdits.ConvertInstrumentToAudio(document, track);

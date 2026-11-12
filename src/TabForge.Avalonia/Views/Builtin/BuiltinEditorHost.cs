@@ -10,7 +10,7 @@ namespace TabForge.Avalonia.Views.Fx;
 // Owns: the built-in effect editor embedded in the FX chain window's editor area (where a plug-in's editor shows): it makes the editor of the focused slot, lets it fill the width
 //   of the area (its groups wrap) and the height (its graph stretches), and scrolls only when the area is too short, and drops it again (its polling stops when it leaves the window).
 // Does not own: which slot shows (FxChainWindow.Editor.cs), the editors (BuiltinEditors, BuiltinEffectPanel, IrLoaderEditor), the pop-out window (BuiltinEditorWindow).
-// Tests: BuiltinEditorWindowTests, FxChainBuiltinEmbedTests.
+// Tests: BuiltinEditorWindowTests.
 public sealed class BuiltinEditorHost : ScrollViewer
 {
     /// <summary>A subclass takes the ScrollViewer's template, so the host scrolls (its own type has no theme of its own).</summary>

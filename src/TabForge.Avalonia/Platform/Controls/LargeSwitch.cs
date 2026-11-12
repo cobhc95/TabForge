@@ -15,7 +15,7 @@ namespace TabForge.Avalonia.Platform.Controls;
 //   Space and Enter toggle it, a keyboard focus shows the app's focus ring. Colours are theme brushes (AccentBrush, OnAccentBrush, CheckBoxBorderBrush, TextBrush, FocusRingBrush),
 //   so the user's accent and both themes apply. The change is instant. No cursor change.
 // Does not own: what the state means (the caller binds IsChecked), the caption beside it.
-// Tests: TabForge.Avalonia.Tests.LargeSwitchTests.
+// Tests: no dedicated test class.
 public sealed class LargeSwitch : ToggleButton
 {
     public const double TrackWidth = ChromeMetrics.LargeSwitchTrackWidth, TrackHeight = ChromeMetrics.LargeSwitchTrackHeight, ThumbSize = ChromeMetrics.LargeSwitchThumbSize;

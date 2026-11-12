@@ -7,7 +7,7 @@ namespace TabForge.KeyboardMode;
 // Owns: the Keyboard mode dock arrangement as pure data: the layout for a size built from the layout in use;
 //   the pane id "learn" is never kept in a saved layout (WorkspaceNormalizer removes it).
 // Does not own: applying a layout (the window's Keyboard mode controller), the dock or the pane sizes (the dock's own height rules).
-// Tests: TestKeyboardModeLayout, TabForge.Avalonia.Tests.MainWindowMenuTests.
+// Tests: KeyboardModeLayoutSwapTests, TabForge.Avalonia.Tests.MainWindowMenuTests.
 public static class KeyboardModeLayoutSwap
 {
     public const string PaneId = WorkspaceNormalizer.KeyboardModePaneId;

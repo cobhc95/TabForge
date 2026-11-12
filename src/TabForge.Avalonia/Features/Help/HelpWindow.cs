@@ -99,9 +99,6 @@ internal sealed class HelpWindow : Window
     internal string StatusText => _ready.Text ?? "";
     internal bool ShowingResults => _results.IsVisible;
 
-    /// <summary>True once the search index has been taken (a finished build is taken during construction).</summary>
-    internal bool SearchReady => _index is not null;
-
     /// <summary>Opens chapter <paramref name="index"/> in the reading pane, at a section when given, and highlights it in the list.</summary>
     internal void Open(int index, int? section)
     {

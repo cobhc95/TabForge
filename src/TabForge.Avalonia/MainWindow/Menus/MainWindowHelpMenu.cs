@@ -120,29 +120,7 @@ internal sealed class AboutWindow : Window
         MaxWidth = MainWindowHelpMenu.DialogMaxWidth;
         this[!BackgroundProperty] = new DynamicResourceExtension("WindowBackground");
 
-        var (glyph, tone) = MessageBoxPresenter.Icon(MessageBoxIcon.Information);
-        var body = new DockPanel { Margin = new Thickness(20, 18, 20, 14), LastChildFill = true };
-        var content = new StackPanel();
-        var row = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
-        var actions = new DockPanel { LastChildFill = true, Margin = new Thickness(0, 18, 0, 0) };
-        actions.Children.Add(row);
-        if (glyph.Length > 0)
-        {
-            var ring = new Ellipse { Width = 30, Height = 30, StrokeThickness = 2 };
-            ring[!Shape.StrokeProperty] = new DynamicResourceExtension(TonePaletteName(tone));
-            var mark = new TextBlock { Text = glyph, FontSize = ChromeMetrics.TextTitle, FontWeight = FontWeight.Bold, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-            mark[!TextBlock.ForegroundProperty] = new DynamicResourceExtension(TonePaletteName(tone));
-            var iconPanel = new Grid { Name = "IconGlyph", Width = 30, Height = 30, VerticalAlignment = VerticalAlignment.Top };
-            iconPanel.Children.Add(ring);
-            iconPanel.Children.Add(mark);
-            DockPanel.SetDock(iconPanel, Dock.Left);
-            body.Children.Add(iconPanel);
-        }
-        var message = new TextBlock { Name = "MessageText", Text = text, TextWrapping = TextWrapping.Wrap, FontSize = MainWindowHelpMenu.MessageFontSize, MaxWidth = MainWindowHelpMenu.MessageMaxWidth };
-        message[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
-        content.Children.Add(message);
-        content.Children.Add(actions);
-        body.Children.Add(content);
+        var (body, row, _) = MessageBoxBody.Build(MessageBoxIcon.Information, text, MainWindowHelpMenu.MessageFontSize, MainWindowHelpMenu.MessageMaxWidth, new Thickness());
 
         var close = AboutButton(MainWindowHelpMenu.CloseButtonText, MainWindowHelpMenu.CloseButtonToolTip, isDefault: true);
         close.Click += (_, _) => Close(false);
@@ -169,12 +147,4 @@ internal sealed class AboutWindow : Window
         ToolTip.SetTip(button, tip);
         return button;
     }
-
-    // The warning icon's amber, with a dark and a light value.
-    private static string TonePaletteName(MessageBoxTone tone) => tone switch
-    {
-        MessageBoxTone.Amber => "WarningIcon",
-        MessageBoxTone.Danger => "Danger",
-        _ => "Accent",
-    };
 }

@@ -5,7 +5,7 @@ namespace TabForge.Docking;
 // Owns: validating a workspace layout read from settings (limits, ids, tree shape) and clamping its sizes in place;
 //   taking the Keyboard mode pane out of a layout that is saved or restored. Validation fails closed: any doubt refuses the layout.
 // Does not own: reading the settings file (SettingsFileService), the dock views, building the Keyboard mode layout (KeyboardModeLayoutSwap).
-// Tests: TestSecurityInputBoundaries, TestKeyboardModeLayout.
+// Tests: no dedicated test class.
 /// <summary>Validates and clamps a saved dock workspace; false means the layout is refused.</summary>
 internal static class WorkspaceNormalizer
 {

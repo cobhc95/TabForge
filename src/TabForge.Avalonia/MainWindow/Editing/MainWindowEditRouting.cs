@@ -2,6 +2,7 @@
 using TabForge.Documents;
 using TabForge.Models;
 using TabForge.Services;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia;
 
@@ -35,10 +36,10 @@ public sealed class MainWindowEditRouting
     public static void Register(MainWindowCommands commands, MainWindowClipboard flow, EditRouting routing, EditTargets targets, Action<string> report, Func<EditVerb, bool>? first = null)
     {
         var router = new MainWindowEditRouting(commands, flow, routing, targets, first);
-        commands.Add("Edit.Copy", () => router.Run("Edit.Copy", EditVerb.Copy, () => flow.Copy()));
-        commands.Add("Edit.Cut", () => router.Run("Edit.Cut", EditVerb.Cut, () => flow.Cut()));
-        commands.Add("Edit.Paste", () => router.Run("Edit.Paste", EditVerb.Paste, () => Platform.UiTasks.Forget(flow.PasteAsync(), "Paste", report)));
-        commands.Add("Edit.PasteSpecial", () => router.Run("Edit.PasteSpecial", EditVerb.PasteSpecial, () => Platform.UiTasks.Forget(flow.PasteSpecialAsync(), "Paste special", report)));
+        commands.Add(CommandIds.Edit.Copy, () => router.Run(CommandIds.Edit.Copy, EditVerb.Copy, () => flow.Copy()));
+        commands.Add(CommandIds.Edit.Cut, () => router.Run(CommandIds.Edit.Cut, EditVerb.Cut, () => flow.Cut()));
+        commands.Add(CommandIds.Edit.Paste, () => router.Run(CommandIds.Edit.Paste, EditVerb.Paste, () => Platform.UiTasks.Forget(flow.PasteAsync(), "Paste", report)));
+        commands.Add(CommandIds.Edit.PasteSpecial, () => router.Run(CommandIds.Edit.PasteSpecial, EditVerb.PasteSpecial, () => Platform.UiTasks.Forget(flow.PasteSpecialAsync(), "Paste special", report)));
     }
 
     // The routed id is this command's own for the score and the range (the clipboard flow runs), else another command (a clip or track row one).

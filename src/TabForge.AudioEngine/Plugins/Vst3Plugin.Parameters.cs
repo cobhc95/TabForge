@@ -6,7 +6,7 @@ namespace TabForge.AudioEngine.Plugins;
 
 // Owns: the parameter list of a VST3 plug-in for the generic plug-in controls panel (tfv3_param_* of the shim): names, ranges, values with the plug-in's own text, and live changes.
 // Does not own: the editor, processing and state (Vst3Plugin.cs), the panel (TabForge.Avalonia Views/Fx), the messages that carry the list (EngineSession.Plugins.cs).
-// Tests: Vst3ParameterMapTests (the plain/normalized mapping); the native calls need tfvst3 and a real plug-in.
+// Tests: no dedicated test class.
 // Threads: main thread only. A change is queued to the processor by the shim's edit ring, so the audio thread never allocates or locks for it.
 public sealed unsafe partial class Vst3Plugin : IPluginParameters
 {

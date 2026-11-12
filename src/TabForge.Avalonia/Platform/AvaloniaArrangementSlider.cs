@@ -12,9 +12,6 @@ using Avalonia.Styling;
 
 namespace TabForge.Avalonia.Platform;
 
-// Owns: ArrangementSlider control template and its sizes.
-// Does not own: the colours (palette keys) or the state rule (Core look).
-
 /// <summary>
 /// The template of sliders with the class "ArrangementSlider" (the mixer faders): App.xaml's compact slider, an 8 DIP track with a 6 DIP blue fill
 /// up to an 18x14 DIP thumb that prints the value. The thumb carries the class of the Core look "ArrangementSliderThumb" and names its face "ThumbFace",

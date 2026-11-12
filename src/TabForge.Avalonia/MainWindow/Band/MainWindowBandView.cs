@@ -8,6 +8,7 @@ using TabForge.Avalonia.Views.Docking;
 using TabForge.Docking;
 using TabForge.Services;
 using TabForge.Services.Features;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia;
 
@@ -24,7 +25,7 @@ public sealed class MainWindowBandView
     /// <summary>The View menu command ids this class handles.</summary>
     public static readonly IReadOnlyList<string> Commands = new[] { CommandId }.Concat(FeatureHotkeyIds.BandViewRowIds()).ToArray();
 
-    private const string CommandId = "View.BandView";
+    private const string CommandId = CommandIds.View.BandView;
     private const string BandPanelId = "band";
     private const string BandLayoutName = "Band";
     private const string ReturnLayoutName = "Default";

@@ -118,7 +118,7 @@ public sealed record NoteMapResult(IReadOnlyList<TabCell> Beats, NoteMapReport R
 
 // Owns: cross-instrument note mapping for paste, pure and deterministic.
 // Does not own: the paste placement (BarGrid) and the questions asked.
-// Tests: TestPasteCommands.
+// Tests: no dedicated test class.
 /// <summary>
 /// Cross-instrument note mapping for paste. Pure and deterministic:
 /// takes cloned beats in time order and returns new beats for the target; never touches a project.

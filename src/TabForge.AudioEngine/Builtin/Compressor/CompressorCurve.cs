@@ -3,7 +3,7 @@ namespace TabForge.AudioEngine.Builtin.Compressor;
 // Owns: the static gain computer of the compressor: output level for an input level with threshold, ratio and a soft knee. The audio path and the
 //   transfer curve picture of the editor call the same function.
 // Does not own: the timing (attack and release, CompressorEffect.Process.cs), the drawing (TransferCurveView in the app).
-// Tests: BuiltinDynamicsTests.
+// Tests: BuiltinCompressorTests.
 public static class CompressorCurve
 {
     /// <summary>The output level in dB for an input level in dB: unchanged below the knee, <c>threshold + over / ratio</c> above it, a quadratic blend inside it.</summary>

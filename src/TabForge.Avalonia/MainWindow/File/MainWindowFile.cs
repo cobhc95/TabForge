@@ -12,6 +12,7 @@ using TabForge.Documents;
 using TabForge.Platform;
 using TabForge.Presenters;
 using TabForge.Services;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia;
 
@@ -30,7 +31,7 @@ public sealed class MainWindowFile
     private const string SaveTemplateLabel = "Template name";
 
     /// <summary>The ids of the commands this class handles (File > New from template, File > Save as template, File > Export ASCII tab and File > Export MusicXML).</summary>
-    public static readonly IReadOnlyList<string> Commands = new[] { "File.NewFromTemplate", "File.SaveAsTemplate", "File.ExportAscii", "File.ExportMusicXml" };
+    public static readonly IReadOnlyList<string> Commands = new[] { CommandIds.File.NewFromTemplate, "File.SaveAsTemplate", "File.ExportAscii", "File.ExportMusicXml" };
 
     private readonly ScoreOpenFlow _scores = new(new DocumentController());
     private readonly IFileDialogs _dialogs;

@@ -2,7 +2,7 @@ namespace TabForge.Platform;
 
 // Owns: how this system compares file paths: ignoring case on Windows and macOS (case-insensitive volumes by default), exactly on Linux.
 // Does not own: normalising a path (Path.GetFullPath, MediaPathPolicy) or comparing text that is not a path.
-// Tests: PathComparerTests.
+// Tests: no dedicated test class.
 /// <summary>Path equality for dictionaries, sets and checks. Windows behaviour is OrdinalIgnoreCase, exactly as before.</summary>
 public static class PathComparer
 {

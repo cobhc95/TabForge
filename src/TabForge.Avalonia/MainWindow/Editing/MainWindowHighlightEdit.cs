@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using TabForge.Documents;
 using TabForge.Models;
 using TabForge.Services;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia;
 
@@ -14,7 +15,7 @@ namespace TabForge.Avalonia;
 // Tests: TabForge.Avalonia.Tests.TimelineBarHighlightEditTests.
 internal static class MainWindowHighlightEdit
 {
-    public const string CopyId = "Highlight.Copy", CutId = "Highlight.Cut", DeleteId = "Highlight.Delete", PasteId = "Highlight.Paste";
+    public const string CopyId = CommandIds.Highlight.Copy, CutId = CommandIds.Highlight.Cut, DeleteId = CommandIds.Highlight.Delete, PasteId = CommandIds.Highlight.Paste;
 
     /// <summary>Asks whether to clear <paramref name="cells"/> highlighted bars: the answer, and whether "Don't ask again" was ticked; Cancel is (false, false).</summary>
     public delegate Task<(bool Confirmed, bool DontAskAgain)> ClearPrompt(int cells);

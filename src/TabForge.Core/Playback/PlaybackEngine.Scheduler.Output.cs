@@ -5,12 +5,8 @@ using TempoMath = TabForge.Audio.Contracts.TempoMath;
 
 namespace TabForge.Playback;
 
-// Owns: event dispatch, channel restoration and output-side scheduler helpers.
-// Does not own: transport state or timeline compilation.
-// Tests: PlaybackSeekSwapTests.
-
 /// <summary>Scheduler output and event helpers.</summary>
-/// <remarks>Owns: event dispatch, channel restoration and output-side scheduler helpers. Does not own: transport state or timeline compilation. Tests: playback scheduling, loop and seek tests.</remarks>
+/// <remarks>Owns: event dispatch, channel restoration and output-side scheduler helpers. Does not own: transport state or timeline compilation. Tests: PlaybackSeekSwapTests.</remarks>
 public sealed partial class PlaybackEngine : IDisposable
 {
     /// <summary>1 while a record count-in is waiting for the scheduler thread; the scheduler takes it (sets 0) once per request.</summary>

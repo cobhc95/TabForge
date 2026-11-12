@@ -1,0 +1,198 @@
+using System;
+using System.Linq;
+using TabForge.Documents;
+using TabForge.Models;
+using TabForge.Services;
+
+namespace TabForge.Avalonia.Views.TransportPopups;
+
+// Owns: the one shared scale pick: the section's scale read through ScaleReadoutEngine, the picks kept in the song (one undo step) or for the session, the
+//   keep-this-pick choice, whether the scale is shown on the fretboard (through the editing settings), the deferred settings save and the Refreshed event, and the links the
+//   hosts use to open each other's panels. The status bar, the fretboard and the piano roll all read and write this one object.
+// Does not own: the detection and picks themselves (ScaleReadoutEngine), the status bar text and the popup (StatusScaleReadout), the panel (ScalePanel), the settings file (MainWindowSettings).
+// Tests: TabForge.Avalonia.Tests.StatusBarScaleTests, PianoRollSharedScaleTests, ScalePanelHostTests.
+/// <summary>UI thread only.</summary>
+internal sealed class ScalePick
+{
+    private readonly Func<EditingSettings?> _editing;
+    private readonly Func<IEditableDocument> _document;
+    private readonly Func<SongProject> _project;
+    private readonly Action _saveDeferred;
+    private readonly ScaleReadoutEngine _engine = new();
+    private readonly ScaleReadoutSettings _fallback = new();
+    private ScaleReadoutResult? _result;
+    private int _bar;
+    private Guid? _trackId;   // the track read, by id: an undo may replace the song objects
+    private string? _shownKey, _lastApplied;
+    private EditingSettings? _hooked;
+
+    /// <param name="editing">The editing settings (null without a settings file: the pick then uses its defaults and drives no fretboard).</param>
+    /// <param name="document">The shown song, whose kept picks are edited as one undo step.</param>
+    /// <param name="project">The shown song's project.</param>
+    /// <param name="saveDeferred">Saves the settings after the frame (a changed setting, a new fretboard highlight).</param>
+    public ScalePick(Func<EditingSettings?> editing, Func<IEditableDocument> document, Func<SongProject> project, Action saveDeferred)
+    {
+        _editing = editing;
+        _document = document;
+        _project = project;
+        _saveDeferred = saveDeferred;
+    }
+
+    /// <summary>How the hosts reach each other's panels (the window sets it once).</summary>
+    public ScaleHostLinks Links { get; } = new();
+
+    /// <summary>The scale text now read (null before the first reading) and the context line under it (null for a drum track, which has no scale); set before <see cref="Refreshed"/> when they change.</summary>
+    public string? ShownText { get; private set; }
+
+    public string? ShownContext { get; private set; }
+
+    /// <summary>How many detections the engine ran (tests).</summary>
+    internal int DetectionRuns => _engine.DetectionRuns;
+
+    /// <summary>True once the scale was read at least once (Current can be read).</summary>
+    internal bool HasResult => _result is not null;
+
+    /// <summary>The reading the panels show now.</summary>
+    public ScaleReadoutResult Current => _result ?? throw new InvalidOperationException("The scale readout has not been shown yet.");
+
+    public ScaleReadoutSettings Settings => _editing()?.ScaleReadout ?? _fallback;
+
+    /// <summary>True when the next status bar pick is kept in the song for its section and track.</summary>
+    public bool KeepChoice { get; set; }
+
+    public bool Flats => (MusicTime.BarOf(_project(), _bar)?.KeySignature ?? _project().KeySignature) < 0;
+
+    public event Action? Refreshed;
+
+    public bool HasSelection => _document().Selection.HasRange;
+
+    public (int First, int Last)? SelectionRange => _document().Selection.HasRange ? (_document().Selection.StartBar, _document().Selection.EndBar) : null;
+
+    public EditingSettings? Editing => _editing();
+
+    /// <summary>The shown song's project.</summary>
+    internal SongProject Project => _project();
+
+    public PitchHistogram? Histogram => _result is null ? null : SectionScaleDetector.Collect(_project(), _result.Context.Tracks, _result.Context.FirstBar, _result.Context.LastBar);
+
+    /// <summary>The track read is not a drum track: a drum track (or the drum channel) has no scale.</summary>
+    internal bool ReadsDrumTrack => _project().Tracks.FirstOrDefault(t => t.Id == _trackId) is { } track && (track.IsDrumTrack || track.MidiChannel == 9);
+
+    /// <summary>Reads the section at <paramref name="bar"/> for <paramref name="track"/>; <see cref="ShownText"/> and <see cref="Refreshed"/> change only when the reading does.</summary>
+    public void Show(SongProject song, int bar, TrackModel? track)
+    {
+        _bar = bar;
+        Hook(_editing());
+        _trackId = track?.Id;
+        // Drum tracks have no scale: the reading is a dash and no detection runs for them.
+        if (track is not null && (track.IsDrumTrack || track.MidiChannel == 9))
+        {
+            _result = new ScaleReadoutResult("—", ScaleReadoutEngine.ContextOf(song, bar, track, Settings, SelectionRange),
+                ScaleReadoutEngine.KeyScale(song, bar), Array.Empty<ScaleMatch>(), false, null, false);
+            const string drumKey = "—";
+            if (drumKey != _shownKey)
+            {
+                _shownKey = drumKey;
+                ShownText = "—";
+                ShownContext = null;
+                Refreshed?.Invoke();
+            }
+            return;
+        }
+        var result = _engine.Compute(song, bar, track, Settings, SelectionRange);
+        _result = result;
+        var key = result.Text + "|" + result.Context.Text;
+        if (key != _shownKey)
+        {
+            _shownKey = key;
+            ShownText = result.Text;
+            ShownContext = result.Context.Text;
+            Refreshed?.Invoke();
+        }
+        ApplyToFretboard(result);
+    }
+
+    /// <summary>Reads again, at the bar and track last read, with the song as it is now (a pick changes the picked card even when the text stays). Nothing before the first reading.</summary>
+    public void Recompute()
+    {
+        if (_result is null) return;
+        _shownKey = null;
+        var song = _project();
+        Show(song, _bar, song.Tracks.FirstOrDefault(t => t.Id == _trackId));
+    }
+
+    /// <summary>Reads at <paramref name="bar"/> for the track last read (else the song's first notation track).</summary>
+    public void Recompute(SongProject song, int bar) => Show(song, bar, song.Tracks.FirstOrDefault(t => t.Id == _trackId) ?? song.FirstNotationTrack);
+
+    public void PickFor(ScaleMatch scale, bool keep, bool fromFretboard)
+    {
+        if (_result is null) return;
+        var context = _result.Context;
+        if (keep) DocumentEdits.Run(_document(), project => _engine.KeepPick(project, context, scale.Highlight), label: "Keep scale");
+        else _engine.PickForSession(context, scale.Highlight);
+        Recompute();
+        if (fromFretboard && !Shown) SetShown(true);   // a pick made at the fretboard lights it at once
+    }
+
+    public void UseAuto()
+    {
+        if (_result is null) return;
+        var context = _result.Context;
+        _engine.ForgetSessionPick(context);
+        if (_engine.PickOf(_project(), context, out _) is not null) DocumentEdits.Run(_document(), project => _engine.ReturnToAuto(project, context), label: "Scale back to auto");
+        Recompute();
+    }
+
+    /// <summary>Tells the open panels and the piano roll to read again (a piano roll option changed).</summary>
+    internal void NotifyRefreshed() => Refreshed?.Invoke();
+
+    public void SettingChanged()
+    {
+        _saveDeferred();
+        Recompute();
+    }
+
+    public void LookChanged() => _saveDeferred();
+
+    public void ClearHighlight() => SetShown(false);
+
+    /// <summary>True when the scale is shown on the fretboard (the one state every on/off control reads).</summary>
+    public bool Shown => _editing()?.ScaleShown ?? Settings.ShowOnFretboard;
+
+    /// <summary>The one way to show or hide the scale on the fretboard: the panel switch, Clear highlight, the menu, hotkeys and the settings windows all end here, through the editing settings.</summary>
+    public void SetShown(bool on)
+    {
+        Hook(_editing());
+        if (_editing() is { } editing) editing.SetScaleShown(on);
+        else { Settings.ShowOnFretboard = on; ScaleShownChanged(); }
+    }
+
+    private void Hook(EditingSettings? editing)
+    {
+        if (ReferenceEquals(editing, _hooked)) return;
+        if (_hooked is not null) _hooked.ScaleShownChanged -= ScaleShownChanged;
+        _hooked = editing;
+        if (editing is not null) editing.ScaleShownChanged += ScaleShownChanged;
+    }
+
+    // Whoever changed whether the scale is shown: apply the read scale (or drop it), save, and tell the open panels.
+    private void ScaleShownChanged()
+    {
+        _lastApplied = null;
+        _saveDeferred();
+        Recompute();
+        Refreshed?.Invoke();
+    }
+
+    // The read scale becomes the fretboard scale highlight when it changes (and the link is on); a manual highlight stays until the read scale changes.
+    private void ApplyToFretboard(ScaleReadoutResult result)
+    {
+        if (_editing() is not { } editing || !editing.ScaleReadout.ShowOnFretboard) { _lastApplied = null; return; }
+        var highlight = result.Effective.Highlight;
+        if (highlight == _lastApplied) return;
+        _lastApplied = highlight;
+        if (editing.ScaleHighlight == highlight) return;
+        editing.ScaleHighlight = highlight;
+        _saveDeferred();
+    }
+}

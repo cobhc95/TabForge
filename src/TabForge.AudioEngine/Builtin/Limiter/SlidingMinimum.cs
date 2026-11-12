@@ -2,7 +2,7 @@ namespace TabForge.AudioEngine.Builtin.Limiter;
 
 // Owns: the smallest value among the last N pushed, in constant time per push and without allocation after construction (a monotonic queue in two arrays).
 // Does not own: what the limiter does with it (LimiterEffect.Process.cs).
-// Tests: BuiltinDynamicsTests.
+// Tests: BuiltinLimiterTests.
 internal sealed class SlidingMinimum
 {
     private readonly double[] _values;

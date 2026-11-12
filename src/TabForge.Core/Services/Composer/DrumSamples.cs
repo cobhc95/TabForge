@@ -47,11 +47,6 @@ public sealed record DrumSample(string Id, string Name, int SuggestedBpm, int Ba
     /// Grooves are not limited to these: any GM note 35–81 from <see cref="DrumMaps"/> can appear in Parts.</summary>
     public const int KickMidi = 36, SnareMidi = 38, HatMidi = 42, RideMidi = 51, CrashMidi = 49, OpenHatMidi = 46;
 
-    /// <summary>The two back-compat accessors.</summary>
-    public IReadOnlyList<int> KickSteps => Parts.FirstOrDefault(p => p.Midi == KickMidi).Steps ?? Array.Empty<int>();
-    public IReadOnlyList<int> SnareSteps => Parts.FirstOrDefault(p => p.Midi == SnareMidi).Steps ?? Array.Empty<int>();
-    public IReadOnlyList<int> HatSteps => Parts.FirstOrDefault(p => p.Midi == HatMidi).Steps ?? Array.Empty<int>();
-
     /// <summary>One kit piece's display label for the panel's pattern grid.</summary>
     public static string PartLabel(int midi) => midi switch
     {

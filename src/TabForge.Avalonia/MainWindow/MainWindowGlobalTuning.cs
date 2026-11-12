@@ -9,6 +9,7 @@ using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Documents;
 using TabForge.Presenters;
 using TabForge.Services;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia;
 
@@ -20,7 +21,7 @@ namespace TabForge.Avalonia;
 /// <summary>The Global tuning command, bound to the shown song.</summary>
 public static class MainWindowGlobalTuning
 {
-    private const string GlobalTuningId = "Tools.GlobalTuning";
+    private const string GlobalTuningId = CommandIds.Tools.GlobalTuning;
 
     /// <summary>The Tools menu command ids this class handles.</summary>
     public static readonly IReadOnlyList<string> Commands = new[] { GlobalTuningId };

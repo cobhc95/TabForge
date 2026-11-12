@@ -13,7 +13,7 @@ namespace TabForge.Avalonia;
 
 // Owns: the take-lane menu's commands (right-click on an empty part of a clip lane): Paste clip here, New empty MIDI clip here, Import audio or MIDI file here,
 //   Record here, Open lane in piano roll, and the Lane rows (Rename, Move up, Move down, Delete). They act on the track, lane and snapped time the menu captured
-//   (ContextMenuHost.ClickedTrack, ClickedLane, ClickedSec); each edit is one undo step through MainWindowClipKeys.Edit.
+//   (ContextMenuHost.Target.Track, ClickedLane, ClickedSec); each edit is one undo step through MainWindowClipKeys.Edit.
 // Does not own: the menu rows (TimelineMenus.TakeLane), which menu opens (ContextMenuRows), the model edits (ClipLaneEdits, ClipEditService), the audio import
 //   itself (MainWindowAudioDrop), the dialogs (passed in as Prompts) or the piano roll (EditorPaneSwitch).
 // Tests: TabForge.Avalonia.Tests.TakeLaneMenuTests, TabForge.Avalonia.Tests.MainWindowMenuTests.
@@ -55,7 +55,7 @@ public static class MainWindowTakeLane
     private static (TrackModel Track, int Lane, double Sec)? Clicked(IEditableDocument document, ContextMenuHost menus)
     {
         var tracks = document.Project.Tracks;
-        return menus.ClickedTrack >= 0 && menus.ClickedTrack < tracks.Count && menus.ClickedLane >= 0 ? (tracks[menus.ClickedTrack], menus.ClickedLane, menus.ClickedSec) : null;
+        return menus.Target.Track >= 0 && menus.Target.Track < tracks.Count && menus.Target.Lane >= 0 ? (tracks[menus.Target.Track], menus.Target.Lane, menus.Target.Sec) : null;
     }
 
     /// <summary>Pastes the copied clip (a take group, or several clips with their relative places) at the clicked time on the clicked lane, as one undo step; the copies become the selection.</summary>
@@ -144,7 +144,7 @@ public static class MainWindowTakeLane
         var (track, _, _) = hit;
         document.TrackIndex = document.Project.Tracks.IndexOf(track);
         if (!track.RecordArm) arm();
-        if (menus.ClickedBar >= 0) menus.MovePlayhead?.Invoke(menus.ClickedBar);
+        if (menus.Target.Bar >= 0) menus.MovePlayhead?.Invoke(menus.Target.Bar);
     }
 
     /// <summary>Shows the clicked lane in the piano roll (its first MIDI clip, whose lane the roll edits); an empty MIDI lane opens its track in the piano roll.</summary>

@@ -2,7 +2,7 @@ namespace TabForge.AudioEngine.Editors;
 
 // Owns: the seam between the engine and the window system that shows plug-in editors (Windows: Win32 windows; Linux: X11 windows; macOS: not supported yet).
 // Does not own: any one window system (EditorWindows is the Windows host, X11EditorHost the Linux one), what a plug-in draws.
-// Tests: PluginEditorHostTests.
+// Tests: no dedicated test class.
 
 /// <summary>Shows plug-in editors in windows of the host system. One per message-loop owner (the engine session, the isolated plug-in host); main thread only.</summary>
 public interface IPluginEditorHost

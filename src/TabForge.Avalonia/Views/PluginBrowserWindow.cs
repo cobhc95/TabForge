@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
@@ -212,7 +213,7 @@ public sealed class PluginBrowserWindow : Window
             _session.AddFolders(chosen);
             _ = Scan(null);
         });
-        AddButton("Browse for a plug-in file…", "Plugins.BrowseFile", "Add a single plug-in file without adding its folder.", BrowseForFile);
+        AddButton("Browse for a plug-in file…", "Plugins.BrowseFile", "Add a single plug-in file without adding its folder.", () => Platform.UiTasks.Forget(BrowseForFile(), "Browse for a plug-in file", text => _status.Text = text));
         AddButton("Rescan", "Plugins.Rescan", "Scan the folders again (after installing or removing plug-ins).", () => _ = Scan(null));
         _approveAll = AddButton("Approve all…", "Plugins.ApproveAll", "Approve every plug-in now listed that still needs approval; you confirm the list first. Never runs by itself.",
             () => _ = ApproveRows(_list.ItemsSource as IReadOnlyList<PluginBrowserRow> ?? []));
@@ -222,13 +223,13 @@ public sealed class PluginBrowserWindow : Window
             if (roots.Count == 0) { _status.Text = PluginBrowserSession.NoCommonFoldersText; return; }
             _ = Scan(roots);
         });
-        AddButton("Edit list…", "Plugins.EditList", "Edit the list of common folders (also in Settings > Audio & Plug-ins), with Reset to defaults.", EditCommonFolders);
+        AddButton("Edit list…", "Plugins.EditList", "Edit the list of common folders (also in Settings > Audio & Plug-ins), with Reset to defaults.", () => Platform.UiTasks.Forget(EditCommonFolders(), "Common folders", text => _status.Text = text));
         AddButton("Folder settings…", "Plugins.FolderSettings", "Plug-in folders, remembered scans and plug-in window options (Settings > Audio & Plug-ins).", () => { Close(false); _openSettings(this); });
         AddButton("Cancel", "Plugins.Cancel", "Close without adding", () => Close(false)).IsCancel = true;
         return scanStandard;
     }
 
-    private async void BrowseForFile()
+    private async Task BrowseForFile()
     {
         var path = await _files.OpenFileAsync(new TabForge.Platform.FileDialogOptions { Key = TabForge.Services.DialogKeys.PluginFile, Title = "Choose a plug-in", Filter = PluginBrowserSession.PluginFileFilter }, this);
         if (path is null) return;
@@ -237,7 +238,7 @@ public sealed class PluginBrowserWindow : Window
         Close(true);
     }
 
-    private async void EditCommonFolders()
+    private async Task EditCommonFolders()
     {
         try
         {

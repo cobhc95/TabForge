@@ -10,6 +10,7 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.VisualTree;
 using TabForge.Platform.Theme;
+using TabForge.Menus;
 
 
 namespace TabForge.Avalonia.Views;
@@ -47,11 +48,11 @@ public static class MenuRowToggles
     {
         new("View.SidePanel", "Show / hide the side panel (tools, sections, practice)", IconGeometry.SidePanel),
         null,
-        new("View.InstrumentPanel", "Show/hide fretboard / keyboard",
+        new(CommandIds.View.InstrumentPanel, "Show/hide fretboard / keyboard",
             IconGeometry.Fretboard),
-        new("View.LearnMode", "Keyboard mode (experimental)", IconGeometry.LearnMode, InStrip: true),
-        new("View.BandView", "Band view: a row per track", IconGeometry.BandView, InStrip: true),
-        new("View.CompactMode", "Compact mode", IconGeometry.CompactMode, InStrip: true),
+        new(CommandIds.View.LearnMode, "Keyboard mode (experimental)", IconGeometry.LearnMode, InStrip: true),
+        new(CommandIds.View.BandView, "Band view: a row per track", IconGeometry.BandView, InStrip: true),
+        new(CommandIds.View.CompactMode, "Compact mode", IconGeometry.CompactMode, InStrip: true),
         null,
         new("File.ProjectSettings", "Project settings: song info, credits, tempo, key",
             IconGeometry.Prefs),

@@ -4,7 +4,7 @@ namespace TabForge.Views;
 
 // Owns: the note flag path.
 // Does not own: the geometry (StaffNotationGeometry, the renderers).
-// Tests: TestDrawContextPort.
+// Tests: no dedicated test class.
 internal static class ScorePaths
 {
     internal static IUiPath FlagGeometry(IPathFactory paths, double x, double y, bool up)

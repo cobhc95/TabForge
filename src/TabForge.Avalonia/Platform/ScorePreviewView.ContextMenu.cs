@@ -25,7 +25,7 @@ public sealed partial class ScorePreviewView
         if (MenuStateSource is null) rows = ScoreMenus.WithPianoRollRow(rows);   // the main score (not a Band card) can show this track in the piano roll
         // Inside the tinted loop region: Clear loop on top (the ruler menu's command, undoable).
         if (_probe.LoopTint is { } t && hit.Measure >= 0 && ScoreEditorGeometry.IsInRange(hit.Measure, hit.Cell, t.m1, t.c1, t.m2, t.c2))
-            return new[] { new MenuSpec { Id = "Transport.ClearLoopArea", Header = "Clear loop", Shortcut = "Esc twice" }, MenuSpec.Separator() }.Concat(rows);
+            return new[] { new MenuSpec { Id = CommandIds.Transport.ClearLoopArea, Header = "Clear loop", Shortcut = "Esc twice" }, MenuSpec.Separator() }.Concat(rows);
         return rows;
     }
 

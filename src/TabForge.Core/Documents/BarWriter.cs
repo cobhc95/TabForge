@@ -5,7 +5,7 @@ namespace TabForge.Documents;
 
 // Owns: the growable byte buffer that bars are encoded into, and the variable-length writers the bar codec uses.
 // Does not own: the field order of a bar (BarCodec) and the reading side (BarReader).
-// Tests: TestUndoDeltaStates.
+// Tests: no dedicated test class.
 /// <summary>Growable byte buffer reused for every bar encoded.</summary>
 internal sealed class BarWriter
 {

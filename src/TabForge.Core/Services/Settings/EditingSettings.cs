@@ -5,7 +5,7 @@ namespace TabForge.Services;
 
 // Owns: the note-entry, paste and fretboard-related editing preferences data, score text styles and clip snapping.
 // Does not own: loading, saving and validating (AppSettingsStore, SettingsValidator) or the Preferences rows (SettingsCatalog).
-// Tests: TestSettingsFileSplitSnapshots.
+// Tests: no dedicated test class.
 public sealed class EditingSettings
 {
     public int DefaultDuration { get; set; } = 4;

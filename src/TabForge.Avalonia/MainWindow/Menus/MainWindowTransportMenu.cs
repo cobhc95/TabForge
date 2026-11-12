@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using TabForge.Avalonia.Features.Recording.Presenter;
 using TabForge.Avalonia.Transport;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia;
 
@@ -13,7 +14,7 @@ namespace TabForge.Avalonia;
 public static class MainWindowTransportMenu
 {
     /// <summary>The Transport menu command ids this class handles.</summary>
-    public static readonly IReadOnlyList<string> Commands = new[] { "Transport.PlayFromStart", "Transport.PlayPause", "Transport.Stop", PanicCommand };
+    public static readonly IReadOnlyList<string> Commands = new[] { "Transport.PlayFromStart", CommandIds.Transport.PlayPause, CommandIds.Transport.Stop, PanicCommand };
 
     /// <summary>Panic: all notes and the sustain pedal off on every output; works while stopped.</summary>
     public const string PanicCommand = "Transport.Panic";
@@ -38,13 +39,13 @@ public static class MainWindowTransportMenu
             if (EndRecording(recording)) return;   // Shift+Space while recording ends it, as Space does
             if (playback?.For(songs.Active) is { } session) PlayFromStart(session);
         });
-        commands.Add("Transport.PlayPause", () =>
+        commands.Add(CommandIds.Transport.PlayPause, () =>
         {
             if (EndRecording(recording)) return;   // Space ends a recording instead of pausing it
             if (playback?.For(songs.Active) is { } session) session.PlayOrPause();
         });
         commands.Add(PanicCommand, () => playback?.Panic());
-        commands.Add("Transport.Stop", () =>
+        commands.Add(CommandIds.Transport.Stop, () =>
         {
             if (EndRecording(recording)) return;   // the recording's stop stops the playback and restores the cursor
             if (playback?.For(songs.Active) is { } session) session.Stop();

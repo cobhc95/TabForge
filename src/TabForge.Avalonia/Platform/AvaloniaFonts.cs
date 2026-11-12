@@ -8,7 +8,7 @@ namespace TabForge.Avalonia.Platform;
 // Owns: turning a logical family name (or a comma list) into the Avalonia FontFamily, through FontProvider: with the bundled set on, Inter and
 //   JetBrains Mono load from the app's Avalonia resources (Assets/Fonts).
 // Does not own: which set is on (FontProvider) or the mapping rules.
-// Tests: FontProviderTests.
+// Tests: no dedicated test class.
 public static class AvaloniaFonts
 {
     /// <summary>Where the bundled TTF files live as Avalonia resources (the assembly is TabForge).</summary>

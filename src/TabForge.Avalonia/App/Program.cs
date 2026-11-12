@@ -10,9 +10,6 @@ using TabForge.Services;
 
 namespace TabForge.Avalonia;
 
-// Owns: process-mode routing and app building (entry point).
-// Does not own: the app itself (App), the audio engine or the import worker.
-
 /// <summary>
 /// Entry point of TabForge. Owns: routing the process modes and building the app.
 /// Does not own: the app itself (App), the audio engine (TabForge.AudioEngine, reached only through EngineHost.Run) or the

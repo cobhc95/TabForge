@@ -14,11 +14,8 @@ namespace TabForge.Avalonia.Platform;
 /// <summary>The pure edits behind the clip commands; no document, undo or view state.</summary>
 public static class ClipEditService
 {
-    /// <summary>The lowest tempo (beats per minute) a beat is measured at; the fallback when a bar has no length to read.</summary>
-    public const double MinimumTempo = 20;
-
-    /// <summary>One beat in seconds at <paramref name="tempo"/>, never faster than <see cref="MinimumTempo"/>.</summary>
-    public static double BeatSeconds(double tempo) => 60.0 / Math.Max(MinimumTempo, tempo);
+    /// <summary>One beat in seconds at <paramref name="tempo"/>, never slower than <see cref="InputLimits.MinTempo"/> beats per minute (the fallback when a bar has no length to read).</summary>
+    public static double BeatSeconds(double tempo) => 60.0 / Math.Max(InputLimits.MinTempo, tempo);
 
     /// <summary>Moves the clip's start by <paramref name="deltaSec"/>, never before the song start; false when it does not move.</summary>
     public static bool Move(AudioClip clip, double deltaSec)

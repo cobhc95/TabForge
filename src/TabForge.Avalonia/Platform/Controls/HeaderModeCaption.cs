@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using TabForge.Presenters;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia.Platform.Controls;
 
@@ -9,7 +10,7 @@ public enum HeaderMode { Compact, Band }
 /// <summary>The command ids of the two header modes, whose toolbar toggles the band menu and the compact menu show.</summary>
 public static class ModeCommandIds
 {
-    public const string BandView = "View.BandView", CompactMode = "View.CompactMode";
+    public const string BandView = CommandIds.View.BandView, CompactMode = CommandIds.View.CompactMode;
 }
 
 // Owns: which header modes are on, in the order they were entered, and so the caption the shared header strip shows: the mode entered last, and when

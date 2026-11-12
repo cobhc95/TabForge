@@ -7,6 +7,7 @@ using TabForge.Documents;
 using TabForge.Models;
 using TabForge.Playback;
 using TabForge.Presenters;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia;
 
@@ -66,7 +67,7 @@ public sealed class MainWindowTempoBar : System.IDisposable
         _bar.SetPressed(ViewTempoBarPresenter.Zoom, () => ShowMenu(ViewTempoBarPresenter.Zoom, ViewTempoMenus.Zoom(score.Zoom, score.SetZoom)));
         _bar.SetPressed(ViewTempoBarPresenter.TimeKey, () => ShowMenu(ViewTempoBarPresenter.TimeKey, ViewTempoMenus.TimeKey(Run)));
         _bar.SetFineTune(ViewTempoBarPresenter.Zoom, () => ViewTempoPopups.Zoom(() => score.Zoom * 100, percent => score.SetZoom(percent / 100), null));
-        _bar.SetWheel(ViewTempoBarPresenter.Zoom, up => Run(up ? "View.ZoomIn" : "View.ZoomOut"));
+        _bar.SetWheel(ViewTempoBarPresenter.Zoom, up => Run(up ? CommandIds.View.ZoomIn : CommandIds.View.ZoomOut));
         Refresh();
     }
 

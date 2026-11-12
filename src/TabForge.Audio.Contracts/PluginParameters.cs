@@ -4,7 +4,7 @@ namespace TabForge.Audio.Contracts;
 
 // Owns: the description of one plug-in parameter and its wire form, shared by the engine (list reply to TabForge, and the plug-in host pipe) and TabForge (generic parameter panel).
 // Does not own: any one format's parameter model (ClapPlugin) or the messages that carry the list (EngineCommand.GetParams / SetParam, EngineEvent.Params).
-// Tests: ClapProtocolTests (wire round trip), ClapParameterTests.
+// Tests: no dedicated test class.
 
 /// <summary>One plug-in parameter: a stable id, display name, plain-value range, the current value and the plug-in's own text for it ("-6.0 dB"; empty when it gave none).</summary>
 public sealed record PluginParameterInfo(uint Id, string Name, string Module, double Min, double Max, double Default, double Value, bool Stepped, bool ReadOnly, string Text = "");

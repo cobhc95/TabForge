@@ -7,7 +7,7 @@ namespace TabForge.KeyboardMode;
 //   real piano proportions within the height cap), the x and width of every key (white keys evenly spaced, black keys 58 % wide and 63 % long, off the seams as on a piano), the strip's height,
 //   how many pixels a millisecond is (the falling area over the look-ahead, capped in speed) and where a moment ahead of the song time sits.
 // Does not own: the key outlines and rectangles as toolkit shapes, the notes, the colours or drawing.
-// Tests: TestKeyboardModeKeyView.
+// Tests: no dedicated test class.
 public sealed class KeyboardStripGeometry
 {
     public const int LowestKey = 21, HighestKey = 108;

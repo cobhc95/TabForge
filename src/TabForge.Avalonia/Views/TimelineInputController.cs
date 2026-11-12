@@ -326,7 +326,7 @@ public sealed partial class TimelineInputController
         {
             _pressRow = cell.Row;   // not left over from an earlier press
             _view.TrackRowFocused = true;   // a track row cell click puts the TrackRow.* keys on that row
-            _view.ContextMenus.ClickedTrack = cell.Row;
+            _view.ContextMenus.Aim(_view.ContextMenus.Target with { Track = cell.Row });
             if (cell.Cell is TrackRowCells.Cell.Volume or TrackRowCells.Cell.Pan)
             {
                 if (e.ClickCount == 2) ResetSlider(cell.Row, cell.Cell);   // the second press of a double-click resets; it starts no drag

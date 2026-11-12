@@ -38,7 +38,7 @@ public sealed class ScaleShownUnifiedTests
             editing.ShowScale("D Dorian");                 // a scale picked from the fretboard menu
             Dispatcher.UIThread.RunJobs();
             Assert.True(toggle.IsChecked);
-            scale.ClearHighlight();                        // the Clear highlight button
+            scale.Pick.ClearHighlight();                        // the Clear highlight button
             Dispatcher.UIThread.RunJobs();
             Assert.False(toggle.IsChecked);
             Assert.Null(editing.ScaleHighlight);

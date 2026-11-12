@@ -22,32 +22,32 @@ namespace TabForge.Avalonia.Views;
 // Tests: TabForge.Avalonia.Tests.ContextMenuTests.
 public static class ContextMenuRows
 {
-    /// <summary>The command ids of the bar menu's insert rows: the window inserts at the bar the right-click was on (ContextMenuHost.ClickedBar).</summary>
+    /// <summary>The command ids of the bar menu's insert rows: the window inserts at the bar the right-click was on (ContextMenuHost.Target.Bar).</summary>
     public const string InsertBarBeforeId = "TimelineBar.InsertBefore", InsertBarAfterId = "TimelineBar.InsertAfter";
 
-    /// <summary>The command ids of the bar menu's Copy bar rows: this track, and every track (the window copies ContextMenuHost.ClickedBar).</summary>
+    /// <summary>The command ids of the bar menu's Copy bar rows: this track, and every track (the window copies ContextMenuHost.Target.Bar).</summary>
     public const string BarCopyId = "TimelineBar.Copy", BarCopyAllTracksId = "TimelineBar.CopyAllTracks";
 
-    /// <summary>The command ids of the bar menu's Paste bar rows: this track, and every track (the window pastes at ContextMenuHost.ClickedBar).</summary>
+    /// <summary>The command ids of the bar menu's Paste bar rows: this track, and every track (the window pastes at ContextMenuHost.Target.Bar).</summary>
     public const string BarPasteId = "TimelineBar.Paste", BarPasteAllTracksId = "TimelineBar.PasteAllTracks";
 
-    /// <summary>The command ids of the bar menu's Delete bar rows: this track, and every track (the window asks what Delete does to ContextMenuHost.ClickedBar).</summary>
+    /// <summary>The command ids of the bar menu's Delete bar rows: this track, and every track (the window asks what Delete does to ContextMenuHost.Target.Bar).</summary>
     public const string BarDeleteId = "TimelineBar.Delete", BarDeleteAllTracksId = "TimelineBar.DeleteAllTracks";
 
-    /// <summary>The command id of the section lock rows (the section menu's and the bar menu's "Lock section position"): the window flips the lock of ContextMenuHost.ClickedSection.</summary>
+    /// <summary>The command id of the section lock rows (the section menu's and the bar menu's "Lock section position"): the window flips the lock of ContextMenuHost.Target.Section.</summary>
     public const string SectionLockId = "Section.ToggleLock";
     public const string RetryReadId = "Media.RetryWaveform", RetryReadHeader = "Retry reading this audio";
     /// <summary>The missing-audio clip menu's top rows: Locate file… (this clip, and the others missing beside it) and Find all missing audio… (the search window).</summary>
     public const string LocateMediaId = "Media.LocateFile", LocateMediaHeader = "Locate file…", FindMissingMediaId = "Media.FindMissingAll", FindMissingMediaHeader = "Find all missing audio…";
 
-    /// <summary>The command ids of the section menu's Copy, Cut, Paste, Duplicate and Delete rows (the window edits ContextMenuHost.ClickedSection).</summary>
+    /// <summary>The command ids of the section menu's Copy, Cut, Paste, Duplicate and Delete rows (the window edits ContextMenuHost.Target.Section).</summary>
     public const string SectionCopyId = "TimelineSection.Copy", SectionCutId = "TimelineSection.Cut",
         SectionDuplicateId = "TimelineSection.Duplicate", SectionPasteAfterId = "TimelineSection.PasteAfter", SectionDeleteId = "TimelineSection.Delete", SectionRemoveLabelId = "TimelineSection.RemoveLabel",
         SectionPasteAtBarId = "TimelineSection.PasteAtBar", SectionCloseGapId = "TimelineSection.CloseGap", SectionGoToId = "TimelineSection.GoTo", SectionAddHereId = "TimelineSection.AddHere", SectionRenameId = "TimelineSection.Rename";
 
-    /// <summary>The command id of the section menu's Loop section row (the window loops ContextMenuHost.ClickedSection).</summary>
+    /// <summary>The command id of the section menu's Loop section row (the window loops ContextMenuHost.Target.Section).</summary>
     public const string LoopSectionId = "Transport.LoopSection";
-    /// <summary>The ruler menu's Move playhead here: the clicked bar (ContextMenuHost.ClickedBar).</summary>
+    /// <summary>The ruler menu's Move playhead here: the clicked bar (ContextMenuHost.Target.Bar).</summary>
     public const string MovePlayheadHereId = "Timeline.MovePlayheadHere";
 
     /// <summary>The command id of the highlight menu's "Select these bars" row.</summary>
@@ -63,19 +63,19 @@ public static class ContextMenuRows
     /// The bar and section settings doors open the Timeline &amp; Tracks Preferences page, as the track list's settings row does.</summary>
     private static readonly IReadOnlyDictionary<TimelineCommand, string> TimelineCommandIds = new Dictionary<TimelineCommand, string>
     {
-        [TimelineCommand.CopySelection] = "Edit.Copy",
-        [TimelineCommand.CutSelection] = "Edit.Cut",
-        [TimelineCommand.PasteSelection] = "Edit.Paste",
-        [TimelineCommand.DeleteSelection] = "Range.Delete",
-        [TimelineCommand.HighlightCopy] = "Highlight.Copy",
-        [TimelineCommand.HighlightCut] = "Highlight.Cut",
-        [TimelineCommand.HighlightClear] = "Highlight.Delete",
-        [TimelineCommand.HighlightPaste] = "Highlight.Paste",
+        [TimelineCommand.CopySelection] = CommandIds.Edit.Copy,
+        [TimelineCommand.CutSelection] = CommandIds.Edit.Cut,
+        [TimelineCommand.PasteSelection] = CommandIds.Edit.Paste,
+        [TimelineCommand.DeleteSelection] = CommandIds.Range.Delete,
+        [TimelineCommand.HighlightCopy] = CommandIds.Highlight.Copy,
+        [TimelineCommand.HighlightCut] = CommandIds.Highlight.Cut,
+        [TimelineCommand.HighlightClear] = CommandIds.Highlight.Delete,
+        [TimelineCommand.HighlightPaste] = CommandIds.Highlight.Paste,
         [TimelineCommand.HighlightSelectBars] = SelectHighlightedBarsId,
-        [TimelineCommand.LoopSelection] = "Transport.Loop",
-        [TimelineCommand.ClearSelection] = "Transport.ClearLoopArea",
-        [TimelineCommand.RulerLoop] = "Transport.Loop",
-        [TimelineCommand.RulerClearLoop] = "Transport.ClearLoopArea",
+        [TimelineCommand.LoopSelection] = CommandIds.Transport.Loop,
+        [TimelineCommand.ClearSelection] = CommandIds.Transport.ClearLoopArea,
+        [TimelineCommand.RulerLoop] = CommandIds.Transport.Loop,
+        [TimelineCommand.RulerClearLoop] = CommandIds.Transport.ClearLoopArea,
         [TimelineCommand.RulerLoopSection] = LoopSectionId,
         [TimelineCommand.RulerLoopSelectedBars] = "Transport.LoopSelectedBars",
         [TimelineCommand.RulerMovePlayhead] = MovePlayheadHereId,
@@ -104,14 +104,14 @@ public static class ContextMenuRows
         [TimelineCommand.ResetTrackListHeight] = ResetTrackRowHeightId,
         [TimelineCommand.TimelineSettings] = TrackListMenus.SettingsId,
         [TimelineCommand.SectionSettings] = TrackListMenus.SettingsId,
-        [TimelineCommand.ClipCopy] = "Clip.Copy",
-        [TimelineCommand.ClipCut] = "Clip.Cut",
-        [TimelineCommand.ClipPaste] = "Clip.Paste",
-        [TimelineCommand.ClipDuplicate] = "Clip.Duplicate",
+        [TimelineCommand.ClipCopy] = CommandIds.Clip.Copy,
+        [TimelineCommand.ClipCut] = CommandIds.Clip.Cut,
+        [TimelineCommand.ClipPaste] = CommandIds.Clip.Paste,
+        [TimelineCommand.ClipDuplicate] = CommandIds.Clip.Duplicate,
         [TimelineCommand.ClipSplit] = "Clip.Split",
         [TimelineCommand.ClipGlue] = "Clip.Glue",
         [TimelineCommand.ClipFadeReset] = "Clip.FadeReset",
-        [TimelineCommand.ClipDelete] = "Clip.Delete",
+        [TimelineCommand.ClipDelete] = CommandIds.Clip.Delete,
         [TimelineCommand.ClipMute] = "Clip.Mute",
         [TimelineCommand.ClipProperties] = "Clip.Properties",
         [TimelineCommand.ClipReRecordPass] = MainWindowReRecordPass.CommandId,
@@ -133,8 +133,8 @@ public static class ContextMenuRows
         if (row.Command != TimelineCommand.None) return TimelineCommandIds.TryGetValue(row.Command, out var timelineId) ? timelineId : null;
         return row.Id switch
         {
-            ScoreMenus.PasteId => "Edit.Paste",
-            ScoreMenus.PasteSpecialId => "Edit.PasteSpecial",
+            ScoreMenus.PasteId => CommandIds.Edit.Paste,
+            ScoreMenus.PasteSpecialId => CommandIds.Edit.PasteSpecial,
             ScoreMenus.LayoutId => ScoreLayoutIdPrefix + row.Arg,
             var id => id,
         };
@@ -168,11 +168,10 @@ public static class ContextMenuRows
         if (inSectionBand && hit >= 0)
         {
             var section = slots[hit];
-            timeline.ContextMenus.ClickedSection = section.MarkerIndex;
             // Add section here runs at the clicked bar; it is offered only off the section's own first bar.
             var clickedBar = timeline.BarAtX(at.X);
             int? addAt = clickedBar >= 0 && clickedBar < timeline.BarCount && clickedBar != song.Markers[section.MarkerIndex].MeasureIndex ? clickedBar : null;
-            timeline.ContextMenus.ClickedBar = addAt ?? -1;
+            Aim(timeline, t => t with { Section = section.MarkerIndex, Bar = addAt ?? -1 });
             return TimelineMenus.Section(new SectionMenuState(AddAtBar: addAt, CanPaste: canPaste, Looped: false, Locked: song.Markers[section.MarkerIndex].LockPosition), key);
         }
 
@@ -180,8 +179,7 @@ public static class ContextMenuRows
         if (inSectionBand)
         {
             var gapBar = timeline.BarAtX(at.X);
-            timeline.ContextMenus.ClickedSection = -1;
-            timeline.ContextMenus.ClickedBar = gapBar >= 0 && gapBar < timeline.BarCount ? gapBar : -1;
+            Aim(timeline, t => t with { Section = -1, Bar = gapBar >= 0 && gapBar < timeline.BarCount ? gapBar : -1 });
             return TimelineMenus.SectionGap(Math.Max(0, gapBar), canPaste, gapBar >= 0 ? SectionGapEdits.Find(song, gapBar) : null, key);
         }
 
@@ -189,9 +187,8 @@ public static class ContextMenuRows
         if (at.Y < TimelineView.RulerHeight)
         {
             var rulerBar = Math.Clamp(timeline.BarAtX(at.X), 0, Math.Max(0, timeline.BarCount - 1));
-            timeline.ContextMenus.ClickedBar = rulerBar;
             var holder = SectionAt(song, rulerBar);
-            timeline.ContextMenus.ClickedSection = holder;
+            Aim(timeline, t => t with { Bar = rulerBar, Section = holder });
             var model = timeline.FocusModel;
             return TimelineMenus.Ruler(new RulerMenuState(model.LoopRepeat, model.HasLoop, holder >= 0, model.HasRange || model.ClipCount > 0), key);
         }
@@ -204,7 +201,7 @@ public static class ContextMenuRows
             var rows = TimelineMenus.Clip(new ClipMenuState(HasClip: true, IsMidi: clip.Clip.IsMidi, CanPaste: ClipClipboard.HasClip, Muted: clip.Clip.Muted,
                 IsGrouped: grouped, Takes: TakesOf(timeline, clip)), key);
             var unreadable = !clip.Clip.IsMidi && timeline.Waveforms.StatusOf(clip.Clip).State == TabForge.Audio.WaveState.Failed;
-            timeline.ContextMenus.ClickedUnreadableClip = unreadable ? clip.Clip : null;
+            Aim(timeline, t => t with { UnreadableClip = unreadable ? clip.Clip : null });
             // A clip whose file could not be read offers to read it again (a file that was busy or copied late then shows its waveform).
             var withRetry = unreadable ? rows.Prepend(MenuSpec.Separator()).Prepend(new MenuSpec { Header = RetryReadHeader, Id = RetryReadId }) : rows;
             return !clip.Clip.IsMidi && timeline.Waveforms.StatusOf(clip.Clip).IsMissing ? MissingMediaRows(timeline).Concat(withRetry) : withRetry;
@@ -233,13 +230,11 @@ public static class ContextMenuRows
         var row = timeline.RowAtY(at.Y);
         var hasBar = bar >= 0 && bar < timeline.BarCount;
         var hasTrack = row >= 0 && row < song.Tracks.Count;
-        // The bar menu's insert rows run at this bar, so the window reads it from the host when the row runs.
-        timeline.ContextMenus.ClickedBar = hasBar ? bar : -1;
-        timeline.ContextMenus.ClickedTrack = hasTrack ? row : -1;
         var marker = hasBar ? song.Markers.Where(m => m.MeasureIndex <= bar).OrderBy(m => m.MeasureIndex).LastOrDefault() : null;
         var state = new BarMenuState(HasBar: hasBar, HasTrack: hasTrack, TrackCount: song.Tracks.Count, CanDeleteThisTrack: hasTrack, CanDeleteAllTracks: true,
             InSection: marker is not null, SectionLocked: marker?.LockPosition ?? false, CanPaste: canPaste, CanPasteAllTracks: canPaste);
-        timeline.ContextMenus.ClickedSection = marker is null ? -1 : song.Markers.IndexOf(marker);
+        // The bar menu's insert rows run at this bar, so the window reads it from the host when the row runs.
+        Aim(timeline, t => t with { Bar = hasBar ? bar : -1, Track = hasTrack ? row : -1, Section = marker is null ? -1 : song.Markers.IndexOf(marker) });
         return TimelineMenus.Bar(state, key);
     }
 
@@ -248,7 +243,7 @@ public static class ContextMenuRows
     {
         var selectedBar = timeline.BarAtX(at.X);
         if (timeline.FocusModel is not { HasLoop: true } looped || !looped.LoopContains(selectedBar)) return null;
-        timeline.ContextMenus.ClickedBar = selectedBar;
+        Aim(timeline, t => t with { Bar = selectedBar });
         var label = looped.LoopStartBar == looped.LoopEndBar
             ? $"Bar {looped.LoopStartBar + 1} looped"
             : $"Bars {looped.LoopStartBar + 1}-{looped.LoopEndBar + 1} looped";
@@ -270,11 +265,7 @@ public static class ContextMenuRows
         var host = timeline.ContextMenus;
         var snappedX = TimelineClipSnap.SnapX(timeline, at.X, null, false, out _);
         var bar = timeline.BarAtX(at.X);
-        host.ClickedTrack = row;
-        host.ClickedLane = lane;
-        host.ClickedSec = Math.Max(0, timeline.SecondsOfX(snappedX));
-        host.ClickedBar = bar >= 0 && bar < timeline.BarCount ? bar : -1;
-        host.ClickedUnreadableClip = null;
+        host.Aim(host.Target with { Track = row, Lane = lane, Sec = Math.Max(0, timeline.SecondsOfX(snappedX)), Bar = bar >= 0 && bar < timeline.BarCount ? bar : -1, UnreadableClip = null });
         var hasMidi = track.AudioClips.Any(c => c.Lane == lane && c.IsMidi);
         var laneEmpty = !track.AudioClips.Any(c => c.Lane == lane);
         var laneCount = Math.Max(1, timeline.LaidOutLaneCountOf(track));
@@ -292,14 +283,17 @@ public static class ContextMenuRows
         return takes.Count < 2 ? null : takes.Select((t, i) => ($"Take {i + 1}", LoopTakes.IsActive(clip.Track, t))).ToList();
     }
 
+    // Makes the one click the commands run on: the earlier click with what this menu path names replaced (the rest keeps its value).
+    private static void Aim(TimelineView timeline, Func<MenuTarget, MenuTarget> change) => timeline.ContextMenus.Aim(change(timeline.ContextMenus.Target));
+
     /// <summary>The track row menu for the track under <paramref name="at"/> (in the timeline's coordinates); where no track is, the empty track list's menu.</summary>
     public static IEnumerable<MenuSpec> TrackRowAt(TimelineView timeline, Point at)
     {
         var song = timeline.Song;
         var row = timeline.RowAtY(at.Y);
-        // The track row menu's commands run on the track the right-click was on (ContextMenuHost.ClickedTrack).
+        // The track row menu's commands run on the track the right-click was on (ContextMenuHost.Target.Track).
         var hasTrack = row >= 0 && row < song.Tracks.Count;
-        timeline.ContextMenus.ClickedTrack = hasTrack ? row : -1;
+        Aim(timeline, t => t with { Track = hasTrack ? row : -1 });
         if (!hasTrack) return TrackListMenus.Build(new TrackListMenuState(GroupsShown: false, MasterLane: timeline.MasterLaneShown));
         var track = song.Tracks[row];
         var state = new TrackRowMenuState(IsAudio: track.IsAudio, CanPaste: timeline.ContextMenus.CanPaste, CanDelete: song.Tracks.Count > 1, ColourHex: track.ColorHex,

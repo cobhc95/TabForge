@@ -1,9 +1,10 @@
+using TabForge.Menus;
 namespace TabForge.Services;
 
 // Owns: the words of the bar-range Delete prompt and of its Settings row ("Timeline cut/delete"), and the mapping between them and BarRangeAction.
 //       Only the two delete actions can be asked or remembered; a stored insert answer from an older version reads as "Ask".
 // Does not own: the prompt window (Views/BarRangePrompt) or the edits (BarRangeGaps).
-// Tests: TestBarRangeGaps.
+// Tests: no dedicated test class.
 public static class BarRangePromptText
 {
     public const string AskLabel = "Ask each time";
@@ -50,7 +51,7 @@ public static class BarRangePromptText
     public static string Tip(int start, int end, Func<string, string> key)
     {
         string K(string id, string what) => key(id) is { Length: > 0 } k ? $"{k} {what}" : "";
-        var parts = new[] { K("Range.Delete", "asks what to do"), K("Range.Remove", "removes and closes the gap"), "right-click for more" }.Where(p => p.Length > 0);
+        var parts = new[] { K(CommandIds.Range.Delete, "asks what to do"), K("Range.Remove", "removes and closes the gap"), "right-click for more" }.Where(p => p.Length > 0);
         var label = start == end ? $"Bar {start + 1}" : $"Bars {start + 1}-{end + 1}";
         return $"{label} selected · {string.Join(" · ", parts)}";
     }

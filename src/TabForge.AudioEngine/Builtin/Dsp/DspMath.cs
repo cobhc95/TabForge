@@ -3,7 +3,7 @@ namespace TabForge.AudioEngine.Builtin.Dsp;
 // Owns: the small maths every built-in effect shares: dB and linear conversion, one-pole time constants from milliseconds (sample-rate independent),
 //   denormal flushing, and the Smoothed value that glides to its target (no zipper noise when a knob moves).
 // Does not own: filters (Biquad), any effect's sound.
-// Tests: BuiltinDynamicsTests, BuiltinEqTests.
+// Tests: BuiltinEqTests.
 public static class DspMath
 {
     /// <summary>Below this magnitude a filter or envelope state is set to zero: denormal numbers make the audio thread slow.</summary>

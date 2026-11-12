@@ -132,14 +132,6 @@ public class PromptWindowTests
     }
 
     [AvaloniaFact]
-    public void TrackPromptsSubmenuListsEverySmallPrompt()
-    {
-        var menu = PreviewPromptsMenu.Build(new Window());
-        Assert.Equal("Track prompts", menu.Header?.ToString());
-        Assert.Equal(7, menu.Items.Count);
-    }
-
-    [AvaloniaFact]
     public void PromptTextReadsAtLeastFourAndAHalfToOneInTheDarkTheme() => AssertPromptContrast(light: false);
 
     [AvaloniaFact]

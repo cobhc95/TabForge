@@ -3,7 +3,7 @@ namespace TabForge.Platform;
 // Owns: the question "where does this file really live once every link and junction is followed".
 // Does not own: the Windows call (the adapter is Platform/Windows/WindowsPathResolver.cs), the prefix handling of the answer,
 // or what a caller does when the answer is unknown.
-// Tests: TestPathResolverAdapter.
+// Tests: no dedicated test class.
 /// <summary>
 /// The final path of a file as the file system reports it, for the policies that decide whether a file may be trusted or opened
 /// (<c>MediaPathPolicy</c>, <c>PluginTrust</c>). The answer is raw: a Windows adapter returns the <c>\\?\</c> form it reports, and each

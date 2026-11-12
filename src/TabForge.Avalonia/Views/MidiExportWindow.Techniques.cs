@@ -20,7 +20,7 @@ namespace TabForge.Avalonia.Views;
 //   and the View / edit link) and the unmapped-techniques choice. It only reads maps and picks presets for this export; it never edits a track.
 // Does not own: the map and its presets (ArticulationMap, ArticulationPresets), the selector (ArticulationPresetSelector), the editor (ArticulationsPane) or
 //   the export (MidiExportService).
-// Tests: MidiTechniqueExportTests (the export service); the compile is covered by TestArticulationKeyswitches.
+// Tests: the compile is covered by TestArticulationKeyswitches.
 public sealed partial class MidiExportWindow
 {
     private readonly RadioButton _asPlayed = new() { Content = "As played in TabForge", GroupName = "articulations", Name = "AsPlayed" };

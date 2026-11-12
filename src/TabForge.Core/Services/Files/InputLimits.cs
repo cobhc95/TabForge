@@ -6,7 +6,7 @@ namespace TabForge.Services;
 
 // Owns: the size and count limits applied to every file and pasted input read.
 // Does not own: the reading code and error messages.
-// Tests: TestSecurityInputBoundaries, TestGuitarProImportWorker.
+// Tests: TestGuitarProImportWorker.
 /// <summary>Small, shared resource bounds for files and model graphs accepted from disk.</summary>
 public static class InputLimits
 {

@@ -172,7 +172,7 @@ public sealed class TimelineDeleteRoutingTests
         var arrangement = window.GetLogicalDescendants().OfType<ArrangementView>().First();
         var timeline = arrangement.Timeline;
         song.TrackIndex = selected;
-        timeline.ContextMenus.ClickedTrack = selected;
+        timeline.ContextMenus.Aim(timeline.ContextMenus.Target with { Track = selected });
         timeline.TrackRowFocused = true;
         timeline.Focus();
 

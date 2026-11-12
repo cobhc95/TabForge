@@ -17,7 +17,7 @@ public static class PianoRollMenus
         Quantize = PianoRollKeyIds.Quantize, QuantizeSettings = "PianoRoll.QuantizeSettings", Mute = PianoRollKeyIds.Mute,
         TransposeUp = "PianoRoll.TransposeUp", TransposeDown = "PianoRoll.TransposeDown", OctaveUp = "PianoRoll.OctaveUp", OctaveDown = "PianoRoll.OctaveDown",
         TransposeBy = "PianoRoll.TransposeBy", VelocitySet = "PianoRoll.VelocitySet", VelocityScale = "PianoRoll.VelocityScale", VelocityRamp = "PianoRoll.VelocityRamp",
-        SelectAll = "PianoRoll.SelectAll", SelectPitch = "PianoRoll.SelectPitch", InvertSelection = PianoRollKeyIds.InvertSelection, ShowInScoreId = "PianoRoll.ShowInScore", ClearLoop = "Transport.ClearLoopArea",
+        SelectAll = "PianoRoll.SelectAll", SelectPitch = "PianoRoll.SelectPitch", InvertSelection = PianoRollKeyIds.InvertSelection, ShowInScoreId = "PianoRoll.ShowInScore", ClearLoop = CommandIds.Transport.ClearLoopArea,
         Legato = PianoRollKeyIds.Legato, Glue = "PianoRoll.Glue", Randomise = "PianoRoll.Randomise", Humanise = "PianoRoll.Humanise", Colours = "PianoRoll.Colours",
         MovePlayhead = "PianoRoll.MovePlayhead", LoopBar = "PianoRoll.LoopBar", LoopSection = "PianoRoll.LoopSection",
         PlaybackNeedle = "PianoRoll.PlaybackNeedle";

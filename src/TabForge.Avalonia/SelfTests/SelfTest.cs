@@ -81,6 +81,7 @@ public static partial class SelfTest
         GuardGroup("architecture", TestChildProcessGuardPort);
         GuardGroup("architecture", TestEveryTestHasAnArea);
         GuardGroup("architecture", TestArchitectureFileLineBudget);
+        GuardGroup("architecture", TestCommandIdsAreInTheCatalogue);
         Section("Basic set: engine (no audio device)");
         Guard(TestHeadlessDeviceReconfigure);
         Guard(TestSharedRingProducers);
@@ -91,6 +92,7 @@ public static partial class SelfTest
         Guard(TestDiskStreamerIdle);
         Guard(TestEngineOwnerTransports);
         Guard(TestEngineOwnerIdLifecycle);
+        Guard(TestPeHeaderReaders);
         Guard(TestClapRealPlugin);
         Guard(TestEngineMessagesRoundTrip);
         Guard(TestEngineMessagesGolden);
@@ -102,6 +104,8 @@ public static partial class SelfTest
         Guard(TestPresetFolderStoreNoOverwrite);
         Guard(TestNumberedSiblingCeiling);
         Guard(TestSaveClaimAtomic);
+        Guard(TestSiblingNameFinder);
+        Guard(TestUndoRedoRestoreOrder);
         Guard(TestAutosaveCopies);
         Guard(TestPairSaveEveryStage);
         Guard(TestPairMarkerIsUntrusted);
@@ -166,11 +170,11 @@ public static partial class SelfTest
         ["TestSourceControlCharacters"] = "hygiene", ["TestInstallerAssociationParity"] = "hygiene", ["TestPublicDocsConsistency"] = "hygiene", ["TestRequireArgumentStrings"] = "hygiene",
         ["TestRequiredGroupGate"] = "hygiene", ["TestOnlyOption"] = "hygiene", ["TestRunnerTimingAndShardOptions"] = "hygiene", ["TestDebuggingDocInSync"] = "hygiene",
         ["TestDocImagesAreReferenced"] = "hygiene", ["TestLooseSoundTouchAndLicenseTexts"] = "hygiene", ["TestNoMojibakeInSources"] = "hygiene",
-        ["TestChildProcessGuardPort"] = "architecture", ["TestEveryTestHasAnArea"] = "architecture", ["TestArchitectureFileLineBudget"] = "architecture",
+        ["TestChildProcessGuardPort"] = "architecture", ["TestEveryTestHasAnArea"] = "architecture", ["TestCommandIdsAreInTheCatalogue"] = "architecture", ["TestArchitectureFileLineBudget"] = "architecture",
         ["TestHeadlessDeviceReconfigure"] = "engine", ["TestSharedRingProducers"] = "engine", ["TestEngineExitCleanupOnUi"] = "engine", ["TestPluginLoadUnloadLoop"] = "engine", ["TestClipChurnWhileStreaming"] = "engine",
         ["TestAudioTrackAddDuringPlayback"] = "engine", ["TestDiskStreamerIdle"] = "engine", ["TestEngineOwnerTransports"] = "engine", ["TestEngineOwnerIdLifecycle"] = "engine",
-        ["TestEngineMessagesRoundTrip"] = "engine", ["TestEngineMessagesGolden"] = "engine", ["TestClapRealPlugin"] = "engine",
-        ["TestPresetFolderStoreNoOverwrite"] = "persistence", ["TestNumberedSiblingCeiling"] = "persistence", ["TestSaveClaimAtomic"] = "persistence", ["TestAutosaveCopies"] = "persistence",
+        ["TestPeHeaderReaders"] = "engine", ["TestEngineMessagesRoundTrip"] = "engine", ["TestEngineMessagesGolden"] = "engine", ["TestClapRealPlugin"] = "engine",
+        ["TestPresetFolderStoreNoOverwrite"] = "persistence", ["TestNumberedSiblingCeiling"] = "persistence", ["TestSaveClaimAtomic"] = "persistence", ["TestSiblingNameFinder"] = "persistence", ["TestUndoRedoRestoreOrder"] = "persistence", ["TestAutosaveCopies"] = "persistence",
         ["TestPairSaveEveryStage"] = "persistence", ["TestPairMarkerIsUntrusted"] = "persistence", ["TestDirectTforgeOpenRecovers"] = "persistence", ["TestTforgeCompression"] = "persistence",
         ["TestScoreClipRejectsUntrustedInput"] = "persistence", ["TestClipboardCopyPasteBytes"] = "persistence",
         ["TestSettingsChangeDuringSaveStaysPending"] = "settings", ["TestSettingsBadWorkspaceKeepsOtherSettings"] = "settings",

@@ -273,8 +273,11 @@ public sealed class LiveInputSession : IDisposable
         if (restore) track.Rig = Saved.Chain;
     }
 
-    /// <summary>Disarms at once; the chain keeps its plug-ins. Their states are read before the engine lets the chain go.</summary>
-    public async void TurnOff()
+    /// <summary>Disarms at once; the chain keeps its plug-ins. Their states are read before the engine lets the chain go. A failure of that second part is logged.</summary>
+    public void TurnOff() => TaskObserver.Observe(TurnOffAsync(), "Live input: turn off");
+
+    /// <summary>The body of <see cref="TurnOff"/>; completes when the states are saved and the chain is released.</summary>
+    public async Task TurnOffAsync()
     {
         if (!IsOn) return;
         _midi.Stop();   // held notes are let go while the stand-in still has its slot

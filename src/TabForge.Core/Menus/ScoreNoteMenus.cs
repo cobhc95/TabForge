@@ -31,13 +31,13 @@ public static class ScoreNoteMenus
     {
         var rows = new List<MenuSpec>
         {
-            new() { Id = "Edit.Copy", Header = CopyHeader, Shortcut = state.Key("Edit.Copy") },
-            new() { Id = "Edit.Cut", Header = CutHeader, Shortcut = state.Key("Edit.Cut") },
+            new() { Id = CommandIds.Edit.Copy, Header = CopyHeader, Shortcut = state.Key(CommandIds.Edit.Copy) },
+            new() { Id = CommandIds.Edit.Cut, Header = CutHeader, Shortcut = state.Key(CommandIds.Edit.Cut) },
         };
         if (state.CanPaste)
         {
-            rows.Add(new MenuSpec { Id = ScoreMenus.PasteId, Header = PasteHeader, Shortcut = state.Key("Edit.Paste") });
-            rows.Add(new MenuSpec { Id = ScoreMenus.PasteSpecialId, Header = PasteSpecialHeader, Shortcut = state.Key("Edit.PasteSpecial") });
+            rows.Add(new MenuSpec { Id = ScoreMenus.PasteId, Header = PasteHeader, Shortcut = state.Key(CommandIds.Edit.Paste) });
+            rows.Add(new MenuSpec { Id = ScoreMenus.PasteSpecialId, Header = PasteSpecialHeader, Shortcut = state.Key(CommandIds.Edit.PasteSpecial) });
         }
         rows.Add(new MenuSpec { Id = PaletteToolCatalog.CommandIdFor("edit:erase_note"), Header = DeleteHeader, Shortcut = DeleteShortcut });
         rows.Add(MenuSpec.Separator());
@@ -76,10 +76,10 @@ public static class ScoreNoteMenus
         Header = PitchAndStringHeader,
         Children = new List<MenuSpec>
         {
-            new() { Id = "Note.PitchUp", Header = "Pitch up a semitone", Shortcut = state.Key("Note.PitchUp") },
-            new() { Id = "Note.PitchDown", Header = "Pitch down a semitone", Shortcut = state.Key("Note.PitchDown") },
-            new() { Id = "Note.MoveStringUp", Header = "Move note to higher string", Shortcut = state.Key("Note.MoveStringUp") },
-            new() { Id = "Note.MoveStringDown", Header = "Move note to lower string", Shortcut = state.Key("Note.MoveStringDown") },
+            new() { Id = CommandIds.Note.PitchUp, Header = "Pitch up a semitone", Shortcut = state.Key(CommandIds.Note.PitchUp) },
+            new() { Id = CommandIds.Note.PitchDown, Header = "Pitch down a semitone", Shortcut = state.Key(CommandIds.Note.PitchDown) },
+            new() { Id = CommandIds.Note.MoveStringUp, Header = "Move note to higher string", Shortcut = state.Key(CommandIds.Note.MoveStringUp) },
+            new() { Id = CommandIds.Note.MoveStringDown, Header = "Move note to lower string", Shortcut = state.Key(CommandIds.Note.MoveStringDown) },
         },
     };
 }

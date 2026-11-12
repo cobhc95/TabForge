@@ -2,7 +2,7 @@ namespace TabForge.Services;
 
 // Owns: the three choices of "Preview notes with" and how they sit on AudioSettings (PreviewNotes = on/off, PreviewWith = the sound when on).
 // Does not own: the sound itself (the host's NotePreviewSound) or the settings row (SettingsCatalog.Audio).
-// Tests: TestSettingsFileSplitSnapshots.
+// Tests: no dedicated test class.
 public static class PreviewSources
 {
     public const string Track = "Track instrument";

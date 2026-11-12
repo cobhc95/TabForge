@@ -4,7 +4,7 @@ namespace TabForge.Playback;
 
 /// <summary>
 /// Owns: a temporary per-channel program the running playback uses instead of the score's (instrument picker preview), kept through loop restarts and partial timeline refreshes, dropped when a start, a seek rebuild or a loop-wrap recompile compiles the song again.
-/// Does not own: the document (nothing is edited, so no dirty mark or undo entry). Tests: SelfTestLiveInstrumentPreview.
+/// Does not own: the document (nothing is edited, so no dirty mark or undo entry). Tests: no dedicated test class.
 /// </summary>
 public sealed partial class PlaybackEngine
 {

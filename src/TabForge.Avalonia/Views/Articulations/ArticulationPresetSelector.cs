@@ -13,7 +13,7 @@ namespace TabForge.Avalonia.Views.Articulations;
 
 // Owns: the one articulation preset ComboBox: its built-in and user rows, the Custom / track-map row, the trailing Manage row, and loading the picked preset.
 // Does not own: what picking does with the map (ArticulationsPane, MidiExportWindow) or where presets live (ArticulationPresets, PresetFolderStore).
-// Tests: MidiTechniqueExportTests (the export dialog lists the same presets); the pane's own behaviour is covered by TestArticulationKeyswitches.
+// Tests: the pane's own behaviour is covered by TestArticulationKeyswitches.
 /// <summary>The shared articulation preset selector used by the Articulations pane and the Export MIDI dialog.</summary>
 public sealed class ArticulationPresetSelector : ComboBox
 {

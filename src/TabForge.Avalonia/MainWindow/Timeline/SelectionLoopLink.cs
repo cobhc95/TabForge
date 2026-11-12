@@ -14,6 +14,7 @@ using TabForge.Models;
 using TabForge.Playback;
 using TabForge.Presenters;
 using TabForge.Services;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia;
 
@@ -388,11 +389,11 @@ public sealed class SelectionLoopLink : IDisposable
     public void Register(MainWindowCommands commands, Window window, ContextMenuHost menus, Action<string> notice)
     {
         _notice = notice;
-        commands.Add("Transport.Loop", ToggleLoop);
-        commands.Add("Transport.ClearLoopArea", ClearLoopArea);
+        commands.Add(CommandIds.Transport.Loop, ToggleLoop);
+        commands.Add(CommandIds.Transport.ClearLoopArea, ClearLoopArea);
         commands.Add("Transport.LoopSelectedBars", LoopSelectedBars);
         commands.Add("Selection.Clear", () => ClearSelection());   // the selection menu's Clear selection row
-        commands.Add(ContextMenuRows.LoopSectionId, () => LoopSection(menus.ClickedSection));
+        commands.Add(ContextMenuRows.LoopSectionId, () => LoopSection(menus.Target.Section));
         commands.Add("Edit.SelectAll", SelectAll);
         commands.Add("Edit.InvertSelection", InvertSelection);
         window.KeyDown += (_, e) =>

@@ -20,8 +20,10 @@ public static class ViewTempoPopups
     public const double MaximumSpeedPercent = 200;
     public const double MinimumZoomPercent = 50;
     public const double MaximumZoomPercent = 200;
-    public const double MinimumTempo = 30;
-    public const double MaximumTempo = 300;
+    // The tempo slider's own range. It is narrower than the song limit (InputLimits.MinTempo..MaxTempo, 20-400, which the menu steps and
+    // the project settings use), so a song outside 30-300 shows a clamped slider thumb.
+    public const double SliderMinimumTempo = 30;
+    public const double SliderMaximumTempo = 300;
     public const double WheelSpeedStep = 5;
     private const double SliderWidth = 130;
     private const double BoxWidth = 46;
@@ -40,7 +42,7 @@ public static class ViewTempoPopups
     public static Control Tempo(Func<int> getTempo, Action<int> setTempo)
     {
         var panel = Row();
-        var set = Tuner(panel, MinimumTempo, MaximumTempo, "", () => getTempo(), v => setTempo((int)Math.Round(v)), true);
+        var set = Tuner(panel, SliderMinimumTempo, SliderMaximumTempo, "", () => getTempo(), v => setTempo((int)Math.Round(v)), true);
         panel.Children.Add(Push("−", "One beat per minute slower", () => set(getTempo() - 1)));
         panel.Children.Add(Push("+", "One beat per minute faster", () => set(getTempo() + 1)));
         return Frame(panel);

@@ -8,7 +8,7 @@ using TabForge.Services;
 namespace TabForge.Views.Score;
 
 // ScoreRenderer: cell x positions, hammer-on/pull-off slurs and tab slides, and the next/previous-note searches they use.
-// Owns: tab links between notes. Does not own: the bar drawing or the layout. Tests: render identity, TestTabEditorRenderInvariance.
+// Owns: tab links between notes. Does not own: the bar drawing or the layout. Tests: no dedicated test class.
 
 internal sealed partial class ScoreRenderer
 {

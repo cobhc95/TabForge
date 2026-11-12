@@ -3,7 +3,7 @@ namespace TabForge.Platform.Theme;
 // Owns: which typefaces the app really draws with: the Windows set (Segoe UI / Consolas) or the bundled set (Inter / JetBrains Mono), the
 //   one switch, and the mapping from the logical family names the drawing code uses to the real ones.
 // Does not own: loading the bundled font files (the Avalonia adapter, AvaloniaFonts) or the setting row.
-// Tests: FontProviderTests.
+// Tests: no dedicated test class.
 /// <summary>
 /// The font provider (one per app, held in the application resources and read by the text adapters). Drawing code names a family by its logical name ("Segoe UI" for interface text, "Consolas" for tab digits); every
 /// text adapter passes the name through <see cref="Map"/>, so the setting switches the whole app (interface, score, tab text) at once.

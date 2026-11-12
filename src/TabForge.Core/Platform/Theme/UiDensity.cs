@@ -1,7 +1,7 @@
 // Owns: the one density and UI-scale interpretation every metric entry point shares: the Comfortable, Compact and Spacious
 //   factors and the 0.7 to 1.5 UI-scale clamp.
 // Does not own: the density setting (AppearanceSettings), the sizes the factors scale, or applying the scale to a window.
-// Tests: UiTokensTests, UiStrokesTests, UiMetricsTests.
+// Tests: UiTokensTests, UiMetricsTests.
 using System;
 using TabForge.Services;
 

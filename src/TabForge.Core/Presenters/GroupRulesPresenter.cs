@@ -3,7 +3,7 @@
 //       rule type, the rule value choices and hints, and the check of OK, which gives the result or the problem.
 // Does not own: the window, the cards, the radio buttons and the colour menu (Views/GroupRulesDialog.cs), applying the result to a song (MixerRules.Apply,
 //       called by MixerWindow), the rule matching (MixerRules).
-// Tests: none dedicated(through the window), TestGroupRulesPresenter (headless).
+// Tests: none dedicated(through the window).
 using TabForge.Models;
 
 namespace TabForge.Presenters;

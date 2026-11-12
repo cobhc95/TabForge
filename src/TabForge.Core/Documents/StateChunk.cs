@@ -6,7 +6,7 @@ namespace TabForge.Documents;
 
 // Owns: the immutable encoded bytes that undo states share, with their SHA-256 and the 64-bit key of the reuse index.
 // Does not own: the choice of which chunk to reuse (ProjectStateEncoder) and the state fingerprint (ProjectState).
-// Tests: TestUndoDeltaStates.
+// Tests: no dedicated test class.
 /// <summary>Immutable bytes shared between undo states.</summary>
 internal sealed class StateChunk
 {

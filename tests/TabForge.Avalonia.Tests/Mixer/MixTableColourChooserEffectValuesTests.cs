@@ -14,6 +14,7 @@ using TabForge.Avalonia.Views;
 using TabForge.Models;
 using TabForge.Platform.Theme;
 using TabForge.Presenters;
+using TabForge.Services;
 using Xunit;
 using static TabForge.Avalonia.Tests.DialogTestKit;
 
@@ -54,7 +55,7 @@ public class MixTableColourChooserEffectValuesTests
         window.GetLogicalDescendants().OfType<TextBox>().Single().Text = "999";
         Click(ButtonNamed(window, MixTablePresenter.OkButton));
 
-        Assert.Equal(MixTablePresenter.TempoMax, (await pending)!.Tempo);
+        Assert.Equal(InputLimits.MaxTempo, (await pending)!.Tempo);
         owner.Close();
     }
 

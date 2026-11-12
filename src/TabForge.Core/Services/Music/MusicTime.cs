@@ -199,15 +199,15 @@ public static class MusicTime
             {
                 var m = track.Measures[i];
                 // An earlier bar's last mid-bar change is still in force at this bar's start.
-                if (i < measureIndex && m.MidBarTempos is { Count: > 0 } points) return Math.Clamp(points[^1].Tempo, 20, 400);
-                if (m.TempoChange is { } change) return Math.Clamp(change, 20, 400);
+                if (i < measureIndex && m.MidBarTempos is { Count: > 0 } points) return Math.Clamp(points[^1].Tempo, InputLimits.MinTempo, InputLimits.MaxTempo);
+                if (m.TempoChange is { } change) return Math.Clamp(change, InputLimits.MinTempo, InputLimits.MaxTempo);
             }
-        return Math.Clamp(p.Tempo, 20, 400);
+        return Math.Clamp(p.Tempo, InputLimits.MinTempo, InputLimits.MaxTempo);
     }
 
     /// <summary>The tempo at the end of a bar (its last mid-bar change, else the tempo it starts with).</summary>
     public static int TempoAfter(SongProject p, int measureIndex, int startTempo) =>
-        BarOf(p, measureIndex)?.MidBarTempos is { Count: > 0 } points ? Math.Clamp(points[^1].Tempo, 20, 400) : startTempo;
+        BarOf(p, measureIndex)?.MidBarTempos is { Count: > 0 } points ? Math.Clamp(points[^1].Tempo, InputLimits.MinTempo, InputLimits.MaxTempo) : startTempo;
 
     /// <summary>Milliseconds from the bar start to a slot, following the bar's mid-bar tempo changes.</summary>
     public static double OffsetMs(MeasureModel? bar, double slot, int startTempo, double tempoScale = 1.0)
@@ -220,7 +220,7 @@ public static class MusicTime
             if (point.Slot >= slot) break;
             ms += ConstMs(Math.Max(0, point.Slot - at), tempo, tempoScale);
             at = Math.Max(at, point.Slot);
-            var target = Math.Clamp(point.Tempo, 20, 400);
+            var target = Math.Clamp(point.Tempo, InputLimits.MinTempo, InputLimits.MaxTempo);
             var next = i + 1 < points.Count ? points[i + 1].Slot : double.MaxValue;
             var length = point.RampSlots > 0 ? Math.Min(point.RampSlots, next - at) : 0;
             if (length <= 0) { tempo = target; continue; }
@@ -243,13 +243,13 @@ public static class MusicTime
             {
                 var point = points[i];
                 if (point.Slot > slot) break;
-                var target = Math.Clamp(point.Tempo, 20, 400);
+                var target = Math.Clamp(point.Tempo, InputLimits.MinTempo, InputLimits.MaxTempo);
                 var next = i + 1 < points.Count ? points[i + 1].Slot : double.MaxValue;
                 var length = point.RampSlots > 0 ? Math.Min(point.RampSlots, next - point.Slot) : 0;
                 if (length > 0 && slot < point.Slot + length) { tempo += (target - tempo) * (slot - point.Slot) / point.RampSlots; break; }
                 tempo = length > 0 ? tempo + (target - tempo) * length / point.RampSlots : target;
             }
-        return (int)Math.Round(Math.Clamp(tempo, 20, 400));
+        return (int)Math.Round(Math.Clamp(tempo, InputLimits.MinTempo, InputLimits.MaxTempo));
     }
 
     /// <summary>How long a typed note previews: the beat's written length at the song tempo in force there (tempo changes up to the bar included).</summary>
@@ -265,7 +265,7 @@ public static class MusicTime
     }
 
     private static double ConstMs(double slots, double tempo, double tempoScale)
-        => slots / SlotsPerQuarter * TempoMath.MsPerBeat(Math.Clamp(tempo, 20, 400)) * tempoScale;
+        => slots / SlotsPerQuarter * TempoMath.MsPerBeat(Math.Clamp(tempo, InputLimits.MinTempo, InputLimits.MaxTempo)) * tempoScale;
 
     /// <summary>Milliseconds for the first <paramref name="x"/> slots of a ramp from t0 to t1 BPM over <paramref name="ramp"/> slots.</summary>
     public static double RampMs(double x, double t0, double t1, double ramp, double tempoScale = 1.0)

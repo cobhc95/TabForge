@@ -49,8 +49,8 @@ public static class MainWindowTimelineBars
     public static async Task PasteBar(IEditableDocument document, ContextMenuHost menus, TimelinePasteKind kind, Action<string> notice,
         Func<EditingSettings> editing, PasteQuestionPrompt askPaste)
     {
-        var bar = menus.ClickedBar;
-        var track = menus.ClickedTrack;
+        var bar = menus.Target.Bar;
+        var track = menus.Target.Track;
         var clip = menus.Clipboard?.TryGetClip(out _);
         if (bar < 0 || clip is null) return;
         var settings = editing();
@@ -71,7 +71,7 @@ public static class MainWindowTimelineBars
     /// <summary>Asks what Delete does to the clicked bar, then runs the picked action on the clicked track or every track as one undo step.</summary>
     public static async Task DeleteBar(IEditableDocument document, ContextMenuHost menus, bool allTracks, Action<string> notice,
         DeletePrompt askDelete, Func<EditingSettings> editing, Action saveSettings) =>
-        await DeleteRange(document, menus.ClickedBar, menus.ClickedBar, menus.ClickedTrack, allTracks, notice, askDelete, editing, saveSettings);
+        await DeleteRange(document, menus.Target.Bar, menus.Target.Bar, menus.Target.Track, allTracks, notice, askDelete, editing, saveSettings);
 
     /// <summary>
     /// Asks what Delete does to bars <paramref name="first"/>…<paramref name="last"/> (or runs the remembered answer), then applies the picked
@@ -134,8 +134,8 @@ public static class MainWindowTimelineBars
     /// <summary>Copies the clicked bar of the clicked track, or of every track; nothing happens when no bar or track was clicked.</summary>
     private static void CopyBar(IEditableDocument document, ContextMenuHost menus, bool allTracks, Action<string> notice)
     {
-        var bar = menus.ClickedBar;
-        var track = menus.ClickedTrack;
+        var bar = menus.Target.Bar;
+        var track = menus.Target.Track;
         var tracks = document.Project.Tracks;
         if (bar < 0 || (!allTracks && (track < 0 || track >= tracks.Count))) return;
         var clip = TimelineClips.CopyBar(document.Project, bar, track, allTracks);

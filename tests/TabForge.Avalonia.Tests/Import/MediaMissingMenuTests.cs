@@ -51,7 +51,7 @@ public sealed class MediaMissingMenuTests
         Assert.Equal("2 missing", rows[1].Shortcut);
         Assert.Equal(ContextMenuRows.RetryReadHeader, rows[2].Header);
         Assert.True(rows[3].IsSeparator);
-        Assert.Same(gone, view.ContextMenus.ClickedUnreadableClip);
+        Assert.Same(gone, view.ContextMenus.Target.UnreadableClip);
         Assert.Contains(rows.Skip(4), r => r.Command == TabForge.Menus.TimelineCommand.ClipCopy);
         window.Close();
         WaveformCache.Default.ClearAll();

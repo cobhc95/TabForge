@@ -3,7 +3,7 @@ namespace TabForge.AudioEngine.Builtin.Limiter;
 // Owns: the true-peak (inter-sample peak) detector of one channel: the signal is read at 4x its rate with a 32-tap windowed-sinc interpolator per phase, and
 //   the largest magnitude of the four phases is the peak of the sample Delay positions back (half the taps). Designed per instance (no shared tables), sample-rate independent.
 // Does not own: what the limiter does with the peak (LimiterEffect.Process.cs).
-// Tests: BuiltinDynamicsTests.
+// Tests: BuiltinLimiterTests.
 internal sealed class TruePeakDetector
 {
     private const int Taps = 32, Phases = 4, Ring = Taps;

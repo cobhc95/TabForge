@@ -5,7 +5,7 @@ namespace TabForge.Services;
 
 // Owns: the Appearance and score-look preferences data and the converter for older null values.
 // Does not own: loading, saving and validating (AppSettingsStore, SettingsValidator) or the Preferences rows (SettingsCatalog).
-// Tests: TestSettingsFileSplitSnapshots.
+// Tests: no dedicated test class.
 public sealed class AppearanceSettings
 {
     /// <summary>Track rows and timeline lanes tinted with the track's colour, in percent (0 = off).</summary>

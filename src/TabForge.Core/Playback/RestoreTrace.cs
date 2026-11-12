@@ -2,10 +2,6 @@ using System.Linq;
 
 namespace TabForge.Playback;
 
-// Owns: the text of the playback trace line for restored channel state (TABFORGE_TRACE=playback).
-// Does not own: the restore itself (PlaybackEngine, app).
-// Tests: TestMixPointsSurviveSeek.
-
 /// <summary>Owns the text of the playback trace line for restored channel state. Does not own the restore itself. Tests: TestMixPointsSurviveSeek.</summary>
 internal static class RestoreTrace
 {

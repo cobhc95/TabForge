@@ -11,7 +11,7 @@ namespace TabForge.Avalonia.Views.TransportPopups;
 // Owns: the piano roll's view of the master scale panel: the ONE shared scale pick (the same readout and pick as the status bar and the fretboard; a pick sticks to the
 //   section and track), plus its own extras (highlight the scale on the grid, SHOW ROWS: all pitches / scale pitches only / pitches used by the notes, lock to scale) and the
 //   muted fretboard section with its link. SHOW ROWS is saved in the shown song (one undo step); the highlight and the lock are settings. The toolbar and the open panel follow each other.
-// Does not own: the shared sections (ScalePanel), the readout and picks (StatusScaleReadout), the rows and the lock themselves (PianoRollView), the settings file.
+// Does not own: the shared sections (ScalePanel), the pick (ScalePick), the rows and the lock themselves (PianoRollView), the settings file.
 // Tests: TabForge.Avalonia.Tests.ScalePanelHostTests, PianoRollRowsPerSongTests.
 // Threads: UI thread only.
 internal sealed class PianoRollScaleHost : ReadoutScaleHost
@@ -30,7 +30,7 @@ internal sealed class PianoRollScaleHost : ReadoutScaleHost
 
     /// <param name="song">The song on screen: SHOW ROWS is read from and written to it.</param>
     /// <param name="sync">Redraws the roll and relights the toolbar controls after a grid option changed.</param>
-    public PianoRollScaleHost(StatusScaleReadout readout, ScaleHostLinks links, Func<EditingSettings> editing, Func<SongDocument?> song, Action sync)
+    public PianoRollScaleHost(ScalePick readout, ScaleHostLinks links, Func<EditingSettings> editing, Func<SongDocument?> song, Action sync)
         : base(readout, links) => (_editing, _song, _sync) = (editing, song, sync);
 
     public override void Pick(ScaleMatch scale) => Readout.PickFor(scale, keep: true, fromFretboard: false);

@@ -23,7 +23,7 @@ public interface IPresetStore
 // Owns: one folder of user preset files of one extension as an IPresetStore: listing in the saved order, rename, duplicate, delete, and
 //   the order file beside the presets (one name per line; a folder without it lists alphabetically, as before).
 // Does not own: what a preset file holds or how it is loaded (PluginLibrary, the MIDI processing window), or any window.
-// Tests: TestPresetManagePanel.
+// Tests: no dedicated test class.
 public sealed class PresetFolderStore : IPresetRestorable
 {
     /// <summary>The folder under <see cref="PluginLibrary.Root"/> that holds the plug-ins' presets.</summary>

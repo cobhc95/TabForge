@@ -2,12 +2,8 @@
 
 namespace TabForge.Playback;
 
-// Owns: transport requests and state (pause/resume/seek).
-// Does not own: timeline compilation or output ownership.
-// Tests: PlaybackStartHoldTests.
-
 /// <summary>Playback transport controls.</summary>
-/// <remarks>Owns: transport requests and state. Does not own: timeline compilation or output ownership. Tests: TestPlaybackScheduleReuse and existing transport tests.</remarks>
+/// <remarks>Owns: transport requests and state. Does not own: timeline compilation or output ownership. Tests: PlaybackStartHoldTests.</remarks>
 public sealed partial class PlaybackEngine : IDisposable
 {
     private readonly record struct PendingPlaybackSeek(int Bar, int Cell, double TargetMs, long RequestId);

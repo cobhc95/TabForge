@@ -4,7 +4,7 @@ namespace TabForge.Platform;
 
 // Owns: opening a folder, file or web address with the system's own program, and showing a file in the file manager, per operating system.
 // Does not own: choosing what to open, or the Avalonia launcher window code (FolderLauncher decides which to use).
-// Tests: ShellCommandsTests.
+// Tests: no dedicated test class.
 /// <summary>Opens things with the system's default program. Every method answers false (never throws) when nothing could be started.</summary>
 public interface IShellLauncher
 {

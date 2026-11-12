@@ -65,15 +65,15 @@ public sealed class MainWindowLifetime
         {
             if (FinishBeforeClose?.Invoke() is not { IsCompleted: false } pending) return;
             e.Cancel = true;
-            CloseAfter(pending);
+            Platform.UiTasks.Forget(CloseAfter(pending), "Closing the window");
             return;
         }
         e.Cancel = true;
-        AskThenClose();
+        Platform.UiTasks.Forget(AskThenClose(), "Closing the window");
     }
 
-    // async void: started from the Closing event, which cannot wait; an exception from the question surfaces on the UI thread.
-    private async void AskThenClose()
+    // Started from the Closing event, which cannot wait: UiTasks.Forget logs an exception from the question.
+    private async Task AskThenClose()
     {
         _closing = true;
         try
@@ -86,8 +86,8 @@ public sealed class MainWindowLifetime
         finally { _closing = false; }
     }
 
-    // async void: as above; the finishing work reports its own failure, so the window closes either way.
-    private async void CloseAfter(Task pending)
+    // As above; the finishing work reports its own failure, so the window closes either way.
+    private async Task CloseAfter(Task pending)
     {
         _closing = true;
         try { await Bounded(pending); }

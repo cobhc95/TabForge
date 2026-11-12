@@ -4,7 +4,7 @@ namespace TabForge.AudioEngine.Builtin.Gate;
 
 // Owns: the noise gate parameter list (ids and keys are saved in songs and presets: never change them) and the readouts the editor shows (open light, level).
 // Does not own: the audio path (GateEffect.Process.cs), the window.
-// Tests: BuiltinDynamicsTests.
+// Tests: BuiltinGateTests.
 // Threads: parameters and state on the engine main thread; Process on the audio thread (it writes the readouts once per block).
 
 /// <summary>Noise gate: opens when the stereo-linked peak passes the threshold, stays open for the hold time, closes by the release to the range (how far it turns the sound down).</summary>
