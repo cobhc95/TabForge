@@ -8,6 +8,12 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 - GM sound stays off when a VST instrument plays the track after a song is reopened. Before, the automatic "GM sound" tick was not saved, so a reopened song with Superior Drummer (or any VST instrument) kept GM sound ticked and played alongside the instrument. Automatic and manual GM choices are now saved in the song, so reopening it keeps the same state.
 - Composer groove audition always plays the built-in drum kit. On Linux it could play the sound of whichever track was on the drum channel (channel 10), such as a VST drum kit with FX. Auditioning now goes to the built-in drum sound and never through a track's route, as metronome clicks already do.
+- Plug-in loading messages no longer mention Wine on Windows. Before, a plug-in that failed to load on Windows could say it "could not be loaded under Wine", even though Wine was never involved. Windows now shows the plug-in's own reason, such as a file it needs being missing.
+- VST2 plug-ins whose support files are found through the system PATH now load. Before, such a plug-in failed to load, while other hosts loaded it. TabForge now tries the standard search order as well, so it loads.
+- Older VST2 plug-ins that only use the original process call now load instead of being refused. Before, a plug-in that did not support the newer replacing processing call was refused even though it could still play sound. TabForge now uses the original call, clearing its buffers first as the format expects.
+- Small plug-in editors keep their own size. Before, Windows widened a narrow editor to its minimum caption width and resized the plug-in with it. The editor now keeps the size the plug-in asked for.
+- Preset switching now works for 32-bit VST2 plug-ins. Before, choosing a preset in a 32-bit plug-in did nothing, and reading which preset was active could switch the plug-in back to the first one. Both now use the right plug-in calls.
+- Focus track, for practising. A new icon on the left strip (and a View menu row) plays the selected track louder; click it to turn it on or off, right-click it for Focus track settings. It is off until you turn it on. Choose how much louder (decibels, a percentage, or a fixed level), and give guitars, basses, drums or other instruments their own rule. If the boost would pass the loudest level, the other tracks are lowered by the difference instead, so nothing distorts. It only changes what you hear: faders, the saved song, exports and renders are never touched.
 
 ## 0.9.4
 

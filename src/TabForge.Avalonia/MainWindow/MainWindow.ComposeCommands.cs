@@ -126,6 +126,7 @@ public sealed partial class MainWindow
             compose.TopBar.Show(text, kind, NoticeCategory.Render, folder is null ? null : ("Open folder", () => FolderLauncher.Open(compose.TopBar.View, folder))),
             compose.StatusBar.Activity);
         MainWindowMixer.Register(commands, songs, this, playback, settings, showStatus);
+        MainWindowFocusTrack.Register(commands, this, songs, playback, settings);
         scaleFinder.Scale = compose.StatusBar.Scale;
         scaleFinder.Anchor = () => compose.InstrumentStrip?.ScalesAnchor;
         scaleFinder.Register(commands);
@@ -386,7 +387,7 @@ public sealed partial class MainWindow
         MainWindowTrackRowEdits.Register(commands, songs, panes, this, contextMenus, clipboard, showStatus, editRouting);
         MainWindowTrackRowOptions.Register(panes, songs, this, instrumentPicker, playback);
         MainWindowConvertToInstrument.Register(commands, songs, this, contextMenus, () => settings?.Settings ?? new TabForge.Services.AppSettings(), () => settings?.SaveSettings());
-        commands.Add("Tab.Close", () => Platform.UiTasks.Forget(songs.CloseActive(), "Closing the tab", showStatus));
+        commands.Add("Tab.Close", () => Platform.UiTasks.Forget(songs.CloseActive(), "Closing the tab", showStatus));
         commands.Add("Tab.Next", () => songs.SwitchNext());
         commands.Add("Tab.Previous", () => songs.SwitchPrevious());
         commands.Add("File.Save", () => _ = saving.Save(songs.Active));

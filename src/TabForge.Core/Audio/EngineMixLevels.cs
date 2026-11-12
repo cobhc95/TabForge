@@ -10,9 +10,10 @@ public static class EngineMixLevels
 {
     /// <summary>Per-track engine level and pan: the mute/solo rule and group levels, with the same master scaling as the CC7 the playback sends.</summary>
     /// <param name="liveSolo">The live input is soloed: only the song's soloed tracks play beside it.</param>
-    public static Func<TrackModel, (int Volume, int Pan)> Levels(SongProject project, int masterPercent, bool liveSolo = false) => t =>
+    /// <param name="focus">Focus Track, when the app has it on: the other tracks play lower; null leaves every level as it is.</param>
+    public static Func<TrackModel, (int Volume, int Pan)> Levels(SongProject project, int masterPercent, bool liveSolo = false, PracticeFocus? focus = null) => t =>
     {
-        var level = Math.Clamp((int)Math.Round(MixerGroups.Volume(project, t) * Math.Clamp(masterPercent, 0, 100) / 100.0), 0, MidiLimits.Max);
+        var level = Math.Clamp((int)Math.Round((focus?.Scale(t, MixerGroups.Volume(project, t)) ?? MixerGroups.Volume(project, t)) * Math.Clamp(masterPercent, 0, 100) / 100.0), 0, MidiLimits.Max);
         return (EngineLevel(MixerGroups.IsAudible(project, t, liveSolo), level), MixerGroups.Pan(project, t));
     };
 

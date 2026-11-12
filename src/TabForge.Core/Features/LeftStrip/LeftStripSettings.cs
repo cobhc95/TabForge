@@ -23,6 +23,23 @@ public sealed class LeftStripSettings
     /// <summary>The icon ids on the strip in order ("Separator" for a line); null is the default strip.</summary>
     public List<string>? Items { get; set; }
 
+    /// <summary>Ids of icons added to the catalog after the strip was saved that were already offered once (put on a saved strip one time), so one the user removes stays removed.</summary>
+    public List<string> Offered { get; set; } = new();
+
+    /// <summary>
+    /// Puts <paramref name="id"/> on a saved strip once, right after <paramref name="after"/> (or at the end when that is not there); a strip that is still the default, or
+    /// that was offered it before, is left alone. True when the strip changed.
+    /// </summary>
+    public bool OfferOnce(string id, string after)
+    {
+        if (Offered.Contains(id)) return false;
+        Offered.Add(id);
+        if (Items is null || Items.Contains(id)) return true;
+        var at = Items.IndexOf(after);
+        Items.Insert(at < 0 ? Items.Count : at + 1, id);
+        return true;
+    }
+
     /// <summary>Large icons (the default) instead of the normal size.</summary>
     public bool Large { get; set; } = true;
 

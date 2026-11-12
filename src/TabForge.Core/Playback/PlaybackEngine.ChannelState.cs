@@ -47,8 +47,10 @@ public sealed partial class PlaybackEngine
         }
     }
 
+    private int FocusedVolume(int level, Guid track) => Focus?.Scale(track, level) ?? level;
+
     /// <summary>The track's value for a setup message the song models; false for the others (bend range, wheel, expression).</summary>
-    private static bool TryLiveValue(SongProject project, TrackModel track, ScoreEvent e, out int value)
+    private bool TryLiveValue(SongProject project, TrackModel track, ScoreEvent e, out int value)
     {
         value = 0;
         switch (e.Status & 0xF0)
@@ -56,7 +58,7 @@ public sealed partial class PlaybackEngine
             case 0xC0: value = track.MidiProgram; return true;
             case 0xB0 when e.Data1 == 0: value = Math.Max(0, track.MidiBankMsb); return track.MidiBankMsb >= 0;
             case 0xB0 when e.Data1 == 32: value = Math.Max(0, track.MidiBankLsb); return track.MidiBankLsb >= 0;
-            case 0xB0 when e.Data1 == 7: value = MixerGroups.Volume(project, track); return true;
+            case 0xB0 when e.Data1 == 7: value = FocusedVolume(MixerGroups.Volume(project, track), track.Id); return true;   // Focus Track lowers the others here only: exports and renders read MixerGroups.Volume
             case 0xB0 when e.Data1 == 10: value = MixerGroups.Pan(project, track); return true;
             case 0xB0 when e.Data1 == 91: value = Math.Clamp(track.Reverb, 0, MidiLimits.Max); return true;
             case 0xB0 when e.Data1 == 93: value = Math.Clamp(track.Chorus, 0, MidiLimits.Max); return true;

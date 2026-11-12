@@ -10,6 +10,10 @@ public sealed class AudioSettings
     /// <summary>Folders (network or removable) the user allowed a song to read linked audio from; revoked in the "Linked audio" review window.</summary>
     public List<MediaApproval> ApprovedMedia { get; set; } = new();
     public bool Metronome { get; set; }
+    /// <summary>Focus Track: the tracks other than the selected one play quieter, so the selected track is easier to hear while practising. Off until the user turns it on.</summary>
+    public bool FocusTrack { get; set; }
+    /// <summary>Focus Track's rules: how much louder the selected track plays, for any track and for a mixer group.</summary>
+    public FocusTrackSettings FocusTrackRules { get; set; } = new();
     public bool CountIn { get; set; }
     public int CountInBars { get; set; } = 1;
     public double Speed { get; set; } = 1.0;

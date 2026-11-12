@@ -58,7 +58,7 @@ public sealed class LeftStripSettingsTests
         Assert.Equal(all.Count, all.Select(i => i.Id).Distinct().Count());
         Assert.All(all, i => global::Avalonia.Media.Geometry.Parse(i.Icon));
         Assert.Equal(new[] { "File.New", "File.Open", "File.Save", "File.SaveAs", "File.Render", "Separator", "Edit.Undo", "Edit.Redo", "Separator",
-                "View.ToggleComposer", "Separator", "View.BandView", "View.CompactMode", "View.LearnMode" },
+                "View.ToggleComposer", "Transport.FocusTrack", "Separator", "View.BandView", "View.CompactMode", "View.LearnMode" },
             TabForge.Avalonia.Features.LeftStrip.LeftStripItems.Resolve(null));
         Assert.Equal(new[] { "File.Open" }, TabForge.Avalonia.Features.LeftStrip.LeftStripItems.Resolve(new[] { "Gone.Command", "File.Open" }));
     }
@@ -68,5 +68,19 @@ public sealed class LeftStripSettingsTests
     {
         var strip = new LeftStripSettings { ShowOnStart = false };
         Assert.False(strip.ShownAtStart);
+    }
+
+    [Fact]
+    public void ASavedStripIsOfferedANewIconOnceAndAnIconTheUserRemovedStaysRemoved()
+    {
+        var state = new TabForge.Features.LeftStrip.LeftStripSettings { Items = new() { "File.Open", "View.ToggleComposer", "Separator" } };
+        Assert.True(state.OfferOnce("Transport.FocusTrack", "View.ToggleComposer"));
+        Assert.Equal(new[] { "File.Open", "View.ToggleComposer", "Transport.FocusTrack", "Separator" }, state.Items);
+        state.Items.Remove("Transport.FocusTrack");
+        Assert.False(state.OfferOnce("Transport.FocusTrack", "View.ToggleComposer"));   // offered before: not put back
+        Assert.DoesNotContain("Transport.FocusTrack", state.Items);
+        var plain = new TabForge.Features.LeftStrip.LeftStripSettings();
+        Assert.True(plain.OfferOnce("Transport.FocusTrack", "View.ToggleComposer"));
+        Assert.Null(plain.Items);   // the default strip already has it
     }
 }

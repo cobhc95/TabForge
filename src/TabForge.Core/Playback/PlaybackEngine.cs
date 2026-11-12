@@ -158,6 +158,9 @@ public sealed partial class PlaybackEngine : IDisposable
     private bool[]? _audible;
     private int _masterVolume = 100;
 
+    /// <summary>Focus Track, when the app has one: the other tracks' channel volume is sent lower (see <see cref="Audio.PracticeFocus"/>); null plays every level as it is. Exports and renders never read it.</summary>
+    public Audio.PracticeFocus? Focus { get; set; }
+
     // Last channel volume (CC7, after master) sent per MIDI channel; GM power-on default is 100.
     private readonly int[] _channelVolume = Enumerable.Repeat(100, 16).ToArray();
 

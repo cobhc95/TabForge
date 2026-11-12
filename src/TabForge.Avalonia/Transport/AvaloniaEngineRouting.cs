@@ -49,14 +49,14 @@ public sealed class AvaloniaEngineRouting
     /// <param name="owner">The document that owns the engine now.</param>
     /// <param name="skippedPlugins">The owning document's plug-ins skipped for now ("Disable it" after a very slow load); null: none.</param>
     public static void Apply(SongProject project, RoutedMidiOutput? routing, AudioEngineClient engine, PluginSettings settings, int masterPercent, object owner,
-        ICollection<string>? skippedPlugins = null)
+        ICollection<string>? skippedPlugins = null, PracticeFocus? focus = null)
     {
         ApplyMixerOptions(settings, engine.Mixer);
         RoutedMidiOutput.WindowsMidiLatencyMs = settings.WindowsMidiLatencyMs;
         engine.RefreshAvailability(project.Tracks.Append(engine.LiveInput.Track), settings, skippedPlugins);   // instruments the engine cannot play count as not playing
         foreach (var track in project.Tracks) MixerGroups.ApplyAutoGm(track, engine.Mixer);
         engine.LiveInput.SetMaster(masterPercent, project.Mixer.MasterPan);
-        engine.Sync(project.Tracks, settings, EngineMixLevels.Levels(project, masterPercent, engine.LiveInput.Solo), project, owner, skippedPlugins: skippedPlugins);
+        engine.Sync(project.Tracks, settings, EngineMixLevels.Levels(project, masterPercent, engine.LiveInput.Solo, focus), project, owner, skippedPlugins: skippedPlugins);
         if (routing is null) return;
         var routes = RoutesFor(project, engine);
         routing.SetRoutes(routes, engine.IsRunning && project.Tracks.Any(t => engine.SlotOf(t) >= 0));
@@ -73,8 +73,8 @@ public sealed class AvaloniaEngineRouting
     }
 
     /// <summary>Sends only the loaded tracks' levels to the running engine (no chain, clip or route sync), for live fader, pan, mute and solo changes.</summary>
-    public static void ApplyLevelsNow(SongProject project, AudioEngineClient engine, int masterPercent) =>
-        engine.SetTrackLevelsNow(project.Tracks, EngineMixLevels.Levels(project, masterPercent, engine.LiveInput.Solo));
+    public static void ApplyLevelsNow(SongProject project, AudioEngineClient engine, int masterPercent, PracticeFocus? focus = null) =>
+        engine.SetTrackLevelsNow(project.Tracks, EngineMixLevels.Levels(project, masterPercent, engine.LiveInput.Solo, focus));
 
     // The engine slot of each MIDI channel: only MIDI that plays through plug-ins goes to the engine; a track's bent-note effect channel follows it.
     private static int[] RoutesFor(SongProject project, AudioEngineClient engine)

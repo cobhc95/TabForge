@@ -62,7 +62,7 @@ public sealed class AvaloniaPlaybackSessions : IDisposable
     public void SyncEngine(SongDocument document, TabForge.Services.PluginSettings plugins)
     {
         if (Engine is null) return;
-        AvaloniaEngineRouting.Apply(document.Project, Existing(document)?.Routing, Engine, plugins, _routing.MasterPercent, document, PluginsSkippedNow(document));
+        AvaloniaEngineRouting.Apply(document.Project, Existing(document)?.Routing, Engine, plugins, _routing.MasterPercent, document, PluginsSkippedNow(document), Focus);
         Existing(document)?.ApplyLiveSolo(document.Project, Engine.LiveInput.Solo);   // the live solo (set by the next sync) gates the MIDI tracks as it does the engine's
     }
 
@@ -107,7 +107,7 @@ public sealed class AvaloniaPlaybackSessions : IDisposable
         if (Engine is { } engine) engine.IsOwnerPlaying ??= owner => owner is SongDocument song && Existing(song) is { IsPlaying: true };
         if (!_sessions.TryGetValue(document, out var session))
         {
-            session = new AvaloniaPlaybackSession(_createEngine(), _ui, () => document.Project, new AnimationFrameSource(_ui, () => FrameWindow()));
+            session = new AvaloniaPlaybackSession(NewEngine(), _ui, () => document.Project, new AnimationFrameSource(_ui, () => FrameWindow()));
             session.SetMetronome(_metronomeOn);
             session.SetCountIn(_countInOn);
             if (_clickAudio is not null) session.ApplyClickOptions(_clickAudio);
@@ -171,6 +171,16 @@ public sealed class AvaloniaPlaybackSessions : IDisposable
         foreach (var session in _sessions.Values) session.ApplyClickOptions(audio);
     }
 
+    /// <summary>Focus Track for every song's playback and the engine sync: the app turns it on for the shown song's selected track; it is never saved in a song.</summary>
+    public TabForge.Audio.PracticeFocus Focus { get; } = new();
+
+    private IPlaybackEngine NewEngine()
+    {
+        var engine = _createEngine!();
+        if (engine is PlaybackEngine playback) playback.Focus = Focus;
+        return engine;
+    }
+
     /// <summary>Raised with the new master percent when it changes (the transport knobs and the mixer's Master slider follow it).</summary>
     public event Action<int>? MasterPercentChanged;
 
@@ -190,13 +200,14 @@ public sealed class AvaloniaPlaybackSessions : IDisposable
     /// <summary>Pushes the document's track levels, pan, sounds, mute and solo to its running playback now, without a route or chain sync: the MIDI channel state always, the audio engine's track levels when there is one.</summary>
     public void PushLiveMix(SongDocument document)
     {
+        Focus.Refresh(document.Project);   // a fader or group change moves the levels Focus Track works out
         PushEngineLevels(document);
         Existing(document)?.ApplyMuteSolo(document.Project, Engine?.LiveInput.Solo ?? false);
     }
 
     private void PushEngineLevels(SongDocument document)
     {
-        if (Engine is { } engine) AvaloniaEngineRouting.ApplyLevelsNow(document.Project, engine, _routing.MasterPercent);
+        if (Engine is { } engine) AvaloniaEngineRouting.ApplyLevelsNow(document.Project, engine, _routing.MasterPercent, Focus);
     }
 
     /// <summary>The length of a test note and of a note audition that does not give one.</summary>

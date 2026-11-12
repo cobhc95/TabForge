@@ -212,6 +212,8 @@ public static class MainMenuTable
             Item("Keyboard mode: view in its own window", "View.LearnPopout"),
             Item("Compact mode", "View.CompactMode"),
             Item("Mixer / VST", "View.Mixer"),
+            Toggle("Focus track (play the selected track louder)", "Transport.FocusTrack"),
+            Item("Focus track settings…", "Transport.FocusTrackSettings"),
             Separator,
             Submenu("Arrangement lanes",
                 Toggle("Show the notes in each track lane", "View.ArrangementIndividualNotes"),

@@ -48,6 +48,7 @@ public static class LeftStripItems
     private const string Tuning = "M6,4 V20 M10,4 V20 M14,4 V20 M18,4 V20 M4,8 H8 M8,13 H12 M12,10 H16 M16,15 H20";
     private const string Lyrics = "M4,6 H20 M4,11 H20 M4,16 H14 M17,14 V20 A1.5,1.5 0 1 1 15.5,18.5";
     private const string ChordFinder = "M5,3 V21 M10,3 V21 M15,3 V21 M5,7 H15 M5,11 H15 M10,9 A1,1 0 1 0 10.01,9 M19,15 A2.5,2.5 0 1 0 19.01,15 M20.8,16.8 L22.5,18.5";
+    private const string FocusTrack = "M0,0 H16.8 V22.8 H0 Z M0,6 H16.8 M4.2,3 H4.3 M8.4,3 H8.5 M12.6,3 H12.7 M8.4,9.96 A5.04,5.04 0 1 0 8.41,9.96 M8.4,15 H8.5";   // an upright combo amp: three knobs above one round speaker. Drawn from the origin: the strip centres a glyph by its bounds from (0,0), so any offset would push it off-centre
     private const string About = "M12,3 A9,9 0 1 0 12.01,3 M12,11 V17 M12,7.5 V8";
 
     /// <summary>Every icon the strip can show, in the Available list's order.</summary>
@@ -60,7 +61,8 @@ public static class LeftStripItems
         new("Bar.Append", "Add bar", "Edit", AddBar), new("Track.Add", "Add track", "Edit", AddTrack), new("Bar.GoTo", "Go to bar", "Edit", GoTo),
         new("Transport.PlayPause", "Play", "Playback", Play), new("Transport.Stop", "Stop", "Playback", Stop), new("Transport.Loop", "Loop", "Playback", Loop),
         new("Transport.Metronome", "Metronome", "Playback", Metronome), new("Transport.CountIn", "Count-in", "Playback", CountIn),
-        new("Transport.Record", "Record", "Playback", Record), new("View.Mixer", "Mixer", "Playback", Mixer), new("Tools.Tuner", "Tuner", "Playback", Tuner),
+        new("Transport.Record", "Record", "Playback", Record), new("View.Mixer", "Mixer", "Playback", Mixer),
+        new(MainWindowFocusTrack.CommandId, "Focus track", "Playback", FocusTrack, IsToggle: true),new("Tools.Tuner", "Tuner", "Playback", Tuner),
         new("Tool.composition:tempo", "Tempo", "Song", Tempo), new("Bar.TimeSignature", "Time signature", "Song", TimeSig),
         new("Bar.KeySignature", "Key signature", "Song", KeySig), new("Tools.Transpose", "Transpose", "Song", Transpose),
         new("Tools.GlobalTuning", "Tuning", "Song", Tuning), new("Insert.Lyrics", "Lyrics", "Song", Lyrics),
@@ -73,12 +75,12 @@ public static class LeftStripItems
         new(LeftStripFeature.ToggleComposerId, "Composer", "App", Composer, IsToggle: true),
     };
 
-    /// <summary>The strip as it comes: New, Open, Save, Save as, Render | Undo, Redo | Composer | Band view, Compact mode, Keyboard mode.</summary>
+    /// <summary>The strip as it comes: New, Open, Save, Save as, Render | Undo, Redo | Composer, Focus track | Band view, Compact mode, Keyboard mode.</summary>
     public static readonly IReadOnlyList<string> Default = new[]
     {
         "File.New", "File.Open", "File.Save", "File.SaveAs", "File.Render", SeparatorId,
         "Edit.Undo", "Edit.Redo", SeparatorId,
-        LeftStripFeature.ToggleComposerId, SeparatorId,
+        LeftStripFeature.ToggleComposerId, MainWindowFocusTrack.CommandId, SeparatorId,
         "View.BandView", "View.CompactMode", "View.LearnMode",
     };
 

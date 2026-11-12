@@ -219,6 +219,7 @@ public sealed partial class PlaybackEngine
         Volatile.Write(ref _lateNotesDropped, 0);
         _paused = startPaused;
         _running = true;
+        ApplyPracticeFocusToSetup(timeline);
         if (startPaused) _clock.Reset();
         else _clock.Restart();
 
@@ -230,5 +231,19 @@ public sealed partial class PlaybackEngine
         };
         _thread.Start();
         TimelineChanged?.Invoke(timeline);
+    }
+
+    /// <summary>
+    /// A start begins at Focus Track's levels: each track's channel-volume setup, freshly compiled for this start, is lowered for every track but the focused one
+    /// (found by the published track ids, so the live song is not read here). Mix-table points keep their own values.
+    /// </summary>
+    private void ApplyPracticeFocusToSetup(ScoreTimeline timeline)
+    {
+        if (Focus is not { IsOn: true } focus || Volatile.Read(ref _song)?.TrackIds is not { } ids) return;
+        foreach (var e in timeline.ChannelSetup)
+        {
+            if ((e.Status & 0xF0) != 0xB0 || e.Data1 != 7 || e.IsChased || e.TrackIndex < 0 || e.TrackIndex >= ids.Length) continue;
+            e.Data2 = focus.Scale(ids[e.TrackIndex], e.Data2);
+        }
     }
 }

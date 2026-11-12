@@ -54,6 +54,7 @@ public sealed class LeftStripFeature
         _settings = settings;
         _state = settings?.Settings.LeftStrip ?? new LeftStripSettings();
         _visible = _state.ShownAtStart;
+        _state.OfferOnce(MainWindowFocusTrack.CommandId, ToggleComposerId);   // a strip saved before Focus track existed gets its icon once, next to Composer
         _composerOpen = _state.ComposerOpenAtStart;
         commands.Add(ToggleStripId, () => SetVisible(!_visible));
         commands.Add(ToggleComposerId, ToggleComposer);
@@ -141,6 +142,7 @@ public sealed class LeftStripFeature
             button.Content = _state.Labels ? Labelled(icon, item.Label, vertical) : icon;
             if (_state.Large || _state.Labels) button.Height = double.NaN;
             if (_state.Large) button.MinHeight = UiMetrics.QuickButtonHeight * LargeScale;
+            if (item.Id == MainWindowFocusTrack.CommandId) button.ContextMenu = FocusTrackMenu();
             ToolTip.SetServiceEnabled(button, _state.Tooltips);
             ConfigureTip(button, vertical);
             panel.Children.Add(button);
@@ -181,6 +183,14 @@ public sealed class LeftStripFeature
         var line = new Border { Height = ChromeMetrics.LeftStripSeparatorHeight, Width = ChromeMetrics.LeftStripSeparatorWidth, Margin = new Thickness(0, 4), Opacity = ChromeMetrics.LeftStripSeparatorOpacity, IsHitTestVisible = false };
         line[!Border.BackgroundProperty] = new DynamicResourceExtension("TextMuted");
         return line;
+    }
+
+    // Right-click the Focus track icon: its rules window (a left click turns it on or off).
+    private ContextMenu FocusTrackMenu()
+    {
+        var settings = new MenuItem { Header = "Focus track settings…" };
+        settings.Click += (_, _) => _commands.Run(MainWindowFocusTrack.SettingsId);
+        return new ContextMenu { Items = { settings } };
     }
 
     private ContextMenu StripMenu()
