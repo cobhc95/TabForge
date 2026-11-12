@@ -76,16 +76,19 @@ internal sealed class ClipEditFinisher
     private static void WireSectionAudio(ArrangementView arrangement, MainWindowSettings? settings, Window? owner)
     {
         if (settings is null || owner is null) return;
-        arrangement.Input.SectionAudioSetting = () => settings.Settings.Editing.SectionMoveAudio;
-        arrangement.Input.SectionAudioRemember = value => { settings.Settings.Editing.SectionMoveAudio = value; settings.SaveSettings(); };
-        arrangement.Input.GapClosePrompt = (first, last, contents) => GapClosePromptWindow.AskAsync(owner, first, last, contents);
-        arrangement.Input.SectionAudioPrompt = crossing => SectionAudioPromptWindow.AskAsync(owner, arrangement.Document.Project, crossing);
-        arrangement.Input.SectionStretchSetting = () => settings.Settings.Editing.SectionStretch;
-        arrangement.Input.SectionStretchRemember = value => { settings.Settings.Editing.SectionStretch = value; settings.SaveSettings(); };
-        arrangement.Input.SectionStretchPrompt = question => SectionStretchPromptWindow.AskAsync(owner, question);
-        arrangement.Input.SectionStretchBackSetting = () => settings.Settings.Editing.SectionStretchBack;
-        arrangement.Input.SectionStretchBackRemember = value => { settings.Settings.Editing.SectionStretchBack = value; settings.SaveSettings(); };
-        arrangement.Input.SectionStretchBackPrompt = question => SectionStretchPromptWindow.AskAsync(owner, question);
+        arrangement.Input.Prompts = new SectionMovePrompts
+        {
+            AudioSetting = () => settings.Settings.Editing.SectionMoveAudio,
+            AudioRemember = value => { settings.Settings.Editing.SectionMoveAudio = value; settings.SaveSettings(); },
+            GapClosePrompt = (first, last, contents) => GapClosePromptWindow.AskAsync(owner, first, last, contents),
+            AudioPrompt = crossing => SectionAudioPromptWindow.AskAsync(owner, arrangement.Document.Project, crossing),
+            StretchSetting = () => settings.Settings.Editing.SectionStretch,
+            StretchRemember = value => { settings.Settings.Editing.SectionStretch = value; settings.SaveSettings(); },
+            StretchPrompt = question => SectionStretchPromptWindow.AskAsync(owner, question),
+            StretchBackSetting = () => settings.Settings.Editing.SectionStretchBack,
+            StretchBackRemember = value => { settings.Settings.Editing.SectionStretchBack = value; settings.SaveSettings(); },
+            StretchBackPrompt = question => SectionStretchPromptWindow.AskAsync(owner, question),
+        };
     }
 
     /// <summary>The setting is read live, so toggling it in Preferences applies to the next edit without rebuilding the hook.</summary>

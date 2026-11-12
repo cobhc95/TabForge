@@ -191,17 +191,9 @@ public sealed partial class TimelineInputController
     /// <summary>Raised with the document and the old-to-new bar mapping when a section drop commits (for the engine's live order refresh).</summary>
     public event Action<IEditableDocument, int[]>? SectionMoved;
 
-    /// <summary>The "when a moved section cuts through audio" setting (EditingSettings.SectionMoveAudio), read at each drop; null asks.</summary>
-    public Func<string>? SectionAudioSetting { get; set; }
-
-    /// <summary>Stores the answer a ticked "Remember my choice" gives (Split or Leave) in the settings.</summary>
-    public Action<string>? SectionAudioRemember { get; set; }
-
-    /// <summary>Asks what to do with audio crossing a section being moved (null answer = cancel the move). Without it crossing audio is left where it is and nothing is asked.</summary>
-    public Func<SectionAudioCrossing, Task<SectionAudioAnswer?>>? SectionAudioPrompt { get; set; }
-
-    /// <summary>Asks how to close a gap that holds something when a section is dragged left into it (null answer = Cancel, the section snaps back). Without it a non-empty gap is not closed.</summary>
-    public Func<int, int, GapContents, Task<GapCloseMode?>>? GapClosePrompt { get; set; }
+    /// <summary>The questions and remembered settings a section drag or stretch may need (the window sets them once); null asks nothing: crossing audio is
+    /// left where it is, a non-empty gap is not closed and a stretch only closes the gap up to its neighbour.</summary>
+    public SectionMovePrompts? Prompts { get; set; }
 
     /// <summary>Raised when a press on the ruler, a section or a lane lands on a bar and no clip or section drag takes it; the arrangement seeks playback to that bar.</summary>
     public event Action<int>? BarSeekRequested;

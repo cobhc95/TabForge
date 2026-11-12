@@ -127,8 +127,8 @@ public sealed partial class TimelineInputController
         // Audio or MIDI clips crossing the section's edges: the setting decides, or the prompt asks (the lifted column stays until it is answered).
         if (SectionAudioCrossings.WouldMove(_document.Project, from, _dropBefore) && SectionAudioCrossings.Find(_document.Project, from) is { } crossing)
         {
-            var remembered = SectionAudioPromptPresenter.Remembered(SectionAudioSetting?.Invoke());
-            if (remembered is null && SectionAudioPrompt is { } ask)
+            var remembered = SectionAudioPromptPresenter.Remembered(Prompts?.AudioSetting?.Invoke());
+            if (remembered is null && Prompts?.AudioPrompt is { } ask)
             {
                 UiTasks.Forget(AskThenDropSection(from, _dropBefore, crossing, ask), "Moving the section", _ => ClearDrag());
                 return true;
@@ -165,7 +165,7 @@ public sealed partial class TimelineInputController
     private async Task CloseGapOnDrop(MarkerModel marker, int first, int last)
     {
         var document = _document;
-        var changed = await MainWindowTimelineSections.CloseGapAsync(document, first, last, GapClosePrompt, _ => { });
+        var changed = await MainWindowTimelineSections.CloseGapAsync(document, first, last, Prompts?.GapClosePrompt, _ => { });
         if (!ReferenceEquals(document, _document)) return;
         if (changed) AfterEdit();
         _view.SectionPreviewX = null;
@@ -190,7 +190,7 @@ public sealed partial class TimelineInputController
             if (!SectionAnimator.BeginSettle(_view.DragSectionX, _slots[_dragSlot].Left, ClearDrag)) ClearDrag();
             return;
         }
-        if (picked.Remember) SectionAudioRemember?.Invoke(SectionAudioPromptPresenter.Store(picked));
+        if (picked.Remember) Prompts?.AudioRemember?.Invoke(SectionAudioPromptPresenter.Store(picked));
         if (!CommitSectionDrop(from, dropBefore, picked.Split)) ClearDrag();
     }
 

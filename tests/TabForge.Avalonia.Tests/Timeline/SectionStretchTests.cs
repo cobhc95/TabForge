@@ -93,10 +93,13 @@ public class SectionStretchTests
             View = new TimelineView(Doc.Project) { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
             Input = new TimelineInputController(View, Doc, sectionTimer: new AvaloniaPlaybackSessionTests.FakeTimer())
             {
-                SectionStretchSetting = () => Setting,
-                SectionStretchRemember = value => Setting = value,
-                SectionStretchPrompt = question => { Asked.Add(question); return Task.FromResult(Answer); },
-                SectionStretchBackPrompt = question => { AskedBack.Add(question); return Task.FromResult(BackAnswer); },
+                Prompts = new SectionMovePrompts
+                {
+                    StretchSetting = () => Setting,
+                    StretchRemember = value => Setting = value,
+                    StretchPrompt = question => { Asked.Add(question); return Task.FromResult(Answer); },
+                    StretchBackPrompt = question => { AskedBack.Add(question); return Task.FromResult(BackAnswer); },
+                },
             };
             Win = new Window { Width = 2600, Height = 500, Content = View };
             Win.Show();

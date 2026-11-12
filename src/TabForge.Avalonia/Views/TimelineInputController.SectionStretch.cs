@@ -20,24 +20,6 @@ public sealed partial class TimelineInputController
     private int _stretchBars;
     private bool _stretchAsking;
 
-    /// <summary>The "when stretching a section past the next one" setting (EditingSettings.SectionStretch), read at each release; null asks.</summary>
-    public Func<string>? SectionStretchSetting { get; set; }
-
-    /// <summary>Stores the choice a ticked "Remember my choice" gives in the settings.</summary>
-    public Action<string>? SectionStretchRemember { get; set; }
-
-    /// <summary>Asks how to stretch (null answer = Cancel, nothing changes). Without it a stretch only closes the gap up to the next section.</summary>
-    public Func<SectionStretchQuestion, Task<SectionStretchAnswer?>>? SectionStretchPrompt { get; set; }
-
-    /// <summary>The "when stretching a section backwards" setting (EditingSettings.SectionStretchBack), read at each release; null asks.</summary>
-    public Func<string>? SectionStretchBackSetting { get; set; }
-
-    /// <summary>Stores the backward choice a ticked "Remember my choice" gives in the settings.</summary>
-    public Action<string>? SectionStretchBackRemember { get; set; }
-
-    /// <summary>Asks how to stretch a section back (null answer = Cancel). Without it a backward stretch only closes the gap up to the previous section.</summary>
-    public Func<SectionStretchBackQuestion, Task<SectionStretchBackAnswer?>>? SectionStretchBackPrompt { get; set; }
-
     // The whole bars the pointer asks for past the next section's start plus the bump: each added bar is as wide as the section's last bar.
     private int StretchBarsAt(double x)
     {
@@ -55,8 +37,8 @@ public sealed partial class TimelineInputController
     private bool CommitStretch(MarkerModel marker, int bars)
     {
         var document = _document;
-        if (SectionStretchChoice.Remembered(SectionStretchSetting?.Invoke()) is { } remembered) ApplyStretch(document, marker, remembered, bars);
-        else if (SectionStretchPrompt is not { } ask || SectionStretch.PlanFor(document.Project, marker) is not { } plan) ApplyStretch(document, marker, SectionStretchMode.Stop, 0);
+        if (SectionStretchChoice.Remembered(Prompts?.StretchSetting?.Invoke()) is { } remembered) ApplyStretch(document, marker, remembered, bars);
+        else if (Prompts?.StretchPrompt is not { } ask || SectionStretch.PlanFor(document.Project, marker) is not { } plan) ApplyStretch(document, marker, SectionStretchMode.Stop, 0);
         else
         {
             UiTasks.Forget(AskStretch(document, marker, plan, bars, ask), "Stretching the section", _ => { _stretchAsking = false; ClearDrag(); });
@@ -74,7 +56,7 @@ public sealed partial class TimelineInputController
         {
             var answer = await ask(SectionStretchPromptPresenter.Question(document.Project, plan, bars));
             if (!ReferenceEquals(document, _document) || !document.Project.Markers.Contains(marker) || answer is not { } picked) return;   // the tab changed under the prompt, or Cancel
-            if (picked.Remember) SectionStretchRemember?.Invoke(SectionStretchChoice.Store(picked.Mode));
+            if (picked.Remember) Prompts?.StretchRemember?.Invoke(SectionStretchChoice.Store(picked.Mode));
             ApplyStretch(document, marker, picked.Mode, bars);
         }
         finally
@@ -98,8 +80,8 @@ public sealed partial class TimelineInputController
     private bool CommitStretchBack(MarkerModel marker, int bars)
     {
         var document = _document;
-        if (SectionStretchBackChoice.Remembered(SectionStretchBackSetting?.Invoke()) is { } remembered) ApplyStretchBack(document, marker, remembered, bars);
-        else if (SectionStretchBackPrompt is not { } ask || SectionStretchBack.PlanFor(document.Project, marker) is not { } plan) ApplyStretchBack(document, marker, SectionStretchBackMode.Stop, 0);
+        if (SectionStretchBackChoice.Remembered(Prompts?.StretchBackSetting?.Invoke()) is { } remembered) ApplyStretchBack(document, marker, remembered, bars);
+        else if (Prompts?.StretchBackPrompt is not { } ask || SectionStretchBack.PlanFor(document.Project, marker) is not { } plan) ApplyStretchBack(document, marker, SectionStretchBackMode.Stop, 0);
         else
         {
             UiTasks.Forget(AskStretchBack(document, marker, plan, bars, ask), "Stretching the section", _ => { _stretchAsking = false; ClearDrag(); });
@@ -117,7 +99,7 @@ public sealed partial class TimelineInputController
         {
             var answer = await ask(SectionStretchBackPromptPresenter.Question(plan, bars));
             if (!ReferenceEquals(document, _document) || !document.Project.Markers.Contains(marker) || answer is not { } picked) return;
-            if (picked.Remember && picked.Mode != SectionStretchBackMode.NewSection) SectionStretchBackRemember?.Invoke(SectionStretchBackChoice.Store(picked.Mode));
+            if (picked.Remember && picked.Mode != SectionStretchBackMode.NewSection) Prompts?.StretchBackRemember?.Invoke(SectionStretchBackChoice.Store(picked.Mode));
             ApplyStretchBack(document, marker, picked.Mode, bars, picked.SectionName, picked.SectionColour);
         }
         finally

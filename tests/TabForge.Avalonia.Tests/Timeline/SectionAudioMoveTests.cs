@@ -161,9 +161,12 @@ public class SectionAudioMoveTests
         rig.View = new TimelineView(doc.Project) { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
         var input = new TimelineInputController(rig.View, doc, sectionClock: () => TimeSpan.FromSeconds(1), sectionTimer: new AvaloniaPlaybackSessionTests.FakeTimer());
         input.SectionAnimator.Enabled = false;
-        input.SectionAudioSetting = () => rig.Setting;
-        input.SectionAudioRemember = value => rig.Setting = value;
-        input.SectionAudioPrompt = crossing => { rig.Asked.Add(crossing); return Task.FromResult(rig.Answer); };
+        input.Prompts = new SectionMovePrompts
+        {
+            AudioSetting = () => rig.Setting,
+            AudioRemember = value => rig.Setting = value,
+            AudioPrompt = crossing => { rig.Asked.Add(crossing); return Task.FromResult(rig.Answer); },
+        };
         rig.Window = new Window { Width = 1300, Height = 400, Content = rig.View };
         rig.Window.Show();
         return rig;

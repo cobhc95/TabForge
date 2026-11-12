@@ -196,7 +196,7 @@ public sealed class SectionGapCloseTests
         var (window, view, input, doc) = Open();
         PutNote(doc.Project, 5);
         GapContents? seen = null;
-        input.GapClosePrompt = (a, b, c) => { seen = c; return Task.FromResult<GapCloseMode?>(null); };
+        input.Prompts = new SectionMovePrompts { GapClosePrompt = (a, b, c) => { seen = c; return Task.FromResult<GapCloseMode?>(null); } };
         DragChorusTo(window, view, 4);
         Assert.NotNull(seen);
         Assert.Equal(8, ChorusBar(doc.Project));
