@@ -47,6 +47,8 @@ python Source/tools/command-map.py
 | `Range.PasteSpecial` | `MainWindow/Editing/MainWindowRangePaste.cs` |
 | `PianoRoll.ShowInScore` | `MainWindow/EditorPaneSwitch.cs` |
 | `Score.ShowInPianoRoll` | `MainWindow/EditorPaneSwitch.cs` |
+| `Edit.InvertSelection` | `MainWindow/EditorPaneSwitch.cs` |
+| `Edit.SelectAll` | `MainWindow/EditorPaneSwitch.cs` |
 | `Media.ManageApprovals` | `MainWindow/File/MainWindowApprovalNotices.cs` |
 | `File.ExportPdf` | `MainWindow/File/MainWindowScorePdf.cs` |
 | `File.ExportMidi` | `MainWindow/MainWindow.ComposeCommands.cs` |
@@ -63,8 +65,6 @@ python Source/tools/command-map.py
 | `Timeline.Snap` | `MainWindow/Timeline/MainWindowTimelineZoom.cs` |
 | `Timeline.ZoomIn` | `MainWindow/Timeline/MainWindowTimelineZoom.cs` |
 | `Timeline.ZoomOut` | `MainWindow/Timeline/MainWindowTimelineZoom.cs` |
-| `Edit.InvertSelection` | `MainWindow/Timeline/SelectionLoopLink.cs` |
-| `Edit.SelectAll` | `MainWindow/Timeline/SelectionLoopLink.cs` |
 | `Selection.Clear` | `MainWindow/Timeline/SelectionLoopLink.cs` |
 | `Transport.ClearLoopArea` | `MainWindow/Timeline/SelectionLoopLink.cs` |
 | `Transport.Loop` | `MainWindow/Timeline/SelectionLoopLink.cs` |

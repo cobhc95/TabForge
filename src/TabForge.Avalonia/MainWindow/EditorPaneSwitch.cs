@@ -22,9 +22,9 @@ namespace TabForge.Avalonia;
 //       clicked, another track is picked or the lane's last take is deleted; never saved, no undo step), and the same automatic roll for a click on empty take-lane
 //       space (an audio/MIDI track always; a tab track when Preferences' "Clicking an empty take lane shows" says Piano roll) on a lane that may hold no take yet
 //       (its first note creates one); and the piano roll's window wiring (playback, the transport's snap, audition, the loop, the prompts, settings and
-//       the refresh after its edits).
+//       the refresh after its edits); who answers Select all and Invert selection (RegisterSelectionCommands: the focused piano roll first, else the score).
 // Does not own: the score view or the piano roll themselves (ScorePreviewView, PianoRollView), the dock (DockPaneSetup), the loop rules (SelectionLoopLink).
-// Tests: TabForge.Avalonia.Tests.PianoRollViewTests.
+// Tests: TabForge.Avalonia.Tests.PianoRollViewTests, PianoRollPaneSwitchTests, SelectionCommandRoutingTests.
 public sealed partial class EditorPaneSwitch
 {
     private readonly ScrollViewer _score;
@@ -184,6 +184,23 @@ public sealed partial class EditorPaneSwitch
     /// <summary>True while the pane shows the piano roll.</summary>
     public bool ShowsPianoRoll => _shown.Roll;
 
+    /// <summary>The command ids <see cref="RegisterSelectionCommands"/> adds (the menu test discovers this field by reflection).</summary>
+    public static readonly IReadOnlyList<string> Commands = new[] { "Edit.SelectAll", "Edit.InvertSelection" };
+
+    /// <summary>Edit.SelectAll and Edit.InvertSelection, routed in one place: the shown piano roll with keyboard focus selects (or inverts) its notes;
+    /// otherwise Select all selects the score (SelectionLoopLink.SelectAll) and Invert does nothing.</summary>
+    public void RegisterSelectionCommands(MainWindowCommands commands)
+    {
+        commands.Add("Edit.SelectAll", () => { if (!TrySelectAll()) _panes.Selection.SelectAll(); });
+        commands.Add("Edit.InvertSelection", () => TryInvert());
+    }
+
+    /// <summary>Select all in the piano roll when it is shown and has keyboard focus; true when it did.</summary>
+    public bool TrySelectAll() => _shown.Roll && PianoRoll.IsKeyboardFocusWithin && PianoRoll.RunEdit(null);
+
+    /// <summary>Invert selection in the piano roll when it is shown and has keyboard focus; true when it did.</summary>
+    public bool TryInvert() => _shown.Roll && PianoRoll.IsKeyboardFocusWithin && PianoRoll.RunInvert();
+
     /// <summary>Adds the two switch commands (and gives the piano roll the window's commands for Clear loop).</summary>
     public void Register(MainWindowCommands commands)
     {
@@ -193,8 +210,6 @@ public sealed partial class EditorPaneSwitch
             if (MainWindowTransportMenu.Commands.Contains(id) || id == MainWindowTransportMenu.EscapeStopCommand
                 || id.StartsWith("Bar.", StringComparison.Ordinal) || id.StartsWith("Section.", StringComparison.Ordinal)) RestoreEditingFocus(claimSelection: true);
         };
-        _panes.Selection.SelectAllFirst = () => _shown.Roll && PianoRoll.IsKeyboardFocusWithin && PianoRoll.RunEdit(null);
-        _panes.Selection.InvertFirst = () => _shown.Roll && PianoRoll.IsKeyboardFocusWithin && PianoRoll.RunInvert();
         commands.Add(ScoreMenus.ShowInPianoRollId, () => SetView(TrackEditorView.PianoRoll));
         commands.Add(PianoRollMenus.ShowInScoreId, () => SetView(TrackEditorView.Score));
         commands.AddWithArgument(TimelineMenus.EmptyLaneClickId, value =>   // the take-lane menu's "Clicking an empty lane shows" rows: the Preferences value, read live by the next click

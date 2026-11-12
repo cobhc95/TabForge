@@ -154,7 +154,7 @@ public sealed partial class MainWindow
             commands.Add("View.InstrumentView", fretboardMenu.CycleInstrumentView);
             commands.Add(FretboardContextMenu.SettingsId, () => fretboardMenu.Run(FretboardContextMenu.SettingsId, null));   // a key opens the window the right-click row opens
         }
-        MainWindowRangeCommands.Register(commands, () => panes.Selection.ActiveScore, () => panes.Selection.Model, showStatus);
+        MainWindowRangeCommands.Register(commands, () => panes.Selection.ActiveScore, () => songs.Active.Selection, showStatus);
     }
 
     /// <summary>The selection, learn mode, compact mode, band view, options and arrangement modes.</summary>
@@ -170,8 +170,8 @@ public sealed partial class MainWindow
         var scaleFinder = compose.ScaleFinder;
         var commands = compose.Commands;
         var showStatus = shared.ShowStatus;
-        panes.Selection.Audio = () => settings?.Settings.Audio;
-        panes.Selection.Register(commands, this, contextMenus, showStatus);
+        panes.Selection.Register(commands, this, contextMenus);
+        compose.EditorPane.RegisterSelectionCommands(commands);   // Select all / Invert: the focused piano roll first, else the score
         var learn = MainWindowLearnMode.Register(commands, this, dock, settings, topBar, panes, () => trackListFit?.FitReplacingUserSplitOnNextLayout());
         compose.LeaveLearn = learn.LeaveFromPane;
         compose.LearnMode = learn;
@@ -368,7 +368,7 @@ public sealed partial class MainWindow
             bar => contextMenus.MovePlayhead?.Invoke(bar),   // the arrangement's seek: playback, playhead, and paging the view to the bar
             afterInsert: () => MainWindowInsertRefresh.Landed(panes, scorePreview, songs.Active));
         var editRouting = new EditRouting();
-        var editTargets = new EditTargets(() => panes.Selection.Model, () => songs.Active.Highlight, () => EditTargetRule.FromChoice(settings?.Settings.Editing.EditTarget));
+        var editTargets = new EditTargets(() => songs.Active.Selection, () => songs.Active.Highlight, () => EditTargetRule.FromChoice(settings?.Settings.Editing.EditTarget));
         var clipFlow = MainWindowClipboard.Register(commands, () => panes.Selection.ActiveScore, this, () => settings?.Settings.Editing ?? new TabForge.Services.EditingSettings(), showStatus, editRouting, editTargets, Windows, compose.EditorPane.RunEdit);
         var clipboard = clipFlow.Clipboard;
         MainWindowRangePaste.Register(commands, songs, panes, clipFlow, showStatus,

@@ -20,20 +20,18 @@ namespace TabForge.Avalonia;
 
 // Owns: everything that keeps the shown document's SelectionModel (SongDocument.Selection) in step: the score editor (SelectionSync), the timeline's loop
 //   marks and the playback transport's loop range and Loop flag (both follow the model's loop region and LoopRepeat); a released score selection setting the
-//   loop; the loop commands (toggle, loop a section or the selected bars, clear the loop), Select all and the stepped Escape (white first, then the loop as
-//   one undo step), and the window's subscription to the shared playback (Dispose ends it).
+//   loop; the loop commands (toggle, loop a section or the selected bars, clear the loop), the score's Select all and the stepped Escape (white first, then
+//   the loop as one undo step), and the window's subscription to the shared playback (Dispose ends it). The composition creates it with the audio settings
+//   and the status line sink (MainWindow.ComposeDock) and hands it to MainWindowDocumentPanes.
 // Does not own: the selection and loop data and rules (Core SelectionModel, DocumentEdits.Escape/EditLoop), the score's or the timeline's pointer handling
 //   (ScorePreviewEditor, TimelineInputController), the engine's wrap at the loop end (PlaybackEngine) or the loop button's drawing (TransportBarView).
-// Tests: TabForge.Avalonia.Tests.SelectionLoopLinkTests, LoopModelTests.
+// Tests: TabForge.Avalonia.Tests.SelectionLoopLinkTests, LoopModelTests, SelectionCommandRoutingTests.
 /// <summary>
 /// The loop region (made on the ruler or by a released score selection) shows on the timeline as an orange bracket and band, and a running or next loop
 /// wraps within it while the Loop button is on. With no region the loop wraps the whole song. UI thread only.
 /// </summary>
 public sealed class SelectionLoopLink : IDisposable
 {
-    /// <summary>The command ids this class handles (the menu test discovers this field by reflection).</summary>
-    public static readonly IReadOnlyList<string> Commands = new[] { "Edit.InvertSelection" };
-
     private readonly MainWindowTabs _tabs;
     private readonly ScorePreviewView _score;
     private readonly AvaloniaPlaybackSessions? _playback;
@@ -43,7 +41,8 @@ public sealed class SelectionLoopLink : IDisposable
     private ArrangementView? _arrangement;
     private (LoopRegionSnapshot Loop, (int, int)? NoArea, bool Looping)? _shown;   // what the transport and the timeline were last given; a change that leaves it alone does nothing
     private (int Start, int End)? _noAreaLoop;   // the bars a loop without an area covers ("loops what is playing"); null: the whole song. UI thread only
-    private Action<string> _notice = _ => { };
+    private readonly Action<string> _notice;
+    private readonly Func<TabForge.Services.AudioSettings?> _audio;
     private (SelectionSnapshot Sel, BarHighlightSnapshot Highlight, LoopRegionSnapshot Loop)? _pre;   // the selections as they were before a score selection began (for its one undo step)
     private SelectionSnapshot? _scoreBefore;   // the model's selection with the score notes in it, as the score last had it
     private SelectionModel? _clipsWatched;   // the shown model: selecting clips deselects the score notes (one selection at a time)
@@ -57,11 +56,16 @@ public sealed class SelectionLoopLink : IDisposable
     }
     private BarHighlight? _mirrored;   // the shown document's cell highlight whose scattered cells the main score mirrors
 
-    public SelectionLoopLink(MainWindowTabs tabs, ScorePreviewView score, AvaloniaPlaybackSessions? playback)
+    /// <param name="audio">The audio settings the loop settings live in ("forget the area when loop is turned off", "loop button loops what is playing"); null or a null answer uses the defaults.</param>
+    /// <param name="notice">Shows the status line after the loop button and Clear loop (the window's status bar transient sink); null shows nothing.</param>
+    public SelectionLoopLink(MainWindowTabs tabs, ScorePreviewView score, AvaloniaPlaybackSessions? playback,
+        Func<TabForge.Services.AudioSettings?>? audio = null, Action<string>? notice = null)
     {
         _tabs = tabs;
         _score = score;
         _playback = playback;
+        _audio = audio ?? (() => null);
+        _notice = notice ?? (_ => { });
         _sync = new SelectionSync(Model, score.Editor, _ => { if (!_tabs.IsTearCopy) SyncAreaVisuals(); });   // a torn-off copy mid-drag shares the song: only the owning window drives the loop
         Wire(score, _sync, () => Active);
         WatchHighlight();
@@ -143,10 +147,7 @@ public sealed class SelectionLoopLink : IDisposable
     /// <summary>The shown document's selection and loop region, which both views read and write.</summary>
     public SelectionModel Model => Active.Selection;
 
-    /// <summary>The audio settings the loop settings live in ("forget the area when loop is turned off", "loop button loops what is playing"); null uses the defaults.</summary>
-    public Func<TabForge.Services.AudioSettings?> Audio { get; set; } = () => null;
-
-    private TabForge.Services.AudioSettings AudioOrDefaults => Audio() ?? new TabForge.Services.AudioSettings();
+    private TabForge.Services.AudioSettings AudioOrDefaults => _audio() ?? new TabForge.Services.AudioSettings();
 
     /// <summary>The loop settings' area line: the region's bars, or that none is picked.</summary>
     public string AreaText => LoopSettingsRules.AreaText(Model.HasLoop, LoopOn, LoopedRange.Start, LoopedRange.End);
@@ -365,37 +366,18 @@ public sealed class SelectionLoopLink : IDisposable
         // reverted 25 Oct: a plain score click clears the score selection only; the loop stays
     }
 
-    /// <summary>Edit.SelectAll: every bar of the shown track, in both views (or every note of a focused piano roll, asked first).</summary>
-    public void SelectAll()
+    /// <summary>Select all on the score: every bar of the shown track, in both views (Edit.SelectAll asks a focused piano roll first, EditorPaneSwitch.RegisterSelectionCommands).</summary>
+    public void SelectAll() => ActiveScore.SelectAll();
+
+    /// <summary>Adds the loop and selection commands to <paramref name="commands"/> (the section row reads the section clicked in <paramref name="menus"/>) and the Escape key to <paramref name="window"/>.
+    /// Select all and Invert selection are registered by EditorPaneSwitch.RegisterSelectionCommands (the piano roll with focus goes first).</summary>
+    public void Register(MainWindowCommands commands, Window window, ContextMenuHost menus)
     {
-        if (SelectAllFirst?.Invoke() == true) return;
-        ActiveScore.SelectAll();
-    }
-
-    /// <summary>Asked before Select all selects the score (the piano roll with focus selects its notes); true when it did.</summary>
-    public Func<bool>? SelectAllFirst { get; set; }
-
-    /// <summary>Edit.InvertSelection: the focused piano roll inverts its note selection (nothing elsewhere).</summary>
-    public void InvertSelection()
-    {
-        if (InvertFirst?.Invoke() == true) return;
-    }
-
-    /// <summary>Asked before Invert selection runs (the piano roll with focus inverts its notes); true when it did.</summary>
-    public Func<bool>? InvertFirst { get; set; }
-
-    /// <summary>Adds the loop and selection commands to <paramref name="commands"/> (the section row reads the section clicked in <paramref name="menus"/>) and the Escape key to <paramref name="window"/>.</summary>
-    /// <param name="notice">Shows the status line after the loop button and Clear loop.</param>
-    public void Register(MainWindowCommands commands, Window window, ContextMenuHost menus, Action<string> notice)
-    {
-        _notice = notice;
         commands.Add(CommandIds.Transport.Loop, ToggleLoop);
         commands.Add(CommandIds.Transport.ClearLoopArea, ClearLoopArea);
         commands.Add("Transport.LoopSelectedBars", LoopSelectedBars);
         commands.Add("Selection.Clear", () => ClearSelection());   // the selection menu's Clear selection row
         commands.Add(ContextMenuRows.LoopSectionId, () => LoopSection(menus.Target.Section));
-        commands.Add("Edit.SelectAll", SelectAll);
-        commands.Add("Edit.InvertSelection", InvertSelection);
         window.KeyDown += (_, e) =>
         {
             if (e.Key == Key.Escape && !e.Handled && e.KeyModifiers == KeyModifiers.None && ClearSelection()) e.Handled = true;

@@ -181,7 +181,9 @@ public sealed partial class MainWindow
         }
         statusBarCreated.BindNotice(notice!);
         statusBarCreated.AttachNotificationBar(topBar);
-        var panes = new MainWindowDocumentPanes(songs, scorePreview, playback, registry.Services.MeterTick);
+        // The selection and loop link reads the loop settings and shows its status line on the status bar's transient sink (the top bar).
+        var selection = new SelectionLoopLink(songs, scorePreview, playback, () => settings?.Settings.Audio, statusBarCreated.ShowTransient);
+        var panes = new MainWindowDocumentPanes(songs, scorePreview, playback, registry.Services.MeterTick, selection);
         MainWindowEngineSync.Register(this, panes, songs, playback, settings, text => topBar.Show(text, NotificationKind.Error, NoticeCategory.Error, source: NotificationBar.EngineSource), registry.Services.MeterTick);
         d.ContextMenus = contextMenus;
         d.ScorePreview = scorePreview;

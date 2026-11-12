@@ -23,10 +23,10 @@ internal static class MainWindowRangeDelete
     public static void Register(MainWindowCommands commands, MainWindowTabs songs, MainWindowDocumentPanes panes, ClipboardService clipboard, Action<string> notice,
         MainWindowTimelineBars.DeletePrompt askDelete, Func<EditingSettings> editing, Action saveSettings)
     {
-        bool HasRange() => SelectionBars.For(panes.Selection.Model, songs.Active.Project) is not null;
-        commands.AddWhen(DeleteId, () => _ = DeleteAsync(songs.Active, panes.Selection.Model, null, notice, askDelete, editing, saveSettings), HasRange);
-        commands.AddWhen(EditRouting.RangeCutId, () => _ = DeleteAsync(songs.Active, panes.Selection.Model, clipboard, notice, askDelete, editing, saveSettings), HasRange);
-        commands.AddWhen(EditRouting.RangeCopyId, () => Copy(songs.Active.Project, panes.Selection.Model, clipboard, notice), HasRange);
+        bool HasRange() => SelectionBars.For(songs.Active.Selection, songs.Active.Project) is not null;
+        commands.AddWhen(DeleteId, () => _ = DeleteAsync(songs.Active, songs.Active.Selection, null, notice, askDelete, editing, saveSettings), HasRange);
+        commands.AddWhen(EditRouting.RangeCutId, () => _ = DeleteAsync(songs.Active, songs.Active.Selection, clipboard, notice, askDelete, editing, saveSettings), HasRange);
+        commands.AddWhen(EditRouting.RangeCopyId, () => Copy(songs.Active.Project, songs.Active.Selection, clipboard, notice), HasRange);
     }
 
     /// <summary>Copies the bars of SelectionBars (the loop on every track, else the selected clips' tracks) to <paramref name="clipboard"/>; never asks. False (with a notice) when nothing could be captured.</summary>

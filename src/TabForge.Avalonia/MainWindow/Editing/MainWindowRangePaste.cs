@@ -22,11 +22,11 @@ internal static class MainWindowRangePaste
         PastePrompt ask, Func<EditingSettings> editing, Action saveSettings, Func<int> playheadBar)
     {
         // A focused track header also applies: the range pastes starting at that track (EditRouting sends it here only when a range was copied).
-        bool HasRange() => SelectionBars.For(panes.Selection.Model, songs.Active.Project) is not null || panes.Selection.Model is { Focus: FocusTarget.TrackRow, TrackRowCount: > 0 };
+        bool HasRange() => SelectionBars.For(songs.Active.Selection, songs.Active.Project) is not null || songs.Active.Selection is { Focus: FocusTarget.TrackRow, TrackRowCount: > 0 };
         void Run(bool special) => Platform.UiTasks.Forget(RunAsync(special), special ? "Paste special" : "Paste", notice);
         async Task RunAsync(bool special)
         {
-            var model = panes.Selection.Model;
+            var model = songs.Active.Selection;
             int? headerTrack = SelectionBars.For(model, songs.Active.Project) is null && model.Focus == FocusTarget.TrackRow && model.Rows.Count > 0
                 ? songs.Active.Project.Tracks.FindIndex(t => t.Id == model.Rows[0]) : null;
             if (await flow.RangeToPasteAsync() is { } snapshot)

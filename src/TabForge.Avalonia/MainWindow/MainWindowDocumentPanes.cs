@@ -24,13 +24,15 @@ public sealed class MainWindowDocumentPanes
     private readonly SharedMeterTick? _meterTick;
     private readonly ToolWindows _tools = new();
 
-    public MainWindowDocumentPanes(MainWindowTabs tabs, ScorePreviewView score, AvaloniaPlaybackSessions? playback = null, SharedMeterTick? meterTick = null)
+    /// <param name="selection">The window's selection and loop link (the composition makes it with the settings and the status line); null makes a plain one (tests).</param>
+    public MainWindowDocumentPanes(MainWindowTabs tabs, ScorePreviewView score, AvaloniaPlaybackSessions? playback = null, SharedMeterTick? meterTick = null,
+        SelectionLoopLink? selection = null)
     {
         _meterTick = meterTick;
         _tabs = tabs;
         _playback = playback;
         Score = score;
-        Selection = new SelectionLoopLink(tabs, score, playback);
+        Selection = selection ?? new SelectionLoopLink(tabs, score, playback);
         LearnEngine.LoopSecondsProvider = () => Selection.LoopSeconds;
         LearnEngine.AttachMidi(() => _playback?.Engine?.MidiInput,
             () => _playback?.Engine is { } engine && engine.IsRunning ? engine.LatencyTicks / (double)System.Diagnostics.Stopwatch.Frequency : 0);

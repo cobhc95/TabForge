@@ -45,7 +45,7 @@ public static class MainWindowTrackRowEdits
         commands.Add(TrackRowMenus.Copy, () => Copy(songs.Active, clipboard, rows.Target.Track));
         Action<string> say = status ?? (_ => { });
         commands.Add(TrackRowMenus.Cut, () => UiTasks.Forget(CutAsync(songs.Active, owner, rows, clipboard, status), "Cut track", say));
-        commands.Add(TrackRowMenus.Paste, () => { if (!RunRangePaste(commands, panes.Selection.Model, clipboard, routing)) Paste(songs.Active, clipboard, rows.Target.Track, say); });
+        commands.Add(TrackRowMenus.Paste, () => { if (!RunRangePaste(commands, songs.Active.Selection, clipboard, routing)) Paste(songs.Active, clipboard, rows.Target.Track, say); });
         commands.Add(TrackRowMenus.Duplicate, () => Duplicate(songs.Active, rows.Target.Track));
         commands.AddWithArgument(TrackRowMenus.Colour, hex => SetColour(songs.Active, rows.Target.Track, hex));
         commands.Add(TrackRowMenus.Rename, () => panes.Arrangement?.BeginTrackRename(rows.Target.Track));
