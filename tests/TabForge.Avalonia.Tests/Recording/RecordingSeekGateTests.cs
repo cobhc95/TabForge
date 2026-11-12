@@ -18,7 +18,7 @@ namespace TabForge.Avalonia.Tests;
 /// <summary>
 /// Owns: the recording seek gate beyond the arrangement's ruler/lane click: rewind, section jumps and score cursor clicks do nothing while
 /// recording and still seek when not recording. Stopping a recording is left to the existing TransportRecordingTests.
-/// Does not own: the gates themselves (TransportBarView, SectionLinks, MainWindowDocumentPanes, BandView), the recording (MainWindowTransportRecord).
+/// Does not own: the gates themselves (TransportBarView, SectionLinks, MainWindowDocumentPanes, BandView), the recording (RecordingPresenter).
 /// Tests: this class.
 /// </summary>
 public class RecordingSeekGateTests

@@ -83,7 +83,7 @@ public sealed class LiveTakePassTagTests
         Assert.Contains("2", drawn.Texts);
         Assert.Contains("3", drawn.Texts);
 
-        MainWindowTransportRecord.LandTake(new[] { song }, track, "take.wav", start, end - start);
+        RecordingPresenter.LandTake(new[] { song }, track, "take.wav", start, end - start);
         var clip = Assert.Single(track.AudioClips);
         var slices = TimelineAudioClips.FoldOf(view, clip)!;
         var landed = slices.Select(s => TimelineAudioClips.SliceRect(view, s, 0)).Select(r => (Left: Math.Round(r.X, 2), Right: Math.Round(r.Right, 2))).OrderBy(r => r.Left).ThenBy(r => r.Right).ToList();
@@ -101,7 +101,7 @@ public sealed class LiveTakePassTagTests
         takes.Frame(track, end, 0.2f, midi: false);
         var live = DrawLive(view).Rects.Where(r => r.Fill).Select(r => (Left: Math.Round(r.X, 2), Right: Math.Round(r.X + r.Width, 2))).ToList();
 
-        MainWindowTransportRecord.LandTake(new[] { song }, track, "take.wav", start, end - start);
+        RecordingPresenter.LandTake(new[] { song }, track, "take.wav", start, end - start);
         var slices = TimelineAudioClips.FoldOf(view, Assert.Single(track.AudioClips))!;
         var landed = slices.Select(s => TimelineAudioClips.SliceRect(view, s, 0)).Select(r => (Left: Math.Round(r.X, 2), Right: Math.Round(r.Right, 2))).ToList();
         Assert.Equal(landed, live);

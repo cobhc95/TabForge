@@ -28,7 +28,7 @@ namespace TabForge.Avalonia.Platform;
 /// engine, so the playback and live input buttons are disabled (drawn with the transport look's Disabled opacity) and their tooltip says why; the
 /// toggles show unlit. The tuning fork and the snap magnet work without an engine.
 /// Owns: layout and drawing of the transport buttons, their tooltips, the recording state the Record button shows and the snap settings the magnet holds.
-/// Does not own: playback, the song, the engine, the recording itself (the window's MainWindowTransportRecord sets the state).
+/// Does not own: playback, the song, the engine, the recording itself (the window's RecordingPresenter sets the state).
 /// The drawn button and divider controls are the partial file TransportBarView.TransportButton.cs.
 /// Tests: TabForge.Avalonia.Tests.TransportBarViewTests.
 /// </summary>
@@ -113,7 +113,7 @@ public sealed partial class TransportBarView : Border
     /// <summary>The window command each timeline zoom button, the mixer button, the Next section button the two toggles and Record run, by button name: the score's zoom rows, the Mixer command, Section.Next and the Transport toggles.</summary>
     private static readonly IReadOnlyDictionary<string, string> WindowCommandIds = new Dictionary<string, string>
     {
-        [RecordItemName] = MainWindowTransportRecord.CommandId,
+        [RecordItemName] = CommandIds.Transport.Record,
         [LiveInputItem.Name] = LiveInputItem.CommandId!,
         ["Zoom in timeline"] = MainWindowTimelineZoom.ZoomInId,
         ["Zoom out timeline"] = MainWindowTimelineZoom.ZoomOutId,

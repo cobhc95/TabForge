@@ -9,7 +9,7 @@ namespace TabForge.Avalonia;
 // including the rule that stopping playback while a recording runs ends the recording first (and the recording's own stop restores the
 //   cursor and stops the playback).
 // Does not own: the menu rows (MainMenuTable in Core), the commands table (MainWindowCommands), the playback session and engine
-//   (AvaloniaPlaybackSessions), the recording (MainWindowTransportRecord), the Metronome and Count-in toggles (MainWindowTransportToggles).
+//   (AvaloniaPlaybackSessions), the recording (RecordingPresenter), the Metronome and Count-in toggles (MainWindowTransportToggles).
 // Tests: TabForge.Avalonia.Tests.MainWindowMenuTests, MainWindowSpaceEscapeRoutingTests, RecordingBatchOneTests.
 public static class MainWindowTransportMenu
 {

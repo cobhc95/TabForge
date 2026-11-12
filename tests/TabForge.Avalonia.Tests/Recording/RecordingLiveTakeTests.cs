@@ -14,7 +14,7 @@ namespace TabForge.Avalonia.Tests;
 /// take's first frame, growing monotonically, clipped to the take's lane), the lane recomputed over the growing span (a collision moves the
 /// take and asks for the row refresh), and the stop rules (audio kept until its WAV lands, MIDI dropped at once). A recording frame
 /// invalidates the overlay only, never the timeline body.
-/// Does not own: the take feed from the engine/MIDI input (MainWindowTransportRecord), the timeline body and playhead (TimelineView), the
+/// Does not own: the take feed from the engine/MIDI input (RecordingPresenter), the timeline body and playhead (TimelineView), the
 /// lane rules (ClipLanes) or the MIDI take capture (MidiTakeCaptureTests).
 /// Tests: this class.
 /// </summary>
@@ -29,7 +29,7 @@ public class RecordingLiveTakeTests
         var view = new TimelineView(song);
         var takes = new LiveTakes();
         view.UseLiveTakes(takes);
-        // The real window reloads the rows when the live take opens its lane (MainWindowTransportRecord.LiveLaneCreated).
+        // The real window reloads the rows when the live take opens its lane (RecordingPresenter.Register's LiveLaneCreated hook).
         takes.LaneCreated = _ => view.Reload(song);
         return (song, track, view, takes);
     }

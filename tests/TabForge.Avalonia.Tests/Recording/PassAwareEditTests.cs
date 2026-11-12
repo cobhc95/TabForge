@@ -190,7 +190,7 @@ public sealed class PassAwareEditTests
         var old = Clip(2, 30);
         track.AudioClips.Add(old);
 
-        MainWindowTransportRecord.LandTake(new[] { song }, track, "new.wav", 19, 5);
+        RecordingPresenter.LandTake(new[] { song }, track, "new.wav", 19, 5);
 
         Assert.False(old.Muted);   // no partial mute exists: the older clip keeps its own mute state
         var landed = Assert.Single(track.AudioClips, clip => !ReferenceEquals(clip, old));
@@ -205,7 +205,7 @@ public sealed class PassAwareEditTests
         var old = Clip(2, 30);
         track.AudioClips.Add(old);
 
-        MainWindowTransportRecord.LandTake(new[] { song }, track, "new.wav", 2, 28);
+        RecordingPresenter.LandTake(new[] { song }, track, "new.wav", 2, 28);
 
         var landed = track.AudioClips.Where(clip => !ReferenceEquals(clip, old)).ToList();
         Assert.Single(landed);

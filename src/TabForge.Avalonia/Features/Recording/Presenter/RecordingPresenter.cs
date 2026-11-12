@@ -9,6 +9,7 @@ using TabForge.Avalonia.Transport;
 using TabForge.Avalonia.Views;
 using TabForge.Documents;
 using TabForge.Features.Recording.Rules;
+using TabForge.LiveInput;
 using TabForge.Models;
 using TabForge.Playback;
 using TabForge.Presenters;
@@ -26,13 +27,30 @@ namespace TabForge.Avalonia.Features.Recording.Presenter;
 // Does not own: the recording logic (TransportRecording), the loop laps (one take per lap at landing; the live box stacks one lane
 //   per lap once the playhead wraps), the button (Platform/TransportBarView), the overlay drawing (Platform/TimelineLiveTakeLayer), the take model
 //   (LiveTakes), the playback sessions and engine (AvaloniaPlaybackSessions), the commands table (MainWindowCommands).
-// Tests: TabForge.Avalonia.Tests.TransportRecordingTests, MidiTakeCaptureTests, CountInRecordingTests, RecordingBatchOneTests, RecordingLiveTakeTests.
+// Tests: TabForge.Avalonia.Tests.TransportRecordingTests, MidiTakeCaptureTests, CountInRecordingTests, RecordingBatchOneTests, RecordingLiveTakeTests, NotificationBarTests.
 internal sealed partial class RecordingPresenter(MainWindowCommands commands, MainWindowDocumentPanes panes, AvaloniaPlaybackSessions? playback,
     MainWindowTabs songs, Action<string> showStatus, Func<PluginSettings> plugins, Func<double, double> meterFraction,
     Func<SnapSettings?>? snap = null, Action<LiveTakes>? rollLive = null, Action? recordingChanged = null)
 {
     /// <summary>The command id of Transport.Record (the Record button runs it too).</summary>
     public const string CommandId = CommandIds.Transport.Record;
+
+    /// <summary>The command ids this class handles.</summary>
+    public static readonly IReadOnlyList<string> Commands = new[] { CommandId };
+
+    /// <summary>Builds the window's recording presenter and registers Transport.Record; "no track armed" goes to the top bar (Info, never modal).</summary>
+    /// <param name="playback">The playback sessions and their engine; null (no engine host, as in the preview) makes the command do nothing.</param>
+    /// <param name="songs">The tabs; the command records the shown song.</param>
+    /// <param name="showStatus">Shows the outcome text on the top bar (Info).</param>
+    /// <param name="plugins">The plug-in settings the engine sync uses, so arm toggles reach the engine before it records.</param>
+    /// <param name="panes">The document panes; each arrangement's track arm toggles, armed-row edits and input meter are hooked, the first one included.</param>
+    /// <returns>The window's recording state; disposing it (the window closed) ends a recording in progress and detaches the hooks.</returns>
+    internal static RecordingSession ForWindow(MainWindowCommands commands, MainWindowDocumentPanes panes, AvaloniaPlaybackSessions? playback, MainWindowTabs songs,
+        Action<string> showStatus, Func<PluginSettings> plugins, Func<SnapSettings?>? snap = null, Action<LiveTakes>? rollLive = null, Action? recordingChanged = null) =>
+        new RecordingPresenter(commands, panes, playback, songs, showStatus, plugins, MeterFraction, snap, rollLive, recordingChanged).Register();
+
+    /// <summary>A linear input peak (0..1) as the armed row meter's fraction (0..1): the live strip's dB curve, one source of truth for both meters.</summary>
+    private static double MeterFraction(double peak) => LiveStripRules.MeterFraction(LiveStripRules.PeakToDb(peak));
 
     /// <returns>The window's recording state; disposing it (the window closed) ends a recording in progress and detaches the hooks.</returns>
     internal RecordingSession Register()
@@ -115,7 +133,7 @@ internal sealed partial class RecordingPresenter(MainWindowCommands commands, Ma
             ShowRecording(panes, hooks.IsRecording);
             recordingChanged?.Invoke();   // the status bar's state word follows
         });
-        return new RecordingSession(hooks, StopFromTransport, (songObj, track, clip) => ReRecord((SongDocument)songObj, track, clip));
+        return new RecordingSession(hooks, StopFromTransport, ReRecord);
     }
 
     /// <summary>The Record button of the shown arrangement shows whether the window is capturing.</summary>
@@ -124,7 +142,6 @@ internal sealed partial class RecordingPresenter(MainWindowCommands commands, Ma
     /// <summary>Tells the user nothing is armed to record (the warning category of the notice sink; kept here so the Landing part names no Views namespace).</summary>
     internal static void WarnNothingArmed(Action<string> showStatus) => showStatus.Warning(TransportRecording.NothingArmedText);
 
-    /// <summary>Where the song's cursor was when recording began; Stop puts it back there, so Play plays the take from its start.</summary>
     // One window's handlers on the shared engine client and its recording; Dispose (the window closed) ends a recording and removes exactly them.
     internal sealed class EngineHooks : IDisposable
     {

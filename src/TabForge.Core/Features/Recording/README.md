@@ -13,12 +13,12 @@ live takes, landing and undo step) and `.../View/` (armed sub-rows, input picker
   (remove and mute of a repeat take).
 - Does not own: the read-only take-group rules (`TakeGroups` in `Models/`), the lane geometry
   (`ClipLanes` in `Models/`), the undo step and dirty mark (`DocumentEdits`), the engine client, the
-  playback session, the window wiring (`MainWindowTransportRecord`) or any drawing.
+  playback session, the window wiring (`RecordingPresenter.ForWindow`) or any drawing.
 - Entry points: `TransportRecording.Toggle`, `AnyArmed` and `DisarmTrack`, `MidiTakeCapture.Start`
   and `Disarm`, `MidiTake.Keep`, `CloseHeld` and `Finish`, `RecordedTakes.FromRecording`, `Place`
   and `StatusText`, `RecordingPasses.Split`, `TakeGroupEdits.Remove` and `ToggleMute`.
-- Callers: `RecordingPresenter` (Avalonia: toggle, landing, undo step), `MainWindowTransportRecord`
-  (the command wiring), `MainWindowClipKeys` and `MainWindowClipEditKeys` (group edits).
+- Callers: `RecordingPresenter` (Avalonia: toggle, landing, undo step; its `ForWindow` is the command wiring),
+  `MainWindowClipKeys` and `MainWindowClipEditKeys` (group edits).
 - Tests: `TransportRecordingTests`, `MidiTakeCaptureTests`, `MidiTakeTests` (capture),
   `RecordingBatchOneTests`, `CountInRecordingTests`, `RecordingLaneLifecycleTests`,
   `RecordingRealPathTests`, `LoopPassGroupTests` (landing and passes),

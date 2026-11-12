@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using TabForge.Audio;
+using TabForge.Avalonia.Features.Recording.Presenter;
 using TabForge.Documents;
 using TabForge.Features.Recording.Rules;
 using TabForge.Models;
@@ -70,7 +71,7 @@ public class MidiTakeCaptureTests
         device.Play(NoteOn, pitch, 100, Stopwatch.GetTimestamp());
         device.Play(NoteOff, pitch, 0, Stopwatch.GetTimestamp());
         recording.Toggle(song.Project.Tracks, "unused");
-        MainWindowTransportRecord.LandMidiTakes(recording, song);
+        RecordingPresenter.LandMidiTakes(recording, song);
     }
 
     private static (SongDocument Song, TrackModel Track) ArmedMidiSong()

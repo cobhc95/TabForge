@@ -20,7 +20,7 @@ using Xunit;
 
 namespace TabForge.Avalonia.Tests;
 
-// Owns: the recording-over-a-repeat path at command level (MainWindowTransportRecord like RecordingRealPathTests): a recording through
+// Owns: the recording-over-a-repeat path at command level (RecordingPresenter like RecordingRealPathTests): a recording through
 //   score repeats lands as ONE ordinary clip (audio and MIDI; the repeat view only folds its drawing), the MIDI compile playing it straight
 //   in performed time, the live second play stacking under the first, and the transport loop keeping its own T1 lane-per-lap behaviour.
 // Does not own: the fold and the folded drawing (RepeatViewTests), the pure segment math (RepeatPassesTests) or the loop-lane stacks (LoopLanesStage*Tests).
@@ -63,7 +63,7 @@ public sealed class RepeatTakeLandingTests
         var start = At(song.Project, 0, 0);
         var end = At(song.Project, 3, 1);
 
-        var status = MainWindowTransportRecord.LandTake(new[] { song }, track, "take.wav", start, end - start);
+        var status = RecordingPresenter.LandTake(new[] { song }, track, "take.wav", start, end - start);
 
         var clip = Assert.Single(track.AudioClips);
         AssertOrdinary(clip, 0);
@@ -85,7 +85,7 @@ public sealed class RepeatTakeLandingTests
         var loopStart = At(song.Project, 0, 0);
         var loopEnd = At(song.Project, 2, 0);
 
-        MainWindowTransportRecord.LandTake(new[] { song }, track, "take.wav", loopStart, (loopEnd - loopStart) + 1, loop: (loopStart, loopEnd));
+        RecordingPresenter.LandTake(new[] { song }, track, "take.wav", loopStart, (loopEnd - loopStart) + 1, loop: (loopStart, loopEnd));
 
         Assert.Equal(2, track.AudioClips.Count);
         Assert.All(track.AudioClips, clip => Assert.Null(clip.TakeGroupId));
@@ -117,7 +117,7 @@ public sealed class RepeatTakeLandingTests
         PlayNote(device, stamp0, start, end - 0.4, 65);
         recording.Toggle(song.Project.Tracks, "unused",
             songSecAt: stamp => start + (stamp - stamp0) / (double)Stopwatch.Frequency);
-        MainWindowTransportRecord.LandMidiTakes(recording, song);
+        RecordingPresenter.LandMidiTakes(recording, song);
 
         // Repeat view: one ordinary MIDI clip holds every note at its performed time (no part dealing).
         var clip = Assert.Single(track.AudioClips);

@@ -36,11 +36,11 @@ public class TransportRecordingTests
         var track = new TrackModel();
         song.Project.Tracks.Add(track);
         track.AudioClips.Add(new AudioClip { File = "old.wav", StartSec = 0, SourceLengthSec = 4, FileLengthSec = 4 });
-        var status = MainWindowTransportRecord.LandTake(new[] { song }, track, "take.wav", 1, 2);
+        var status = RecordingPresenter.LandTake(new[] { song }, track, "take.wav", 1, 2);
         Assert.Equal(RecordedTakes.StatusText(track, 1, 2), status);
         Assert.Equal(2, track.AudioClips.Count);
         Assert.Equal(1, track.AudioClips[^1].Lane);
-        Assert.Null(MainWindowTransportRecord.LandTake(new[] { song }, new TrackModel(), "other.wav", 0, 1));
+        Assert.Null(RecordingPresenter.LandTake(new[] { song }, new TrackModel(), "other.wav", 0, 1));
     }
 
     [Fact]
@@ -112,9 +112,9 @@ public class TransportRecordingTests
         using var session = new TabForge.Avalonia.Transport.AvaloniaPlaybackSession(new AvaloniaPlaybackSessionTests.FakeEngine(), new AvaloniaPlaybackSessionTests.FakeUiThread(), () => document.Project);
         var start = new RecordingPresenter.RecordStart();
         var recording = new TransportRecording(client, client.MidiInput.CreateClient());
-        MainWindowTransportRecord.Toggle(recording, session, document, _ => { }, start);
+        RecordingPresenter.Toggle(recording, session, document, _ => { }, start);
         Assert.Equal((3, 2, 1), (start.Bar, start.Cell, start.String));
-        if (recording.IsRecording) MainWindowTransportRecord.Toggle(recording, session, document, _ => { }, start);
+        if (recording.IsRecording) RecordingPresenter.Toggle(recording, session, document, _ => { }, start);
     }
 
     [Fact]
@@ -127,9 +127,9 @@ public class TransportRecordingTests
         session.Seek(6, 0);   // an arrangement or section click seeks the playback; the document's cursor is not moved
         var start = new RecordingPresenter.RecordStart();
         var recording = new TransportRecording(client, client.MidiInput.CreateClient());
-        MainWindowTransportRecord.Toggle(recording, session, document, _ => { }, start);
+        RecordingPresenter.Toggle(recording, session, document, _ => { }, start);
         Assert.Equal((6, 0), (start.Bar, start.Cell));
-        if (recording.IsRecording) MainWindowTransportRecord.Toggle(recording, session, document, _ => { }, start);
+        if (recording.IsRecording) RecordingPresenter.Toggle(recording, session, document, _ => { }, start);
     }
 
     [Fact]
@@ -152,13 +152,13 @@ public class TransportRecordingTests
         using var client = new AudioEngineClient(new TabForge.Plugins.PluginTrust());
         using var recording = new TransportRecording(client, new MidiInputHub(device).CreateClient());
         var start = new RecordingPresenter.RecordStart();
-        MainWindowTransportRecord.Toggle(recording, session, song, _ => { }, start, playback: sessions);
+        RecordingPresenter.Toggle(recording, session, song, _ => { }, start, playback: sessions);
 
         Assert.True(recording.IsRecording);
         Assert.Equal((3, 2), (start.Bar, start.Cell));   // the take starts at the playhead, not at the stale cursor
         device.Play(0x90, 60, 100, Stopwatch.GetTimestamp());
         device.Play(0x80, 60, 0, Stopwatch.GetTimestamp());
-        MainWindowTransportRecord.Toggle(recording, session, song, _ => { }, start);
+        RecordingPresenter.Toggle(recording, session, song, _ => { }, start);
 
         var clip = Assert.Single(track.AudioClips);
         Assert.Equal(5.0, clip.StartSec, 6);
@@ -186,13 +186,13 @@ public class TransportRecordingTests
         using var client = new AudioEngineClient(new TabForge.Plugins.PluginTrust());
         using var recording = new TransportRecording(client, new MidiInputHub(device).CreateClient());
         var start = new RecordingPresenter.RecordStart();
-        MainWindowTransportRecord.Toggle(recording, session, song, _ => { }, start, playback: sessions);
+        RecordingPresenter.Toggle(recording, session, song, _ => { }, start, playback: sessions);
         Assert.True(recording.IsRecording);
 
         device.Play(0x90, 60, 100, Stopwatch.GetTimestamp());
         device.Play(0x80, 60, 0, Stopwatch.GetTimestamp());
-        MainWindowTransportRecord.Toggle(recording, session, song, _ => { }, start);
-        MainWindowTransportRecord.LandMidiTakes(recording, song);
+        RecordingPresenter.Toggle(recording, session, song, _ => { }, start);
+        RecordingPresenter.LandMidiTakes(recording, song);
 
         var landed = Assert.Single(track.AudioClips);
         // The take lands at the song bar being played, not at the timeline second (which would be bar 2).
@@ -223,7 +223,7 @@ public class TransportRecordingTests
 
         using var recording = new TransportRecording(client, client.MidiInput.CreateClient());
         var start = new RecordingPresenter.RecordStart();
-        MainWindowTransportRecord.Toggle(recording, session, song, _ => { }, start, playback: sessions);
+        RecordingPresenter.Toggle(recording, session, song, _ => { }, start, playback: sessions);
 
         var owner = client.OwnerIdOf(song);
         // The engine is anchored at the playhead second and keeps RUNNING: a song that plays on must not stop its audio clips for the recording.
@@ -232,7 +232,7 @@ public class TransportRecordingTests
         var position = commands.IndexOf(EngineCommand.SetPosition);
         var record = commands.IndexOf(EngineCommand.Record);
         Assert.True(position >= 0 && record > position, $"position at {position}, record at {record}");
-        MainWindowTransportRecord.Toggle(recording, session, song, _ => { }, start);
+        RecordingPresenter.Toggle(recording, session, song, _ => { }, start);
     }
 
     [Fact]
@@ -253,7 +253,7 @@ public class TransportRecordingTests
         using var client = new AudioEngineClient(new TabForge.Plugins.PluginTrust());
         using var recording = new TransportRecording(client, new MidiInputHub(device).CreateClient());
         var start = new RecordingPresenter.RecordStart();
-        MainWindowTransportRecord.Toggle(recording, session, song, _ => { }, start, playback: sessions);
+        RecordingPresenter.Toggle(recording, session, song, _ => { }, start, playback: sessions);
         Assert.True(recording.IsRecording);
 
         // Playback moves on while recording: the notes must follow the live song position, not the press-time one.
@@ -261,7 +261,7 @@ public class TransportRecordingTests
         ui.FrameTimer.Fire();
         device.Play(0x90, 60, 100, Stopwatch.GetTimestamp());
         device.Play(0x80, 60, 0, Stopwatch.GetTimestamp());
-        MainWindowTransportRecord.Toggle(recording, session, song, _ => { }, start);
+        RecordingPresenter.Toggle(recording, session, song, _ => { }, start);
 
         var clip = Assert.Single(track.AudioClips);
         var note = Assert.Single(clip.Notes!);
@@ -298,7 +298,7 @@ public class TransportRecordingTests
         {
             using var recording = new TransportRecording(client, client.MidiInput.CreateClient());
             var start = new RecordingPresenter.RecordStart();
-            MainWindowTransportRecord.Toggle(recording, session, song, _ => { }, start, hooks, playback: sessions);
+            RecordingPresenter.Toggle(recording, session, song, _ => { }, start, hooks, playback: sessions);
             Assert.True(recording.IsRecording);
 
             ui.FrameTimer.Fire();   // the first live frame starts the take at the live scheduler second, not the drawn playhead
@@ -316,10 +316,10 @@ public class TransportRecordingTests
             Assert.Equal(7.0, take.EndSec, 6);
             Assert.Equal(7.0, take.EndSec, 6);
 
-            MainWindowTransportRecord.Toggle(recording, session, song, _ => { }, start, hooks);
+            RecordingPresenter.Toggle(recording, session, song, _ => { }, start, hooks);
 
             // The take lands over the live span: press-anchored start, live-tracked end.
-            var status = MainWindowTransportRecord.LandTake(new[] { song }, track, "take.wav", 5.0, 2.0);
+            var status = RecordingPresenter.LandTake(new[] { song }, track, "take.wav", 5.0, 2.0);
             Assert.Equal(RecordedTakes.StatusText(track, 1, 2.0), status);
             var landed = Assert.Single(track.AudioClips);
             Assert.Equal(5.0, landed.StartSec, 6);

@@ -201,7 +201,7 @@ public sealed partial class MainWindow
         var layout = compose.Layout;
         var commands = compose.Commands;
         var showStatus = shared.ShowStatus;
-        var recordingHooks = MainWindowTransportRecord.Register(commands, panes, playback, songs, showStatus, () => settings?.Settings.Plugins ?? new TabForge.Services.PluginSettings(),
+        var recordingHooks = Features.Recording.Presenter.RecordingPresenter.ForWindow(commands, panes, playback, songs, showStatus, () => settings?.Settings.Plugins ?? new TabForge.Services.PluginSettings(),
             () => panes.Arrangement?.Transport.Snap, live => compose.EditorPane.PianoRoll.ShowLive(live), compose.StatusBar.Activity.Notify);
         compose.RecordingHooks = recordingHooks;
         compose.StatusBar.Activity.TransportRecording = () => recordingHooks.IsRecording;

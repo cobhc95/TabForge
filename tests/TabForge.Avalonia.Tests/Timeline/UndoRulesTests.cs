@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.VisualTree;
+using TabForge.Avalonia.Features.Recording.Presenter;
 using TabForge.Avalonia;
 using TabForge.Avalonia.Views;
 using TabForge.Documents;
@@ -44,7 +45,7 @@ public sealed class UndoRulesTests
         var track = AddAudioTrack(song);
         track.RecordArm = true;
 
-        MainWindowTransportRecord.LandTake(new[] { song }, track, "take.wav", 1, 2);
+        RecordingPresenter.LandTake(new[] { song }, track, "take.wav", 1, 2);
         Assert.Single(song.Project.Tracks[^1].AudioClips);
         Assert.Equal(1, song.Undo.UndoCount);
 
@@ -70,8 +71,8 @@ public sealed class UndoRulesTests
 
         // The stop's landing state is taken once; every file that arrives afterwards joins that same step.
         var before = song.Undo.Snapshot(song.Project, "Record takes");
-        MainWindowTransportRecord.LandTake(new[] { song }, first, "a.wav", 1, 2, before: before);
-        MainWindowTransportRecord.LandTake(new[] { song }, second, "b.wav", 1, 2, before: before);
+        RecordingPresenter.LandTake(new[] { song }, first, "a.wav", 1, 2, before: before);
+        RecordingPresenter.LandTake(new[] { song }, second, "b.wav", 1, 2, before: before);
 
         Assert.Equal(1, song.Undo.UndoCount);
         Assert.Single(song.Project.Tracks[^2].AudioClips);
@@ -148,7 +149,7 @@ public sealed class UndoRulesTests
         });
         var lanesBefore = track.Lanes.Count;
 
-        MainWindowTransportRecord.LandTake(new[] { song }, track, "new.wav", 2, 3);
+        RecordingPresenter.LandTake(new[] { song }, track, "new.wav", 2, 3);
         var landed = song.Project.Tracks[^1];
         Assert.Equal(1, landed.AudioClips[^1].Lane);   // the new take needed the lane below the old clip
         Assert.Equal(2, landed.Lanes.Count);

@@ -24,7 +24,7 @@ Tests live in the local Avalonia test project (not part of the public export); r
 
 | Owner | Covered by |
 |---|---|
-| `MainWindow/Transport/MainWindowTransportRecord.cs` | `TransportRecordingTests`, `MidiTakeCaptureTests`, `RecordingBatchOneTests`, `RecordingLiveTakeTests` |
+| `Features/Recording/Presenter/RecordingPresenter.cs` (ForWindow) | `TransportRecordingTests`, `MidiTakeCaptureTests`, `RecordingBatchOneTests`, `RecordingLiveTakeTests` |
 | `MainWindow/Clips/MainWindowAudioDrop.cs` | `AudioDropPlannerTests` |
 | `Features/Recording/Presenter/RecordingPresenter.cs` | `TransportRecordingTests`, `MidiTakeCaptureTests`, `CountInRecordingTests`, `RecordingBatchOneTests` |
 | `Features/Recording/Presenter/LiveTakes.cs` | `RecordingLiveTakeTests`, `LiveTakeFoldTests` |

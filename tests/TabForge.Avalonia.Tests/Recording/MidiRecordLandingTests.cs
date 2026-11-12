@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using TabForge.Audio;
+using TabForge.Avalonia.Features.Recording.Presenter;
 using TabForge.Documents;
 using TabForge.Features.Recording.Rules;
 using TabForge.Models;
@@ -110,7 +111,7 @@ public class MidiRecordLandingTests
         device.Play(0x80, 60, 0, Stopwatch.GetTimestamp());
         recording.Dispose();   // the window closed
         Assert.False(recording.IsRecording);
-        MainWindowTransportRecord.LandMidiTakes(recording, song);
+        RecordingPresenter.LandMidiTakes(recording, song);
         Assert.Equal(60, Assert.Single(Assert.Single(track.AudioClips).Notes!).Pitch);
     }
 

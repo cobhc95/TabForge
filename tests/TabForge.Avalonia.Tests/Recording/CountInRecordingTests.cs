@@ -49,7 +49,7 @@ public class CountInRecordingTests
         client.SentForTest = command => commands.Add(command);
         using var recording = new TransportRecording(client, client.MidiInput.CreateClient());
         var start = new RecordingPresenter.RecordStart();
-        MainWindowTransportRecord.Toggle(recording, session, song, _ => { }, start, playback: sessions);
+        RecordingPresenter.Toggle(recording, session, song, _ => { }, start, playback: sessions);
 
         Assert.False(recording.IsRecording);
         Assert.DoesNotContain(EngineCommand.Record, commands);   // the count-in is a pre-roll: no capture yet
@@ -73,7 +73,7 @@ public class CountInRecordingTests
         var position = commands.IndexOf(EngineCommand.SetPosition);
         var record = commands.IndexOf(EngineCommand.Record);
         Assert.True(position >= 0 && record > position, $"position at {position}, record at {record}");
-        MainWindowTransportRecord.Toggle(recording, session, song, _ => { }, start);
+        RecordingPresenter.Toggle(recording, session, song, _ => { }, start);
     }
 
     [Fact]
@@ -97,13 +97,13 @@ public class CountInRecordingTests
         client.SentForTest = command => commands.Add(command);
         using var recording = new TransportRecording(client, client.MidiInput.CreateClient());
         var start = new RecordingPresenter.RecordStart();
-        MainWindowTransportRecord.Toggle(recording, session, song, _ => { }, start, playback: sessions);
+        RecordingPresenter.Toggle(recording, session, song, _ => { }, start, playback: sessions);
 
         Assert.True(recording.IsRecording);
         Assert.Contains(EngineCommand.Record, commands);
         var at = AudioClipTimelineRules.SecondsAtBar(song.Project, start.Bar, 0);
         Assert.Equal((false, at), client.PositionSentForTest(client.OwnerIdOf(song)));
-        MainWindowTransportRecord.Toggle(recording, session, song, _ => { }, start);
+        RecordingPresenter.Toggle(recording, session, song, _ => { }, start);
     }
 
     [Fact]
@@ -120,7 +120,7 @@ public class CountInRecordingTests
         using var recording = new TransportRecording(new AudioEngineClient(new TabForge.Plugins.PluginTrust()), new MidiInputHub(device).CreateClient());
         var start = new RecordingPresenter.RecordStart();
 
-        MainWindowTransportRecord.Toggle(recording, session, song, _ => { }, start);
+        RecordingPresenter.Toggle(recording, session, song, _ => { }, start);
         Assert.False(recording.IsRecording);
 
         // Heard while the count-in clicks: it belongs to the pre-roll and must not reach the take.
@@ -135,8 +135,8 @@ public class CountInRecordingTests
 
         device.Play(NoteOn, 64, 100, Stopwatch.GetTimestamp());
         device.Play(NoteOff, 64, 0, Stopwatch.GetTimestamp());
-        MainWindowTransportRecord.Toggle(recording, session, song, _ => { }, start);
-        MainWindowTransportRecord.LandMidiTakes(recording, song);
+        RecordingPresenter.Toggle(recording, session, song, _ => { }, start);
+        RecordingPresenter.LandMidiTakes(recording, song);
 
         var at = AudioClipTimelineRules.SecondsAtBar(project, start.Bar, 0);
         var clip = Assert.Single(track.AudioClips);
@@ -169,7 +169,7 @@ public class CountInRecordingTests
         client.SentForTest = command => commands.Add(command);
         using var recording = new TransportRecording(client, client.MidiInput.CreateClient());
         var start = new RecordingPresenter.RecordStart();
-        MainWindowTransportRecord.Toggle(recording, session, song, _ => { }, start, loop: loop, playback: sessions);
+        RecordingPresenter.Toggle(recording, session, song, _ => { }, start, loop: loop, playback: sessions);
 
         Assert.False(recording.IsRecording);   // fails on the old immediate start: the pre-roll captures nothing
         Assert.DoesNotContain(EngineCommand.Record, commands);
@@ -193,7 +193,7 @@ public class CountInRecordingTests
         Assert.Equal(at, takes[0].StartSec, 6);   // the first pass sits at P, not at the count-in start
         Assert.Equal(0.0, takes[0].OffsetSec, 6);
         Assert.Equal(at, takes[1].StartSec, 6);
-        MainWindowTransportRecord.Toggle(recording, session, song, _ => { }, start);
+        RecordingPresenter.Toggle(recording, session, song, _ => { }, start);
     }
 
     [Fact]
@@ -217,7 +217,7 @@ public class CountInRecordingTests
         client.SentForTest = command => commands.Add(command);
         using var recording = new TransportRecording(client, client.MidiInput.CreateClient());
         var start = new RecordingPresenter.RecordStart();
-        MainWindowTransportRecord.Toggle(recording, session, song, _ => { }, start, playback: sessions);
+        RecordingPresenter.Toggle(recording, session, song, _ => { }, start, playback: sessions);
         Assert.False(recording.IsRecording);
 
         session.Stop();   // what Transport.Stop runs after its EndRecording no-op while a record is pending
@@ -250,7 +250,7 @@ public class CountInRecordingTests
         client.SentForTest = command => commands.Add(command);
         using var recording = new TransportRecording(client, client.MidiInput.CreateClient());
         var start = new RecordingPresenter.RecordStart();
-        MainWindowTransportRecord.Toggle(recording, session, song, _ => { }, start, playback: sessions);
+        RecordingPresenter.Toggle(recording, session, song, _ => { }, start, playback: sessions);
         Assert.False(recording.IsRecording);
 
         session.Seek(0, 0);   // a moved start invalidates the waiting take second
@@ -282,11 +282,11 @@ public class CountInRecordingTests
         client.SentForTest = command => commands.Add(command);
         using var recording = new TransportRecording(client, client.MidiInput.CreateClient());
         var start = new RecordingPresenter.RecordStart();
-        MainWindowTransportRecord.Toggle(recording, session, song, _ => { }, start, playback: sessions);
+        RecordingPresenter.Toggle(recording, session, song, _ => { }, start, playback: sessions);
         Assert.False(recording.IsRecording);
 
         var messages = new List<string>();
-        MainWindowTransportRecord.Toggle(recording, session, song, messages.Add, start);
+        RecordingPresenter.Toggle(recording, session, song, messages.Add, start);
         Assert.Equal(TransportRecording.StoppedText, Assert.Single(messages));
         Assert.False(recording.IsRecording);
         Assert.DoesNotContain(EngineCommand.Record, commands);

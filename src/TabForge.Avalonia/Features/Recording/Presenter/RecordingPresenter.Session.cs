@@ -1,23 +1,33 @@
 using System;
+using TabForge.Documents;
 using TabForge.Models;
 
 namespace TabForge.Avalonia.Features.Recording.Presenter;
 
 // Owns: the window's recording state (RecordingSession): the transport ends a recording through StopRecording, the
-//   arrangement's Record button reads IsRecording, and disposing it (the window closed) ends a recording in progress.
+//   arrangement's Record button reads IsRecording, and disposing it (the window closed) ends a recording in progress; and the cursor
+//   position a recording began at (RecordStart).
 // Does not own: the Record command and the engine hooks (RecordingPresenter) or the recording logic (TransportRecording).
 // Tests: TabForge.Avalonia.Tests.TransportRecordingTests, MidiTakeCaptureTests, CountInRecordingTests.
 internal sealed partial class RecordingPresenter
 {
+    /// <summary>Where the song's cursor was when recording began; Stop puts it back there, so Play plays the take from its start.</summary>
+    internal sealed class RecordStart
+    {
+        public int Bar { get; set; }
+        public int Cell { get; set; }
+        public int String { get; set; }
+    }
+
     /// <summary>The window's recording state: the transport ends a recording through StopRecording, and the arrangement's
     /// Record button reads IsRecording. Disposing it (the window closed) ends a recording in progress.</summary>
     internal sealed class RecordingSession : IDisposable
     {
         private readonly EngineHooks _hooks;
         private readonly Action _stop;
-        private readonly Action<object, TrackModel, AudioClip>? _reRecord;
+        private readonly Action<SongDocument, TrackModel, AudioClip>? _reRecord;
 
-        internal RecordingSession(EngineHooks hooks, Action stop, Action<object, TrackModel, AudioClip>? reRecord = null)
+        internal RecordingSession(EngineHooks hooks, Action stop, Action<SongDocument, TrackModel, AudioClip>? reRecord = null)
         {
             _hooks = hooks;
             _stop = stop;
@@ -46,7 +56,7 @@ internal sealed partial class RecordingPresenter
         /// runs the normal count-in when enabled, captures only that track for one loop length and replaces only that pass on landing.
         /// False while another recording runs or when the clip is not a loop pass.
         /// </summary>
-        public bool ReRecordPass(object song, TrackModel track, AudioClip clip)
+        public bool ReRecordPass(SongDocument song, TrackModel track, AudioClip clip)
         {
             if (IsRecording || _reRecord is null || !TakeGroups.IsGrouped(clip)) return false;
             _reRecord(song, track, clip);

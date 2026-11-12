@@ -21,7 +21,7 @@ using Xunit;
 
 namespace TabForge.Avalonia.Tests;
 
-// Owns: the real recording path at command level (MainWindowTransportRecord.Toggle/LandTake, the engine's Recorded event and the
+// Owns: the real recording path at command level (RecordingPresenter.Toggle/LandTake, the engine's Recorded event and the
 //   live-take overlay): loop laps land as separate takes on separate lanes (even one lap), a linear take stays one clip, a mid-take disarm
 //   cuts the capture and keeps its lane, arm/disarm are their own undo steps, and the take length follows the session speed.
 // Does not own: the pure fold geometry (LiveTakeFoldTests), the model round-trip (LoopLanesStage1Tests) or the engine itself.
@@ -56,7 +56,7 @@ public sealed class RecordingRealPathTests
         // (a) Loop (2,4), recorded from 1 for three laps: take 1 = 1..4 (the pre-roll stays part of it), laps 2-3 = 2..4, each on a new lane.
         var song = NewSong();
         var track = AddAudio(song);
-        var status = MainWindowTransportRecord.LandTake(new[] { song }, track, "take.wav", 1, 7, loop: (2, 4));
+        var status = RecordingPresenter.LandTake(new[] { song }, track, "take.wav", 1, 7, loop: (2, 4));
 
         Assert.Equal(3, track.AudioClips.Count);
         Assert.All(track.AudioClips, clip => Assert.Null(clip.TakeGroupId));
@@ -97,7 +97,7 @@ public sealed class RecordingRealPathTests
         // (b) The same loop but stopped inside the first lap: one ordinary take 1..4, no group, no extra lane.
         var song = NewSong();
         var track = AddAudio(song);
-        MainWindowTransportRecord.LandTake(new[] { song }, track, "take.wav", 1, 3, loop: (2, 4));
+        RecordingPresenter.LandTake(new[] { song }, track, "take.wav", 1, 3, loop: (2, 4));
 
         var take = Assert.Single(track.AudioClips);
         Assert.Null(take.TakeGroupId);
@@ -118,7 +118,7 @@ public sealed class RecordingRealPathTests
         // (c) No loop: one ordinary clip, selectable; a waiting area uses the inactive ink, never the active loop accent.
         var song = NewSong();
         var track = AddAudio(song);
-        MainWindowTransportRecord.LandTake(new[] { song }, track, "take.wav", 1, 3);
+        RecordingPresenter.LandTake(new[] { song }, track, "take.wav", 1, 3);
         var clip = Assert.Single(track.AudioClips);
         Assert.Null(clip.TakeGroupId);
 
@@ -218,7 +218,7 @@ public sealed class RecordingRealPathTests
         Assert.Equal(1, song.Undo.UndoCount);
         Assert.Equal("Arm track", song.Undo.Latest!.Value.Label);
 
-        MainWindowTransportRecord.LandTake(new[] { song }, track, "take.wav", 1, 2);
+        RecordingPresenter.LandTake(new[] { song }, track, "take.wav", 1, 2);
         Assert.Single(track.AudioClips);
         Assert.Equal(2, song.Undo.UndoCount);
 

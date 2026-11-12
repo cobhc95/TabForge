@@ -10,6 +10,7 @@ using Avalonia.Input;
 using Avalonia.LogicalTree;
 using Avalonia.VisualTree;
 using TabForge.Audio;
+using TabForge.Avalonia.Features.Recording.Presenter;
 using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Playback;
 using TabForge.Avalonia.Transport;
@@ -67,7 +68,7 @@ public class RecordingBatchOneTests
     }
 
     private static TransportBarView.TransportButton RecordButton(MainWindow main) =>
-        main.GetVisualDescendants().OfType<TransportBarView.TransportButton>().First(b => b.Item.CommandId == MainWindowTransportRecord.CommandId);
+        main.GetVisualDescendants().OfType<TransportBarView.TransportButton>().First(b => b.Item.CommandId == RecordingPresenter.CommandId);
 
     private static StatusNoticeBarView Notice(MainWindow main) =>
         // All notifications appear on the single top bar (N1): the first visible notice is the top bar; the bottom rows stay hidden.
@@ -261,7 +262,7 @@ public class RecordingBatchOneTests
     public void TheRecordButtonShowsAndClearsTheRecordingState()
     {
         var bar = new TransportBarView();
-        var button = bar.GetVisualDescendants().OfType<TransportBarView.TransportButton>().First(b => b.Item.CommandId == MainWindowTransportRecord.CommandId);
+        var button = bar.GetVisualDescendants().OfType<TransportBarView.TransportButton>().First(b => b.Item.CommandId == RecordingPresenter.CommandId);
 
         Assert.False(bar.Recording);
         Assert.False(button.Lit);

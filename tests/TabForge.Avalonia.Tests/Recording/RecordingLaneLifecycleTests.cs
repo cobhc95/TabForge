@@ -130,7 +130,7 @@ public class RecordingLaneLifecycleTests
         var (song, track) = SongWithTrack();
 
         // 8 s recorded from 1 s while looping [2, 4): take 1 = 1..4 (the pre-roll stays part of it), then laps 2..4, 2..4, 2..3.
-        var status = MainWindowTransportRecord.LandTake(new[] { song }, track, "take.wav", 1, 8, loop: (2, 4));
+        var status = RecordingPresenter.LandTake(new[] { song }, track, "take.wav", 1, 8, loop: (2, 4));
 
         Assert.Equal(4, track.AudioClips.Count);
         // Loop laps are separate takes on separate lanes (they overlap on purpose); the older laps are muted, the newest plays.
@@ -165,7 +165,7 @@ public class RecordingLaneLifecycleTests
         device.Play(0x80, 64, 0, t0 + Ticks(2.4));
 
         recording.Toggle(song.Project.Tracks, "unused");
-        MainWindowTransportRecord.LandMidiTakes(recording, song);
+        RecordingPresenter.LandMidiTakes(recording, song);
 
         Assert.Equal(2, track.AudioClips.Count);
         Assert.All(track.AudioClips, clip => Assert.Null(clip.TakeGroupId));
