@@ -28,10 +28,6 @@ public interface IScoreEditContext
     /// <summary>Runs one command as one edit (see <see cref="IScoreEditHost.Run"/>), then coerces the cursor, raises Edited and redraws; returns whether the song changed.</summary>
     bool RunEdit(Func<bool> mutate, bool markTimeline = true, bool continuesLastStep = false);
     void PreviewNote(TabNote note);
-    /// <summary>The tool state changed without a song edit: toolbars re-read it.</summary>
-    void NotifyState();
-    void Redraw();
-    void Say(string text);
     void SelectRange(int startMeasure, int startCell, int endMeasure, int endCell);
     /// <summary>Ends the selection (a command that consumed it, Undo / Redo); the cursor stays.</summary>
     void ClearSelection();
@@ -42,7 +38,8 @@ public interface IScoreEditContext
 
 // Owns: the score editor's note commands (entry and edits of notes, durations, ties, techniques, beat and bar operations) and the tool-state queries the toolbars read.
 // Does not own: the editor window and its key routing (the host behind IScoreEditContext), the undo transaction (RunEdit), or the pure note rules (EditCommands).
-// Tests: no dedicated test class.
+// Tests: ScoreNoteEditTests, ScoreEditKeyBehaviourTests, ScoreEntryBeamTests (the commands read the context through _c directly; the context has no
+//   message or redraw hooks: the view repaints after every handled key, and the old Say/NotifyState/Redraw hooks were empty and are gone).
 
 /// <summary>
 /// The score editor's note commands (duration, dots, tuplets, ties, techniques, accents, beat and bar operations, fret entry) and the tool-state
@@ -50,58 +47,30 @@ public interface IScoreEditContext
 /// </summary>
 public sealed partial class ScoreEditCommands
 {
-    /// <summary>Status shown when a note command finds no note under the cursor; the host clears it once an edit succeeds.</summary>
-    public const string NoNoteMessage = "No note on this string";
-
     private readonly IScoreEditContext _c;
 
     public ScoreEditCommands(IScoreEditContext context) => _c = context;
 
-    private SongProject? _project => _c.Project;
-    private TrackModel? Track => _c.Track;
-    private int SelectedTrackIndex => _c.SelectedTrackIndex;
-    private int ActiveVoiceIndex => _c.ActiveVoiceIndex;
-    private int _activeVoiceIndex => _c.ActiveVoiceIndex;
-    private int SelectedMeasure { get => _c.SelectedMeasure; set => _c.SelectedMeasure = value; }
-    private int SelectedCell { get => _c.SelectedCell; set => _c.SelectedCell = value; }
-    private int SelectedString { get => _c.SelectedString; set => _c.SelectedString = value; }
-    private bool HasSelection => _c.HasSelection;
-    private int CurrentDurationDenominator { get => _c.Tools.DurationDenominator; set => _c.Tools.DurationDenominator = value; }
-    private int CurrentDots { get => _c.Tools.Dots; set => _c.Tools.Dots = value; }
-    private bool CurrentTriplet { get => _c.Tools.Triplet; set => _c.Tools.Triplet = value; }
-    private int CurrentTupletNumerator { get => _c.Tools.TupletNumerator; set => _c.Tools.TupletNumerator = value; }
-    private int CurrentTupletDenominator { get => _c.Tools.TupletDenominator; set => _c.Tools.TupletDenominator = value; }
-    private int CurrentVelocity { get => _c.Tools.Velocity; set => _c.Tools.Velocity = value; }
     // The quick two-digit fret entry window: the last digit typed and where.
     private DateTime _lastDigit = DateTime.MinValue;
     private int _lastDigitMeasure = -1, _lastDigitCell = -1, _lastDigitString = -1;
-    private List<TabCell> CellsFor(MeasureModel measure, bool create = false) => _c.CellsFor(measure, create);
-    private int SlotsFor(int measure) => _c.SlotsFor(measure);
     private bool RunEdit(Func<bool> mutate, bool markTimeline = true, bool continuesLastStep = false) { ForgetWritingMarks(); return _c.RunEdit(mutate, markTimeline, continuesLastStep); }
-    private void PreviewNote(TabNote note) => _c.PreviewNote(note);
-    private void InvalidateVisual() => _c.Redraw();
-    private bool AutoAdvanceAfterEntry => _c.Tools.AutoAdvanceAfterEntry;
-    private bool PreventBarOverflow => _c.Tools.PreventBarOverflow;
-    private bool FillBars => _c.Tools.FillBarsWithRests;
-    private (int m1, int c1, int m2, int c2) SelectionRange() => _c.SelectionRange();
-    private void SetPosition(int measure, int cell, int stringIndex) => _c.SetPosition(measure, cell, stringIndex);
-    private void MoveForwardBeat(TrackModel track) => _c.MoveForwardBeat(track);
     // ---------- note editing ----------
 
     public TabCell? CurrentCell(bool create = false)
     {
-        var track = Track;
-        if (track is null || SelectedMeasure < 0 || SelectedMeasure >= track.Measures.Count) return null;
-        var m = track.Measures[SelectedMeasure];
-        var cells = CellsFor(m, create: create && _activeVoiceIndex == 1);
-        return SelectedCell >= 0 && SelectedCell < cells.Count ? cells[SelectedCell] : null;
+        var track = _c.Track;
+        if (track is null || _c.SelectedMeasure < 0 || _c.SelectedMeasure >= track.Measures.Count) return null;
+        var m = track.Measures[_c.SelectedMeasure];
+        var cells = _c.CellsFor(m, create: create && _c.ActiveVoiceIndex == 1);
+        return _c.SelectedCell >= 0 && _c.SelectedCell < cells.Count ? cells[_c.SelectedCell] : null;
     }
 
     public MeasureModel? CurrentMeasure()
     {
-        var track = Track;
-        if (track is null || SelectedMeasure < 0 || SelectedMeasure >= track.Measures.Count) return null;
-        return track.Measures[SelectedMeasure];
+        var track = _c.Track;
+        if (track is null || _c.SelectedMeasure < 0 || _c.SelectedMeasure >= track.Measures.Count) return null;
+        return track.Measures[_c.SelectedMeasure];
     }
 
     /// <summary>Enter a fret on the selected string (TAB entry).</summary>
@@ -167,45 +136,45 @@ public sealed partial class ScoreEditCommands
 
     public void EnterFret(int digit, bool autoAdvance = true)
     {
-        var track = Track;
+        var track = _c.Track;
         var cell = CurrentCell(create: true);
         if (track is null || cell is null) return;
         var editingExistingNote = false;
-        var prior = cell.Notes.FirstOrDefault(n => n.StringIndex == SelectedString);
+        var prior = cell.Notes.FirstOrDefault(n => n.StringIndex == _c.SelectedString);
         var append = prior is not null && (DateTime.UtcNow - _lastDigit).TotalMilliseconds < 700   // the second digit of a two-digit fret: one undo step with the first
-                     && _lastDigitMeasure == SelectedMeasure && _lastDigitCell == SelectedCell
-                     && _lastDigitString == SelectedString && prior.Fret < 10 && prior.Fret > 0;
+                     && _lastDigitMeasure == _c.SelectedMeasure && _lastDigitCell == _c.SelectedCell
+                     && _lastDigitString == _c.SelectedString && prior.Fret < 10 && prior.Fret > 0;
         RunEdit(() =>
         {
             ApplyPendingDuration(cell);
-            SplitBeatTie(cell, SelectedString);
+            SplitBeatTie(cell, _c.SelectedString);
 
-            var existing = cell.Notes.FirstOrDefault(n => n.StringIndex == SelectedString);
+            var existing = cell.Notes.FirstOrDefault(n => n.StringIndex == _c.SelectedString);
             editingExistingNote = existing is not null;
             var fret = Math.Clamp(append && existing is not null && existing.Fret * 10 + digit <= MaxEntryNumber(track) ? existing.Fret * 10 + digit : digit, 0, MaxEntryNumber(track));   // two digits past the last fret: the second replaces the first
             if (existing is null)
             {
-                existing = new TabNote { StringIndex = SelectedString, Velocity = CurrentVelocity };
+                existing = new TabNote { StringIndex = _c.SelectedString, Velocity = _c.Tools.Velocity };
                 cell.Notes.Add(existing);
             }
             existing.Fret = fret;
             existing.Dead = false;
-            existing.MidiValue = MidiOf(track, SelectedString, fret);
-            _lastDigit = DateTime.UtcNow; _lastDigitMeasure = SelectedMeasure; _lastDigitCell = SelectedCell; _lastDigitString = SelectedString;
+            existing.MidiValue = MidiOf(track, _c.SelectedString, fret);
+            _lastDigit = DateTime.UtcNow; _lastDigitMeasure = _c.SelectedMeasure; _lastDigitCell = _c.SelectedCell; _lastDigitString = _c.SelectedString;
 
-            PreviewNote(existing);
+            _c.PreviewNote(existing);
             FillBarAfterWrite();
             return true;
         }, continuesLastStep: append);
         // Auto-advance is useful for entering a passage, but changing an existing
         // note should leave the edit cursor on that note for further adjustments.
-        if (!editingExistingNote && autoAdvance && AutoAdvanceAfterEntry) MoveForwardBeat(track);
+        if (!editingExistingNote && autoAdvance && _c.Tools.AutoAdvanceAfterEntry) _c.MoveForwardBeat(track);
     }
 
     /// <summary>Toggle the fretboard's note on the selected beat/string using the editor edit lifecycle.</summary>
     public bool ToggleFretAtPosition(int stringIndex, int fret)
     {
-        var track = Track;
+        var track = _c.Track;
         var cell = CurrentCell(create: true);
         if (track is null || cell is null || track.StringTunings.Count == 0 ||
             stringIndex < 0 || stringIndex >= track.StringTunings.Count || fret < 0 || fret > MaxEntryNumber(track))
@@ -229,7 +198,7 @@ public sealed partial class ScoreEditCommands
                 var midi = MidiOf(track, stringIndex, fret);
                 if (sameString.Count == 0)
                 {
-                    existing = new TabNote { StringIndex = stringIndex, Velocity = CurrentVelocity };
+                    existing = new TabNote { StringIndex = stringIndex, Velocity = _c.Tools.Velocity };
                     cell.Notes.Add(existing);
                 }
                 else
@@ -243,12 +212,12 @@ public sealed partial class ScoreEditCommands
                 existing.Fret = fret;
                 existing.Dead = false;
                 existing.MidiValue = midi;
-                PreviewNote(existing);
+                _c.PreviewNote(existing);
                 FillBarAfterWrite();
             }
 
             _lastDigitMeasure = _lastDigitCell = _lastDigitString = -1;
-            SetPosition(SelectedMeasure, SelectedCell, stringIndex);
+            _c.SetPosition(_c.SelectedMeasure, _c.SelectedCell, stringIndex);
             return true;
         });
         return true;

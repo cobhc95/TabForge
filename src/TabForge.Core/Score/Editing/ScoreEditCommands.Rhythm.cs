@@ -21,25 +21,16 @@ public sealed partial class ScoreEditCommands
     private void SetDuration(int denominator, bool force)
     {
         if (Array.IndexOf(MusicTime.AllDenominators, denominator) < 0) return;
-        if ((!force || PreventBarOverflow) && !CanSetDuration(denominator)) return;
+        if ((!force || _c.Tools.PreventBarOverflow) && !CanSetDuration(denominator)) return;
         if (force) RememberWritingForUndo();   // as GP5, +/- on an empty spot is an undo step of its own
-        CurrentDurationDenominator = denominator;
+        _c.Tools.DurationDenominator = denominator;
         if (ApplyToolSelection(cells => { if (RefillSelectedRests(cells, denominator)) return; Services.EditCommands.ApplyDuration(cells, denominator); if (!CloseUpSelection(cells)) NormaliseRests(cells, resize: true); })) { RestoreRestSelection(); return; }
         var cell = CurrentCell();
         if (cell is not null && (cell.Notes.Count > 0 || cell.IsRest) && !Placeholder(cell))   // an empty slot or placeholder rest: the value is the writing duration only
         {
             RunEdit(() => { cell.DurationDenominator = denominator; FollowLengthChange(cell); return true; });
         }
-        else
-        {
-            // Nothing under the cursor yet: the value still applies to the next note,
-            // so tell the host to refresh its readouts.
-            NotifyState();
-            InvalidateVisual();
-        }
     }
-
-    private void NotifyState() => _c.NotifyState();
 
     public void Longer() => SetDuration(MusicTime.Longer(StepBaseDuration()), force: true);
     public void Shorter() => SetDuration(MusicTime.Shorter(StepBaseDuration()), force: true);
@@ -50,11 +41,11 @@ public sealed partial class ScoreEditCommands
         var dots = BeatDots() == 1 ? 0 : 1;
         if (!CanSetDots(dots)) return;
         RememberWritingForUndo();
-        CurrentDots = dots;
+        _c.Tools.Dots = dots;
         if (ApplyToolSelection(DotSelection)) { RestoreRestSelection(); return; }
         var cell = CurrentCell();
-        if (cell is null || Placeholder(cell)) { NotifyState(); InvalidateVisual(); return; }   // as GP5: an empty spot's dot is the next note's
-        RunEdit(() => { cell.Dots = CurrentDots; FollowLengthChange(cell); return true; });
+        if (cell is null || Placeholder(cell)) return;   // as GP5: an empty spot's dot is the next note's
+        RunEdit(() => { cell.Dots = _c.Tools.Dots; FollowLengthChange(cell); return true; });
     }
 
     public void SetDots(int dots)
@@ -62,11 +53,11 @@ public sealed partial class ScoreEditCommands
         dots = Math.Clamp(dots, 0, 2);
         if (dots > 0 && BeatDots() == dots && ToolCells().All(c => c.Dots == dots)) dots = 0;   // clicking the active dot button removes it
         if (!CanSetDots(dots)) return;
-        CurrentDots = dots;
+        _c.Tools.Dots = dots;
         if (ApplyToolSelection(DotSelection)) { RestoreRestSelection(); return; }
         var cell = CurrentCell();
-        if (cell is null || Placeholder(cell)) { NotifyState(); InvalidateVisual(); return; }
-        RunEdit(() => { cell.Dots = CurrentDots; FollowLengthChange(cell); return true; });
+        if (cell is null || Placeholder(cell)) return;
+        RunEdit(() => { cell.Dots = _c.Tools.Dots; FollowLengthChange(cell); return true; });
     }
 
     public void ToggleTriplet()
@@ -74,26 +65,26 @@ public sealed partial class ScoreEditCommands
         var beats = ToolCells().Where(MusicTime.IsBeat).ToList();   // the beat's own state, not the pending entry state
         var triplet = beats.Count > 0
             ? Services.EditCommands.NextTriplet(beats)
-            : !CurrentTriplet;
+            : !_c.Tools.Triplet;
         if (!CanSetTuplet(triplet ? (3, 2) : (0, 0))) return;
         RememberWritingForUndo();
-        CurrentTriplet = triplet;
-        CurrentTupletNumerator = triplet ? 3 : 0;
-        CurrentTupletDenominator = triplet ? 2 : 0;
+        _c.Tools.Triplet = triplet;
+        _c.Tools.TupletNumerator = triplet ? 3 : 0;
+        _c.Tools.TupletDenominator = triplet ? 2 : 0;
         if (ApplyToolSelection(cells =>
             {
-                foreach (var selected in cells) Services.EditCommands.ApplyTriplet(selected, CurrentTriplet);
-                foreach (var measure in Track!.Measures)   // the later beats of each bar follow on, as GP5 times them
-                    if (CellsFor(measure) is var barCells && barCells.FindIndex(cells.Contains) is >= 0 and var first) Services.EditCommands.RetimeFrom(barCells, first);
+                foreach (var selected in cells) Services.EditCommands.ApplyTriplet(selected, _c.Tools.Triplet);
+                foreach (var measure in _c.Track!.Measures)   // the later beats of each bar follow on, as GP5 times them
+                    if (_c.CellsFor(measure) is var barCells && barCells.FindIndex(cells.Contains) is >= 0 and var first) Services.EditCommands.RetimeFrom(barCells, first);
             })) return;
         var cell = CurrentCell();
-        if (cell is null || Placeholder(cell)) { NotifyState(); InvalidateVisual(); return; }   // as GP5: an empty spot's triplet is the next note's
+        if (cell is null || Placeholder(cell)) return;   // as GP5: an empty spot's triplet is the next note's
         RunEdit(() =>
         {
-            cell.IsTriplet = CurrentTriplet;
-            cell.TupletNumerator = CurrentTriplet ? 3 : 0;
-            cell.TupletDenominator = CurrentTriplet ? 2 : 0;
-            if (Track is { } track && SelectedMeasure < track.Measures.Count) Services.EditCommands.RetimeFrom(CellsFor(track.Measures[SelectedMeasure]), SelectedCell);   // GP5 b05
+            cell.IsTriplet = _c.Tools.Triplet;
+            cell.TupletNumerator = _c.Tools.Triplet ? 3 : 0;
+            cell.TupletDenominator = _c.Tools.Triplet ? 2 : 0;
+            if (_c.Track is { } track && _c.SelectedMeasure < track.Measures.Count) Services.EditCommands.RetimeFrom(_c.CellsFor(track.Measures[_c.SelectedMeasure]), _c.SelectedCell);   // GP5 b05
             return true;
         });
     }
@@ -113,9 +104,9 @@ public sealed partial class ScoreEditCommands
     {
         if (requestedDenominator.HasValue && Array.IndexOf(MusicTime.AllDenominators, requestedDenominator.Value) < 0) return false;
         // Default: any rhythm may be entered; a bar that no longer adds up is flagged red.
-        if (!PreventBarOverflow) return Track is not null && _project is not null;
-        var track = Track;
-        if (track is null || _project is null) return false;
+        if (!_c.Tools.PreventBarOverflow) return _c.Track is not null && _c.Project is not null;
+        var track = _c.Track;
+        if (track is null || _c.Project is null) return false;
         if (!SelectedBeatsFit(track, requestedDenominator, requestedDots, requestedTuplet, out var checkedTarget)) return false;
         // ToolCells normally returns the current cell even when it is empty. Its pending duration
         // still has to fit between the cursor and the next real beat (or the end of this bar).
@@ -132,8 +123,8 @@ public sealed partial class ScoreEditCommands
         for (var measureIndex = 0; measureIndex < track.Measures.Count; measureIndex++)
         {
             var measure = track.Measures[measureIndex];
-            var cells = CellsFor(measure, create: _activeVoiceIndex == 1);
-            var barSlots = MusicTime.BarSlots(_project!, measureIndex);
+            var cells = _c.CellsFor(measure, create: _c.ActiveVoiceIndex == 1);
+            var barSlots = MusicTime.BarSlots(_c.Project!, measureIndex);
             var beats = cells.Select((cell, index) => (cell, index))
                 .Where(item => item.cell.Notes.Count > 0 || item.cell.IsRest || item.cell.HasAnnotation)
                 .Select(item => (item.cell, item.index, Start: CursorPositions.BeatStart(item.cell, item.index)))
@@ -146,10 +137,10 @@ public sealed partial class ScoreEditCommands
                 checkedTarget = true;
                 var start = CursorPositions.BeatStart(cell, index);
                 var hasBeat = cell.Notes.Count > 0 || cell.IsRest || cell.HasAnnotation;
-                var denominator = requestedDenominator ?? (hasBeat ? cell.DurationDenominator : CurrentDurationDenominator);
-                var dots = requestedDots ?? (hasBeat ? cell.Dots : CurrentDots);
-                var tuplet = requestedTuplet ?? (hasBeat ? cell.Tuplet : CurrentTupletNumerator > 0
-                    ? (CurrentTupletNumerator, CurrentTupletDenominator) : CurrentTriplet ? (3, 2) : (0, 0));
+                var denominator = requestedDenominator ?? (hasBeat ? cell.DurationDenominator : _c.Tools.DurationDenominator);
+                var dots = requestedDots ?? (hasBeat ? cell.Dots : _c.Tools.Dots);
+                var tuplet = requestedTuplet ?? (hasBeat ? cell.Tuplet : _c.Tools.TupletNumerator > 0
+                    ? (_c.Tools.TupletNumerator, _c.Tools.TupletDenominator) : _c.Tools.Triplet ? (3, 2) : (0, 0));
                 var duration = DurationSlots(denominator, dots, tuplet);
                 var end = start + duration;
                 if (start < 0 || end > barSlots + 0.001) return false;
@@ -176,25 +167,25 @@ public sealed partial class ScoreEditCommands
     private bool PendingDurationFitsAtCursor(TrackModel track, int? requestedDenominator, int? requestedDots, (int Numerator, int Denominator)? requestedTuplet)
     {
         var currentMeasure = CurrentMeasure();
-        if (currentMeasure is null || SelectedMeasure < 0 || SelectedMeasure >= track.Measures.Count) return false;
-        var currentCells = CellsFor(currentMeasure);
+        if (currentMeasure is null || _c.SelectedMeasure < 0 || _c.SelectedMeasure >= track.Measures.Count) return false;
+        var currentCells = _c.CellsFor(currentMeasure);
         if (currentCells.Count == 0)
         {
-            var pendingTupletOnly = requestedTuplet ?? (CurrentTupletNumerator > 0
-                ? (CurrentTupletNumerator, CurrentTupletDenominator) : CurrentTriplet ? (3, 2) : (0, 0));
-            var pendingOnlyDuration = DurationSlots(requestedDenominator ?? CurrentDurationDenominator,
-                requestedDots ?? CurrentDots, pendingTupletOnly);
-            return pendingOnlyDuration <= MusicTime.BarSlots(_project!, SelectedMeasure) + 0.001;
+            var pendingTupletOnly = requestedTuplet ?? (_c.Tools.TupletNumerator > 0
+                ? (_c.Tools.TupletNumerator, _c.Tools.TupletDenominator) : _c.Tools.Triplet ? (3, 2) : (0, 0));
+            var pendingOnlyDuration = DurationSlots(requestedDenominator ?? _c.Tools.DurationDenominator,
+                requestedDots ?? _c.Tools.Dots, pendingTupletOnly);
+            return pendingOnlyDuration <= MusicTime.BarSlots(_c.Project!, _c.SelectedMeasure) + 0.001;
         }
-        var cursorCell = Math.Clamp(SelectedCell, 0, Math.Max(0, currentCells.Count - 1));
+        var cursorCell = Math.Clamp(_c.SelectedCell, 0, Math.Max(0, currentCells.Count - 1));
         var cursor = currentCells[cursorCell];
         var cursorStart = CursorPositions.BeatStart(cursor, cursorCell);
-        var pendingDenominator = requestedDenominator ?? CurrentDurationDenominator;
-        var pendingDots = requestedDots ?? CurrentDots;
-        var pendingTuplet = requestedTuplet ?? (CurrentTupletNumerator > 0
-            ? (CurrentTupletNumerator, CurrentTupletDenominator) : CurrentTriplet ? (3, 2) : (0, 0));
+        var pendingDenominator = requestedDenominator ?? _c.Tools.DurationDenominator;
+        var pendingDots = requestedDots ?? _c.Tools.Dots;
+        var pendingTuplet = requestedTuplet ?? (_c.Tools.TupletNumerator > 0
+            ? (_c.Tools.TupletNumerator, _c.Tools.TupletDenominator) : _c.Tools.Triplet ? (3, 2) : (0, 0));
         var pendingDuration = DurationSlots(pendingDenominator, pendingDots, pendingTuplet);
-        var pendingBarSlots = MusicTime.BarSlots(_project!, SelectedMeasure);
+        var pendingBarSlots = MusicTime.BarSlots(_c.Project!, _c.SelectedMeasure);
         var beatsAtCursorBar = currentCells.Select((cell, index) => (cell, index))
             .Where(item => item.cell.Notes.Count > 0 || item.cell.IsRest || item.cell.HasAnnotation)
             .Select(item => (item.cell, Start: CursorPositions.BeatStart(item.cell, item.index), Duration: MusicTime.CellSlots(item.cell)))

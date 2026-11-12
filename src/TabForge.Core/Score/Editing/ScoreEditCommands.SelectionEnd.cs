@@ -24,11 +24,11 @@ public sealed partial class ScoreEditCommands
 
     private void PlaceCursor(int measure, int cell)
     {
-        var track = Track;
+        var track = _c.Track;
         if (track is null || track.Measures.Count == 0) return;
         measure = Math.Clamp(measure, 0, track.Measures.Count - 1);
-        var cells = CellsFor(track.Measures[measure]);
-        var at = cells.Count == 0 ? 0 : CursorPositions.Snap(cells, CursorPositions.SnapToBeat(cells, Math.Clamp(cell, 0, cells.Count - 1), preferNext: false), SlotsFor(measure));
-        _c.SetPosition(measure, at, SelectedString);
+        var cells = _c.CellsFor(track.Measures[measure]);
+        var at = cells.Count == 0 ? 0 : CursorPositions.Snap(cells, CursorPositions.SnapToBeat(cells, Math.Clamp(cell, 0, cells.Count - 1), preferNext: false), _c.SlotsFor(measure));
+        _c.SetPosition(measure, at, _c.SelectedString);
     }
 }

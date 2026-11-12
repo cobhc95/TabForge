@@ -16,7 +16,7 @@ public sealed partial class ScoreEditCommands
 {
     /// <summary>The cursor's beat stands for the writing duration: an empty slot or a rest with no note after it in its bar.</summary>
     private bool Placeholder(TabCell cell)
-        => !ReferenceEquals(cell, _restJustWritten) && (CurrentMeasure() is not { } bar || WritingDuration.Applies(CellsFor(bar), cell));
+        => !ReferenceEquals(cell, _restJustWritten) && (CurrentMeasure() is not { } bar || WritingDuration.Applies(_c.CellsFor(bar), cell));
 
     // The rest R last wrote on an empty spot: a real beat (as GP5, duration keys and "." change it), though the rest fill's rests look the same.
     // ponytail: remembered by reference, so undo, reload or another edit that replaces the cell makes it a placeholder again; a saved
@@ -29,11 +29,11 @@ public sealed partial class ScoreEditCommands
     /// </summary>
     private void FillBarAfterWrite()
     {
-        if (!FillBars || CurrentMeasure() is not { } measure) return;
+        if (!_c.Tools.FillBarsWithRests || CurrentMeasure() is not { } measure) return;
         if (measure.FreeTime || measure.Anacrusis || measure.SimileOneBar || measure.SimileTwoBar) return;
-        var cells = CellsFor(measure);
+        var cells = _c.CellsFor(measure);
         if (!BarFill.IsPlain(cells)) return;
-        BarFill.FillCells(cells, SlotsFor(SelectedMeasure), always: true);
+        BarFill.FillCells(cells, _c.SlotsFor(_c.SelectedMeasure), always: true);
     }
 
     private void ApplyPendingDuration(TabCell cell)
@@ -45,27 +45,27 @@ public sealed partial class ScoreEditCommands
             cell.IsRest = false;
             return;
         }
-        cell.DurationDenominator = CurrentDurationDenominator;
-        cell.Dots = CurrentDots;
-        cell.IsTriplet = CurrentTriplet;
-        cell.TupletNumerator = CurrentTupletNumerator;
-        cell.TupletDenominator = CurrentTupletDenominator;
+        cell.DurationDenominator = _c.Tools.DurationDenominator;
+        cell.Dots = _c.Tools.Dots;
+        cell.IsTriplet = _c.Tools.Triplet;
+        cell.TupletNumerator = _c.Tools.TupletNumerator;
+        cell.TupletDenominator = _c.Tools.TupletDenominator;
         cell.IsRest = false;
     }
 
     // The beat whose own value +/- and "." start from: the first selected beat, or the cursor beat unless it is a placeholder (then the writing duration).
     private TabCell? ValueBeat()
     {
-        if (HasSelection) return ToolCells().FirstOrDefault(c => c.Notes.Count > 0 || c.IsRest);
+        if (_c.HasSelection) return ToolCells().FirstOrDefault(c => c.Notes.Count > 0 || c.IsRest);
         var cell = CurrentCell();
         return cell is not null && (cell.Notes.Count > 0 || cell.IsRest) && !Placeholder(cell) ? cell : null;
     }
 
     // +/- step from the selected beat's own value (not a stale toolbar value).
-    private int StepBaseDuration() => ValueBeat()?.DurationDenominator ?? CurrentDurationDenominator;
+    private int StepBaseDuration() => ValueBeat()?.DurationDenominator ?? _c.Tools.DurationDenominator;
 
     // The dots the selected beat actually has (the toolbar's CurrentDots can be stale).
-    private int BeatDots() => ValueBeat()?.Dots ?? CurrentDots;
+    private int BeatDots() => ValueBeat()?.Dots ?? _c.Tools.Dots;
 
     /// <summary>
     /// R without a selection: an empty slot or placeholder rest becomes a rest of the writing duration (the fill refills the rest of the bar); a note
@@ -93,15 +93,15 @@ public sealed partial class ScoreEditCommands
     /// open between notes) and the selection covers the moved beats. False when a bar has tuplets or free positions (the rests are resized instead).</summary>
     private bool CloseUpSelection(IReadOnlyList<TabCell> selected)
     {
-        var track = Track;
-        if (track is null || !FillBars || selected.Count == 0) return false;
-        var (m1, _, m2, _) = HasSelection ? SelectionRangeOrdered() : (SelectedMeasure, 0, SelectedMeasure, 0);
+        var track = _c.Track;
+        if (track is null || !_c.Tools.FillBarsWithRests || selected.Count == 0) return false;
+        var (m1, _, m2, _) = _c.HasSelection ? SelectionRangeOrdered() : (_c.SelectedMeasure, 0, _c.SelectedMeasure, 0);
         m1 = Math.Max(0, m1); m2 = Math.Min(m2, track.Measures.Count - 1);
-        var bars = Enumerable.Range(m1, Math.Max(0, m2 - m1 + 1)).Select(m => (M: m, Cells: CellsFor(track.Measures[m], create: _activeVoiceIndex == 1))).ToList();
+        var bars = Enumerable.Range(m1, Math.Max(0, m2 - m1 + 1)).Select(m => (M: m, Cells: _c.CellsFor(track.Measures[m], create: _c.ActiveVoiceIndex == 1))).ToList();
         if (bars.Count == 0 || !bars.All(b => BarFill.IsPlain(b.Cells) || ShortNoteFill.Packed(b.Cells))) return false;
         var keep = selected.ToHashSet();
-        foreach (var (m, cells) in bars) Services.EditCommands.CloseUp(cells, SlotsFor(m), keep);
-        if (!HasSelection) { SelectedCell = Math.Max(0, bars[0].Cells.IndexOf(selected[0])); return true; }   // the cursor stays on its beat
+        foreach (var (m, cells) in bars) Services.EditCommands.CloseUp(cells, _c.SlotsFor(m), keep);
+        if (!_c.HasSelection) { _c.SelectedCell = Math.Max(0, bars[0].Cells.IndexOf(selected[0])); return true; }   // the cursor stays on its beat
         _restSelection = (m1, Math.Max(0, bars[0].Cells.IndexOf(selected[0])), m2, Math.Max(0, bars[^1].Cells.IndexOf(selected[^1])));
         return true;
     }
@@ -119,15 +119,13 @@ public sealed partial class ScoreEditCommands
     {
         if (Array.IndexOf(MusicTime.AllDenominators, denominator) < 0) return;
         dots = Math.Clamp(dots, 0, 2);
-        if (CurrentDurationDenominator == denominator && CurrentDots == dots && !CurrentTriplet
-            && CurrentTupletNumerator == 0 && CurrentTupletDenominator == 0) return;
-        CurrentDurationDenominator = denominator;
-        CurrentDots = dots;
-        CurrentTriplet = false;
-        CurrentTupletNumerator = 0;
-        CurrentTupletDenominator = 0;
-        NotifyState();
-        InvalidateVisual();
+        if (_c.Tools.DurationDenominator == denominator && _c.Tools.Dots == dots && !_c.Tools.Triplet
+            && _c.Tools.TupletNumerator == 0 && _c.Tools.TupletDenominator == 0) return;
+        _c.Tools.DurationDenominator = denominator;
+        _c.Tools.Dots = dots;
+        _c.Tools.Triplet = false;
+        _c.Tools.TupletNumerator = 0;
+        _c.Tools.TupletDenominator = 0;
     }
 
     // As GP5, "." or the triplet (or +/-) on an empty spot is an undo step of its own: the writing duration before it, while the cursor stays on that spot.
@@ -137,12 +135,12 @@ public sealed partial class ScoreEditCommands
 
     private void ForgetWritingMarks() { _writingUndo.Clear(); _writingRedo.Clear(); }
 
-    private (int, int, int, int, bool, int, int) WritingNow() => (SelectedMeasure, SelectedCell, CurrentDurationDenominator, CurrentDots, CurrentTriplet, CurrentTupletNumerator, CurrentTupletDenominator);
+    private (int, int, int, int, bool, int, int) WritingNow() => (_c.SelectedMeasure, _c.SelectedCell, _c.Tools.DurationDenominator, _c.Tools.Dots, _c.Tools.Triplet, _c.Tools.TupletNumerator, _c.Tools.TupletDenominator);
 
     private void RememberWritingForUndo()
     {
         _writingRedo.Clear();
-        if (HasSelection || CurrentCell() is { } cell && !Placeholder(cell)) return;
+        if (_c.HasSelection || CurrentCell() is { } cell && !Placeholder(cell)) return;
         _writingUndo.Push(WritingNow());
     }
 
@@ -152,11 +150,10 @@ public sealed partial class ScoreEditCommands
     /// <summary>The writing duration becomes that of the last note before cell <paramref name="cell"/> of bar <paramref name="bar"/> (a quarter when there is none).</summary>
     public void WriteLikeBeatBefore(int bar, int cell)
     {
-        var before = Track?.Measures.Take(Math.Max(0, bar) + 1).SelectMany((m, i) => i < bar ? CellsFor(m) : CellsFor(m).Take(Math.Max(0, cell))).LastOrDefault(c => c.Notes.Count > 0);
-        (CurrentDurationDenominator, CurrentDots, CurrentTriplet, CurrentTupletNumerator, CurrentTupletDenominator) = before is null ? (4, 0, false, 0, 0)
+        var before = _c.Track?.Measures.Take(Math.Max(0, bar) + 1).SelectMany((m, i) => i < bar ? _c.CellsFor(m) : _c.CellsFor(m).Take(Math.Max(0, cell))).LastOrDefault(c => c.Notes.Count > 0);
+        (_c.Tools.DurationDenominator, _c.Tools.Dots, _c.Tools.Triplet, _c.Tools.TupletNumerator, _c.Tools.TupletDenominator) = before is null ? (4, 0, false, 0, 0)
             : (before.DurationDenominator, before.Dots, before.IsTriplet, before.TupletNumerator, before.TupletDenominator);
         ForgetWritingMarks();
-        NotifyState();
     }
 
 }

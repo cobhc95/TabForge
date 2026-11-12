@@ -12,15 +12,15 @@ public sealed partial class ScoreEditCommands
     /// <summary>The selected notes, or the note on the cursor's string; empty when there is none.</summary>
     public List<TabNote> EffectNotes()
     {
-        if (HasSelection) return ToolCells().SelectMany(cell => cell.Notes).ToList();
-        var note = CurrentCell()?.Notes.FirstOrDefault(n => n.StringIndex == SelectedString);
+        if (_c.HasSelection) return ToolCells().SelectMany(cell => cell.Notes).ToList();
+        var note = CurrentCell()?.Notes.FirstOrDefault(n => n.StringIndex == _c.SelectedString);
         return note is null ? new List<TabNote>() : new List<TabNote> { note };
     }
 
     /// <summary>The beats of the selection (or the cursor beat) that hold notes.</summary>
     public List<TabCell> EffectCells()
     {
-        var cells = HasSelection ? ToolCells() : CurrentCell() is { } current ? new List<TabCell> { current } : new List<TabCell>();
+        var cells = _c.HasSelection ? ToolCells() : CurrentCell() is { } current ? new List<TabCell> { current } : new List<TabCell>();
         return cells.Where(cell => cell.Notes.Count > 0).ToList();
     }
 
@@ -28,7 +28,7 @@ public sealed partial class ScoreEditCommands
     public double PreviousBendEnd()
     {
         if (EffectCells().FirstOrDefault() is not { } cell || PreviousCellOf(cell) is not { } previous) return 0;
-        var note = previous.Notes.FirstOrDefault(n => n.StringIndex == (EffectNotes().FirstOrDefault()?.StringIndex ?? SelectedString));
+        var note = previous.Notes.FirstOrDefault(n => n.StringIndex == (EffectNotes().FirstOrDefault()?.StringIndex ?? _c.SelectedString));
         return LevelAtEnd(note?.BendPoints);
     }
 
@@ -39,7 +39,7 @@ public sealed partial class ScoreEditCommands
     private static double LevelAtEnd(IReadOnlyList<BendPointModel>? points) => points is { Count: > 0 } ? points.OrderBy(p => p.Offset).Last().Value : 0;
 
     /// <summary>The displayed track (string tunings for the fret <-> pitch conversion of the trill and grace editors).</summary>
-    public TrackModel? EffectTrack => Track;
+    public TrackModel? EffectTrack => _c.Track;
 
     /// <summary>Runs one effect-editor change as a single undo step (DocumentEdits.Run through the editor host).</summary>
     public bool EditEffect(Func<bool> mutate) => RunEdit(mutate);

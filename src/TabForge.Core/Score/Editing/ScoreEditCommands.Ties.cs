@@ -26,7 +26,7 @@ public sealed partial class ScoreEditCommands
                 }
             })) return;
         var cell = CurrentCell(create: true); if (cell is null) return;
-        var stringIndex = SelectedString;
+        var stringIndex = _c.SelectedString;
         var previous = PreviousCellOf(cell);
         var source = previous?.Notes.FirstOrDefault(n => n.StringIndex == stringIndex && !n.Dead && !n.IsGraceNote);
         var note = cell.Notes.FirstOrDefault(n => n.StringIndex == stringIndex);
@@ -41,10 +41,10 @@ public sealed partial class ScoreEditCommands
             if (note is null)
             {
                 if (cell.Notes.Count == 0) ApplyPendingDuration(cell);   // an empty slot or rest takes the writing duration
-                note = new TabNote { StringIndex = stringIndex, Velocity = source?.Velocity ?? CurrentVelocity };
+                note = new TabNote { StringIndex = stringIndex, Velocity = source?.Velocity ?? _c.Tools.Velocity };
                 cell.Notes.Add(note);
             }
-            note.Fret = source?.Fret ?? 0; note.MidiValue = source?.MidiValue ?? MidiOf(Track!, stringIndex, 0); note.Tied = true;
+            note.Fret = source?.Fret ?? 0; note.MidiValue = source?.MidiValue ?? MidiOf(_c.Track!, stringIndex, 0); note.Tied = true;
             cell.IsRest = false;
             return true;
         });
@@ -77,11 +77,11 @@ public sealed partial class ScoreEditCommands
 
     private TabCell? PreviousCellOf(TabCell cell)
     {
-        var track = Track;
+        var track = _c.Track;
         if (track is null) return null;
         TabCell? previous = null;
         foreach (var measure in track.Measures)
-            foreach (var candidate in CellsFor(measure))
+            foreach (var candidate in _c.CellsFor(measure))
             {
                 if (ReferenceEquals(candidate, cell)) return previous;
                 if (candidate.Notes.Count > 0 || candidate.IsRest) previous = candidate;   // empty slots between beats are not beats

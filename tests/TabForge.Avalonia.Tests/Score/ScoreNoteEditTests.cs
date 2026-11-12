@@ -82,6 +82,21 @@ public class ScoreNoteEditTests
     }
 
     [AvaloniaFact]
+    public void ANoteCommandWithNoNoteUnderTheCursorShowsNoNotice()
+    {
+        // Pins today's behaviour: the commands' "No note on this string" style messages are dropped (the editor's Say hook was empty), so the
+        // editor's Notice channel stays silent and the song is unchanged.
+        var (probe, editor) = TwoQuartersSamePitch();
+        var notices = new List<string>();
+        editor.Notice = notices.Add;
+        probe.Cursor = (0, 0, 3);   // string 4: no note there
+        editor.Effects.ToggleTechnique(TechniqueNames.PalmMute);
+        editor.Effects.ShiftPitch(1);
+        Assert.Empty(notices);
+        Assert.DoesNotContain(TechniqueNames.PalmMute, Beat(probe, 0, 0).Notes.Single().Techniques);
+    }
+
+    [AvaloniaFact]
     public void EffectToggleOnOff_RestoresOriginalNoteExactly()
     {
         var (probe, editor) = TwoQuartersSamePitch();

@@ -16,22 +16,22 @@ public sealed partial class ScoreEditCommands
         get
         {
             var cells = ToolCells();
-            return cells.SelectMany(cell => cell.Notes).Any(note => HasSelection || note.StringIndex == SelectedString);
+            return cells.SelectMany(cell => cell.Notes).Any(note => _c.HasSelection || note.StringIndex == _c.SelectedString);
         }
     }
 
     public bool HasSecondaryBeamEligibleNotes =>
-        (HasSelection ? ToolCells() : CurrentCell() is { } cell ? new List<TabCell> { cell } : new List<TabCell>())
+        (_c.HasSelection ? ToolCells() : CurrentCell() is { } cell ? new List<TabCell> { cell } : new List<TabCell>())
         .Any(cell => cell.Notes.Count > 0 && cell.DurationDenominator >= 16);
 
     public bool? GetNoteCellToolState(Func<TabCell, bool> state)
     {
-        var cells = HasSelection ? ToolCells() : CurrentCell() is { } cell ? new List<TabCell> { cell } : new List<TabCell>();
+        var cells = _c.HasSelection ? ToolCells() : CurrentCell() is { } cell ? new List<TabCell> { cell } : new List<TabCell>();
         var notes = cells.Where(cell => cell.Notes.Count > 0).ToList();
         return notes.Count == 0 ? null : Uniform(notes.Select(state));
     }
 
-    private List<TabCell> EditableCells() => HasSelection ? ToolCells(createVoice: true) :
+    private List<TabCell> EditableCells() => _c.HasSelection ? ToolCells(createVoice: true) :
         CurrentCell() is { } cell ? new List<TabCell> { cell } : new List<TabCell>();
 
     public void SetSoundDurationPercent(int percent)
@@ -72,12 +72,12 @@ public sealed partial class ScoreEditCommands
     }
 
     // Tie note / Tie beat work on the cursor beat, also under a one-beat selection, and toggle: a tied note can always be untied.
-    private bool MultiBeatSelection => HasSelection && SelectionRange() is var (m1, c1, m2, c2) && (m1 != m2 || c1 != c2);
+    private bool MultiBeatSelection => _c.HasSelection && _c.SelectionRange() is var (m1, c1, m2, c2) && (m1 != m2 || c1 != c2);
 
     public bool CanTieSelectedNote()
     {
         if (MultiBeatSelection) return false;
-        var note = CurrentCell()?.Notes.FirstOrDefault(candidate => candidate.StringIndex == SelectedString);
+        var note = CurrentCell()?.Notes.FirstOrDefault(candidate => candidate.StringIndex == _c.SelectedString);
         return note is not null && (note.Tied || FindPreviousCompatibleNote(note) is not null);
     }
 
@@ -90,7 +90,7 @@ public sealed partial class ScoreEditCommands
     public void TieSelectedNote()
     {
         if (!CanTieSelectedNote()) return;
-        var note = CurrentCell()!.Notes.First(candidate => candidate.StringIndex == SelectedString);
+        var note = CurrentCell()!.Notes.First(candidate => candidate.StringIndex == _c.SelectedString);
         RunEdit(() => { note.Tied = !note.Tied; return true; });
     }
 
@@ -106,15 +106,15 @@ public sealed partial class ScoreEditCommands
 
     private TabNote? FindPreviousCompatibleNote(TabNote destination)
     {
-        var track = Track;
-        if (track is null || SelectedMeasure < 0 || SelectedMeasure >= track.Measures.Count) return null;
-        var currentCells = CellsFor(track.Measures[SelectedMeasure]);
-        if (SelectedCell < 0 || SelectedCell >= currentCells.Count) return null;
-        var currentStart = AbsoluteCellStart(track, SelectedMeasure, SelectedCell, currentCells[SelectedCell]);
-        for (var measureIndex = SelectedMeasure; measureIndex >= 0; measureIndex--)
+        var track = _c.Track;
+        if (track is null || _c.SelectedMeasure < 0 || _c.SelectedMeasure >= track.Measures.Count) return null;
+        var currentCells = _c.CellsFor(track.Measures[_c.SelectedMeasure]);
+        if (_c.SelectedCell < 0 || _c.SelectedCell >= currentCells.Count) return null;
+        var currentStart = AbsoluteCellStart(track, _c.SelectedMeasure, _c.SelectedCell, currentCells[_c.SelectedCell]);
+        for (var measureIndex = _c.SelectedMeasure; measureIndex >= 0; measureIndex--)
         {
-            var cells = CellsFor(track.Measures[measureIndex]);
-            var firstCell = measureIndex == SelectedMeasure ? SelectedCell - 1 : cells.Count - 1;
+            var cells = _c.CellsFor(track.Measures[measureIndex]);
+            var firstCell = measureIndex == _c.SelectedMeasure ? _c.SelectedCell - 1 : cells.Count - 1;
             for (var cellIndex = firstCell; cellIndex >= 0; cellIndex--)
             {
                 var cell = cells[cellIndex];
@@ -135,7 +135,7 @@ public sealed partial class ScoreEditCommands
     {
         var start = 0.0;
         for (var measure = 0; measure < measureIndex; measure++)
-            start += _project is null ? 16 : MusicTime.BarSlots(_project, measure);
+            start += _c.Project is null ? 16 : MusicTime.BarSlots(_c.Project, measure);
         return start + CursorPositions.BeatStart(cell, cellIndex);
     }
 
@@ -171,13 +171,10 @@ public sealed partial class ScoreEditCommands
         RunEdit(() => { cell.Fermata = !cell.Fermata; return true; });
     }
 
-    public const string NoNoteHereMessage = "No note here";
-
-    /// <summary>The cursor beat when it holds notes; otherwise says "No note here" and returns null.</summary>
-    private TabCell? BeatWithNotesOrSay()
+    /// <summary>The cursor beat when it holds notes; otherwise null.</summary>
+    private TabCell? BeatWithNotes()
     {
         if (CurrentCell() is { Notes.Count: > 0 } cell) return cell;
-        _c.Say(NoNoteHereMessage);
         return null;
     }
 
@@ -189,14 +186,14 @@ public sealed partial class ScoreEditCommands
                 var target = cells.All(cell => cell.Accent == accent) ? 0 : accent;   // pressing the lit accent clears it
                 foreach (var selected in cells) selected.Accent = target;
             })) return;
-        if (BeatWithNotesOrSay() is not { } cell) return;   // as GP5: a mark on an empty spot does nothing (nothing is kept for the next note)
+        if (BeatWithNotes() is not { } cell) return;   // as GP5: a mark on an empty spot does nothing (nothing is kept for the next note)
         RunEdit(() => { cell.Accent = cell.Accent == accent ? 0 : accent; return true; });
     }
 
     public void ToggleStaccato()
     {
         if (ApplyToolSelection(Services.EditCommands.ToggleStaccato)) return;
-        if (BeatWithNotesOrSay() is not { } cell) return;   // as GP5: a mark on an empty spot does nothing (nothing is kept for the next note)
+        if (BeatWithNotes() is not { } cell) return;   // as GP5: a mark on an empty spot does nothing (nothing is kept for the next note)
         RunEdit(() => { cell.Staccato = !cell.Staccato; return true; });
     }
 
@@ -209,7 +206,7 @@ public sealed partial class ScoreEditCommands
 
     public void ToggleTechnique(string technique)
     {
-        if (HasSelection)
+        if (_c.HasSelection)
         {
             var notes = ToolCells(createVoice: true).SelectMany(cell => cell.Notes).Where(n => !TiedSkips(n, technique)).ToList();
             if (notes.Count == 0) return;
@@ -220,8 +217,8 @@ public sealed partial class ScoreEditCommands
             });
             return;
         }
-        var note = CurrentCell()?.Notes.FirstOrDefault(n => n.StringIndex == SelectedString);
-        if (note is null) { _c.Say(NoNoteMessage); return; }
+        var note = CurrentCell()?.Notes.FirstOrDefault(n => n.StringIndex == _c.SelectedString);
+        if (note is null) return;
         if (TiedSkips(note, technique)) return;
         RunEdit(() => { Services.EditCommands.ToggleTechnique(new[] { note }, technique); return true; });
     }
@@ -232,7 +229,7 @@ public sealed partial class ScoreEditCommands
 
     public void ToggleDead()
     {
-        if (HasSelection)
+        if (_c.HasSelection)
         {
             var notes = ToolCells(createVoice: true).SelectMany(cell => cell.Notes).ToList();
             if (notes.Count == 0) return;
@@ -240,12 +237,12 @@ public sealed partial class ScoreEditCommands
             RunEdit(() => { foreach (var selectedNote in notes) selectedNote.Dead = value; return true; });
             return;
         }
-        var track = Track; var cell = CurrentCell(create: true);
+        var track = _c.Track; var cell = CurrentCell(create: true);
         if (track is null || cell is null) return;
         RunEdit(() =>
         {
-            var note = cell.Notes.FirstOrDefault(n => n.StringIndex == SelectedString);
-            if (note is null) { ApplyPendingDuration(cell); note = new TabNote { StringIndex = SelectedString, Dead = true, Fret = 0, MidiValue = MidiOf(track, SelectedString, 0), Velocity = CurrentVelocity }; cell.Notes.Add(note); }
+            var note = cell.Notes.FirstOrDefault(n => n.StringIndex == _c.SelectedString);
+            if (note is null) { ApplyPendingDuration(cell); note = new TabNote { StringIndex = _c.SelectedString, Dead = true, Fret = 0, MidiValue = MidiOf(track, _c.SelectedString, 0), Velocity = _c.Tools.Velocity }; cell.Notes.Add(note); }
             else note.Dead = !note.Dead;
             return true;
         });
@@ -253,7 +250,7 @@ public sealed partial class ScoreEditCommands
 
     public void ToggleGhost()
     {
-        if (HasSelection)
+        if (_c.HasSelection)
         {
             var notes = ToolCells(createVoice: true).SelectMany(cell => cell.Notes).ToList();
             if (notes.Count == 0) return;
@@ -261,8 +258,8 @@ public sealed partial class ScoreEditCommands
             RunEdit(() => { foreach (var selectedNote in notes) selectedNote.Ghost = value; return true; });
             return;
         }
-        var note = CurrentCell()?.Notes.FirstOrDefault(n => n.StringIndex == SelectedString);
-        if (note is null) { _c.Say(NoNoteMessage); return; }
+        var note = CurrentCell()?.Notes.FirstOrDefault(n => n.StringIndex == _c.SelectedString);
+        if (note is null) return;
         RunEdit(() => { note.Ghost = !note.Ghost; return true; });
     }
 
@@ -272,16 +269,16 @@ public sealed partial class ScoreEditCommands
         var start = SelectionRangeOrdered();
         if (ApplyToolSelection(cells =>
             {
-                foreach (var selected in cells) { var had = selected.Notes.Count > 0; selected.Notes.Clear(); if (FillBars && had) selected.IsRest = true; }
+                foreach (var selected in cells) { var had = selected.Notes.Count > 0; selected.Notes.Clear(); if (_c.Tools.FillBarsWithRests && had) selected.IsRest = true; }
                 if (_c.Tools.MergeRestsOnDeleteActive) NormaliseRests(cells);
             })) { EndSelection(start.M1, start.C1); return; }
-        var track = Track; var cell = CurrentCell();
+        var track = _c.Track; var cell = CurrentCell();
         if (track is null || cell is null) return;
-        var note = cell.Notes.FirstOrDefault(n => n.StringIndex == SelectedString);
-        if (note is null) { _c.Say(NoNoteMessage); return; }
+        var note = cell.Notes.FirstOrDefault(n => n.StringIndex == _c.SelectedString);
+        if (note is null) return;
         RunEdit(() =>
         {
-            if (note is not null) { cell.Notes.Remove(note); if (FillBars && cell.Notes.Count == 0) cell.IsRest = true; }
+            if (note is not null) { cell.Notes.Remove(note); if (_c.Tools.FillBarsWithRests && cell.Notes.Count == 0) cell.IsRest = true; }
             if (_c.Tools.MergeRestsOnDeleteActive && cell.Notes.Count == 0) NormaliseRests(new[] { cell });
             return true;
         });
@@ -293,42 +290,42 @@ public sealed partial class ScoreEditCommands
         void Clear(IReadOnlyList<TabCell> cells)
         {
             var restOnly = NoNotes(cells);
-            Services.EditCommands.ClearBeats(cells, FillBars);
-            if (FillBars && (restOnly || _c.Tools.MergeRestsOnDeleteActive)) NormaliseRests(cells, wholeRuns: !restOnly);
+            Services.EditCommands.ClearBeats(cells, _c.Tools.FillBarsWithRests);
+            if (_c.Tools.FillBarsWithRests && (restOnly || _c.Tools.MergeRestsOnDeleteActive)) NormaliseRests(cells, wholeRuns: !restOnly);
         }
         // A selection: its beats are removed and the following beats move left (GP5); beats with text or markers are cleared instead.
         var start = SelectionRangeOrdered();
-        if (HasSelection && ToolCells(createVoice: false) is { Count: > 0 } picked && !picked.Any(c => c.HasAnnotation) && !(picked.Count == 1 && picked[0].Notes.Count > 0)) { DeleteBeats(); EndSelection(start.M1, start.C1); return; }
+        if (_c.HasSelection && ToolCells(createVoice: false) is { Count: > 0 } picked && !picked.Any(c => c.HasAnnotation) && !(picked.Count == 1 && picked[0].Notes.Count > 0)) { DeleteBeats(); EndSelection(start.M1, start.C1); return; }
         if (ApplyToolSelection(Clear)) { EndSelection(start.M1, start.C1); return; }
         var cell = CurrentCell(); if (cell is null) return;
         // Cursor on one note of a chord: only that note goes, the beat keeps its other notes and its length.
-        if (cell.Notes.Count > 1 && cell.Notes.FirstOrDefault(n => n.StringIndex == SelectedString) is { } one)
+        if (cell.Notes.Count > 1 && cell.Notes.FirstOrDefault(n => n.StringIndex == _c.SelectedString) is { } one)
         { RunEdit(() => { cell.Notes.Remove(one); return true; }); return; }
         // Cursor on an empty string of a beat with notes: nothing is under the cursor, so nothing goes.
-        if (cell.Notes.Count > 0 && cell.Notes.All(n => n.StringIndex != SelectedString)) { _c.Say(NoNoteMessage); return; }
+        if (cell.Notes.Count > 0 && cell.Notes.All(n => n.StringIndex != _c.SelectedString)) return;
         // Cursor on an empty beat or rest: the beat itself is removed and the following beats move left.
         if (NoNotes(new[] { cell }) && !cell.HasAnnotation && CurrentMeasure() is { } bar)
-        { var cells = CellsFor(bar, create: true); var slots = SlotsFor(SelectedMeasure); RunEdit(() => { Services.EditCommands.DeleteBeatsAt(cells, SelectedCell, SelectedCell, slots); if (FillBars) NormaliseRests(cells.Skip(SelectedCell).ToList()); return true; }); return; }
+        { var cells = _c.CellsFor(bar, create: true); var slots = _c.SlotsFor(_c.SelectedMeasure); RunEdit(() => { Services.EditCommands.DeleteBeatsAt(cells, _c.SelectedCell, _c.SelectedCell, slots); if (_c.Tools.FillBarsWithRests) NormaliseRests(cells.Skip(_c.SelectedCell).ToList()); return true; }); return; }
         RunEdit(() => { Clear(new[] { cell }); return true; });
     }
 
     /// <summary>Insert a beat at the cursor, shifting the rest of the bar right.</summary>
     public void InsertBeat()
     {
-        var bar = SelectedMeasure; var at = SelectedCell;
-        if (HasSelection)
+        var bar = _c.SelectedMeasure; var at = _c.SelectedCell;
+        if (_c.HasSelection)
         {
             // Inserting is a cursor action: one beat at the start of the range.
-            var (m1, c1, m2, c2) = SelectionRange();
+            var (m1, c1, m2, c2) = _c.SelectionRange();
             (bar, at) = m2 < m1 || (m2 == m1 && c2 < c1) ? (m2, c2) : (m1, c1);
         }
-        var track = Track;
+        var track = _c.Track;
         if (track is null || bar < 0 || bar >= track.Measures.Count) return;
-        var cells = CellsFor(track.Measures[bar], create: true);
-        var slots = SlotsFor(bar);
+        var cells = _c.CellsFor(track.Measures[bar], create: true);
+        var slots = _c.SlotsFor(bar);
         RunEdit(() =>
         {
-            if (FillBars) Services.BarFill.InsertBeat(cells, at, slots, NewBeat());   // consumes following rests, never drops a note
+            if (_c.Tools.FillBarsWithRests) Services.BarFill.InsertBeat(cells, at, slots, NewBeat());   // consumes following rests, never drops a note
             else Services.EditCommands.InsertBeatAt(cells, at, slots, NewBeat());
             return true;
         });
@@ -336,35 +333,35 @@ public sealed partial class ScoreEditCommands
 
     private TabCell NewBeat() => new()
     {
-        DurationDenominator = CurrentDurationDenominator, Dots = CurrentDots, IsTriplet = CurrentTriplet,
-        TupletNumerator = CurrentTupletNumerator, TupletDenominator = CurrentTupletDenominator
+        DurationDenominator = _c.Tools.DurationDenominator, Dots = _c.Tools.Dots, IsTriplet = _c.Tools.Triplet,
+        TupletNumerator = _c.Tools.TupletNumerator, TupletDenominator = _c.Tools.TupletDenominator
     };
 
     /// <summary>Delete the beat(s) at the cursor, or the selected beats of every selected bar, shifting the rest of each bar left.</summary>
     public void DeleteBeats()
     {
-        if (HasSelection) { EditSelectedBars((cells, first, last, slots) => { var hadNotes = cells.Skip(first).Take(last - first + 1).Any(c => c.Notes.Count > 0); Services.EditCommands.DeleteBeatsAt(cells, first, last, slots); if (hadNotes) Services.EditCommands.TidyAfterRemoval(cells, slots, wholeRest: _activeVoiceIndex != 1); }); return; }
+        if (_c.HasSelection) { EditSelectedBars((cells, first, last, slots) => { var hadNotes = cells.Skip(first).Take(last - first + 1).Any(c => c.Notes.Count > 0); Services.EditCommands.DeleteBeatsAt(cells, first, last, slots); if (hadNotes) Services.EditCommands.TidyAfterRemoval(cells, slots, wholeRest: _c.ActiveVoiceIndex != 1); }); return; }
         var measure = CurrentMeasure(); if (measure is null) return;
-        var cells = CellsFor(measure, create: true);
-        var slots = SlotsFor(SelectedMeasure);
-        var wasBeat = SelectedCell < cells.Count && !Placeholder(cells[SelectedCell]);
-        RunEdit(() => { Services.EditCommands.DeleteBeatsAt(cells, SelectedCell, SelectedCell, slots); return true; });
+        var cells = _c.CellsFor(measure, create: true);
+        var slots = _c.SlotsFor(_c.SelectedMeasure);
+        var wasBeat = _c.SelectedCell < cells.Count && !Placeholder(cells[_c.SelectedCell]);
+        RunEdit(() => { Services.EditCommands.DeleteBeatsAt(cells, _c.SelectedCell, _c.SelectedCell, slots); return true; });
         // As GP5 (quiet l6b t03 vs t05): a deleted beat takes its length with it; the empty spot left writes like the beat before it.
-        if (wasBeat && (CurrentCell() is not { } here || Placeholder(here))) WriteLikeBeatBefore(SelectedMeasure, SelectedCell);
+        if (wasBeat && (CurrentCell() is not { } here || Placeholder(here))) WriteLikeBeatBefore(_c.SelectedMeasure, _c.SelectedCell);
     }
 
     /// <summary>One undo step over every selected bar: <paramref name="edit"/> gets the active voice's cells, the first and last selected cell in that bar, and the bar's slot count.</summary>
     private void EditSelectedBars(Action<List<TabCell>, int, int, int> edit)
     {
-        var track = Track; if (track is null || track.Measures.Count == 0) return;
-        var (m1, c1, m2, c2) = SelectionRange();
+        var track = _c.Track; if (track is null || track.Measures.Count == 0) return;
+        var (m1, c1, m2, c2) = _c.SelectionRange();
         if (m2 < m1 || (m2 == m1 && c2 < c1)) (m1, c1, m2, c2) = (m2, c2, m1, c1);
         RunEdit(() =>
         {
             for (var m = Math.Max(0, m1); m <= Math.Min(m2, track.Measures.Count - 1); m++)
             {
-                var cells = CellsFor(track.Measures[m], create: _activeVoiceIndex == 1);
-                var slots = SlotsFor(m);
+                var cells = _c.CellsFor(track.Measures[m], create: _c.ActiveVoiceIndex == 1);
+                var slots = _c.SlotsFor(m);
                 edit(cells, m == m1 ? c1 : 0, m == m2 ? c2 : CursorPositions.LastCell(cells, slots), slots);
             }
             return true;
@@ -375,19 +372,19 @@ public sealed partial class ScoreEditCommands
     /// <summary>Repeat beat (C, and Edit > Copy last beat): the previous beat of the active voice onto the cursor, then step forward.</summary>
     public void CopyLastBeat()
     {
-        var track = Track; var measure = CurrentMeasure();
+        var track = _c.Track; var measure = CurrentMeasure();
         if (track is null || measure is null) return;
-        var cells = CellsFor(measure);
-        if (!Services.EditCommands.CanCopyLastBeat(cells, SelectedCell)) { _c.Say("No previous beat to copy"); return; }
-        RunEdit(() => { Services.EditCommands.CopyLastBeat(cells, SelectedCell); return true; });
-        MoveForwardBeat(track);
+        var cells = _c.CellsFor(measure);
+        if (!Services.EditCommands.CanCopyLastBeat(cells, _c.SelectedCell)) return;
+        RunEdit(() => { Services.EditCommands.CopyLastBeat(cells, _c.SelectedCell); return true; });
+        _c.MoveForwardBeat(track);
     }
 
     /// <summary>Empties the active voice of the selected bar (one undo step; nothing is captured when it is already empty).</summary>
     public void EmptyBar()
     {
         var measure = CurrentMeasure(); if (measure is null) return;
-        var cells = CellsFor(measure);
+        var cells = _c.CellsFor(measure);
         if (!cells.Any(c => c.Notes.Count > 0 || c.IsRest || c.IsTied)) return;
         RunEdit(() => { Services.EditCommands.EmptyBar(cells); return true; });
     }
@@ -395,15 +392,15 @@ public sealed partial class ScoreEditCommands
 
     public void ToggleRepeatOpen()
     {
-        if (_project is null || CurrentMeasure() is null) return;
-        RunEdit(() => { EditCommands.ToggleRepeatOpen(_project, SelectedTrackIndex, SelectedMeasure, out _); return true; });
+        if (_c.Project is null || CurrentMeasure() is null) return;
+        RunEdit(() => { EditCommands.ToggleRepeatOpen(_c.Project, _c.SelectedTrackIndex, _c.SelectedMeasure, out _); return true; });
     }
 
     /// <summary>Toggles the repeat end; <paramref name="count"/> (from the menu's prompt) sets the repeat count when turning it on.</summary>
     public void ToggleRepeatClose(int? count = null)
     {
-        if (_project is null || CurrentMeasure() is null) return;
-        RunEdit(() => { EditCommands.ToggleRepeatClose(_project, SelectedTrackIndex, SelectedMeasure, count, out _); return true; });
+        if (_c.Project is null || CurrentMeasure() is null) return;
+        RunEdit(() => { EditCommands.ToggleRepeatClose(_c.Project, _c.SelectedTrackIndex, _c.SelectedMeasure, count, out _); return true; });
     }
 
     /// <summary>
@@ -414,57 +411,52 @@ public sealed partial class ScoreEditCommands
     /// </summary>
     public bool MoveNotesToAdjacentString(int delta)
     {
-        var track = Track;
+        var track = _c.Track;
         if (track is null) return false;
-        void Say(string text) => _c.Say(text);
         // On an empty spot (no note on the cursor's string) the cursor moves to the next string, wrapping like Up / Down (GP5 l6 a01, a02).
-        if (!HasSelection && CurrentCell()?.Notes.Any(n => n.StringIndex == SelectedString) != true && Math.Max(1, track.StringTunings.Count) is var strings)
+        if (!_c.HasSelection && CurrentCell()?.Notes.Any(n => n.StringIndex == _c.SelectedString) != true && Math.Max(1, track.StringTunings.Count) is var strings)
         {
-            SetPosition(SelectedMeasure, SelectedCell, ((SelectedString + delta) % strings + strings) % strings);
+            _c.SetPosition(_c.SelectedMeasure, _c.SelectedCell, ((_c.SelectedString + delta) % strings + strings) % strings);
             return true;
         }
         // The rules (which notes may move, the new frets, why not) are EditCommands.PlanStringMove; the control brackets them with its edit events.
         var plan = EditCommands.PlanStringMove(track, ToolCells().Select(cell =>
-            (cell, (IReadOnlyList<TabNote>)(HasSelection ? cell.Notes.ToList() : cell.Notes.Where(n => n.StringIndex == SelectedString).ToList()))), delta);
-        if (plan.Refusal is { } refusal) { Say(refusal); return false; }
-        var side = delta < 0 ? "higher" : "lower";
+            (cell, (IReadOnlyList<TabNote>)(_c.HasSelection ? cell.Notes.ToList() : cell.Notes.Where(n => n.StringIndex == _c.SelectedString).ToList()))), delta);
+        if (plan.Refusal is not null) return false;
         RunEdit(() =>
         {
             EditCommands.ApplyStringMove(track, plan);
-            if (!HasSelection) SelectedString = plan.Moves[0].Target;
+            if (!_c.HasSelection) _c.SelectedString = plan.Moves[0].Target;
             return true;
         });
-        Say(plan.Moves.Count == 1 ? $"Moved the note to the {side} string" : $"Moved {plan.Moves.Count} notes to the {side} string");
         return true;
     }
 
     /// <summary>Move the note up/down in pitch by semitones (Shift+Up / Shift+Down).</summary>
     public void ShiftPitch(int semitones)
     {
-        var track = Track;
+        var track = _c.Track;
         if (track is null) return;
-        if (HasSelection)
+        if (_c.HasSelection)
         {
             var plans = new List<(TabNote Note, int String, int Fret)>();
             foreach (var selected in ToolCells(createVoice: true))
                 foreach (var n in selected.Notes)
                     if (EditCommands.PlanPitchShift(track, selected, n, semitones) is var (s, f)) plans.Add((n, s, f));
-            var skipped = ToolCells().Sum(c => c.Notes.Count) - plans.Count;
-            if (plans.Count == 0) { if (skipped > 0) _c.Say("No note can move that far"); return; }
+            if (plans.Count == 0) return;
             RunEdit(() => { foreach (var (n, s, f) in plans) EditCommands.ApplyPitchShift(track, n, s, f); return true; });
-            if (skipped > 0) _c.Say($"{skipped} note(s) could not move and stayed");
             return;
         }
         var cell = CurrentCell();
         if (cell is null) return;
-        var note = cell.Notes.FirstOrDefault(n => n.StringIndex == SelectedString);
-        if (note is null) { _c.Say(NoNoteMessage); return; }
+        var note = cell.Notes.FirstOrDefault(n => n.StringIndex == _c.SelectedString);
+        if (note is null) return;
         // Below the open string the note stays (EditCommands.PlanPitchShift, as GP5).
-        if (EditCommands.PlanPitchShift(track, cell, note, semitones) is not var (stringIndex, fret)) { _c.Say("Already the open string"); return; }
+        if (EditCommands.PlanPitchShift(track, cell, note, semitones) is not var (stringIndex, fret)) return;
         RunEdit(() =>
         {
             EditCommands.ApplyPitchShift(track, note, stringIndex, fret);
-            if (stringIndex != SelectedString) SetPosition(SelectedMeasure, SelectedCell, stringIndex);
+            if (stringIndex != _c.SelectedString) _c.SetPosition(_c.SelectedMeasure, _c.SelectedCell, stringIndex);
             return true;
         });
     }

@@ -22,12 +22,12 @@ public sealed partial class ScoreEditCommands
         var measure = CurrentMeasure();
         var notes = ToolNotes(cells);
 
-        if (toolId == "edit:pointer") return !HasSelection;
+        if (toolId == "edit:pointer") return !_c.HasSelection;
         if (toolId.StartsWith("duration:", StringComparison.Ordinal)) return DurationToolState(toolId[9..], cells);
         if (toolId.StartsWith("dynamic:", StringComparison.Ordinal))
         {
             var velocity = DynamicVelocity(toolId[8..]);
-            if (notes.Count == 0) return HasSelection ? null : CurrentVelocity == velocity;
+            if (notes.Count == 0) return _c.HasSelection ? null : _c.Tools.Velocity == velocity;
             return Uniform(notes.Select(note => NearestDynamicVelocity(note.Velocity) == velocity));
         }
         if (toolId.StartsWith("effect:", StringComparison.Ordinal)) return EffectToolState(toolId[7..], cells, notes);
@@ -42,15 +42,15 @@ public sealed partial class ScoreEditCommands
     /// <summary>The state of a duration tool: the value shared by the populated cells (or the entry value when there are none).</summary>
     private bool? DurationToolState(string key, List<TabCell> cells)
     {
-        var populated = cells.Where(cell => (cell.Notes.Count > 0 || cell.IsRest) && !(!HasSelection && Placeholder(cell))).ToList();
+        var populated = cells.Where(cell => (cell.Notes.Count > 0 || cell.IsRest) && !(!_c.HasSelection && Placeholder(cell))).ToList();
         return key switch
         {
             "whole" or "half" or "quarter" or "eighth" or "sixteenth" or "thirtysecond" or "sixtyfourth" =>
-                Uniform((populated.Count > 0 ? populated.Select(cell => cell.DurationDenominator) : new[] { CurrentDurationDenominator })
+                Uniform((populated.Count > 0 ? populated.Select(cell => cell.DurationDenominator) : new[] { _c.Tools.DurationDenominator })
                     .Select(value => value == DurationForKey(key))),
-            "dotted" => Uniform((populated.Count > 0 ? populated.Select(cell => cell.Dots) : new[] { CurrentDots }).Select(value => value == 1)),
-            "double-dotted" => Uniform((populated.Count > 0 ? populated.Select(cell => cell.Dots) : new[] { CurrentDots }).Select(value => value == 2)),
-            "tuplet" => Uniform((populated.Count > 0 ? populated.Select(cell => cell.IsTriplet || cell.TupletNumerator > 0) : new[] { CurrentTupletNumerator > 0 || CurrentTriplet }).Select(value => value)),
+            "dotted" => Uniform((populated.Count > 0 ? populated.Select(cell => cell.Dots) : new[] { _c.Tools.Dots }).Select(value => value == 1)),
+            "double-dotted" => Uniform((populated.Count > 0 ? populated.Select(cell => cell.Dots) : new[] { _c.Tools.Dots }).Select(value => value == 2)),
+            "tuplet" => Uniform((populated.Count > 0 ? populated.Select(cell => cell.IsTriplet || cell.TupletNumerator > 0) : new[] { _c.Tools.TupletNumerator > 0 || _c.Tools.Triplet }).Select(value => value)),
             "tie" => Uniform(cells.SelectMany(cell => cell.Notes.Count > 0
                 ? cell.Notes.Select(note => cell.IsTied || note.Tied)
                 : new[] { cell.IsTied })),
@@ -114,22 +114,22 @@ public sealed partial class ScoreEditCommands
 
     internal List<TabCell> ToolCells(bool createVoice = false)
     {
-        var track = Track;
+        var track = _c.Track;
         if (track is null || track.Measures.Count == 0) return new List<TabCell>();
-        if (!HasSelection)
+        if (!_c.HasSelection)
         {
             var current = CurrentCell();
             return current is null ? new List<TabCell>() : new List<TabCell> { current };
         }
 
-        var (m1, c1, m2, c2) = SelectionRange();
+        var (m1, c1, m2, c2) = _c.SelectionRange();
         if (m2 < m1 || (m2 == m1 && c2 < c1)) (m1, c1, m2, c2) = (m2, c2, m1, c1);
         var selected = new List<TabCell>();
         for (var m = Math.Max(0, m1); m <= Math.Min(m2, track.Measures.Count - 1); m++)
         {
             var measure = track.Measures[m];
             var first = m == m1 ? c1 : 0;
-            var cells = CellsFor(measure, create: createVoice && _activeVoiceIndex == 1);
+            var cells = _c.CellsFor(measure, create: createVoice && _c.ActiveVoiceIndex == 1);
             var last = m == m2 ? c2 : cells.Count - 1;
             for (var c = Math.Max(0, first); c <= Math.Min(last, cells.Count - 1); c++) selected.Add(cells[c]);
         }
@@ -138,8 +138,8 @@ public sealed partial class ScoreEditCommands
 
     private List<TabNote> ToolNotes(IReadOnlyList<TabCell> cells)
     {
-        if (HasSelection) return cells.SelectMany(cell => cell.Notes).ToList();
-        return cells[0].Notes.Where(note => note.StringIndex == SelectedString).ToList();
+        if (_c.HasSelection) return cells.SelectMany(cell => cell.Notes).ToList();
+        return cells[0].Notes.Where(note => note.StringIndex == _c.SelectedString).ToList();
     }
 
     private static bool? Uniform(IEnumerable<bool> values)
@@ -163,7 +163,7 @@ public sealed partial class ScoreEditCommands
 
     private bool ApplyToolSelection(Action<IReadOnlyList<TabCell>> edit)
     {
-        if (!HasSelection) return false;
+        if (!_c.HasSelection) return false;
         var cells = ToolCells(createVoice: true);
         if (cells.Count == 0) return true;
         RunEdit(() => { edit(cells); return true; });
@@ -173,17 +173,15 @@ public sealed partial class ScoreEditCommands
     /// <summary>Set the dynamic on selected notes, or the pending entry dynamic at an empty cursor.</summary>
     public void SetDynamicVelocity(int velocity)
     {
-        CurrentVelocity = Math.Clamp(velocity, 1, MidiLimits.Max);
-        var notes = HasSelection
+        _c.Tools.Velocity = Math.Clamp(velocity, 1, MidiLimits.Max);
+        var notes = _c.HasSelection
             ? ToolCells(createVoice: true).SelectMany(cell => cell.Notes).ToList()
-            : CurrentCell()?.Notes.Where(note => note.StringIndex == SelectedString).ToList() ?? new List<TabNote>();
+            : CurrentCell()?.Notes.Where(note => note.StringIndex == _c.SelectedString).ToList() ?? new List<TabNote>();
         if (notes.Count == 0)
         {
-            NotifyState();
-            InvalidateVisual();
             return;
         }
-        RunEdit(() => { foreach (var note in notes) note.Velocity = CurrentVelocity; return true; });
+        RunEdit(() => { foreach (var note in notes) note.Velocity = _c.Tools.Velocity; return true; });
     }
 
     /// <summary>Apply an explicit tuplet ratio to the selected beats or the current beat.</summary>
@@ -193,25 +191,25 @@ public sealed partial class ScoreEditCommands
         var targets = ToolCells().Where(MusicTime.IsBeat).ToList();
         if (targets.Count > 0 && targets.All(c => c.Tuplet == (numerator, denominator))) { numerator = 0; denominator = 0; }   // the lit ratio again clears it
         if (!CanSetTuplet((numerator, denominator))) return;
-        CurrentTriplet = numerator == 3 && denominator == 2;
-        CurrentTupletNumerator = numerator;
-        CurrentTupletDenominator = denominator;
+        _c.Tools.Triplet = numerator == 3 && denominator == 2;
+        _c.Tools.TupletNumerator = numerator;
+        _c.Tools.TupletDenominator = denominator;
         if (ApplyToolSelection(cells =>
             {
                 foreach (var cell in cells)
                 {
                     cell.TupletNumerator = numerator;
                     cell.TupletDenominator = denominator;
-                    cell.IsTriplet = CurrentTriplet;
+                    cell.IsTriplet = _c.Tools.Triplet;
                 }
             })) return;
         var current = CurrentCell(create: true);
-        if (current is null) { NotifyState(); return; }
+        if (current is null) return;
         RunEdit(() =>
         {
             current.TupletNumerator = numerator;
             current.TupletDenominator = denominator;
-            current.IsTriplet = CurrentTriplet;
+            current.IsTriplet = _c.Tools.Triplet;
             return true;
         });
     }

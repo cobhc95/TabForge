@@ -329,12 +329,6 @@ internal sealed partial class ScorePreviewEditor : IScoreEditContext, ISelection
         var lengthMs = cell is not null ? MusicTime.NoteLengthMs(_document.Project, SelectedMeasure, SelectedCell, cell) : 0;
         NotePreviewed?.Invoke(new NotePreview(midi, track.MidiOutputDeviceId, track.MidiChannel, track.MidiProgram, lengthMs));
     }
-    /// <summary>The tool state changed without a song edit; toolbars re-read it.</summary>
-    public void NotifyState() { }
-    /// <summary>The view repaints after every handled key.</summary>
-    public void Redraw() { }   // the view repaints after every handled key
-    /// <summary>Shows a status line through the host.</summary>
-    public void Say(string text) { }
     /// <summary>Ends the selection; the cursor stays.</summary>
     public void ClearSelection() => Sel.Clear();
     /// <summary>The ordered selection range, or the cursor beat when nothing is selected.</summary>
