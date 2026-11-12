@@ -8,8 +8,9 @@ using TabForge.Services;
 
 namespace TabForge.Audio;
 
-// Owns: decoding engine events into client events.
-// Does not own: the rest of this type (see the main file).
+// Owns: decoding engine events into client events. It also writes state the other parts own and read: the ready wait and protocol version
+//   (Lifecycle), the engine config and rule device (Sync), the render progress (Commands) and the chains the engine reports as sent (Sync).
+// Does not own: what those parts do with that state, the send path (AudioEngineClient.cs) or the commands (AudioEngineClient.Commands.cs).
 // Tests: no dedicated test class.
 public sealed partial class AudioEngineClient
 {

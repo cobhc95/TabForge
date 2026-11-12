@@ -54,7 +54,7 @@ public sealed class AvaloniaPlaybackSession : IDisposable
     public double SchedulerSec => _engine.Playhead().ElapsedMs / 1000.0;
 
     /// <summary>Note-ons the engine skipped this playthrough because its scheduler fell behind; 0 for an engine that does not count them.</summary>
-    public int LateNotesDropped => _engine is PlaybackEngine engine ? engine.LateNotesDropped : 0;
+    public int LateNotesDropped => _engine.LateNotesDropped;
 
     public bool IsPlaying => _transport.IsPlaying;
     public bool IsPaused => _transport.IsPaused;

@@ -84,7 +84,7 @@ Source/src/TabForge.Core/Models/SongProject.cs|1
 Source/src/TabForge.Core/Platform/Controls/KnobValueParser.cs|1
 Source/src/TabForge.Core/Platform/Theme/InstrumentBadge.cs|1
 Source/src/TabForge.Core/Platform/Windows/DxgiCom.cs|1
-Source/src/TabForge.Core/Playback/PlaybackEngine.cs|2
+Source/src/TabForge.Core/Playback/PlaybackEngine.cs|1
 Source/src/TabForge.Core/Playback/PlaybackOrder.Structure.cs|1
 Source/src/TabForge.Core/Plugins/ChainStateStore.cs|1
 Source/src/TabForge.Core/Plugins/DrumMapLibrary.cs|1

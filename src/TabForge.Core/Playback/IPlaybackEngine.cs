@@ -15,6 +15,9 @@ public interface IPlaybackEngine : IDisposable
     bool IsPlaying { get; }
     bool IsPaused { get; }
 
+    /// <summary>Notes the scheduler dropped because they were already too late to send (a diagnostic count); an engine that never drops reports 0.</summary>
+    int LateNotesDropped => 0;
+
     /// <summary>Raised with the compiled timeline at a start, a seek or a speed change.</summary>
     event Action<ScoreTimeline>? TimelineChanged;
     /// <summary>Raised with a live-reordered future timeline; the playhead does not move.</summary>

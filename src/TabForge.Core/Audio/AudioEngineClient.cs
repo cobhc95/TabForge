@@ -8,8 +8,11 @@ using TabForge.Services;
 
 namespace TabForge.Audio;
 
-// Owns: the client link to the audio-engine process (slots, ownership and warm parking, wiring, MIDI routes, clips).
-// Does not own: the engine process itself (TabForge.AudioEngine/EngineHost) or the plug-in trust decision (PluginTrust).
+// Owns: the client object of the audio-engine process: its public surface, the state the partial files share (declared here; each part's header
+//   names what it writes), the one command send path to the pipe (Send), and the media / audio-input change subscriptions.
+// Does not own: the graph sync (AudioEngineClient.Sync.cs, .Sync.Warm.cs), the process lifecycle (.Lifecycle.cs), the command surface (.Commands.cs),
+//   event decoding (.Events.cs), the resend after a lost command (.Resync.cs), the probes (.Probes.cs, .AsioProbe.cs, .PluginInfo.cs), the engine
+//   process itself (TabForge.AudioEngine/EngineHost) or the plug-in trust decision (PluginTrust).
 // Tests: AvaloniaEngineRoutingTests, AudioSmokeTests, EngineGmAudibleTests.
 
 /// <summary>One line of the MIDI log: song time, the message, and which processor stage logged it.</summary>

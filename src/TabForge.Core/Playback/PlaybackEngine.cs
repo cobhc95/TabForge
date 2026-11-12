@@ -145,8 +145,6 @@ public sealed partial class PlaybackEngine : IDisposable
     /// <summary>Loop count, count-in per loop and speed trainer; see <see cref="PlaybackPreferences.Loop"/>.</summary>
     public sealed record LoopBehaviour(int Count = 0, bool CountInEachLoop = false,
         bool Trainer = false, int TrainerFromPercent = 50, int TrainerToPercent = 100, int TrainerStepPercent = 10);
-    /// <summary>Raised (scheduler thread) after each completed loop: engine and loops completed so far.</summary>
-    public static event Action<PlaybackEngine, int>? LoopCompleted;
     private int _loopsDone;
 
     private int[] _sectionStarts = Array.Empty<int>();

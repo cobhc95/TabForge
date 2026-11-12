@@ -87,7 +87,6 @@ public sealed partial class PlaybackEngine
         (s.LoopStartMs, s.LoopEndMs, s.LoopAvailable) = ComputeLoopBounds(timeline, opts);
         s.LoopRangeVersion = Volatile.Read(ref _loopRangeVersion);
         _loopsDone = 0;
-        LoopCompleted?.Invoke(this, 0);
         lock (_gate)
         {
             // Re-anchor so a trainer rate change never jumps the position.
@@ -282,7 +281,6 @@ public sealed partial class PlaybackEngine
         if (!boundaryAdmitted) return LoopStep.Continue;
         var settings = Preferences.Loop;
         _loopsDone++;
-        LoopCompleted?.Invoke(this, _loopsDone);
         // All requested loops played: finish at the loop end.
         if (settings.Count > 0 && _loopsDone >= settings.Count) return FinishRun(ref s, generation, s.LoopEndMs);
 

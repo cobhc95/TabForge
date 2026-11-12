@@ -9,7 +9,8 @@ using TabForge.Services;
 namespace TabForge.Audio;
 
 // Owns: keeping the engine's graph in step with the open documents: slots, ownership and warm parking of chains, wiring, MIDI routes and processors, gain, bypass and audio clips.
-// Does not own: the command send path (AudioEngineClient.Commands.cs) or the engine process (AudioEngineClient.cs).
+// Does not own: the send path (AudioEngineClient.cs), the other commands (AudioEngineClient.Commands.cs), forgetting what was sent (AudioEngineClient.Resync.cs)
+//   or the engine process (AudioEngineClient.Lifecycle.cs).
 // Tests: no dedicated test class.
 
 /// <summary>Keeps the engine's graph in step with the documents: slots, ownership and warm parking, wiring, MIDI routes and processors, gain, bypass and audio clips.</summary>

@@ -9,7 +9,7 @@ using TabForge.Services;
 namespace TabForge.Audio;
 
 // Owns: the commands sent to the engine: transport position and song transports per document, the master output tap, recording, editor windows, programs, pitch, state, offline render and live MIDI writes.
-// Does not own: the engine process and pipe (AudioEngineClient.cs) or the graph sync (AudioEngineClient.Sync.cs).
+// Does not own: the send path (AudioEngineClient.cs), the engine process and pipe (AudioEngineClient.Lifecycle.cs) or the graph sync (AudioEngineClient.Sync.cs).
 // Tests: no dedicated test class.
 
 /// <summary>Commands sent to the engine: transport position, recording, editor windows, programs, pitch, state, offline render and live MIDI writes.</summary>

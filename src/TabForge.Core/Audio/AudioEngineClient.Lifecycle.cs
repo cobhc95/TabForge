@@ -8,7 +8,8 @@ using TabForge.Services;
 namespace TabForge.Audio;
 
 // Owns: the engine process lifecycle of the client (start, pipe connect, liveness, stop, crash restart, cleanup).
-// Does not own: the command surface and event dispatch (AudioEngineClient.cs) or the engine process itself (TabForge.AudioEngine/EngineHost).
+// Does not own: the send path (AudioEngineClient.cs), the command surface (AudioEngineClient.Commands.cs), event decoding (AudioEngineClient.Events.cs)
+//   or the engine process itself (TabForge.AudioEngine/EngineHost).
 // Tests: AvaloniaEngineRoutingTests, AudioSmokeTests.
 public sealed partial class AudioEngineClient
 {
