@@ -74,22 +74,35 @@ public sealed class SectionGapMenuTests
         Assert.Equal(0, view.ContextMenus.Target.Section);
     }
 
-    /// <summary>A menu path sets only what it names: the section and gap menus leave the track of the bar menu opened before them (Paste section uses it).</summary>
+    /// <summary>
+    /// Paste section (after a section, and in a gap) puts a one-track clip on the track selected in the song, never on the track an earlier bar
+    /// menu left in the menu target (the menu path itself still sets only what it names).
+    /// </summary>
     [AvaloniaFact]
-    public void ASectionMenuKeepsTheTrackTheLastBarMenuLeft()
+    public void PasteSectionUsesTheTrackSelectedInTheSongNotTheLastBarMenusTrack()
     {
         var view = Open(out var project);
         project.Tracks.Add(new TrackModel { Name = "Bass", Measures = Enumerable.Range(0, Bars).Select(bar => new MeasureModel { Number = bar + 1 }).ToList() });
+        project.Tracks[0].Measures[0].Cells[0].Notes.Add(new TabNote { StringIndex = 0, Fret = 7 });
         view.Reload(project);
-        view.ContextMenus.Aim(view.ContextMenus.Target with { Track = 1 });   // the bar menu of a lane on the second track
+        var clipboard = new ClipboardService(null);
+        clipboard.Copy(ClipboardService.CaptureBars(project, new[] { 0 }, 0, 0));   // one bar of the first track
+        view.ContextMenus.Clipboard = clipboard;
+        var document = new SongDocument(() => null) { Project = project };
+        document.TrackIndex = 1;                                                    // the song's selected track: Bass
+        view.ContextMenus.Aim(view.ContextMenus.Target with { Track = 0 });          // the bar menu of a lane on the first track
 
-        ContextMenuRows.TimelineAt(view, OnStrip(view, 2)).ToList();
-        Assert.Equal(1, view.ContextMenus.Target.Track);
+        ContextMenuRows.TimelineAt(view, OnStrip(view, 5)).ToList();                // the gap menu at bar 6
+        Assert.Equal(0, view.ContextMenus.Target.Track);                            // the menu target keeps the earlier track...
+        MainWindowTimelineSections.PasteAtBar(document, document.TrackIndex, view.ContextMenus, _ => { }, new MainWindowTimelineSections.CopiedSection());
+        Assert.Equal(7, Assert.Single(project.Tracks[1].Measures[5].Cells[0].Notes).Fret);   // ...but the paste lands on the selected track
+        Assert.Empty(project.Tracks[0].Measures[5].Cells[0].Notes);
+
+        ContextMenuRows.TimelineAt(view, OnStrip(view, 2)).ToList();                // the Verse section menu (bars 1-4)
         Assert.Equal(0, view.ContextMenus.Target.Section);
-
-        ContextMenuRows.TimelineAt(view, OnStrip(view, 5)).ToList();
-        Assert.Equal(1, view.ContextMenus.Target.Track);
-        Assert.Equal(-1, view.ContextMenus.Target.Section);
+        MainWindowTimelineSections.PasteAfter(document, document.TrackIndex, view.ContextMenus, _ => { }, new MainWindowTimelineSections.CopiedSection());
+        Assert.Equal(7, Assert.Single(project.Tracks[1].Measures[4].Cells[0].Notes).Fret);
+        Assert.Empty(project.Tracks[0].Measures[4].Cells[0].Notes);
     }
 
     [AvaloniaFact]
