@@ -454,6 +454,13 @@ public sealed partial class ArrangementView : UserControl
     /// <summary>Re-reads <paramref name="project"/>'s tracks into the timeline and header through the row source, so a changed row count or height re-fits the track list at once (a clip edit that added a track).</summary>
     internal void ReloadRows(SongProject project) => _trackRows.Source.Reload(project);
 
+    /// <summary>Re-reads <paramref name="project"/>'s rows into the timeline and the track header (no row-count notice; ReloadRows sends one).</summary>
+    internal void ReloadSong(SongProject project)
+    {
+        Timeline.Reload(project);
+        Header.Reload(project);
+    }
+
     /// <summary>Selects <paramref name="track"/> and scrolls its row into view (a dropped file that made a new track).</summary>
     internal void ShowTrack(TrackModel track)
     {

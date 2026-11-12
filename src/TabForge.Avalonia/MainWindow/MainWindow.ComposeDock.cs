@@ -350,7 +350,7 @@ public sealed partial class MainWindow
             if (id == FretboardSettingsBinding.InstrumentPaneId) settings?.RememberFretboard(d.Compose.FretboardMode(), shown);
         };
         // The dock builds the first arrangement here, so the clip-edit refresh attaches to it and to every later pane.
-        MainWindowClipRefresh.Register(panes, settings, playback, showStatus, this);
+        ClipEditFinisher.Register(panes, settings, playback, showStatus, this);
         d.CloseInstrument = () => d.Dock.ClosePanelByUser("instrument");
         d.TrackListFit = new MainWindowTrackListFit(d.Dock, workspace, () => panes.Arrangement, () => (settings?.Settings ?? SettingsDefaults.Fallback()).Timeline.AutoFitTrackList, AvaloniaUiThread.ForApplication());
         // The fretboard's height is per tab: the tab being left keeps its height before the timeline refits (the refit moves the split beside the pane),

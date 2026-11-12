@@ -115,7 +115,7 @@ public sealed class ClipVerticalDragStressTests
         rig.Arrangement = new ArrangementView(project, rig.Doc);
         rig.View = rig.Arrangement.Timeline;
         rig.View.Snap = new SnapSettings { Enabled = false };
-        rig.View.ClipEdited = document => { rig.Refreshes++; MainWindowClipRefresh.AfterEdit(rig.Arrangement, document, null, rig.Sessions); };
+        rig.View.ClipEditLanded += document => { rig.Refreshes++; ClipEditFinisher.AfterEdit(rig.Arrangement, document, null, rig.Sessions); };
         if (prompt) rig.View.ClipOverlap = OverlapPolicy(rig);
         rig.Window = new Window { Width = 1800, Height = 900, Content = rig.Arrangement };
         rig.Window.Show();

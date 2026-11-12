@@ -61,7 +61,8 @@ public class ClipLaneOverlapTests
             Remember = value => rig.Setting = value,
             Prompt = question => { rig.Asked.Add(question); return Task.FromResult(rig.Answer); },
         };
-        rig.View = new TimelineView(song) { Snap = new SnapSettings { Enabled = false }, ClipOverlap = rig.Policy, ClipEdited = _ => rig.Refreshes++ };
+        rig.View = new TimelineView(song) { Snap = new SnapSettings { Enabled = false }, ClipOverlap = rig.Policy };
+        rig.View.ClipEditLanded += _ => rig.Refreshes++;
         return rig;
     }
 

@@ -214,7 +214,7 @@ internal sealed partial class TimelineClipGestureController
             fit = ClipAutoBars.Fit(project);   // the song grows (or gives its auto-added bars back) in the same undo step as the move
             return true;
         }).Changed;
-        if (fit.EndsInJump) _view.ClipNotice?.Invoke(ClipAutoBars.JumpNotice);
+        if (fit.EndsInJump) _view.RaiseClipNotice(ClipAutoBars.JumpNotice);
         if (changed && (relocate || copy)) _view.SelectClips(landed);
         // A move or trim can land a clip over another on its lane: the overlap check follows the drop (never the drag), then the refresh.
         var moveOrTrim = _gesture is ClipGesture.Move or ClipGesture.TrimStart or ClipGesture.TrimEnd;

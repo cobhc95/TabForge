@@ -65,8 +65,8 @@ public sealed class SplitMovePlaybackSyncTests
         var arrangement = new ArrangementView(project, song);
         var view = arrangement.Timeline;
         view.Snap = new SnapSettings { Enabled = false };
-        // The same post-edit refresh the window attaches to every arrangement (MainWindowClipRefresh.Register): growth, lane compaction, engine sync, reload.
-        view.ClipEdited = document => MainWindowClipRefresh.AfterEdit(arrangement, document, null, sessions);
+        // The same post-edit refresh the window attaches to every arrangement (ClipEditFinisher.Register): growth, lane compaction, engine sync, reload.
+        view.ClipEditLanded += document => ClipEditFinisher.AfterEdit(arrangement, document, null, sessions);
         var window = new Window { Width = 1800, Height = 900, Content = arrangement };
         try
         {
@@ -122,7 +122,7 @@ public sealed class SplitMovePlaybackSyncTests
             var removed = false;
             client.SentForTest = command => removed |= command == EngineCommand.RemoveTrack;
             DocumentEdits.Run(song, _ => { foreach (var c in track.AudioClips) c.Muted = true; return true; });
-            view.ClipEdited!(song);
+            ClipEditFinisher.AfterEdit(arrangement, song, null, sessions);
             Assert.True(removed || client.SlotOf(track) < 0, "muted clips still play in the engine");
         }
         finally

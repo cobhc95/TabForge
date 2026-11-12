@@ -217,7 +217,7 @@ public class AudioDropLandingTests
         track.AudioClips.Add(new AudioClip { File = "x.wav", Name = "x", StartSec = 0, SourceLengthSec = 3, FileLengthSec = 3 });
         document.Project.Tracks.Add(track);
 
-        MainWindowClipRefresh.AfterEdit(arrangement, document, null, null);
+        ClipEditFinisher.AfterEdit(arrangement, document, null, null);
 
         Assert.Equal(before + 1, arrangement.Timeline.RowCount);
         Assert.True(rowsChanged > 0, "the track list was not re-fitted");

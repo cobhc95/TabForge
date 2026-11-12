@@ -215,8 +215,8 @@ public class RecordingLaneLifecycleTests
         try
         {
             var view = new ArrangementView(song.Project, song);
-            // The same post-edit refresh the window attaches to every arrangement (MainWindowClipRefresh.Register), on a bare arrangement.
-            view.Timeline.ClipEdited = document => MainWindowClipRefresh.AfterEdit(view, document, null, sessions);
+            // The same post-edit refresh the window attaches to every arrangement (ClipEditFinisher.Register), on a bare arrangement.
+            view.Timeline.ClipEditLanded += document => ClipEditFinisher.AfterEdit(view, document, null, sessions);
             var sent = new List<ClipSpec>();
             var commands = new List<EngineCommand>();
             client.ClipsSentForTest = (_, clips) => sent.AddRange(clips);

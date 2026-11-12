@@ -62,21 +62,19 @@ internal sealed partial class RecordingPresenter(MainWindowCommands commands, Ma
             LiveChanged = () => { panes.Arrangement?.Timeline.RefreshLiveTakes(); rollLive?.Invoke(created!.Live); },
             MidiOptions = () => new MidiRecordOptions(plugins().MergeMidiTakes, plugins().QuantizeMidiInput && snap?.Invoke() is { } grid ? grid.Grid : null),
             // A landed take is a clip edit too: compact its empty lanes and sync the engine down the normal path.
-            ClipLanded = song => panes.Arrangement?.Timeline.ClipEdited?.Invoke(song),
+            ClipLanded = song => panes.ClipEdits?.Finish(song),
             // The rows must always show a landed take's lanes and pass stacks, even if no clip-refresh hook is attached.
             RowsReload = song =>
             {
                 if (panes.Arrangement is not { } arrangement) return;
-                arrangement.Timeline.Reload(song.Project);
-                arrangement.Header.Reload(song.Project);
+                arrangement.ReloadSong(song.Project);
             },
             // A lane the growing take needs: only the overlay grows it; lay the rows out once so the take's band is current (never every frame).
             LiveLaneCreated = _ =>
             {
                 if (panes.Arrangement is { } arrangement)
                 {
-                    arrangement.Timeline.Reload(arrangement.Document.Project);
-                    arrangement.Header.Reload(arrangement.Document.Project);
+                    arrangement.ReloadSong(arrangement.Document.Project);
                 }
             },
         };

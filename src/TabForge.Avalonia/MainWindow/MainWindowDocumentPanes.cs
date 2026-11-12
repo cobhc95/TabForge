@@ -58,8 +58,7 @@ public sealed class MainWindowDocumentPanes
         // Its Timeline/Header are rebuilt only when the song itself changed; Show alone keeps the old song's rows.
         if (_arrangement is not null && !ReferenceEquals(_arrangement.Timeline.Song, _tabs.Active.Project))
         {
-            _arrangement.Timeline.Reload(_tabs.Active.Project);
-            _arrangement.Header.Reload(_tabs.Active.Project);
+            _arrangement.ReloadSong(_tabs.Active.Project);
         }
         _arrangement?.Show(_tabs.Active);
         _arrangement?.BindPlayback(_playback?.For(_tabs.Active));
@@ -114,10 +113,14 @@ public sealed class MainWindowDocumentPanes
     /// <summary>True while this window records: the arrangement's Record button state, the same check its bar/lane seek gate uses.</summary>
     public bool IsRecording => _arrangement?.Transport.Recording == true;
 
-    /// <summary>A new arrangement pane for the dock, showing the shown song and following later tab changes.</summary>
+    /// <summary>The window's post-clip-edit fix-up (set once by ClipEditFinisher.Register in the composition; null in a bare test window). Edits that
+    /// land outside the timeline (a recording, a piano-roll edit, collected media) finish through it.</summary>
+    internal ClipEditFinisher? ClipEdits { get; set; }
+
     /// <summary>Raised with each new arrangement pane, so its owners can apply saved view modes to it.</summary>
     public event Action<ArrangementView>? ArrangementCreated;
 
+    /// <summary>A new arrangement pane for the dock, showing the shown song and following later tab changes.</summary>
     public ArrangementView NewArrangement()
     {
         // Perf E2b (H4/H5): reuse the one arrangement pane across Shows (Detached/Shared). A fresh Timeline/Header
@@ -127,8 +130,7 @@ public sealed class MainWindowDocumentPanes
             var active = _tabs.Active;
             if (!ReferenceEquals(_arrangement.Document, active) || !ReferenceEquals(_arrangement.Timeline.Song, active.Project))
             {
-                _arrangement.Timeline.Reload(active.Project);
-                _arrangement.Header.Reload(active.Project);
+                _arrangement.ReloadSong(active.Project);
                 _arrangement.Show(active);
             }
             return (ArrangementView)DockPaneSetup.Detached(_arrangement);

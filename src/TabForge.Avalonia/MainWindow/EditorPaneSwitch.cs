@@ -313,8 +313,8 @@ public sealed partial class EditorPaneSwitch
         _scoreView.InvalidateVisual();
         if (_panes.Arrangement is { } arrangement && _songs.Songs.Count > 0)
         {
-            arrangement.Timeline.ClipEdited?.Invoke(_songs.Active);
-            if (arrangement.Timeline.ClipEdited is null) arrangement.Timeline.InvalidateVisual();
+            if (_panes.ClipEdits is { } finisher) finisher.Finish(_songs.Active);
+            else arrangement.Timeline.InvalidateVisual();   // a bare window (tests) without the window's finisher
         }
     }
 

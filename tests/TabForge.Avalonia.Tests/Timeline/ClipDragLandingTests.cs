@@ -48,7 +48,7 @@ public sealed class ClipDragLandingTests
         rig.Arrangement = new ArrangementView(project, rig.Doc);
         rig.View = rig.Arrangement.Timeline;
         rig.View.Snap = new SnapSettings { Enabled = false };
-        rig.View.ClipEdited = _ => rig.Refreshes++;
+        rig.View.ClipEditLanded += _ => rig.Refreshes++;
         rig.Window = new Window { Width = 1800, Height = 900, Content = rig.Arrangement };
         rig.Window.Show();
         rig.Window.UpdateLayout();

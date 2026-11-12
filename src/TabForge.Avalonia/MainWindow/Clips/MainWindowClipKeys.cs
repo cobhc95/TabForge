@@ -103,7 +103,7 @@ public static class MainWindowClipKeys
             return true;
         }, label: label).Changed;
         if (!changed) return;
-        if (fit.EndsInJump) timeline.ClipNotice?.Invoke(ClipAutoBars.JumpNotice);
+        if (fit.EndsInJump) timeline.RaiseClipNotice(ClipAutoBars.JumpNotice);
         timeline.ClipEditCommitted(document, edited?.Invoke());
         timeline.InvalidateVisual();
     }

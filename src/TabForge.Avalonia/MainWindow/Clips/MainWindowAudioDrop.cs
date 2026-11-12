@@ -20,7 +20,7 @@ namespace TabForge.Avalonia;
 // Owns: the audio-file drag over an arrangement: the drop affordance (the Add track strip's shade and drop words, the target lane highlight), the
 //   target/time mapping from the pointer, the asynchronous measurement with the existing decoder, and the one undo step that lands a plan.
 // Does not own: the planning and model edit (AudioDropPlanner/AudioDropApplier in Core), opening song files (MainWindowFileDrop), the notice row
-//   (the window), the status bar (MainWindowStatusBar) or the post-edit refresh (Timeline.ClipEdited, the batch-3 path).
+//   (the window), the status bar (MainWindowStatusBar) or the post-edit refresh (ClipEditFinisher, the batch-3 path).
 // Tests: TabForge.Avalonia.Tests.AudioDropPlannerTests (planner and executor); the drag routing is UI-only.
 internal sealed class MainWindowAudioDrop
 {

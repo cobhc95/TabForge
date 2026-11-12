@@ -12,7 +12,7 @@ namespace TabForge.Avalonia;
 //   that changes its size changed.
 // Does not own: the settings file and its validation (MainWindowSettings, SettingsValidator), the lane-mode rows (MainWindowArrangementModes), the
 //   drawing (TimelineView, TrackHeaderColumn, MasterLaneStrip) or the pane lifetime (MainWindowDocumentPanes). The row TuningIconOpensWindow
-//   has no Avalonia feature to drive yet (no tuning icon). SectionDragAnimation (with Reduce animations) drives the section slide; AutoRemoveEmptyLanes is read by MainWindowClipRefresh.
+//   has no Avalonia feature to drive yet (no tuning icon). SectionDragAnimation (with Reduce animations) drives the section slide; AutoRemoveEmptyLanes is read by ClipEditFinisher.
 // Tests: TabForge.Avalonia.Tests.TimelineSettingsBindingTests.
 
 /// <summary>Keeps the arrangement panes in step with the Timeline and Tracks pages of the Settings window. Thread: UI. Holds the panes weakly, so a pane the dock dropped is freed.</summary>

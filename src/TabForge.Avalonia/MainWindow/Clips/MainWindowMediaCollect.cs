@@ -92,7 +92,7 @@ public sealed class MainWindowMediaCollect
     // The clip paths changed: the engine and the timeline follow, and the notice is checked again.
     private void Changed(SongDocument document)
     {
-        _panes?.Arrangement?.Timeline.ClipEdited?.Invoke(document);
+        _panes?.ClipEdits?.Finish(document);
         _ = ScanAsync();
     }
 

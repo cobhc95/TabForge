@@ -64,9 +64,7 @@ public class EngineAudibilityTests
         try
         {
             var view = new ArrangementView(song.Project, song);
-            view.Timeline.ClipEdited = document => MainWindowClipRefresh.AfterEdit(view, document, null, sessions);
-
-            view.Timeline.ClipEdited.Invoke(song);
+            ClipEditFinisher.AfterEdit(view, song, null, sessions);   // the post-edit refresh the window runs after a clip edit
 
             Assert.Contains(sent, spec => Math.Abs(spec.StartSec - clip.StartSec) < 0.001);
         }
@@ -127,7 +125,7 @@ public class EngineAudibilityTests
         client.ClipsSentForTest = (_, clips) => sent.AddRange(clips);
         try
         {
-            MainWindowClipRefresh.AfterSectionMove(song, new[] { 0 }, null, sessions);
+            ClipEditFinisher.AfterSectionMove(song, new[] { 0 }, null, sessions);
 
             Assert.Contains(sent, spec => Math.Abs(spec.StartSec - 7) < 0.001);
         }

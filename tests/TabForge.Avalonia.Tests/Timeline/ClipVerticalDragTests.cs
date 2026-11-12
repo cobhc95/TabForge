@@ -54,7 +54,8 @@ public sealed class ClipVerticalDragTests
         foreach (var track in new[] { rig.A, rig.B })
             if (track.AudioClips.Count > 0) ClipLanes.Ensure(track, track.AudioClips.Max(c => c.Lane) + 1);
         rig.Doc = new SongDocument(() => null) { Project = project };
-        rig.View = new TimelineView(project) { Snap = new SnapSettings { Enabled = false }, ClipEdited = _ => rig.Refreshes++ };
+        rig.View = new TimelineView(project) { Snap = new SnapSettings { Enabled = false } };
+        rig.View.ClipEditLanded += _ => rig.Refreshes++;
         if (prompt)
             rig.View.ClipOverlap = new ClipOverlapPolicy
             {

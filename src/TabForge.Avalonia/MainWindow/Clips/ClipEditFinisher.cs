@@ -9,29 +9,55 @@ using TabForge.Services;
 
 namespace TabForge.Avalonia;
 
-// Owns: what every clip or lane edit needs after it landed, in the clip-edit order: the "Remove empty clip lanes
-//   automatically" setting compacts every track's empty lanes (ClipLanes.Compact skips armed tracks), and the engine is brought in line down
-//   its normal sync path, so a fade/move/trim/recording landing is heard without waiting for the next play.
+// Owns: what every clip or lane edit needs after it landed, in the clip-edit order: the song grows to hold its clips (with 2 bars of headroom when the
+//   edit did not fit the song itself), the "Remove empty clip lanes automatically" setting compacts every track's empty lanes (ClipLanes.Compact skips
+//   armed tracks), the engine is brought in line down its normal sync path, and the rows are laid out again; the same after a section move (engine sync
+//   and the live arrangement refresh); and the window wiring of each arrangement to it (its ClipEditLanded and SectionMoved events, its clip-overlap
+//   policy and its section-move prompts). The window's one finisher is MainWindowDocumentPanes.ClipEdits; edits that land outside the timeline
+//   (a recording, a piano-roll edit, collected media) call Finish on it.
+//   Rule kept from before (a known hazard, see the cleanup report): with no arrangement pane the fix-up does not run, so such an edit neither grows the
+//   song nor compacts lanes until the next timeline edit.
 // Does not own: the edit itself (MainWindowClipKeys, TimelineClipGestureController), the lane rules (ClipLanes in Core), the engine sync
 //   (AvaloniaPlaybackSessions/AvaloniaEngineRouting), the rows and body drawing (ArrangementView, TimelineView).
-// Tests: TabForge.Avalonia.Tests.RecordingLaneLifecycleTests.
-internal static class MainWindowClipRefresh
+// Tests: TabForge.Avalonia.Tests.ClipEditFinishCharacterizationTests, RecordingLaneLifecycleTests.
+internal sealed class ClipEditFinisher
 {
     private static readonly TimelineSettings Defaults = new();
+    private readonly MainWindowDocumentPanes _panes;
+    private readonly MainWindowSettings? _settings;
+    private readonly AvaloniaPlaybackSessions? _playback;
 
-    /// <summary>Hooks the existing arrangement and every later one; null settings keep the default (empty lanes are compacted).</summary>
-    public static void Register(MainWindowDocumentPanes panes, MainWindowSettings? settings, AvaloniaPlaybackSessions? playback, Action<string>? notice = null, Window? owner = null)
+    private ClipEditFinisher(MainWindowDocumentPanes panes, MainWindowSettings? settings, AvaloniaPlaybackSessions? playback)
     {
+        _panes = panes;
+        _settings = settings;
+        _playback = playback;
+    }
+
+    /// <summary>Makes the window's finisher (<see cref="MainWindowDocumentPanes.ClipEdits"/>) and hooks the existing arrangement and every later one;
+    /// null settings keep the default (empty lanes are compacted).</summary>
+    public static ClipEditFinisher Register(MainWindowDocumentPanes panes, MainWindowSettings? settings, AvaloniaPlaybackSessions? playback, Action<string>? notice = null, Window? owner = null)
+    {
+        var finisher = new ClipEditFinisher(panes, settings, playback);
+        panes.ClipEdits = finisher;
         void Attach(ArrangementView arrangement)
         {
-            arrangement.Timeline.ClipEdited = document => AfterEdit(arrangement, document, settings, playback);
-            arrangement.Timeline.ClipNotice = notice;
+            arrangement.Timeline.ClipEditLanded += document => AfterEdit(arrangement, document, settings, playback);
+            if (notice is not null) arrangement.Timeline.ClipNotice += notice;
             arrangement.Timeline.ClipOverlap = OverlapPolicy(settings, owner);
             arrangement.Input.SectionMoved += (_, mapping) => AfterSectionMove(arrangement.Document, mapping, settings, playback);
             WireSectionAudio(arrangement, settings, owner);
         }
         if (panes.Arrangement is { } existing) Attach(existing);
         panes.ArrangementCreated += Attach;
+        return finisher;
+    }
+
+    /// <summary>An edit of <paramref name="document"/> landed outside the timeline (a recording, a piano-roll edit, collected media): the same fix-up as a
+    /// timeline clip edit, on the shown arrangement. Nothing runs while no arrangement exists (today's rule).</summary>
+    public void Finish(IEditableDocument document)
+    {
+        if (_panes.Arrangement is { } arrangement) AfterEdit(arrangement, document, _settings, _playback);
     }
 
     /// <summary>The "Clips overlap" decision of one arrangement: the setting is read at each check and a ticked Remember is saved at once. Without settings or a window overlaps are left as they are.</summary>

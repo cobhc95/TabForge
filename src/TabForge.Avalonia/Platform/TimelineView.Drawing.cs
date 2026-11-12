@@ -102,13 +102,16 @@ public sealed partial class TimelineView
     internal LiveTakes LiveTakes { get; private set; } = new();
 
     /// <summary>
-    /// Raised after a clip or lane edit of this timeline landed (a drag/trim/fade, a clip command, a take click): the window compacts empty
-    /// lanes when the setting says so and syncs the engine down its normal path.
+    /// Raised after a clip or lane edit of this timeline landed (a drag/trim/fade, a clip command, a take click): the window's ClipEditFinisher
+    /// grows the song to its clips, compacts empty lanes when the setting says so and syncs the engine down its normal path.
     /// </summary>
-    internal Action<IEditableDocument>? ClipEdited { get; set; }
+    internal event Action<IEditableDocument>? ClipEditLanded;
 
-    /// <summary>Shows a short status notice for a clip gesture that is refused (a trim or fade on a loop take group).</summary>
-    internal Action<string>? ClipNotice { get; set; }
+    /// <summary>Raised with a short status notice for a clip gesture that is refused (a trim or fade on a loop take group) or a song that grew past a jump.</summary>
+    internal event Action<string>? ClipNotice;
+
+    /// <summary>Shows <paramref name="text"/> through <see cref="ClipNotice"/> (the clip gesture controller and the clip keys report through the view).</summary>
+    internal void RaiseClipNotice(string text) => ClipNotice?.Invoke(text);
 
     /// <summary>
     /// The lane edit cursor: the track, lane and song second of the last press in a clip lane. Clip.
