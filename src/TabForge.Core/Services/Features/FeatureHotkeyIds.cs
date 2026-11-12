@@ -1,4 +1,4 @@
-using TabForge.Menus;
+using TabForge.Commands;
 namespace TabForge.Services.Features;
 
 // Owns: the ids of the hotkey rows the feature modules add to the catalogue (the rows are in HotkeyCatalog.Features.cs), and the ids of the FX chain window's commands.

@@ -2,6 +2,7 @@ using System;
 using Avalonia.Controls;
 using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Views;
+using TabForge.Commands;
 using TabForge.Menus;
 using TabForge.Models;
 using TabForge.Views.Score;

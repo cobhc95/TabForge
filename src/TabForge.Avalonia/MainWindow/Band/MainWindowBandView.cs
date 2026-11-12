@@ -8,7 +8,7 @@ using TabForge.Avalonia.Views.Docking;
 using TabForge.Docking;
 using TabForge.Services;
 using TabForge.Services.Features;
-using TabForge.Menus;
+using TabForge.Commands;
 
 namespace TabForge.Avalonia;
 

@@ -13,7 +13,7 @@ using TabForge.Models;
 using TabForge.Presenters;
 using TabForge.Services;
 using TabForge.Views.Score;
-using TabForge.Menus;
+using TabForge.Commands;
 
 namespace TabForge.Avalonia.Platform;
 

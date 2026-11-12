@@ -143,7 +143,7 @@
     "Source/src/TabForge.Avalonia/MainWindow/MainWindow.cs": 1,
     "Source/src/TabForge.Avalonia/MainWindow/MainWindowTabs.cs": 5,
     "Source/src/TabForge.Avalonia/MainWindow/Menus/CompactModeMenu.cs": 1,
-    "Source/src/TabForge.Avalonia/MainWindow/Menus/MainWindowHelpMenu.cs": 8,
+    "Source/src/TabForge.Avalonia/MainWindow/Menus/MainWindowHelpMenu.cs": 5,
     "Source/src/TabForge.Avalonia/MainWindow/Menus/MainWindowMenu.cs": 2,
     "Source/src/TabForge.Avalonia/Metrics/DialogWindowPlacement.cs": 6,
     "Source/src/TabForge.Avalonia/Platform/AvaloniaArrangementSlider.cs": 4,
@@ -263,7 +263,7 @@
     "Source/src/TabForge.Avalonia/Views/ViewTempoBarView.cs": 12,
     "Source/src/TabForge.Avalonia/Views/ViewTempoPopups.cs": 11,
     "Source/src/TabForge.Avalonia/Views/WiringWindow.cs": 16,
-    "Source/src/TabForge.Core/Plugins/PeExports.cs": 7
+    "Source/src/TabForge.Core/Plugins/PeExports.cs": 4
   },
   "theme": {
     "Source/src/TabForge.Avalonia/MainWindow/Menus/MainWindowMenu.cs": 1,

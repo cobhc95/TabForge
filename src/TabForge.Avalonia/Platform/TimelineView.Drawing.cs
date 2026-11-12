@@ -297,7 +297,7 @@ public sealed partial class TimelineView
                 // A button: lighter under the pointer, darker and a pixel smaller while pressed.
                 var r = MixMarkRect(bar);
                 var pressed = bar == _mixPressBar;
-                var fill = pressed ? ThemeColours.Blend(red, new UiColor(255, 0, 0, 0), 0.3) : bar == _mixHoverBar ? ThemeColours.Blend(red, new UiColor(255, 255, 255, 255), 0.3) : red;
+                var fill = pressed ? ThemeColours.Darken(red, 0.3) : bar == _mixHoverBar ? ThemeColours.Lighten(red, 0.3) : red;
                 var grow = pressed ? -1 : bar == _mixHoverBar ? 1 : 0;
                 d.Rect(fill, null, r.X - grow, r.Y - grow, r.Width + 2 * grow, r.Height + 2 * grow, 3);
             }

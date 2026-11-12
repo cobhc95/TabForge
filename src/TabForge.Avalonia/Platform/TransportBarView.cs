@@ -12,6 +12,7 @@ using TabForge.Avalonia;
 using TabForge.Avalonia.Platform.Controls;
 using TabForge.Avalonia.Transport;
 using TabForge.Avalonia.Views;
+using TabForge.Commands;
 using TabForge.Platform;
 using TabForge.Platform.Theme;
 using TabForge.Menus;

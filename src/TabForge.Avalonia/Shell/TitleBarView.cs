@@ -16,7 +16,7 @@ using TabForge.Platform;
 using TabForge.Platform.Theme;
 using TabForge.Services.Features;
 using TabForge.Shell;
-using TabForge.Menus;
+using TabForge.Commands;
 using Buttons = TabForge.Avalonia.Shell.CaptionButtons;
 
 namespace TabForge.Avalonia.Shell;

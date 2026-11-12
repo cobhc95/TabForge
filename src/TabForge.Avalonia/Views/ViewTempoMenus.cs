@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Linq;
 using Avalonia.Controls;
 using TabForge.Services;
-using TabForge.Menus;
+using TabForge.Commands;
 
 namespace TabForge.Avalonia.Views;
 

@@ -3,7 +3,7 @@
 // Does not own: the buttons (Avalonia ToolsPaneView), the tool actions, the icon artwork (Assets/Icons/Tools).
 // Tests: TabForge.Avalonia.Tests.ToolsPaneViewTests.
 
-using TabForge.Menus;
+using TabForge.Commands;
 namespace TabForge.Presenters;
 
 /// <summary>One palette button: its group heading, id (also its hotkey name), icon file under Assets/Icons/Tools, label, and whether the app supports it.</summary>

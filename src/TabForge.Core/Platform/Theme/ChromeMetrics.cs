@@ -107,6 +107,9 @@ public static class ChromeMetrics
     /// the audition button's edge and its icon size, in DIPs.</summary>
     public const double ComposerStepHeight = 6, ComposerStepGap = 1, ComposerBeatGap = 3, ComposerVoiceLabelWidth = 18, ComposerPlaySize = 26, ComposerPlayIcon = 12;
 
+    /// <summary>The Composer panel's close button beside the title: the button's edge, the X glyph's edge and the glyph's stroke, in DIPs.</summary>
+    public const double ComposerCloseSize = 24, ComposerCloseGlyph = 9, ComposerCloseStroke = 1.4;
+
     /// <summary>The Customize strip window: its size, the width of each list, the gap between rows and the gap between columns, in DIPs.</summary>
     public const double LeftStripWindowWidth = 720, LeftStripWindowHeight = 480, LeftStripListWidth = 220, LeftStripGap = 6, LeftStripColumnGap = 12, LeftStripGlyphSize = 16;
     /// <summary>The Focus track settings window: its width, the gap between its sections and inside a row, and the roundness of its chips and bars.</summary>

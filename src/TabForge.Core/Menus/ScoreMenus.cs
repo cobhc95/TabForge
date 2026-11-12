@@ -1,3 +1,5 @@
+using TabForge.Commands;
+
 // Owns: the score editor's empty-area right-click menu as data (paste, standard notation, note length outline, zoom, page layout and the one
 //   "Score settings..." door), the main score's "Show in piano roll (this track)" row, and the ids and captions its rows carry.
 // Does not own: opening the menu or running its rows (the score host, the Avalonia ScorePreviewView) or the Preferences pages it points to.

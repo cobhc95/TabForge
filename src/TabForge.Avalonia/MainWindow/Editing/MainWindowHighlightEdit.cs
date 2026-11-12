@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using TabForge.Documents;
 using TabForge.Models;
 using TabForge.Services;
-using TabForge.Menus;
+using TabForge.Commands;
 
 namespace TabForge.Avalonia;
 

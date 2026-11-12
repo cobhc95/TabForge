@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using TabForge.Platform.Theme;
-using TabForge.Menus;
+using TabForge.Commands;
 
 namespace TabForge.Avalonia.Features.LeftStrip;
 

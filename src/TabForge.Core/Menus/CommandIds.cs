@@ -1,4 +1,4 @@
-namespace TabForge.Menus;
+namespace TabForge.Commands;
 
 // Owns: the names of the command ids that more than four files spell out (menu table, hotkey catalogue, left strip, transport bar, context menus, handlers). Every value is the id as the
 //   settings and the hotkey bindings store it, so a constant is never renamed or re-valued.

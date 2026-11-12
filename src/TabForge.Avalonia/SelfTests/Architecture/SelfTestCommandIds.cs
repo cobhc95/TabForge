@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using System.Reflection;
 using TabForge.Avalonia.Features.LeftStrip;
-using TabForge.Menus;
+using TabForge.Commands;
 using TabForge.Presenters;
 using TabForge.Services;
 

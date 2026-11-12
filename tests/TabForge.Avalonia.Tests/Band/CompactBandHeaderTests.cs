@@ -10,6 +10,7 @@ using Avalonia.Threading;
 using TabForge.Avalonia.Features.LeftStrip;
 using TabForge.Avalonia.Platform.Controls;
 using TabForge.Avalonia.Views;
+using TabForge.Commands;
 using TabForge.Presenters;
 using TabForge.Services;
 using Xunit;

@@ -10,7 +10,7 @@ using TabForge.Platform;
 using TabForge.Rendering;
 using TabForge.Services;
 using TabForge.Services.Video;
-using TabForge.Menus;
+using TabForge.Commands;
 
 namespace TabForge.Avalonia;
 

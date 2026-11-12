@@ -1,5 +1,5 @@
 using TabForge.Models;
-using TabForge.Menus;
+using TabForge.Commands;
 // Owns: the catalogue rows for main-menu commands that had no id, so each can be given a key in Preferences > Shortcuts.
 // Does not own: the menu rows and their handlers (MainWindow.Menus.cs), the registration of rows as commands (Views/MainMenu/MenuRowCommands.cs).
 // Tests: no dedicated test class.

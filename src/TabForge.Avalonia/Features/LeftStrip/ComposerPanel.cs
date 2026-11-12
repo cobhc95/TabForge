@@ -86,14 +86,19 @@ public static class ComposerPanel
         if (close is null) stack.Children.Add(title);
         else
         {
-            var glyph = new Path { Data = Geometry.Parse("M0,0 L9,9 M9,0 L0,9"), Width = 9, Height = 9, StrokeThickness = 1.4, StrokeLineCap = PenLineCap.Round };
+            var glyph = new Path
+            {
+                Data = Geometry.Parse("M0,0 L9,9 M9,0 L0,9"), Width = ChromeMetrics.ComposerCloseGlyph, Height = ChromeMetrics.ComposerCloseGlyph,
+                StrokeThickness = ChromeMetrics.ComposerCloseStroke, StrokeLineCap = PenLineCap.Round,
+            };
             glyph[!Shape.StrokeProperty] = new DynamicResourceExtension("IconDefaultBrush");
             var x = new Button
             {
-                Name = "ComposerCloseButton", Content = glyph, Width = 24, Height = 24, MinWidth = 24, MinHeight = 24, Padding = new Thickness(0),
+                Name = "ComposerCloseButton", Content = glyph, Width = ChromeMetrics.ComposerCloseSize, Height = ChromeMetrics.ComposerCloseSize,
+                MinWidth = ChromeMetrics.ComposerCloseSize, MinHeight = ChromeMetrics.ComposerCloseSize,
                 HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top,
                 Background = AvaloniaPalette.TransparentBrush, Focusable = false,
-            };
+            }.WithPadding(DialogMetrics.ComposerNoPadding);
             ToolTip.SetTip(x, "Close Composer");
             AutomationProperties.SetName(x, "Close Composer");
             x.Click += (_, _) => close();

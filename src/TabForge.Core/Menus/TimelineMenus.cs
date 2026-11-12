@@ -1,4 +1,6 @@
-﻿// Owns: the arrangement-timeline right-click menus as data: the bar, loop region, ruler, section and clip menus, and the command each row runs (TimelineCommand).
+﻿using TabForge.Commands;
+
+// Owns: the arrangement-timeline right-click menus as data: the bar, loop region, ruler, section and clip menus, and the command each row runs (TimelineCommand).
 // Does not own: opening the menus or running their commands (the Avalonia timeline menu).
 // Tests: no dedicated test class.
 

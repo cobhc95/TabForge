@@ -19,7 +19,7 @@ using TabForge.Platform.Theme;
 using TabForge.Presenters;
 using TabForge.Services;
 using TabForge.Shell;
-using TabForge.Menus;
+using TabForge.Commands;
 
 // Owns: building the document tabs and their layout; the press, move past TabDragRules.DragThreshold and release that make a tab drag; the
 //   drop preview over the strip (the accent highlight and the insertion marker), the neighbour slide of an in-strip reorder and the tab hidden

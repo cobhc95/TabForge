@@ -1,4 +1,4 @@
-using TabForge.Menus;
+using TabForge.Commands;
 namespace TabForge.Services;
 
 // Owns: the words of the bar-range Delete prompt and of its Settings row ("Timeline cut/delete"), and the mapping between them and BarRangeAction.

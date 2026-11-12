@@ -4,6 +4,7 @@
 // Does not own: opening the menu or running the rows (the app's PianoRollView), or the edits (PianoRollPresenter).
 // Tests: TabForge.Avalonia.Tests.PianoRollViewTests.
 
+using TabForge.Commands;
 using TabForge.Services;
 
 namespace TabForge.Menus;

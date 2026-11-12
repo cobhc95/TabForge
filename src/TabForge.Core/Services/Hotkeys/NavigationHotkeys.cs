@@ -1,4 +1,4 @@
-using TabForge.Menus;
+using TabForge.Commands;
 namespace TabForge.Services;
 
 // Owns: which commands count as navigation and transport, the ones that act on the song while another TabForge window has the focus.

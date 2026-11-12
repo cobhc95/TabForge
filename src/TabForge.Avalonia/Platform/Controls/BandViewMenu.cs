@@ -1,5 +1,6 @@
 using System;
 using Avalonia.Controls;
+using TabForge.Commands;
 using TabForge.Services;
 
 namespace TabForge.Avalonia.Platform.Controls;

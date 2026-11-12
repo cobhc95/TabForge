@@ -6,7 +6,7 @@ using TabForge.Avalonia.Platform;
 using TabForge.Models;
 using TabForge.Services;
 using TabForge.Views.EffectEditors;
-using TabForge.Menus;
+using TabForge.Commands;
 
 namespace TabForge.Avalonia.Views;
 

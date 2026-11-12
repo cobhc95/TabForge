@@ -4,7 +4,7 @@ using Avalonia.Controls;
 using TabForge.Avalonia.Views;
 using TabForge.Documents;
 using TabForge.Models;
-using TabForge.Menus;
+using TabForge.Commands;
 
 namespace TabForge.Avalonia;
 

@@ -12,7 +12,7 @@ using TabForge.Platform.Theme;
 using TabForge.Presenters;
 using TabForge.Services;
 using TabForge.Avalonia.Views.Dialogs;
-using TabForge.Menus;
+using TabForge.Commands;
 
 namespace TabForge.Avalonia.Views;
 

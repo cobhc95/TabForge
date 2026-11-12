@@ -156,6 +156,8 @@ public sealed class MenuHotkeysUnchangedTests
             "View.LearnPopout|Ctrl+Alt+O|",
             "View.CompactMode|Ctrl+Alt+C|",
             "View.BandView|Ctrl+Shift+B|",
+            // Deliberate new defaults added after the consolidation (pinned here so they cannot change by accident either).
+            "Transport.FocusTrack|Ctrl+Alt+F|",
     };
 
     [Fact]

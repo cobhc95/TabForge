@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using TabForge.Presenters;
-using TabForge.Menus;
+using TabForge.Commands;
 
 namespace TabForge.Avalonia.Platform.Controls;
 

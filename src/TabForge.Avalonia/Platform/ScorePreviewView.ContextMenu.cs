@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
 using TabForge.Avalonia.Views;
+using TabForge.Commands;
 using TabForge.Menus;
 using TabForge.Presenters;
 using TabForge.Views.Score;

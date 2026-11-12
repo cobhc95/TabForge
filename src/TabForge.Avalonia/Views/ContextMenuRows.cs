@@ -4,6 +4,7 @@ using System.Linq;
 using Avalonia;
 using TabForge.Avalonia;
 using TabForge.Avalonia.Platform;
+using TabForge.Commands;
 using TabForge.Documents;
 using TabForge.Features.Recording.Rules;
 using TabForge.Menus;

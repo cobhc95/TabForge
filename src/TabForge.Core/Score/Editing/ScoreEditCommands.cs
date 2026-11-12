@@ -6,7 +6,7 @@ using TabForge.Playback;
 using TabForge.Services;
 using TabForge.Views;
 using TabForge.Views.Score;
-using TabForge.Menus;
+using TabForge.Commands;
 
 namespace TabForge.ScoreEditing;
 

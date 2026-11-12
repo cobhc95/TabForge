@@ -7,7 +7,7 @@ using TabForge.Documents;
 using TabForge.Models;
 using TabForge.Playback;
 using TabForge.Presenters;
-using TabForge.Menus;
+using TabForge.Commands;
 
 namespace TabForge.Avalonia;
 

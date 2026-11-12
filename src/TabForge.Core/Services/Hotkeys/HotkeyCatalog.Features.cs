@@ -3,7 +3,7 @@
 // Does not own: the ids (FeatureHotkeyIds, FxChainIds), the commands and handlers (the feature modules, MainWindow.Commands.cs), the presets.
 // Tests: no dedicated test class.
 using TabForge.Services.Features;
-using TabForge.Menus;
+using TabForge.Commands;
 
 namespace TabForge.Services;
 

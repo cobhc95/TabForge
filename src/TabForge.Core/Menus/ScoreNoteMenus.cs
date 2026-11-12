@@ -5,6 +5,7 @@
 //   (PaletteToolStates, reached through ScoreNoteMenuState), the palette tool rows (PaletteToolCatalog).
 // Tests: TabForge.Avalonia.Tests.ScoreContextMenuTests.
 
+using TabForge.Commands;
 using TabForge.Presenters;
 
 namespace TabForge.Menus;

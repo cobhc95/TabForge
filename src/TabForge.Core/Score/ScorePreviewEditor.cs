@@ -6,7 +6,7 @@ using TabForge.Presenters;
 using TabForge.Services;
 using TabForge.Shell;
 using TabForge.ScoreEditing;
-using TabForge.Menus;
+using TabForge.Commands;
 
 namespace TabForge.Views.Score;
 

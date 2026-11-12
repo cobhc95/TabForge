@@ -1,7 +1,7 @@
 // Owns: the table of bindable commands (id, category, name, default keys, description), built once in five slices (the feature rows last).
 // Does not own: lookup, gestures and presets (HotkeyCatalog.cs).
 // Tests: no dedicated test class.
-using TabForge.Menus;
+using TabForge.Commands;
 namespace TabForge.Services;
 
 public static partial class HotkeyCatalog

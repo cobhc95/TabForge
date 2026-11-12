@@ -10,7 +10,7 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.VisualTree;
 using TabForge.Platform.Theme;
-using TabForge.Menus;
+using TabForge.Commands;
 
 
 namespace TabForge.Avalonia.Views;

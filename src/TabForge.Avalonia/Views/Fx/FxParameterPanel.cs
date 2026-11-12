@@ -13,7 +13,7 @@ using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Platform.Controls;
 using TabForge.Platform.Theme;
 using TabForge.Services;
-using TabForge.Menus;
+using TabForge.Commands;
 
 namespace TabForge.Avalonia.Views.Fx;
 

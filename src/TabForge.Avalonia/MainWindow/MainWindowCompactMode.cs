@@ -7,7 +7,7 @@ using TabForge.Avalonia.Platform.Controls;
 using TabForge.Docking;
 using TabForge.Documents;
 using TabForge.Presenters;
-using TabForge.Menus;
+using TabForge.Commands;
 
 namespace TabForge.Avalonia;
 

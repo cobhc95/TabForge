@@ -1,5 +1,5 @@
 using TabForge.Models;
-using TabForge.Menus;
+using TabForge.Commands;
 // Owns: the plain main-menu rows as data: the top-level menu each group goes in, the skeleton item it follows, each row's caption
 //   (with the access-key underscore the menu shows), its command id (the hotkey id of HotkeyCatalog) and its tag, the separators and the submenus (a caption over its own rows).
 // Does not own: the click handlers (MainWindow.Menus.cs binds each command id to one), the menu skeleton (MainWindow.xaml: the

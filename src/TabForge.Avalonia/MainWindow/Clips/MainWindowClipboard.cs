@@ -5,7 +5,7 @@ using Avalonia.Controls;
 using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Services;
-using TabForge.Menus;
+using TabForge.Commands;
 
 namespace TabForge.Avalonia;
 

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using TabForge.Avalonia.Platform;
+using TabForge.Commands;
 using TabForge.Documents;
 using TabForge.Features.Recording.Model;
 using TabForge.Features.Recording.Rules;

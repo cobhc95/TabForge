@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using TabForge.Avalonia.Features.Recording.Presenter;
 using TabForge.Avalonia.Transport;
-using TabForge.Menus;
+using TabForge.Commands;
 
 namespace TabForge.Avalonia;
 

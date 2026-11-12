@@ -12,7 +12,7 @@ using TabForge.Documents;
 using TabForge.Platform;
 using TabForge.Presenters;
 using TabForge.Services;
-using TabForge.Menus;
+using TabForge.Commands;
 
 namespace TabForge.Avalonia;
 

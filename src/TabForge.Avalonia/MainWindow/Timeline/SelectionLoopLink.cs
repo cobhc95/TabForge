@@ -14,7 +14,7 @@ using TabForge.Models;
 using TabForge.Playback;
 using TabForge.Presenters;
 using TabForge.Services;
-using TabForge.Menus;
+using TabForge.Commands;
 
 namespace TabForge.Avalonia;
 

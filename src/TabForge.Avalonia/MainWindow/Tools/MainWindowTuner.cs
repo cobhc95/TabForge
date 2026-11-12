@@ -5,7 +5,7 @@ using Avalonia.Controls;
 using TabForge.Audio;
 using TabForge.Avalonia.Views;
 using TabForge.Models;
-using TabForge.Menus;
+using TabForge.Commands;
 
 namespace TabForge.Avalonia;
 

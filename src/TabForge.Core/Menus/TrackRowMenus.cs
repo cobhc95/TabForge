@@ -1,3 +1,5 @@
+using TabForge.Commands;
+
 // Owns: the contents of the track row's right-click menu (plain data, one menu for every track kind), and the master track row's menu item (its
 //   header, command id and setting key).
 // Does not own: opening the menu and running the commands (the Avalonia track header).

@@ -360,6 +360,12 @@ public static class ThemeColours
         return new UiColor(0xFF, Mix(c.R, other.R), Mix(c.G, other.G), Mix(c.B, other.B));
     }
 
+    /// <summary><see cref="Blend"/> toward opaque black by <paramref name="amount"/> (a pressed button's shade); the result is opaque.</summary>
+    public static UiColor Darken(UiColor c, double amount) => Blend(c, new UiColor(0xFF, 0, 0, 0), amount);
+
+    /// <summary><see cref="Blend"/> toward opaque white by <paramref name="amount"/> (a hovered button's shade); the result is opaque, unlike <see cref="Brighten"/>.</summary>
+    public static UiColor Lighten(UiColor c, double amount) => Blend(c, new UiColor(0xFF, 0xFF, 0xFF, 0xFF), amount);
+
     /// <summary>The colour mixed toward white by <paramref name="amount"/> (0 keeps it, 1 is white); alpha is kept.</summary>
     public static UiColor Brighten(UiColor c, double amount)
     {
