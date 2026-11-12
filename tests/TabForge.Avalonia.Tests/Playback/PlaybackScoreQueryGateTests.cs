@@ -29,7 +29,7 @@ public sealed class PlaybackScoreQueryGateTests
     private static readonly Dictionary<string, (int Count, string Reason)> AllowedLiveReads = new()
     {
         ["PlaybackEngine.cs"] = (7, "LiveProject accessor and its owner-thread users (SetPracticeSilence, loop restart); AudibleMask(project) is the static the snapshot calls with its copy; PublishedSongCopy is the self-test view"),
-        ["PlaybackEngine.MidiOut.cs"] = (1, "RearmChannelSetup while stopped: owner thread, no scheduler runs"),
+        ["PlaybackEngine.MidiOut.cs"] = (2, "RearmChannelSetup while stopped: owner thread, no scheduler runs; SendSetupFromProject keeps the published track ids on the stopped setup timeline so Focus track can find each track"),
         ["PlaybackEngine.Loop.cs"] = (1, "loop restart in UpdateOptions: owner thread, live song read only for the restart"),
         ["PlaybackEngine.ChannelState.cs"] = (6, "PushLiveChannelState: the owner-thread live send of the song's program, volume, pan and sends (the setup events are written under the output lock the scheduler reads them under); LiveProject only for the paused resume refresh"),
         ["PlaybackEngine.Transport.cs"] = (1, "Stop keeps the live song as an identity reference only; it is never dereferenced"),
