@@ -6,15 +6,22 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ### Added
 
-- A small red mark under the bar number on the timeline for every bar where any track changes sound, effects or tempo.
+- A small red button under the bar number on the timeline for every bar where any track changes sound, effects or tempo. It lightens under the pointer, presses in when clicked, and opens the Mix Table on the bar's first changed beat.
+- A close (X) button at the top right of the Composer panel; it does the same as turning the Composer off.
 - A shortcut for Focus track: Ctrl+Alt+F turns it on or off, also while the mixer or a plug-in window is in front. Change it in Settings > Shortcuts like any other shortcut.
 
 ### Changed
 
 - The Mix Table (F10) shows every change in force at the beat, whichever track it was made from: the tempo of the bar, a gradual tempo change with its length in the Transition box, and a mix point set for all tracks. Setting a tempo writes it for every track, as a gradual change when a Transition is chosen.
 
+- F10 on a beat with no change, in a bar the timeline marks, opens the Mix Table on the bar's first changed beat instead of an empty table.
+- The tempo slider in the tempo popup covers the whole song range, 20 to 400 BPM, instead of 30 to 300.
+- Under the hood: the code was tidied for readability and safety, with no change to what you see. Dead code and stale test notes were removed; the tempo limits, the setting ranges, command ids, MIDI status and controller numbers and the "all notes off" reset now each have one shared definition; six duplicated pieces were merged; failures in background actions are now logged or shown on the status line instead of being lost; right-click menu state, the shared scale pick, undo memory, the selection and loop link, the recording hookup and the clip-edit clean-up each have one clear owner; the main window's start-up wiring is covered by a new safety test; and new tests pin the compiled MIDI, undo order, selection commands and the main window's commands.
+
 ### Fixed
 
+- Paste after section (and Paste section on a gap) pasted into the track left over from an earlier right-click menu. It now pastes into the track selected in the song.
+- The let-ring time setting did nothing between 400 and 599 ms; playback never went below 600 ms. It now follows the whole 400 to 6000 ms range. Values of 600 ms and more sound exactly as before, and Guitar Pro files are unaffected (they carry only the let-ring mark, not a time).
 - Focus track stops working part-way through a song. Before, once playback reached a volume point written in the Mix Table, the tracks it set went back to their normal level, so the selected track lost its boost and the other tracks were no longer lowered. Volume points are now scaled by Focus track like every other level.
 - Focus track switches itself off after a jump. Before, clicking the timeline or ruler, jumping to a bar or section, a loop restarting after an edit, or an edit while the song played could bring every track back to its normal level until Focus track was turned off and on again. A track added while the song played was not lowered either. Focus track is now applied to every level as it is sent, so nothing that moves the playback can lose it.
 - A gradual tempo change (such as bar 101 of Ashen Meridian) was missing from the Mix Table.
