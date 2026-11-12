@@ -1,0 +1,62 @@
+demo|letring=600|9C1F5882361974FD83376C4C
+demo|letring=1000|9C1F5882361974FD83376C4C
+demo|letring=2000|9C1F5882361974FD83376C4C
+demo|letring=6000|9C1F5882361974FD83376C4C
+demo|metronome+countin|55D1FEE0B9EDAF12B208AF32
+demo|start=bar5|7C558EF02DC51C4667567A47
+demo|export|5AAB12F94A81EB8A8C598ECA
+full-demo|letring=600|4352B7D1165A0E8F91B4D67E
+full-demo|letring=1000|0673E26D6663DFF749B69245
+full-demo|letring=2000|27A633650FD6A61EBE2EA774
+full-demo|letring=6000|5E2048FA5325671CC8C4989D
+full-demo|metronome+countin|07FDA6B8EF537D63C2CACF75
+full-demo|start=bar5|690F44B542D6F225016862D0
+full-demo|export|AE62B6CDDDB49A8B688F2138
+mix-points|letring=600|DFD74C90A07597867186D045
+mix-points|letring=1000|B7828665A1E8BD698A8EEF33
+mix-points|letring=2000|29BF762A7A5977CFBD1935F1
+mix-points|letring=6000|731AD16FEA5032A60821364D
+mix-points|metronome+countin|6208D92FF942238430EB1C14
+mix-points|start=bar5|9448C9F251573B17DBBFBE74
+mix-points|export|EA979A01CCFA992831A49047
+sample:As I Lay Dying - Blinded (ver 2 by president100).gp5|letring=600|DE5730367F0CC0B8FE6EABC2
+sample:As I Lay Dying - Blinded (ver 2 by president100).gp5|letring=1000|9BD81760A6EF5FE96123C5BB
+sample:As I Lay Dying - Blinded (ver 2 by president100).gp5|letring=2000|4436D72A0A8DCE61A10AFCEE
+sample:As I Lay Dying - Blinded (ver 2 by president100).gp5|letring=6000|F490038595819B4DC3DFCA22
+sample:As I Lay Dying - Blinded (ver 2 by president100).gp5|metronome+countin|3812A12AAD66F86E67D8B83E
+sample:As I Lay Dying - Blinded (ver 2 by president100).gp5|start=bar5|BCE50EEC30B2E8FBA2E552DC
+sample:As I Lay Dying - Blinded (ver 2 by president100).gp5|export|550CF724B43FBAA01D04CBBB
+sample:As I Lay Dying - The Darkest Nights (ver 3 by Mysticlink).gp5|letring=600|C1132D4E74DEDD10DCD51D71
+sample:As I Lay Dying - The Darkest Nights (ver 3 by Mysticlink).gp5|letring=1000|C1132D4E74DEDD10DCD51D71
+sample:As I Lay Dying - The Darkest Nights (ver 3 by Mysticlink).gp5|letring=2000|C1132D4E74DEDD10DCD51D71
+sample:As I Lay Dying - The Darkest Nights (ver 3 by Mysticlink).gp5|letring=6000|C1132D4E74DEDD10DCD51D71
+sample:As I Lay Dying - The Darkest Nights (ver 3 by Mysticlink).gp5|metronome+countin|3677AB7558CFDF27C054A9E2
+sample:As I Lay Dying - The Darkest Nights (ver 3 by Mysticlink).gp5|start=bar5|BDA24ECBBF56D99C33788DB2
+sample:As I Lay Dying - The Darkest Nights (ver 3 by Mysticlink).gp5|export|3DD7EC86DA3C0B09B4CF2943
+sample:TabForge - Showcase fixture.gp|letring=600|642B01F22D967A4DBCA22551
+sample:TabForge - Showcase fixture.gp|letring=1000|642B01F22D967A4DBCA22551
+sample:TabForge - Showcase fixture.gp|letring=2000|642B01F22D967A4DBCA22551
+sample:TabForge - Showcase fixture.gp|letring=6000|642B01F22D967A4DBCA22551
+sample:TabForge - Showcase fixture.gp|metronome+countin|BD3EFFEA694B92DB755EA53C
+sample:TabForge - Showcase fixture.gp|start=bar5|1FCEB2331C0645E577202A8D
+sample:TabForge - Showcase fixture.gp|export|147B564CC7E227D99CB26EFE
+sample:TabForge - Synthetic GP fixture.gp|letring=600|06A132621C7039CEB3C6D116
+sample:TabForge - Synthetic GP fixture.gp|letring=1000|06A132621C7039CEB3C6D116
+sample:TabForge - Synthetic GP fixture.gp|letring=2000|06A132621C7039CEB3C6D116
+sample:TabForge - Synthetic GP fixture.gp|letring=6000|06A132621C7039CEB3C6D116
+sample:TabForge - Synthetic GP fixture.gp|metronome+countin|E4C9E3FED432C34A3B41603B
+sample:TabForge - Synthetic GP fixture.gp|export|12F376482EA48A4ED10EFD31
+sample:TabForge Demo - Ashen Meridian.gp|letring=600|8AAE7BD122DE604DD22009F7
+sample:TabForge Demo - Ashen Meridian.gp|letring=1000|7A6D245E7B1103940134A69C
+sample:TabForge Demo - Ashen Meridian.gp|letring=2000|527EACE0303F98C874A37BC5
+sample:TabForge Demo - Ashen Meridian.gp|letring=6000|0F455C5F9350140D25092F33
+sample:TabForge Demo - Ashen Meridian.gp|metronome+countin|8B1D2E03EE9D4606FE80DC5E
+sample:TabForge Demo - Ashen Meridian.gp|start=bar5|ED47B47A1B7EBD8DCE91AEB7
+sample:TabForge Demo - Ashen Meridian.gp|export|07567DE7A9F5F8E26CCFF7A2
+sample:TabForge Demo - Ashen Meridian.gp5|letring=600|A9009AD4488FD7FAE5FB0946
+sample:TabForge Demo - Ashen Meridian.gp5|letring=1000|33D4D4E74AACEE56C624818B
+sample:TabForge Demo - Ashen Meridian.gp5|letring=2000|5A396A35C85008E4ECC1B6B6
+sample:TabForge Demo - Ashen Meridian.gp5|letring=6000|5A396A35C85008E4ECC1B6B6
+sample:TabForge Demo - Ashen Meridian.gp5|metronome+countin|641C86CBF79D2FA4CC0F3F96
+sample:TabForge Demo - Ashen Meridian.gp5|start=bar5|00F1376B9A9B17D84ACFEFF8
+sample:TabForge Demo - Ashen Meridian.gp5|export|D4FF88872F996D0DC948DEEF
