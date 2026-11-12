@@ -15,7 +15,6 @@ Source/src/TabForge.AudioEngine/Plugins/Vst3ClassInfo.cs|1
 Source/src/TabForge.AudioEngine/Plugins/Vst3Plugin.cs|1
 Source/src/TabForge.Avalonia/App/Program.cs|1
 # Reason: a fixed table of placeholder rows, never written after start-up.
-Source/src/TabForge.Avalonia/Features/LeftStrip/ComposerPanel.cs|1
 # Reason: a fixed table of command ids, never written after start-up.
 Source/src/TabForge.Avalonia/Features/LeftStrip/LeftStripFeature.cs|1
 Source/src/TabForge.Avalonia/MainWindow/Menus/MainWindowOptionsMenu.cs|1

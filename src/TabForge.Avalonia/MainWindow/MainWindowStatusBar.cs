@@ -142,6 +142,7 @@ public sealed class MainWindowStatusBar : IDisposable, INoticeReceiver
     /// <summary>Shows the state word and the readouts: the playhead's while the song plays, else the cursor's (with the time at it). The playhead tick calls only this.</summary>
     private void RefreshReadout()
     {
+        if (_tabs.ActiveIndex < 0 || _tabs.ActiveIndex >= _tabs.Songs.Count) return;   // the last tab is closing: no song to show
         _watch.Bind(_tabs.Active);
         var song = _tabs.Active.Project;
         var track = song.Tracks.Count > 0 ? song.Tracks[0] : null;

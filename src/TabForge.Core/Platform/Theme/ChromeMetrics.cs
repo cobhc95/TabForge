@@ -109,6 +109,8 @@ public static class ChromeMetrics
 
     /// <summary>The Customize strip window: its size, the width of each list, the gap between rows and the gap between columns, in DIPs.</summary>
     public const double LeftStripWindowWidth = 720, LeftStripWindowHeight = 480, LeftStripListWidth = 220, LeftStripGap = 6, LeftStripColumnGap = 12, LeftStripGlyphSize = 16;
+    /// <summary>The Focus track settings window: its width, the gap between its sections and inside a row, and the roundness of its chips and bars.</summary>
+    public const double FocusWindowWidth = 460, FocusGap = 12, FocusTightGap = 6, FocusCorner = 6;
 
     /// <summary>The Help window: default and minimum size, the chapter list's width, the reading column's widest line, and the search results' most rows.</summary>
     public const double HelpWindowWidth = 960, HelpWindowHeight = 680, HelpWindowMinWidth = 600, HelpWindowMinHeight = 420, HelpNavWidth = 248, HelpReadingWidth = 760;

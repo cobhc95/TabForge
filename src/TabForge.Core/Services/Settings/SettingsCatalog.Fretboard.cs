@@ -90,7 +90,7 @@ public static partial class SettingsCatalog
             Choice(Fretboard, "Appearance","fretboard.scalecolour", "Scale highlight colour", v => ed.ScaleHighlightColour = v, () => ed.ScaleHighlightColour,
                 ScaleHighlightStyles.Colours,
                 "Colour of the scale highlight on the fretboard and keyboard.",
-                "scale highlight colour color blue green amber purple red teal grey"),
+                "scale highlight custom colour color blue green amber purple red teal grey"),
             Int(Fretboard, "Appearance", "fretboard.scalestrength", "Scale highlight strength", v => ed.ScaleHighlightStrength = v, () => ed.ScaleHighlightStrength,
                 ScaleHighlightStyles.MinStrength, ScaleHighlightStyles.MaxStrength,
                 "How strong the scale highlight looks on the fretboard and keyboard: lower is dimmer, higher is brighter (100% is the standard look). The root note always stays stronger than the other scale notes.",

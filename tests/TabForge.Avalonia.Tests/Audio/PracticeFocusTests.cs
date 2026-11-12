@@ -6,8 +6,9 @@ using Xunit;
 
 namespace TabForge.Avalonia.Tests;
 
-// Owns: Focus Track's rules: off changes nothing; the selected track is raised by decibels, percent or to a level, for any track or a mixer group; the others
-//   drop only when the boost would pass the loudest level; the engine levels follow it; the fader and saved song are untouched.
+// Owns: Focus Track's behaviour: off changes nothing; the selected track is raised by decibels, percent or to a level; every other track is lowered like the
+//   boost by default, or left alone, lowered or raised by its group's choice; the selected track is never lowered; the ready-made templates; the engine levels
+//   follow it; the fader and saved song are untouched.
 public sealed class PracticeFocusTests
 {
     private readonly PracticeFocus _focus = new();
@@ -22,6 +23,13 @@ public sealed class PracticeFocusTests
 
     private static FocusTrackSettings Rules(FocusBoostMode mode, double amount) => new() { Boost = new FocusBoost(mode, amount) };
 
+    private static FocusTrackSettings WithOthers(FocusBoostMode mode, double amount, FocusOther other, SongProject project)
+    {
+        var rules = Rules(mode, amount);
+        rules.Others[MixerGroups.GroupOf(project, project.Tracks[0])] = other;
+        return rules;
+    }
+
     [Fact]
     public void OffChangesNothing()
     {
@@ -32,48 +40,91 @@ public sealed class PracticeFocusTests
     }
 
     [Fact]
-    public void DecibelsRaiseTheSelectedTrackAndLeaveTheOthersWhenThereIsRoom()
+    public void ByDefaultEveryOtherTrackIsLoweredByTheAmountTheSelectedOneIsRaised()
     {
-        var project = Song(first: 50);
+        var project = Song(first: 50, second: 100);
         _focus.Set(true, project, project.Tracks[0], Rules(FocusBoostMode.Decibels, 6));
-        Assert.InRange(_focus.Scale(project.Tracks[0], 50), 99, 101);   // +6 dB is about twice the level
+        Assert.InRange(_focus.Scale(project.Tracks[0], 50), 99, 101);    // +6 dB is about twice the level
+        Assert.InRange(_focus.Scale(project.Tracks[1], 100), 49, 51);    // the others go down 6 dB
+    }
+
+    [Fact]
+    public void PercentLowersTheOthersByTheSamePercentage()
+    {
+        var project = Song(first: 60, second: 100);
+        _focus.Set(true, project, project.Tracks[0], Rules(FocusBoostMode.Percent, 20));
+        Assert.Equal(72, _focus.Scale(project.Tracks[0], 60));    // 20% louder
+        Assert.Equal(80, _focus.Scale(project.Tracks[1], 100));   // 20% quieter
+    }
+
+    [Fact]
+    public void ToLevelPlaysAtThatLevelAndTheOthersFallByTheSameChangeInLoudness()
+    {
+        var project = Song(first: 50, second: 100);
+        _focus.Set(true, project, project.Tracks[0], Rules(FocusBoostMode.ToLevel, 100));   // twice its level
+        Assert.Equal(100, _focus.Scale(project.Tracks[0], 50));
+        Assert.InRange(_focus.Scale(project.Tracks[1], 100), 49, 51);
+    }
+
+    [Fact]
+    public void PastTheLoudestLevelTheSelectedTrackStopsAt127()
+    {
+        var project = Song(first: 100, second: 100);
+        _focus.Set(true, project, project.Tracks[0], Rules(FocusBoostMode.Decibels, 6));
+        Assert.Equal(127, _focus.Scale(project.Tracks[0], 100));
+        Assert.InRange(_focus.Scale(project.Tracks[1], 100), 49, 51);
+    }
+
+    [Fact]
+    public void AGroupLeftAsItIsKeepsItsLevelAndTheSelectedTrackKeepsItsBoost()
+    {
+        var project = Song(first: 60, second: 100);   // both in the same group
+        var rules = WithOthers(FocusBoostMode.Percent, 20, new FocusOther(FocusOtherMode.LeaveAlone), project);
+        _focus.Set(true, project, project.Tracks[0], rules);
+        Assert.Equal(72, _focus.Scale(project.Tracks[0], 60));
         Assert.Equal(100, _focus.Scale(project.Tracks[1], 100));
     }
 
     [Fact]
-    public void PercentRaisesByThatShareOfTheTracksOwnLevel()
+    public void AGroupCanBeLoweredOrRaisedByAnAmountOfItsOwn()
     {
-        var project = Song(first: 60);
-        _focus.Set(true, project, project.Tracks[0], Rules(FocusBoostMode.Percent, 50));
-        Assert.Equal(90, _focus.Scale(project.Tracks[0], 60));
+        var project = Song(first: 60, second: 50);
+        _focus.Set(true, project, project.Tracks[0], WithOthers(FocusBoostMode.Percent, 20, new FocusOther(FocusOtherMode.Lower, new FocusBoost(FocusBoostMode.Decibels, 6)), project));
+        Assert.InRange(_focus.Scale(project.Tracks[1], 50), 24, 26);
+        _focus.Set(true, project, project.Tracks[0], WithOthers(FocusBoostMode.Percent, 20, new FocusOther(FocusOtherMode.Raise, new FocusBoost(FocusBoostMode.Percent, 50)), project));
+        Assert.Equal(75, _focus.Scale(project.Tracks[1], 50));
+        Assert.Equal(72, _focus.Scale(project.Tracks[0], 60));   // the selected track is the boosted one either way
     }
 
     [Fact]
-    public void ToLevelPlaysAtThatLevelWhateverTheFaderSays()
+    public void TheSelectedTrackIsNeverLoweredWhateverItsGroupSays()
     {
-        var project = Song(first: 40);
-        _focus.Set(true, project, project.Tracks[0], Rules(FocusBoostMode.ToLevel, 110));
-        Assert.Equal(110, _focus.Scale(project.Tracks[0], 40));
-    }
-
-    [Fact]
-    public void PastTheLoudestLevelTheOthersMakeUpTheDifference()
-    {
-        var project = Song(first: 100);
-        _focus.Set(true, project, project.Tracks[0], Rules(FocusBoostMode.Decibels, 6));   // wants about 199, can reach 127
-        Assert.Equal(127, _focus.Scale(project.Tracks[0], 100));
-        Assert.True(_focus.Scale(project.Tracks[1], 100) < 100);
-    }
-
-    [Fact]
-    public void AGroupRuleWinsOverTheDefaultAndOtherGroupsKeepTheDefault()
-    {
-        var project = Song(first: 50);
-        var rules = Rules(FocusBoostMode.Percent, 20);
-        rules.Groups[MixerGroups.GroupOf(project, project.Tracks[0])] = new FocusBoost(FocusBoostMode.Percent, 100);
+        var project = Song(first: 60, second: 60);
+        var rules = WithOthers(FocusBoostMode.Decibels, 6, new FocusOther(FocusOtherMode.Lower, new FocusBoost(FocusBoostMode.Percent, 100)), project);   // silence the group
         _focus.Set(true, project, project.Tracks[0], rules);
-        Assert.Equal(100, _focus.Scale(project.Tracks[0], 50));   // the group's +100% (twice), not the default +20%
-        Assert.Equal(20, rules.Boost.Amount);
+        Assert.True(_focus.Scale(project.Tracks[0], 60) >= 60);
+        Assert.Equal(0, _focus.Scale(project.Tracks[1], 60));
+    }
+
+    [Fact]
+    public void TheReadyMadeTemplatesSayWhatTheyDo()
+    {
+        Assert.All(FocusTrackSettings.Groups, g => Assert.Equal(FocusOtherMode.SameAsBoost, FocusTrackSettings.ForPreset(FocusTrackSettings.Spotlight)[g].Mode));
+        var keep = FocusTrackSettings.ForPreset(FocusTrackSettings.KeepRhythm);
+        Assert.Equal(FocusOtherMode.LeaveAlone, keep[FocusTrackSettings.Drums].Mode);
+        Assert.Equal(FocusOtherMode.LeaveAlone, keep[FocusTrackSettings.Basses].Mode);
+        Assert.Equal(FocusOtherMode.SameAsBoost, keep[FocusTrackSettings.Guitars].Mode);
+        Assert.All(FocusTrackSettings.Groups, g => Assert.Equal(FocusOtherMode.LeaveAlone, FocusTrackSettings.ForPreset(FocusTrackSettings.OnlyBoost)[g].Mode));
+        Assert.Equal(FocusOtherMode.Raise, FocusTrackSettings.ForPreset(FocusTrackSettings.RhythmUp)[FocusTrackSettings.Drums].Mode);
+    }
+
+    [Fact]
+    public void AGroupOfTheUsersOwnFollowsOtherInstruments()
+    {
+        var rules = new FocusTrackSettings();
+        rules.Others[FocusTrackSettings.OtherInstruments] = new FocusOther(FocusOtherMode.LeaveAlone);
+        Assert.Equal(FocusOtherMode.LeaveAlone, rules.OtherFor("My strings").Mode);
+        Assert.Equal(FocusOtherMode.SameAsBoost, new FocusTrackSettings().OtherFor("My strings").Mode);
     }
 
     [Fact]
@@ -112,6 +163,9 @@ public sealed class PracticeFocusTests
         Assert.Equal(FocusBoost.MaxDecibels, new FocusBoost(FocusBoostMode.Decibels, 99).ClampedAmount);
         Assert.Equal(0, new FocusBoost(FocusBoostMode.Percent, -5).ClampedAmount);
         Assert.Equal(FocusBoost.MaxLevel, new FocusBoost(FocusBoostMode.ToLevel, 500).ClampedAmount);
+        Assert.Equal(60, new FocusBoost(FocusBoostMode.ToLevel, 80).ApplyLower(60));    // a cap never raises
+        Assert.Equal(80, new FocusBoost(FocusBoostMode.ToLevel, 80).ApplyLower(110));
+        Assert.Equal(0, new FocusBoost(FocusBoostMode.Percent, 500).ApplyLower(100));
     }
 
     [Fact]

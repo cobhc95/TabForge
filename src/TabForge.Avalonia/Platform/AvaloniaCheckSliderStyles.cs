@@ -13,9 +13,9 @@ using Avalonia.Styling;
 namespace TabForge.Avalonia.Platform;
 
 /// <summary>
-/// The templates of every CheckBox, RadioButton and Slider, replacing Fluent's accent-filled ones with the app's: the CheckBox is App.xaml's 15 DIP rounded
+/// The templates of every CheckBox, RadioButton and Slider (and the on colour of every ToggleSwitch), replacing Fluent's accent-filled ones with the app's: the CheckBox is App.xaml's 15 DIP rounded
 /// box with an accent tick (its checked and hover colours come from the Core look "CheckBox", whose class the template adds), the RadioButton is a
-/// thin-outlined 13 DIP circle with a 5 DIP centred dot while checked, and the Slider is the default one (a 4 DIP track and a 11x18 DIP thumb
+/// thin-outlined 13 DIP circle with a 5 DIP centred dot while checked, and the Slider is the default one (a 4 DIP track filled with the accent up to a 11x18 DIP thumb
 /// in the system control colours, which the app does not theme).
 /// Owns: those three templates and the system slider colours. Does not own: the CheckBox state colours (Core look "CheckBox" via AvaloniaLooks).
 /// </summary>
@@ -74,6 +74,8 @@ public static class AvaloniaCheckSliderStyles
         {
             Setters = { new Setter(Shape.FillProperty, new DynamicResourceExtension("PressBrush")) },
         },
+        // The switch's track is the app's accent while it is on (Fluent's own accent is not the app's), in every state, as the check box tick.
+        SwitchOn(":checked"), SwitchOn(":checked:pointerover"), SwitchOn(":checked:pressed"),
         // Fluent sets the slider template per orientation, so these selectors are as specific as its own.
         new Style(x => x.OfType<Slider>().Class(":horizontal"))
         {
@@ -90,6 +92,16 @@ public static class AvaloniaCheckSliderStyles
             Setters = { new Setter(TemplatedControl.BorderBrushProperty, new DynamicResourceExtension("SliderThumbDisabledBorder")) },
         },
     };
+
+    private static Style SwitchOn(string state) =>
+        new(x => x.OfType<ToggleSwitch>().Class(state).Template().OfType<Border>().Name("SwitchKnobBounds"))
+        {
+            Setters =
+            {
+                new Setter(Border.BackgroundProperty, new DynamicResourceExtension("AccentBrush")),
+                new Setter(Border.BorderBrushProperty, new DynamicResourceExtension("AccentBrush")),
+            },
+        };
 
     private static Style ThumbStyle(string state, string fill, string border) =>
         new(x => x.OfType<Slider>().Template().OfType<Thumb>().Class(state))
@@ -183,7 +195,8 @@ public static class AvaloniaCheckSliderStyles
         };
         BindBrush(thumb, TemplatedControl.BackgroundProperty, slider, "SystemSliderThumb");
         BindBrush(thumb, TemplatedControl.BorderBrushProperty, slider, "SystemSliderThumbBorder");
-        var less = new RepeatButton { Name = "PART_DecreaseButton", Focusable = false, Opacity = 0 };
+        // The part before the thumb is filled with the accent, as the mixer faders' fill (the palette key SliderTrackFill), so every slider reads the same.
+        var less = new RepeatButton { Name = "PART_DecreaseButton", Focusable = false, HorizontalAlignment = HorizontalAlignment.Stretch, Template = FillTemplate("SliderTrackFill") };
         var more = new RepeatButton { Name = "PART_IncreaseButton", Focusable = false, Opacity = 0 };
         var bar = new Track { Name = "PART_Track", Orientation = Orientation.Horizontal, Thumb = thumb, DecreaseButton = less, IncreaseButton = more };
         bar.Bind(RangeBase.MinimumProperty, slider.GetObservable(RangeBase.MinimumProperty), BindingPriority.Template);
@@ -193,6 +206,13 @@ public static class AvaloniaCheckSliderStyles
         bar.RegisterInNameScope(scope); thumb.RegisterInNameScope(scope); less.RegisterInNameScope(scope); more.RegisterInNameScope(scope);
         return new Grid { Height = SliderHeight, VerticalAlignment = VerticalAlignment.Center, Children = { track, bar } };
     }
+
+    private static FuncControlTemplate<RepeatButton> FillTemplate(string brushKey) => new((button, _) =>
+    {
+        var pill = new Border { Height = TrackHeight, CornerRadius = new CornerRadius(TrackHeight / 2), VerticalAlignment = VerticalAlignment.Center };
+        BindBrush(pill, Border.BackgroundProperty, button, brushKey);
+        return pill;
+    });
 
     // The thumb face shows the thumb's own background and border, so the state styles above repaint it.
     private static Control ThumbFace(Thumb thumb)

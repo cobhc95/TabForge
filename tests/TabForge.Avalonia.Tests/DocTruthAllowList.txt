@@ -78,4 +78,6 @@ libmpg123.so.0
 TabForge-0.9.1-linux-x64.tar.gz
 TabForge-0.9.1-linux-x86_64.AppImage
 TabForge-0.9.1-win-x64-portable.zip
+TabForge-0.9.5-linux-x64.tar.gz
+TabForge-0.9.5-linux-x86_64.AppImage
 raw.githubusercontent.com

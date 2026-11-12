@@ -17,8 +17,8 @@ public static class TuxGuitarImporter
     private const string Invalid = "This score file is invalid, truncated, or unsupported.";
     private const long MaxXmlBytes = 64L * 1024 * 1024;
     private const int MaxZipEntries = 1024;
-    private static readonly int[] DrumTunings = { 49, 42, 48, 38, 43, 36 };
-    private static readonly int[] PitchLadder = { 96, 84, 72, 60, 48, 36, 24 };
+    private static readonly IReadOnlyList<int> DrumTunings = new[] { 49, 42, 48, 38, 43, 36 };
+    private static readonly IReadOnlyList<int> PitchLadder = new[] { 96, 84, 72, 60, 48, 36, 24 };
 
     public static SongProject Import(string path, Services.ImportContext? context = null)
     {

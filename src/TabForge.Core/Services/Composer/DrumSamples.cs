@@ -137,7 +137,8 @@ public sealed record DrumSample(string Id, string Name, int SuggestedBpm, int Ba
 /// <summary>The starter drum grooves the Composer panel offers.</summary>
 public static class DrumSamples
 {
-    private static readonly DrumSample[] StarterSamples =    {
+    private static readonly IReadOnlyList<DrumSample> StarterSamples = new DrumSample[]
+    {
         new("straight-8ths", "Straight 8ths groove", 120, 4,
             new[] { (36, new[] { 0, 8 }), (38, new[] { 4, 12 }), (42, new[] { 0, 2, 4, 6, 8, 10, 12, 14 }) }, DrumGenre.RockPop),
         new("half-time-chug", "Half-time chug", 90, 4,

@@ -4,6 +4,21 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ## 0.9.5
 
+### Added
+
+- Focus track, for practising: play the selected track louder so it is easy to hear against the rest. It has its own icon on the left strip (a combo amp; left-click turns it on or off) and a View > Focus track row, and it is off until you turn it on. Once on, it stays on, like the other settings, until you turn it off. Right-click the icon (or View > Focus track settings) for the settings window.
+  - The selected track goes louder by 20% to begin with. Choose decibels, a percentage or a fixed level (0 to 127) instead, with a slider.
+  - The other tracks are lowered by the same amount by default (a 20% boost lowers them by 20%). Give each group (guitars, basses, drums, other instruments) its own choice: lowered like the boost, left exactly as they are, lowered by an amount of their own, or raised by an amount of their own. Four ready-made templates fill all four groups at once: Spotlight, Keep the rhythm section, Only boost the selected track and Rhythm section up. Changing a group by hand makes the template Custom.
+  - The selected track is never lowered, whatever its group says, and a boost stops at the loudest level the track can reach.
+  - It follows the selected track as you select another or switch songs, and Apply changes the levels straight away, even while the song plays.
+  - It changes only what you hear: faders, the saved song, exports and renders are never touched, and another open song is not affected. It acts on MIDI playback and on plug-in tracks alike. Volume points written in the Mix Table keep their own values.
+  - The icon is on the default left strip. A strip you arranged yourself is offered it once, next to Composer; remove it and it stays removed.
+
+### Changed
+
+- Every slider fills with the accent colour up to its thumb, as the mixer faders do. Before, most sliders were plain grey.
+- Every On/Off switch uses the accent colour while it is on. Before, it was grey.
+
 ### Fixed
 
 - GM sound stays off when a VST instrument plays the track after a song is reopened. Before, the automatic "GM sound" tick was not saved, so a reopened song with Superior Drummer (or any VST instrument) kept GM sound ticked and played alongside the instrument. Automatic and manual GM choices are now saved in the song, so reopening it keeps the same state.
@@ -13,7 +28,6 @@ TabForge is actively developed; please report anything odd on the Issues page.
 - Older VST2 plug-ins that only use the original process call now load instead of being refused. Before, a plug-in that did not support the newer replacing processing call was refused even though it could still play sound. TabForge now uses the original call, clearing its buffers first as the format expects.
 - Small plug-in editors keep their own size. Before, Windows widened a narrow editor to its minimum caption width and resized the plug-in with it. The editor now keeps the size the plug-in asked for.
 - Preset switching now works for 32-bit VST2 plug-ins. Before, choosing a preset in a 32-bit plug-in did nothing, and reading which preset was active could switch the plug-in back to the first one. Both now use the right plug-in calls.
-- Focus track, for practising. A new icon on the left strip (and a View menu row) plays the selected track louder; click it to turn it on or off, right-click it for Focus track settings. It is off until you turn it on. Choose how much louder (decibels, a percentage, or a fixed level), and give guitars, basses, drums or other instruments their own rule. If the boost would pass the loudest level, the other tracks are lowered by the difference instead, so nothing distorts. It only changes what you hear: faders, the saved song, exports and renders are never touched.
 
 ## 0.9.4
 

@@ -147,9 +147,9 @@ public static class ComposerPanel
         {
             Content = MenuRowToggles.Icon(PlayIcon, ChromeMetrics.ComposerPlayIcon),
             Width = ChromeMetrics.ComposerPlaySize, Height = ChromeMetrics.ComposerPlaySize, MinWidth = 0, MinHeight = 0,
-            Padding = new Thickness(0), HorizontalContentAlignment = HorizontalAlignment.Center, VerticalContentAlignment = VerticalAlignment.Center,
+            HorizontalContentAlignment = HorizontalAlignment.Center, VerticalContentAlignment = VerticalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
-        };
+        }.WithPadding(DialogMetrics.ComposerNoPadding);
         ToolTip.SetTip(play, "Audition at the song tempo");
         AutomationProperties.SetName(play, "Audition " + sample.Name);
 
@@ -177,7 +177,7 @@ public static class ComposerPanel
         var row = new Border
         {
             Name = SampleRowPrefix + sample.Id, Child = body, BorderThickness = DialogMetrics.ComposerOutline,
-            CornerRadius = new CornerRadius(ChromeMetrics.RadiusMedium), Cursor = new Cursor(StandardCursorType.Hand), Focusable = true,
+            CornerRadius = new CornerRadius(ChromeMetrics.RadiusMedium), Focusable = true,
         };
         var parts = new SampleRowParts { Sample = sample, Row = row, Play = play };
         var pattern = Pattern(sample, parts.Cells);
@@ -248,8 +248,8 @@ public static class ComposerPanel
                 var cell = new Border
                 {
                     Height = ChromeMetrics.ComposerStepHeight, CornerRadius = new CornerRadius(ChromeMetrics.RadiusTiny),
-                    Margin = new Thickness(left, 0, ChromeMetrics.ComposerStepGap, 0), VerticalAlignment = VerticalAlignment.Center,
-                };
+                    VerticalAlignment = VerticalAlignment.Center,
+                }.WithMargin(DialogMetrics.ComposerStepMargin(left));
                 cell[!Border.BackgroundProperty] = new DynamicResourceExtension(StepBrushKey(on, false));
                 Grid.SetRow(cell, voice);
                 Grid.SetColumn(cell, step + 1);

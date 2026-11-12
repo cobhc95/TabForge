@@ -60,7 +60,7 @@ public sealed class MainWindowFocusTrack
     // Right-click the icon (or View > Focus track settings): the rules window; Apply works the levels out again at once.
     private void OpenSettings(global::Avalonia.Controls.Window owner)
     {
-        var window = new Features.LeftStrip.FocusTrackSettingsWindow(Rules, () => { _settings?.SaveSettingsDeferred(); Apply(true); });
+        var window = new Features.LeftStrip.FocusTrackSettingsWindow(Rules, _on, on => { if (on != _on) Toggle(); }, () => { _settings?.SaveSettingsDeferred(); Apply(true); });
         window.Show(owner);
     }
 

@@ -218,7 +218,9 @@ public sealed class FxChainWindows
     /// <summary>The monitor chain in effect for the shown song: whether it is on, its plug-in count, whether it is the app-wide one, and whether anything in it really plays on the current output (the title bar's Monitor FX button).</summary>
     public (bool On, int Plugins, bool Global, bool Playing) MonitorState()
     {
-        var project = _active().Project;
+        SongProject project;
+        try { project = _active().Project; }
+        catch (ArgumentOutOfRangeException) { return default; }   // the last tab is closing: no song is shown, so the button shows nothing
         var chain = project.Mixer.MonitorUseGlobal ? GlobalMonitorChain : project.Mixer.MonitorFx;
         var playing = chain is not null && ActiveOnRules.AnyPlays(chain.Rig, chain.On, _playback?.Engine?.ActiveOutput ?? default);
         return (chain?.On ?? false, chain?.Rig.Plugins.Count ?? 0, project.Mixer.MonitorUseGlobal, playing);

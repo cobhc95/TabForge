@@ -45,6 +45,12 @@ internal static class DialogMetrics
 
     /// <summary>The gap between a dialog's content and its footer row of buttons.</summary>
     public static readonly Thickness FooterGap = new(0, 10, 0, 0);
+    /// <summary>Focus track settings: a row's padding, the gap above a section, under a section label, and between footer buttons.</summary>
+    /// <summary>The margin of one Composer pattern step: <paramref name="left"/> to its left, then the step gap on its right.</summary>
+    public static Thickness ComposerStepMargin(double left) => new(left, 0, TabForge.Platform.Theme.ChromeMetrics.ComposerStepGap, 0);
+
+    public static readonly Thickness HairlineAll = new(1), HairlineTop = new(0, 1, 0, 0), HairlineBottom = new(0, 0, 0, 1);
+    public static readonly Thickness FocusRowPad = new(12, 8), FocusSectionTop = new(0, 12, 0, 0), FocusLabelGap = new(0, 0, 0, 6), FocusButtonGap = new(0, 0, 8, 0), FocusValueGap = new(10, 0, 0, 0);
 
     /// <summary>The top and bottom margin of a dialog row, so rows in a column keep their two-pixel rhythm.</summary>
     public static readonly Thickness RowMargin = new(0, 2, 0, 2);
@@ -83,7 +89,7 @@ internal static class DialogMetrics
     /// <summary>The Composer panel: its content inset, a category card's inset and outer margin, the card and results outline, the gap above the
     /// search box and the results box, the gap under a badge, and the gap beside a card's accent dot.</summary>
     public static readonly Thickness ComposerPanelInset = new(10, 8), ComposerCardInset = new(8, 6), ComposerCardMargin = new(2),
-        ComposerOutline = new(1), ComposerSearchGap = new(0, 8, 0, 0), ComposerResultsGap = new(0, 8, 0, 0), ComposerBadgeGap = new(0, 0, 0, 4),
+        ComposerOutline = new(1), ComposerNoPadding = new(0), ComposerSearchGap = new(0, 8, 0, 0), ComposerResultsGap = new(0, 8, 0, 0), ComposerBadgeGap = new(0, 0, 0, 4),
         ComposerDotGap = new(0, 0, 4, 0), ComposerEdge = new(0, 0, 1, 0), ComposerPatternGap = new(0, 6, 0, 0), ComposerGripGap = new(0, 0, 6, 0);
 
     /// <summary>The colour picker popup: its width, the square and hue strip sizes, a colour cell, the corner, the position marker (radius and line) and the code box width.</summary>

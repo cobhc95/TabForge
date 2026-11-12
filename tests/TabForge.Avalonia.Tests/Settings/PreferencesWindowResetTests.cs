@@ -48,6 +48,7 @@ public class PreferencesWindowResetTests
         nameof(AppSettings.MidiExport), nameof(AppSettings.Video), nameof(AppSettings.TrackMeter), nameof(AppSettings.Workspace),
         nameof(AppSettings.WorkspaceBeforeSideHide), nameof(AppSettings.SavedLayouts), nameof(AppSettings.LastLayout),
         nameof(AppSettings.EffectPresets), nameof(AppSettings.TuningUserPresets), nameof(AppSettings.RememberedFolders),
+        nameof(AppSettings.HelpWindowWidth), nameof(AppSettings.HelpWindowHeight), nameof(AppSettings.LeftStrip),
     };
 
     /// <summary>A new AppSettings property must be classified here before it can be silently wiped by a reset.</summary>

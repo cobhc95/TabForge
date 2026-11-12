@@ -1,4 +1,4 @@
-# TabForge 0.9.4
+# TabForge 0.9.5
 
 **A keyboard-driven tablature and notation editor for Windows, with experimental Linux packages.** Opens .gp3, .gp4, .gp5, .gpx, .gp and TuxGuitar (.tg) files, and saves .gp, .tg and its own .tforge projects. Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard or keyboard, a piano roll, an arrangement timeline, audio and MIDI recording, a mixer, built-in effects, VST2, VST3 and CLAP plug-ins (32-bit and 64-bit VST), and offline audio and video rendering.
 
@@ -7,15 +7,15 @@
 ## Download
 
 > [!TIP]
-> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.9.4/TabForge-0.9.4-win-setup.exe)** · no administrator rights needed
+> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.9.5/TabForge-0.9.5-win-setup.exe)** · no administrator rights needed
 >
-> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.9.4/TabForge-0.9.4-win-x64-portable.zip)** · extract and run `TabForge.exe`
+> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.9.5/TabForge-0.9.5-win-x64-portable.zip)** · extract and run `TabForge.exe`
 
 Windows 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify your download](#verify-your-download). Older versions: [Releases](https://github.com/cobhc95/TabForge/releases).
 
 ### Linux packages (experimental)
 
-The main Linux download is the AppImage ([`TabForge-0.9.4-linux-x86_64.AppImage`](https://github.com/cobhc95/TabForge/releases/download/v0.9.4/TabForge-0.9.4-linux-x86_64.AppImage)). The archive ([`TabForge-0.9.4-linux-x64.tar.gz`](https://github.com/cobhc95/TabForge/releases/download/v0.9.4/TabForge-0.9.4-linux-x64.tar.gz)) is the fallback. Both include Wine 9.21 for Windows plug-ins, FFmpeg for video export and a General MIDI SoundFont, so sound works on first run.
+The main Linux download is the AppImage ([`TabForge-0.9.5-linux-x86_64.AppImage`](https://github.com/cobhc95/TabForge/releases/download/v0.9.5/TabForge-0.9.5-linux-x86_64.AppImage)). The archive ([`TabForge-0.9.5-linux-x64.tar.gz`](https://github.com/cobhc95/TabForge/releases/download/v0.9.5/TabForge-0.9.5-linux-x64.tar.gz)) is the fallback. Both include Wine 9.21 for Windows plug-ins, FFmpeg for video export and a General MIDI SoundFont, so sound works on first run.
 
 ```bash
 chmod +x TabForge-*-linux-x86_64.AppImage
@@ -36,11 +36,20 @@ chmod +x TabForge-*-linux-x86_64.AppImage
 </tr>
 </table>
 
-**Contents:** [Download](#download) · [What's new in 0.9.4](#whats-new-in-094) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Piano roll](#piano-roll) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Plug-ins](#plug-ins) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
+**Contents:** [Download](#download) · [What's new in 0.9.5](#whats-new-in-095) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Piano roll](#piano-roll) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Plug-ins](#plug-ins) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
 
-## What's new in 0.9.4
+## What's new in 0.9.5
 
-0.9.4 is a stable release. ✨
+0.9.5 is a stable release. ✨
+
+- **Focus track:** a left strip icon (and View > Focus track) that plays the selected track louder so it is easy to hear while you practise. Off until you turn it on, and it stays on until you turn it off. Click it to turn it on or off; right-click it for the settings: how much louder (20% to begin with, or decibels, or a fixed level), and what the other tracks do, group by group: lowered by the same amount, left as they are, or lowered or raised by an amount of their own, with four ready-made templates. The selected track is never lowered, and your faders, song and exports are never touched.
+- **Accent sliders and switches:** every slider fills with the accent colour up to its thumb, as the mixer faders do, and every On/Off switch uses the accent colour while on.
+- **Plug-ins:** Windows shows a plug-in's own reason when it fails to load instead of mentioning Wine; VST2 plug-ins whose support files are on the system PATH, and older VST2 plug-ins that only use the original process call, now load; small plug-in editors keep their size; preset switching works for 32-bit VST2 plug-ins.
+- **Fixes:** the GM sound stays off after reopening a song with a playing VST instrument, and auditioning a Composer groove always plays the built-in drum kit.
+
+Full list: the [changelog](CHANGELOG.md#095).
+
+<details><summary>Earlier in 0.9.4: Composer grooves, Reverb, Ctrl+Tab</summary>
 
 - **Composer drum grooves (101):** in the Composer panel, with audition, drag onto a track at the bar to start from, and a choice of the tab lane (notation on the track) or the MIDI lane (a clip on a take lane). The catalogue spans Rock/Pop, Metal, Punk/Hardcore and Funk/Breakbeat — double-bass, blast-beat, ballad, half-time, intro and fill grooves using kick, snare, closed/open hats, ride, crash and toms — and Grooves may use any General MIDI drum piece. Timing stays on the 16th grid with fixed pattern accents in dynamics (mp/mf/f/ff) — quarters strongest, 16th off-beats as ghosts, the snare backbeats and bar-opening kick on top, and the last bar of a multi-bar groove lifted into the repeat.
 - **Built-in Reverb:** a convolution-based room generated by TabForge — no external IR file required — added like any other effect from the Add plug-in window. Size, Predelay, Mix, High cut, Low cut, Width and Bypass shape the tail.
@@ -52,6 +61,8 @@ chmod +x TabForge-*-linux-x86_64.AppImage
 - **Fixes:** a groove dropped on the tab lane no longer leaves its bars short (drawn red) — a hit now lasts until the next hit, so every bar adds up to its time signature.
 
 Full list: the [changelog](CHANGELOG.md#094).
+
+</details>
 
 <details><summary>Earlier in 0.9.3: left strip, help, TuxGuitar</summary>
 
