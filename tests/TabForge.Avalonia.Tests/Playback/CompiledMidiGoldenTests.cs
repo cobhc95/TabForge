@@ -158,14 +158,41 @@ public sealed class CompiledMidiGoldenTests
     }
 
     [Fact]
-    public void LetRingSettingsBelow600SoundLike600()
+    public void LetRingSettingsBelow600TakeEffect()
     {
-        // Pins today's behaviour: SustainResolver floors the let-ring setting at 600 ms, so 400-599 compile exactly like 600.
+        // The whole setting range 400-6000 ms takes effect (until 0.9.6 SustainResolver floored it at 600, so 400-599 sounded like 600). Settings of
+        // 600 and more are pinned by the golden above. A song with let-ring tails rings shorter under 600, never longer; one without is unchanged.
         foreach (var (name, song) in Songs.Value)
         {
-            var at600 = Compile(song, o => o.LetRingCapMs = 600);
+            var at600 = MidiTimelineBuilder.Build(song, new PlaybackOptions { LetRingCapMs = 600 });
             foreach (var cap in LowCaps)
-                Assert.True(at600 == Compile(song, o => o.LetRingCapMs = cap), $"{name}: let-ring {cap} differs from 600");
+            {
+                var low = MidiTimelineBuilder.Build(song, new PlaybackOptions { LetRingCapMs = cap });
+                if (at600.LetRingExtensions == 0) Assert.True(Hash(at600) == Hash(low), $"{name}: no let-ring tail, yet let-ring {cap} differs from 600");
+                else
+                {
+                    Assert.True(Hash(at600) != Hash(low), $"{name}: let-ring {cap} still sounds like 600");
+                    Assert.True(low.Notes.Max(n => n.DurationMs) <= at600.Notes.Max(n => n.DurationMs), $"{name}: let-ring {cap} rings longer than 600");
+                    Assert.True(low.MaxLetRingExtensionMs <= at600.MaxLetRingExtensionMs, $"{name}: let-ring {cap} extends more than 600");
+                }
+            }
+        }
+    }
+
+    [Fact]
+    public void ALoneLetRingNoteRingsForTheSettingBelow600()
+    {
+        // One short let-ring note alone on its string: it rings for exactly the setting when that is under 600 ms (600 before 0.9.6).
+        var song = new SongProject { Tempo = 120 };
+        var track = new TrackModel { Name = "Guitar", Measures = Enumerable.Range(0, 2).Select(bar => new MeasureModel { Number = bar + 1 }).ToList() };
+        var note = new TabNote { StringIndex = 0, Fret = 3 };
+        note.Techniques.Add("LetRing");
+        track.Measures[0].Cells[0].Notes.Add(note);
+        song.Tracks.Add(track);
+        foreach (var (cap, ring) in new[] { (400.0, 400.0), (500.0, 500.0), (600.0, 600.0), (2000.0, 600.0) })
+        {
+            var compiled = MidiTimelineBuilder.Build(song, new PlaybackOptions { LetRingCapMs = cap }).Notes.Single();
+            Assert.Equal(ring, compiled.DurationMs, 3);
         }
     }
 }

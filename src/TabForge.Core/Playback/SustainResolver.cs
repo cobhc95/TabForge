@@ -16,6 +16,8 @@ internal static class SustainResolver
     /// <summary>Release before a same-pitch retrigger; without it many synths swallow the attack.</summary>
     private const double ReleaseGapMs = 9.0;
     private const double LetRingStopGapMs = 3.0;
+    /// <summary>The least ring of a lone let-ring note when the let-ring setting allows it (settings of 600 ms and more).</summary>
+    private const double MinLoneRingMs = 600.0;
 
     public static void Resolve(ScoreTimeline timeline, int[] channels, double letRingCapMs = 2000)
     {
@@ -84,10 +86,12 @@ internal static class SustainResolver
                 var written = list[i].DurationMs;
                 double end;
                 if (runSize.TryGetValue(list[i], out var size) && size > 1)
-                    end = Math.Min(runEnd[list[i]], list[i].OnsetMs + Math.Max(written, Math.Max(600.0, letRingCapMs)));
+                    end = Math.Min(runEnd[list[i]], list[i].OnsetMs + Math.Max(written, letRingCapMs));
                 else
                 {
-                    var ringCap = Math.Clamp(written * 2.0, 600.0, Math.Max(600.0, letRingCapMs));
+                    // A lone let-ring note rings twice its written length, at least MinLoneRingMs and at most the setting; a setting under
+                    // MinLoneRingMs (the setting allows 400) is both the least and the most, so the whole 400-6000 range takes effect.
+                    var ringCap = Math.Clamp(written * 2.0, Math.Min(MinLoneRingMs, letRingCapMs), letRingCapMs);
                     end = list[i].OnsetMs + ringCap;
                 }
                 if (i + 1 < list.Count) end = Math.Min(end, list[i + 1].OnsetMs - LetRingStopGapMs);
