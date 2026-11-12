@@ -390,32 +390,15 @@ internal sealed partial class ScorePreviewEditor : IScoreEditContext, ISelection
         public SelectionModel Selection { get; } = new();
         /// <summary>The preview shows no timeline, so its highlight is never drawn.</summary>
         public BarHighlight Highlight { get; } = new();
-        /// <summary>No selection to remember in the preview.</summary>
-        public void RememberSelection(ProjectState state, SelectionSnapshot selection) { }
-        /// <summary>No selection to restore in the preview.</summary>
-        public void RestoreSelection(ProjectState state) { }
-        /// <summary>Per-string tuning shifts (unused by the preview).</summary>
-        public int[] TuningShift { get; } = new int[6];
-        /// <summary>Skip ranges (unused by the preview).</summary>
-        public List<(int Start, int End)> SkipRanges { get; } = new();
-        /// <summary>No bar mapping to remember in the preview.</summary>
-        public void RememberBarMapping(UndoSnapshot snapshot) { }
-        /// <summary>No song id to carry in the preview.</summary>
-        public void CarrySongId(SongProject from, SongProject to) { }
-        /// <summary>No tuning shift to remember in the preview.</summary>
-        public void RememberTuningShift(ProjectState state) { }
-        /// <summary>No tuning shift to remember in the preview.</summary>
-        public void RememberTuningShift(ProjectState state, int[] shift) { }
-        /// <summary>No tuning shift to restore in the preview.</summary>
-        public void RestoreTuningShift(ProjectState state) { }
-        /// <summary>No skip ranges to remember in the preview.</summary>
-        public void RememberSkipRanges(ProjectState state, (int Start, int End)[] ranges) { }
-        /// <summary>No skip ranges to remember in the preview.</summary>
-        public void RememberSkipRangesForReturn(ProjectState current, ProjectState target) { }
-        /// <summary>No skip ranges to restore in the preview.</summary>
-        public void RestoreSkipRanges(ProjectState state) { }
-        /// <summary>The preview is never clean content.</summary>
-        public bool IsCleanContent(UndoSnapshot snapshot) => false;
+        /// <summary>The preview keeps no side state beside its undo stack (no selection, tuning, skip or bar memory; never clean content).</summary>
+        public IUndoMemory Memory => NoUndoMemory.Instance;
+        Ports.EditOutcome Ports.IEditTarget.Run(Func<SongProject, bool> mutate, bool invalidatesTimeline, string label) =>
+            new(DocumentEdits.Run(this, mutate, invalidatesTimeline: invalidatesTimeline, label: label).Changed);
+        Ports.EditOutcome<T> Ports.IEditTarget.Run<T>(Func<SongProject, T?> mutate, bool invalidatesTimeline, string label) where T : class
+        {
+            var result = DocumentEdits.Run(this, mutate, invalidatesTimeline: invalidatesTimeline, label: label);
+            return new Ports.EditOutcome<T>(result.Changed, result.Value);
+        }
         /// <summary>Nothing watches the preview's song.</summary>
         public event Action<SongProject>? TimelineMarked { add { } remove { } }
         /// <summary>Nothing watches the preview's song.</summary>

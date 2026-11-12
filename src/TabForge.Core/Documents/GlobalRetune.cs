@@ -18,7 +18,7 @@ public static class GlobalRetune
     /// Applies <paramref name="delta"/> (semitones per string, high to low) to every pitched track of the document, as one undo step. Returns the status
     /// line for the new tuning, or null when the delta changes nothing (nothing is stored then).
     /// </summary>
-    public static string? Apply(IEditableDocument document, int[] delta)
+    public static string? Apply(SongDocument document, int[] delta)
     {
         if (delta.All(d => d == 0)) return null;
         DocumentEdits.Run(document, project =>

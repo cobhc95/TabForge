@@ -37,7 +37,7 @@ public static class MainWindowGlobalTuning
         transport.GlobalTuningRequested += () => _ = ChooseAndRetuneAsync(songs.Active, owner, notice);
 
     /// <summary>Opens the window on the song's current tuning and applies the change it returns.</summary>
-    private static async Task ChooseAndRetuneAsync(IEditableDocument document, Window owner, Action<string> notice)
+    private static async Task ChooseAndRetuneAsync(SongDocument document, Window owner, Action<string> notice)
     {
         var current = GlobalTuningPresenter.StandardE.Select((pitch, s) => pitch + document.TuningShift[s]).ToArray();
         var chosen = await DialogLauncher.Ask<GlobalTuningWindow, int[]?>(owner, () => new GlobalTuningWindow(current, TuningPresets.SixStringPresets));

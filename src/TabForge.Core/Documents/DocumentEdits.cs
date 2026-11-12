@@ -7,9 +7,11 @@ public readonly record struct EditResult(bool Changed, UndoCapture Capture);
 
 public readonly record struct EditResult<T>(bool Changed, T? Value, UndoCapture Capture) where T : class;
 
-// Owns: the one model-side wrapper every logical edit of an open document goes through: the undo transaction, the dirty mark and the timeline invalidation.
-// Does not own: the edit rules inside each caller's body, the undo stacks (UndoController), or any window, tab or current-document lookup.
-// Tests: no dedicated test class.
+// Owns: the one model-side wrapper every logical edit of an open document goes through: the undo transaction, the dirty mark and the timeline invalidation,
+//   and the one undo/redo restore sequence (remember for the way back, restore the song, restore the side state, notify).
+// Does not own: the edit rules inside each caller's body, the undo stacks (UndoController), the side state kept per undo state (IUndoMemory), or any
+//   window, tab or current-document lookup.
+// Tests: UndoRulesTests, UndoSideStateCharacterizationTests.
 
 /// <summary>
 /// The model half of every logical edit of one open document, for an explicit <see cref="IEditableDocument"/>. A window, a keyboard shortcut, a menu
@@ -40,9 +42,7 @@ public static class DocumentEdits
         var project = document.Project;
         using var timeline = project.BeginTimelineBatch();   // a model step that marks the timeline itself (bar grid) and this edit's own mark are one invalidation
         var transaction = before is null ? document.Undo.BeginTransaction(project, label) : null;
-        var shiftBefore = (int[])document.TuningShift.Clone();
-        var skipBefore = document.SkipRanges.ToArray();
-        var selectionBefore = document.Selection.Snapshot();
+        var sideBefore = document.Memory.Capture();
         var trackIds = document.Highlight.Has ? project.Tracks.Select(track => track.Id).ToArray() : null;
         T? value;
         try { value = mutate(project); }
@@ -57,13 +57,7 @@ public static class DocumentEdits
             return new EditResult<T>(false, null, default);
         }
         var capture = transaction is not null ? document.Undo.Commit(transaction) : document.Undo.Capture(before!.Value with { Label = label });
-        if (capture.Stored)
-        {
-            document.RememberBarMapping(capture.Snapshot);
-            document.RememberSelection(capture.Snapshot.State, selectionBefore);
-            document.RememberTuningShift(capture.Snapshot.State, shiftBefore);
-            if (!skipBefore.AsSpan().SequenceEqual(document.SkipRanges.ToArray())) document.RememberSkipRanges(capture.Snapshot.State, skipBefore);   // only an edit that moved them
-        }
+        if (capture.Stored) document.Memory.RememberEdit(capture.Snapshot, sideBefore);
         FollowHighlight(document, trackIds, value as int[]);
         MarkChanged(document, invalidatesTimeline);
         return new EditResult<T>(true, value, capture);
@@ -87,7 +81,7 @@ public static class DocumentEdits
     public static UndoCapture Checkpoint(IEditableDocument document, string label = "Edit")
     {
         var capture = document.Undo.BeginGesture(document.Project, label);
-        if (capture.Stored) document.RememberBarMapping(capture.Snapshot);
+        if (capture.Stored) document.Memory.RememberCheckpoint(capture.Snapshot);
         return capture;
     }
 
@@ -171,14 +165,9 @@ public static class DocumentEdits
     {
         var current = document.Undo.Snapshot(document.Project) with { RestoresLoopRepeat = restoresLoopRepeat };   // its way back gives the button back too
         if (!tryStep(current, out var target)) return null;
-        document.RememberBarMapping(current);
-        document.RememberTuningShift(current.State);
-        document.RememberSelection(current.State, document.Selection.Snapshot());
-        document.RememberSkipRangesForReturn(current.State, target.State);
+        document.Memory.RememberForReturn(current, target.State);
         Restore(document, current, target);
-        document.RestoreTuningShift(target.State);
-        document.RestoreSkipRanges(target.State);
-        document.RestoreSelection(target.State);
+        document.Memory.RestoreSide(target.State);
         document.NotifyRestored();
         return target;
     }
@@ -192,10 +181,10 @@ public static class DocumentEdits
             // Unchanged bars move over from the song being replaced; only the bars the undo changes are rebuilt.
             var replaced = document.Project;
             document.Project = document.Undo.Restore(snapshot, replaced);
-            document.CarrySongId(replaced, document.Project);
+            document.Memory.CarrySongId(replaced, document.Project);
             MarkChanged(document);   // undo / redo may restore in place
             // Undoing back to the saved state clears the "*": the exact content check runs here only.
-            if (document.IsCleanContent(snapshot)) document.Project.IsDirty = false;
+            if (document.Memory.IsCleanContent(snapshot)) document.Project.IsDirty = false;
         }
         if (snapshot.Highlight is { } highlight) document.Highlight.Restore(highlight, document.Project.Tracks.Count, BarRangeEditor.MaxMeasures(document.Project));
         if (snapshot.Selection is { } sel) document.Selection.Restore(sel, document.Project, BarRangeEditor.MaxMeasures(document.Project));

@@ -8,7 +8,7 @@ using TabForge.Services;
 namespace TabForge.Documents;
 
 // Owns: one open song without its playback: the score, its file, undo history, the unsaved-changes baseline, media context and the editor's own
-//     per-tab state. Saving and the edit pipeline take it explicitly.
+//     per-tab state, and its undo side state per undo state (IUndoMemory: tuning shift, skipped areas, selection). Saving and the edit pipeline take it explicitly.
 // Does not own: playback and engine chains (the app's AvaloniaPlaybackSessions adds them), the tabs (DocumentManager, MainWindowTabs), writing files
 //     (DocumentController, DocumentSaveFlow).
 // Tests: MainWindowDocumentsTests, TabForge.Avalonia.Tests.MainWindowSaveTests.
@@ -16,7 +16,7 @@ namespace TabForge.Documents;
 /// One open song. Holds everything that is per-document so several songs can be open at once: the score, the file, undo history and the editor's
 /// own state. UI thread only.
 /// </summary>
-public class SongDocument : IEditableDocument
+public class SongDocument : IEditableDocument, IUndoMemory
 {
     private byte[]? _cleanContentHash;
     private ProjectState? _cleanState;
@@ -99,9 +99,9 @@ public class SongDocument : IEditableDocument
     public BarHighlight Highlight { get; } = new();
 
     private readonly System.Runtime.CompilerServices.ConditionalWeakTable<ProjectState, SelectionSnapshot> _selectionByState = new();
-    /// <inheritdoc />
+    /// <summary>Keeps <paramref name="selection"/> with the undo step <paramref name="state"/> (the selection to show when that state is restored).</summary>
     public void RememberSelection(ProjectState state, SelectionSnapshot selection) => _selectionByState.AddOrUpdate(state, selection);
-    /// <inheritdoc />
+    /// <summary>Shows the selection kept with <paramref name="state"/> (nothing kept: the current one, kept inside the restored song).</summary>
     public void RestoreSelection(ProjectState state)
     {
         var barCount = BarRangeEditor.MaxMeasures(Project);
@@ -286,6 +286,45 @@ public class SongDocument : IEditableDocument
     /// </summary>
     public bool IsCleanContent(UndoSnapshot snapshot) =>
         _cleanContentHash is not null && (_cleanState is { } clean ? clean.ContentEquals(snapshot.State) : !HasUnsavedChanges);
+
+    /// <inheritdoc />
+    public IUndoMemory Memory => this;
+
+    UndoSideState IUndoMemory.Capture() => new(Selection.Snapshot(), (int[])TuningShift.Clone(), SkipRanges.ToArray());
+
+    void IUndoMemory.RememberEdit(UndoSnapshot stored, UndoSideState before)
+    {
+        RememberBarMapping(stored);
+        RememberSelection(stored.State, before.Selection!);
+        RememberTuningShift(stored.State, before.TuningShift!);
+        if (!before.SkipRanges.AsSpan().SequenceEqual(SkipRanges.ToArray())) RememberSkipRanges(stored.State, before.SkipRanges!);   // only an edit that moved them
+    }
+
+    void IUndoMemory.RememberCheckpoint(UndoSnapshot stored) => RememberBarMapping(stored);
+
+    void IUndoMemory.RememberForReturn(UndoSnapshot current, ProjectState target)
+    {
+        RememberBarMapping(current);
+        RememberTuningShift(current.State);
+        RememberSelection(current.State, Selection.Snapshot());
+        RememberSkipRangesForReturn(current.State, target);
+    }
+
+    void IUndoMemory.RestoreSide(ProjectState target)
+    {
+        RestoreTuningShift(target);
+        RestoreSkipRanges(target);
+        RestoreSelection(target);
+    }
+
+    Ports.EditOutcome Ports.IEditTarget.Run(Func<SongProject, bool> mutate, bool invalidatesTimeline, string label) =>
+        new(DocumentEdits.Run(this, mutate, invalidatesTimeline: invalidatesTimeline, label: label).Changed);
+
+    Ports.EditOutcome<T> Ports.IEditTarget.Run<T>(Func<SongProject, T?> mutate, bool invalidatesTimeline, string label) where T : class
+    {
+        var result = DocumentEdits.Run(this, mutate, invalidatesTimeline: invalidatesTimeline, label: label);
+        return new Ports.EditOutcome<T>(result.Changed, result.Value);
+    }
 
     // Streams the compact in-memory serialization straight into SHA-256 (no multi-MB JSON string per check).
     private byte[] ContentHash() => ProjectService.ContentHash(Project);
