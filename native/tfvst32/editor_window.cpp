@@ -233,6 +233,14 @@ LRESULT CALLBACK EditorWindow::WndProc(HWND hwnd, UINT message, WPARAM wParam, L
                 }
             }
             break;
+        case WM_GETMINMAXINFO:
+            // Windows' default minimum width for a captioned window would widen a small editor (many older plug-ins)
+            // and then resize the plug-in to match; let the frame fit whatever size the plug-in asks for.
+            if (self != nullptr && !self->docked_) {
+                reinterpret_cast<MINMAXINFO*>(lParam)->ptMinTrackSize = POINT{1, 1};
+                return 0;
+            }
+            break;
         case WM_DPICHANGED:
             if (self != nullptr && !self->docked_) {
                 const auto* suggested = reinterpret_cast<const RECT*>(lParam);

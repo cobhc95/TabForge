@@ -127,12 +127,33 @@ public sealed class WineStage9Tests
     [Fact]
     public void RefusalsAreReadablePerCategory()
     {
-        Assert.Contains("iLok", ProbeRefusal.Classify("the plug-in could not be loaded (error 126). It may need PACE iLok driver", 1));
-        Assert.Contains("missing", ProbeRefusal.Classify("the plug-in could not be loaded (error 126). It may need a DLL that is missing", 1), StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("bitness", ProbeRefusal.Classify("The VST3 bundle has no 64-bit Windows binary (Contents\\x86_64-win).", 1), StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("helper crash", ProbeRefusal.Classify("the plug-in faulted while starting", 1), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("iLok", ProbeRefusal.Classify("the plug-in could not be loaded (error 126). It may need PACE iLok driver", 1, underWine: true));
+        Assert.Contains("missing", ProbeRefusal.Classify("the plug-in could not be loaded (error 126). It may need a DLL that is missing", 1, underWine: true), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("bitness", ProbeRefusal.Classify("The VST3 bundle has no 64-bit Windows binary (Contents\\x86_64-win).", 1, underWine: true), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("helper crash", ProbeRefusal.Classify("the plug-in faulted while starting", 1, underWine: true), StringComparison.OrdinalIgnoreCase);
         Assert.Contains("did not answer", ProbeRefusal.ForTimeout(180000), StringComparison.OrdinalIgnoreCase);
         Assert.Contains("prefix", ProbeRefusal.BrokenPrefixText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // A native probe (Windows) keeps its own reason: no Wine or Linux wording for a plug-in that never went near Wine.
+    [Theory]
+    [InlineData("The plug-in could not be loaded: a file it needs is missing (Windows error 126).")]
+    [InlineData("The plug-in could not be loaded: access denied (Windows error 5).")]
+    [InlineData("This plug-in needs the iLok driver to run.")]
+    [InlineData("'x.dll' could not be loaded (bad image). It may be built for another system or CPU.")]
+    public void NativeProbeFailuresNeverMentionWine(string stderr)
+    {
+        var text = ProbeRefusal.Classify(stderr, 1, underWine: false);
+        Assert.Equal(stderr, text);
+        Assert.DoesNotContain("Wine", text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Linux", text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void NativeProbeRefusalAndCrashStayReadable()
+    {
+        Assert.StartsWith("The plug-in was refused before loading:", ProbeRefusal.Classify("hash mismatch", 5, underWine: false));
+        Assert.Contains("helper crash", ProbeRefusal.Classify("", -1073741819, underWine: false), StringComparison.OrdinalIgnoreCase);
     }
 
     // Bridged probe detection prefers the saved label (no file IO) and upgrades the timeout.

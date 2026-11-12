@@ -168,7 +168,7 @@ private:
 
     HMODULE module_ = nullptr;
     AEffect* effect_ = nullptr;
-    void* processReplacing_ = nullptr;
+    void* process_ = nullptr;
     int sampleRate_ = 48000;
     int maxBlock_ = 256;
     int latency_ = 0;

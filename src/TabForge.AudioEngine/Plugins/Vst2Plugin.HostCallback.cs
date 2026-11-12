@@ -39,6 +39,7 @@ public sealed unsafe partial class Vst2Plugin
                 case 34: return 1;
                 case 37: return CanDo(ptr) ? 1 : 0;                    // canDo: byte compare, no string allocation on the audio thread
                 case 42: return 1;                                     // updateDisplay
+                case 61: return 1;                                     // host language: English (0 is no language; some plug-ins index a table with it)
                 case Vst2ReaperHostApi.Opcode:                         // Reaper-only function lookup (the ReaPlugs): answer by name, 0 = unknown
                     return index == Vst2ReaperHostApi.Index ? Vst2ReaperHostApi.Resolve(ptr) : 0;
                 default: return 0;

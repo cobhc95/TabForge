@@ -73,7 +73,8 @@ public sealed unsafe partial class Vst2Plugin : IPluginInstance, IEditorResizeSo
     /// <summary>Diagnostics: the native AEffect pointer (for the editor log lines).</summary>
     internal IntPtr NativeHandle => (IntPtr)_effect;
     private readonly delegate* unmanaged[Cdecl]<AEffect*, int, int, IntPtr, IntPtr, float, IntPtr> _dispatch;
-    private readonly delegate* unmanaged[Cdecl]<AEffect*, float**, float**, int, void> _processReplacing;
+    /// <summary>processReplacing, or the accumulating process of a VST 2.0-era plug-in (outputs are cleared before each call).</summary>
+    private readonly delegate* unmanaged[Cdecl]<AEffect*, float**, float**, int, void> _process;
     private double _sampleRate;
     private int _maxBlock;
     private readonly IntPtr _events;       // VstEvents header + pointer array + events
@@ -230,9 +231,9 @@ public sealed unsafe partial class Vst2Plugin : IPluginInstance, IEditorResizeSo
 
     public Vst2Plugin(string path, double sampleRate, int maxBlock, EngineThreads threads) : this(path, LoadModule(path), IntPtr.Zero, sampleRate, maxBlock, threads) { }
 
-    // Load flags: the plug-in's own folder and the system folders only, never the working folder or the search path.
-    private const uint LoadLibrarySearchDefaultDirs = 0x00001000, LoadLibrarySearchDllLoadDir = 0x00000100;
-
+    // Load flags: first the plug-in's own folder and the system folders only. A plug-in whose support DLLs sit in a vendor
+    // folder on PATH fails that with error 126, so it gets one retry in the standard order every other host uses (its own folder first).
+    private const uint LoadLibrarySearchDefaultDirs = 0x00001000, LoadLibrarySearchDllLoadDir = 0x00000100, LoadWithAlteredSearchPath = 0x00000008;
 
     /// <summary>Loads the VST2 module at its full path (the caller passes a normalised path only).</summary>
     private static IntPtr LoadModule(string path)
@@ -240,8 +241,15 @@ public sealed unsafe partial class Vst2Plugin : IPluginInstance, IEditorResizeSo
         var module = LoadLibraryEx(path, IntPtr.Zero, LoadLibrarySearchDefaultDirs | LoadLibrarySearchDllLoadDir);
         if (module != IntPtr.Zero) return module;
         var error = Marshal.GetLastPInvokeError();
+        if (error == Vst2LoadError.ModuleNotFound)
+        {
+            module = LoadLibraryEx(path, IntPtr.Zero, LoadWithAlteredSearchPath);
+            if (module != IntPtr.Zero) return module;
+            error = Marshal.GetLastPInvokeError();
+        }
         throw new System.ComponentModel.Win32Exception(error, Vst2LoadError.Describe(error));
     }
+
 
     /// <param name="library">The loaded module (freed only if the plug-in's entry point never ran); zero with an explicit <paramref name="entryPoint"/>.</param>
     /// <param name="entryPoint">VSTPluginMain; zero = look it up in <paramref name="library"/>.</param>
@@ -274,10 +282,11 @@ public sealed unsafe partial class Vst2Plugin : IPluginInstance, IEditorResizeSo
                 finally { _loading = null; }
             }
             if (_effect is null || _effect->magic != Magic) throw new InvalidOperationException("The plug-in did not start (bad VST2 entry).");
-            if ((_effect->flags & FlagCanReplacing) == 0) throw new InvalidOperationException("The plug-in does not support 32-bit float processing.");
+            var process = (_effect->flags & FlagCanReplacing) != 0 && _effect->processReplacing != IntPtr.Zero ? _effect->processReplacing : _effect->process;
+            if (process == IntPtr.Zero) throw new InvalidOperationException("The plug-in does not support 32-bit float processing.");
             Instances[(IntPtr)_effect] = this;
             _dispatch = (delegate* unmanaged[Cdecl]<AEffect*, int, int, IntPtr, IntPtr, float, IntPtr>)_effect->dispatcher;
-            _processReplacing = (delegate* unmanaged[Cdecl]<AEffect*, float**, float**, int, void>)_effect->processReplacing;
+            _process = (delegate* unmanaged[Cdecl]<AEffect*, float**, float**, int, void>)process;
             IsInstrument = (_effect->flags & FlagIsSynth) != 0;
 
             Dispatch(EffOpen, 0, IntPtr.Zero, IntPtr.Zero, 0);
@@ -392,8 +401,8 @@ public sealed unsafe partial class Vst2Plugin : IPluginInstance, IEditorResizeSo
             var dst = new Span<float>(_inputBuffers[c], frames);
             if (c < input.Length) input[c].AsSpan(0, frames).CopyTo(dst); else dst.Clear();
         }
-        for (var c = 0; c < _outputBuffers.Length; c++) new Span<float>(_outputBuffers[c], frames).Clear();
-        _processReplacing(_effect, _inputs, _outputs, frames);
+        for (var c = 0; c < _outputBuffers.Length; c++) new Span<float>(_outputBuffers[c], frames).Clear();   // the accumulating process adds into these
+        _process(_effect, _inputs, _outputs, frames);
         for (var c = 0; c < output.Length; c++)
             new ReadOnlySpan<float>(_outputBuffers[Math.Min(c, _outputBuffers.Length - 1)], frames).CopyTo(output[c]);
     }
@@ -414,8 +423,7 @@ public sealed unsafe partial class Vst2Plugin : IPluginInstance, IEditorResizeSo
     {
         if (state.Length == 0) return;
         if ((_effect->flags & FlagProgramChunks) == 0) { TrySetParameterListState(state); return; }
-        fixed (byte* p = state) Dispatch(EffSetChunk, 0, state.Length, (IntPtr)p, 0);
-    }
+        fixed (byte* p = state) Dispatch(EffSetChunk, 0, state.Length, (IntPtr)p, 0);    }
 
     public (int Width, int Height)? OpenEditor(IntPtr parent)
     {

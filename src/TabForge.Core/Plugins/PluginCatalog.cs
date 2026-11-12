@@ -52,7 +52,7 @@ public static class PluginCatalog
         }
         else
         {
-            (probed, refusal) = ProbeWithRefusal(path, hash, dependencies, effectiveTimeout);
+            (probed, refusal) = ProbeWithRefusal(path, hash, dependencies, effectiveTimeout, OperatingSystem.IsLinux() && NeedsBridgedProbe(path, format));
         }
         if (probed is { } found) { var r = Remember(settings, path, found.Role, found.Vendor, found.Name); return (r.Role, r.Vendor, r.Name, null); }
         // Could not be probed (crashed or timed out): guess from the name, never remembered.
@@ -102,7 +102,7 @@ public static class PluginCatalog
     internal static Func<string, string, int, (string Role, string Vendor, string Name)?>? ProbeOverride;   // key: none; ceiling: one value; thread: set by a test on its own thread
 
     private static ((string Role, string Vendor, string Name)? Result, string? Refusal) ProbeWithRefusal(string path, string sha256,
-        string dependencies, int timeoutMs)
+        string dependencies, int timeoutMs, bool underWine)
     {
         var exe = Environment.ProcessPath;
         if (exe is null) return (null, ProbeRefusal.CannotIdentifyText);
@@ -129,7 +129,7 @@ public static class PluginCatalog
             var parts = line.Split('|');
             if (process.ExitCode == 0 && parts.Length >= 3 && parts[0] is ("Instrument" or "Effect"))
                 return ((parts[0], parts[1].Length > 256 ? parts[1][..256] : parts[1], parts[2].Length > 256 ? parts[2][..256] : parts[2]), null);
-            return (null, ProbeRefusal.Classify(errText, process.ExitCode, path));
+            return (null, ProbeRefusal.Classify(errText, process.ExitCode, underWine));
         }
         catch (Exception ex) when (ex is IOException or InvalidOperationException or System.ComponentModel.Win32Exception)
         {
@@ -137,7 +137,4 @@ public static class PluginCatalog
             return (null, ProbeRefusal.HelperCrashText);
         }
     }
-
-    private static (string Role, string Vendor, string Name)? Probe(string path, string sha256, int timeoutMs)
-        => ProbeWithRefusal(path, sha256, "", timeoutMs).Result;
 }

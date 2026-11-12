@@ -17,6 +17,7 @@ dist/
 
 # Native build output and fetched third-party SDKs
 native/tfvst3/build/
+native/tfvst32/build64/
 third_party/
 
 # Stray third-party packages (not part of TabForge)

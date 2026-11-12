@@ -1,6 +1,7 @@
-// Owns: the readable refusal text the Linux probe reports per category (Stage 9).
+// Owns: the readable refusal text a failed identify probe reports: per Wine category for a bridged probe on Linux (Stage 9),
+// the probe's own first line everywhere else.
 // Does not own: the probe itself (PluginCatalog) or the Wine texts (WineBridgeSupport).
-// Tests: ProbeRefusalTests.
+// Tests: WineStage9Tests.
 namespace TabForge.Plugins;
 
 /// <summary>Readable refusal categories for a probe that could not identify a plug-in.</summary>
@@ -27,13 +28,17 @@ public static class ProbeRefusal
     public static string ForTimeout(int timeoutMs) =>
         $"{TimeoutPrefix} {timeoutMs / 1000} s. If this is the first Windows plug-in after installing, Wine may still be preparing; otherwise the plug-in hung and was stopped.";
 
-    /// <summary>Maps helper stderr + exit code to a readable category (pure, tested on any OS).</summary>
-    public static string Classify(string? stderr, int exitCode, string? path = null)
+    /// <summary>
+    /// Maps probe stderr + exit code to readable text (pure, tested on any OS). The Wine categories apply only when the probe
+    /// ran under Wine; a native probe (Windows, macOS, a Linux-native plug-in) already wrote the exact reason, so its first line is kept.
+    /// </summary>
+    public static string Classify(string? stderr, int exitCode, bool underWine)
     {
         var err = (stderr ?? "").Trim();
         if (err.Length == 0) return exitCode == 5
             ? "The file changed since approval or could not be read; approve it again."
             : $"{HelperCrashText} (exit {exitCode}).";
+        if (!underWine) return exitCode == 5 ? $"The plug-in was refused before loading: {FirstLine(err)}" : FirstLine(err);
         if (ContainsAny(err, "iLok", "PACE", "Sentinel", "eLicenser", "e-licenser", "Wibu", "CodeMeter", "codemeter", "kernel driver", "driver"))
         {
             // A "could not be loaded" with a protection/driver hint is copy protection, not a plain missing DLL.

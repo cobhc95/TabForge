@@ -20,7 +20,7 @@ struct VstEventsHeader {
 };
 constexpr size_t kEventPointersOffset = offsetof(VstEventsHeader, events);
 
-constexpr int kEffOpen = 0, kEffClose = 1, kEffGetProgram = 2, kEffSetProgram = 3,
+constexpr int kEffOpen = 0, kEffClose = 1, kEffSetProgram = 2, kEffGetProgram = 3,
     kEffGetParamLabel = 6, kEffGetParamDisplay = 7, kEffGetParamName = 8,
     kEffSetSampleRate = 10, kEffSetBlockSize = 11, kEffMainsChanged = 12, kEffEditClose = 15,
     kEffProcessEvents = 25,
@@ -187,7 +187,12 @@ bool Vst2Host::Load(const std::wstring& path, const std::string& expectedSha256,
     // Keep the read-only handle (writers denied) open until the module has been mapped, then release it.
     module_ = LoadLibraryExW(path.c_str(), nullptr,
                              LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
-    const DWORD loadError = GetLastError();
+    DWORD loadError = GetLastError();
+    if (module_ == nullptr && loadError == ERROR_MOD_NOT_FOUND) {
+        // Support DLLs in a vendor folder on PATH: one retry in the standard order every other host uses (own folder first).
+        module_ = LoadLibraryExW(path.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
+        loadError = GetLastError();
+    }
     CloseHandle(hold);
     if (module_ == nullptr) {
         error = "the plug-in could not be loaded (error " + std::to_string(loadError) +
@@ -212,12 +217,15 @@ bool Vst2Host::Load(const std::wstring& path, const std::string& expectedSha256,
         return false;
     }
     effect_ = effect;
-    if ((effect->flags & kFlagCanReplacing) == 0 || effect->processReplacing == 0) {
+    // processReplacing, or the accumulating process of a VST 2.0-era plug-in (Process clears the outputs before each call).
+    const intptr_t process = (effect->flags & kFlagCanReplacing) != 0 && effect->processReplacing != 0
+        ? effect->processReplacing : effect->process;
+    if (process == 0) {
         error = "the plug-in does not support 32-bit float processing";
         Close();
         return false;
     }
-    processReplacing_ = reinterpret_cast<void*>(effect->processReplacing);
+    process_ = reinterpret_cast<void*>(process);
     Dispatch(kEffOpen, 0, 0, nullptr, 0);
     opened_ = true;
     instrument_ = (effect->flags & kFlagIsSynth) != 0;
@@ -281,7 +289,7 @@ void Vst2Host::Close() {
         effect_ = nullptr;
     }
     if (g_host == this) g_host = nullptr;
-    processReplacing_ = nullptr;
+    process_ = nullptr;
     opened_ = false;
     FreeBuffers();
     const HMODULE module = module_;
@@ -310,7 +318,7 @@ intptr_t Vst2Host::Dispatch(int opcode, int index, intptr_t value, void* ptr, fl
 
 bool Vst2Host::Process(const BlockMidi* events, int eventCount, const float* inL, const float* inR,
                        float* outL, float* outR, int frames, const Transport& transport) {
-    if (effect_ == nullptr || processReplacing_ == nullptr || frames <= 0) return false;
+    if (effect_ == nullptr || process_ == nullptr || frames <= 0) return false;
     frames = std::min(frames, maxBlock_);
     audioThread_.store(GetCurrentThreadId());
 
@@ -350,7 +358,7 @@ bool Vst2Host::Process(const BlockMidi* events, int eventCount, const float* inL
         if (source != nullptr) std::memcpy(destination, source, sizeof(float) * static_cast<size_t>(frames));
         else std::memset(destination, 0, sizeof(float) * static_cast<size_t>(frames));
     }
-    for (float* buffer : outputBuffers_) std::memset(buffer, 0, sizeof(float) * static_cast<size_t>(frames));
+    for (float* buffer : outputBuffers_) std::memset(buffer, 0, sizeof(float) * static_cast<size_t>(frames));   // the accumulating process adds into these
 
     const int count = events == nullptr ? 0 : std::clamp(eventCount, 0, kMaxEvents);
     void* eventBase = nullptr;
@@ -392,7 +400,7 @@ bool Vst2Host::ProcessGuarded(void* events, int count, int frames) {
     __try {
         if (count > 0 && events != nullptr) Dispatch(kEffProcessEvents, 0, 0, events, 0);
         using ProcessProc = void (VST_CALLBACK*)(AEffect*, float**, float**, int32_t);
-        reinterpret_cast<ProcessProc>(processReplacing_)(effect_, inputs_.data(), outputs_.data(), frames);
+        reinterpret_cast<ProcessProc>(process_)(effect_, inputs_.data(), outputs_.data(), frames);
         return true;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return false;
@@ -494,7 +502,7 @@ bool Vst2Host::SetProgram(int program) {
     const int count = effect_->numPrograms;
     if (program < 0 || (count > 0 && program >= count)) return false;
     std::lock_guard<std::mutex> lock(pluginMutex_);
-    Dispatch(kEffSetProgram, program, 0, nullptr, 0);
+    Dispatch(kEffSetProgram, 0, program, nullptr, 0);   // the program number is the value argument
     return dispatchFaulted_.load(std::memory_order_relaxed) == 0;
 }
 
