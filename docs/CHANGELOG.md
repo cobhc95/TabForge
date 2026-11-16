@@ -11,6 +11,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ### Fixed
 
+- At a UI scale other than 100%, a window made larger than its default size (or maximised) left empty bands around its content, which sat narrower in the middle. Every scaled window now fills itself at any size.
 - The side-panel toolbar button was lit when the panel was hidden and unlit when it showed. It now follows the panel, however it was opened or closed.
 - Hiding or showing the side panels took one to two seconds, because the window layout was rebuilt once per panel. It is rebuilt once now.
 

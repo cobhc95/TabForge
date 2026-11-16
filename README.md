@@ -44,6 +44,7 @@ chmod +x TabForge-*-linux-x86_64.AppImage
 
 - **Redesigned MIDI processing window:** processors grouped by what they do, each with an icon, foldable groups and search. Drag to reorder the chain, switch steps on and off, and edit each section in its own card.
 - **Fits at every scale:** no cut-off labels or misplaced buttons at any UI scale, density, font or window size.
+- **Scaled windows fill themselves:** no empty bands around a resized window at a UI scale other than 100%.
 - **Side-panel button:** lit when the panel shows, and toggling is quick again.
 
 Full list: the [changelog](docs/CHANGELOG.md#098).

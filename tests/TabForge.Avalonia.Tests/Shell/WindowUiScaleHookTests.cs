@@ -61,7 +61,7 @@ public class WindowUiScaleHookTests
             window = new Window { Width = 400, Height = 300, Content = content };
             window.Show();
 
-            var root = Assert.IsType<LayoutTransformControl>(window.Content);
+            var root = Assert.IsAssignableFrom<LayoutTransformControl>(window.Content);
             Assert.Same(content, root.Child);
             Assert.Equal(Math.Min(600, WorkingWidth(window)), window.Width, 3);
             Assert.Equal(Math.Min(450, WorkingHeight(window)), window.Height, 3);
@@ -105,7 +105,7 @@ public class WindowUiScaleHookTests
             window = new MixerWindow(DocumentOf(DemoSongFactory.Create()));
             window.Show();
 
-            var root = Assert.IsType<LayoutTransformControl>(window.Content);
+            var root = Assert.IsAssignableFrom<LayoutTransformControl>(window.Content);
             Assert.IsNotType<LayoutTransformControl>(root.Child);
         }
         finally

@@ -29,7 +29,7 @@ public class WindowUiScaleTests
         var appearance = new AppearanceSettings();
         try
         {
-            var root = Assert.IsType<LayoutTransformControl>(WindowUiScale.Attach(window, content, appearance));
+            var root = Assert.IsAssignableFrom<LayoutTransformControl>(WindowUiScale.Attach(window, content, appearance));
             window.Content = root;
             window.Show();
 
@@ -48,7 +48,7 @@ public class WindowUiScaleTests
         try
         {
             window.Show();
-            var root = Assert.IsType<LayoutTransformControl>(window.Content);
+            var root = Assert.IsAssignableFrom<LayoutTransformControl>(window.Content);
             var before = window.MinWidth;
             Assert.Equal(MixerColumnLayout.MinCompactWidth, before, 3);
 
@@ -74,7 +74,7 @@ public class WindowUiScaleTests
         var appearance = new AppearanceSettings();
         try
         {
-            var root = Assert.IsType<LayoutTransformControl>(WindowUiScale.Attach(window, new Border(), appearance));
+            var root = Assert.IsAssignableFrom<LayoutTransformControl>(WindowUiScale.Attach(window, new Border(), appearance));
             window.Content = root;
             window.Show();
             window.Close();

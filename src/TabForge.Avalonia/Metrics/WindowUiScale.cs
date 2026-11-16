@@ -86,7 +86,7 @@ public static class WindowUiScale
     public static Control Attach(Window window, Control content, AppearanceSettings? appearance = null, Action<double>? scaleChanged = null, bool autoSize = false, bool scaleOnly = false)
     {
         ReleaseFromClosedRoot(content);
-        var root = new LayoutTransformControl { Child = content };
+        var root = new UiScaleRoot { Child = content };
         var state = new Attached(root, appearance, scaleChanged, scaleOnly) { AutoSize = autoSize };
         if (Windows.TryGetValue(window, out var previous)) Detach(window, previous);
         Windows.Add(window, state);
