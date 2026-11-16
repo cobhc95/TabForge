@@ -1,4 +1,5 @@
 using System;
+using TabForge.Avalonia.Platform;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -47,8 +48,7 @@ public sealed class LeftStripCustomizeWindow : Window
         Width = ChromeMetrics.LeftStripWindowWidth; Height = ChromeMetrics.LeftStripWindowHeight;
         ShowInTaskbar = false;
         DialogMetrics.CentreOnOwner(this);
-        this[!BackgroundProperty] = new DynamicResourceExtension("WindowBackground");
-        this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
+        this.UseWindowColours();
         FontSize = ChromeMetrics.TextDialog;
 
         _available.ItemTemplate = new global::Avalonia.Controls.Templates.FuncDataTemplate<string>((id, _) => Row(id));
@@ -76,12 +76,11 @@ public sealed class LeftStripCustomizeWindow : Window
 
         var reset = Action("Reset to default", () => Load(new LeftStripSettings()));
         reset.Name = "ResetButton";
-        var cancel = Action("Cancel", () => Close());
-        cancel.IsCancel = true;
-        var apply = Action("Apply", Apply);
-        apply.IsDefault = true; apply.Name = "ApplyButton";
-        cancel.Margin = new Thickness(0, 0, Gap, 0);
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Children = { cancel, apply } };
+        var cancel = DialogButtons.Cancel();
+        cancel.Click += (_, _) => Close();
+        var apply = DialogButtons.Apply();
+        apply.Click += (_, _) => Apply();
+        var buttons = DialogButtons.Row(cancel, apply);
         var footer = new DockPanel { Margin = DialogMetrics.FooterGap, Children = { reset, buttons } };
         DockPanel.SetDock(reset, Dock.Left);
 

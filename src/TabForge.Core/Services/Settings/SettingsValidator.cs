@@ -274,8 +274,8 @@ public static class SettingsValidator
         value.NormalVibratoDepth = InputLimits.ClampFinite(value.NormalVibratoDepth, 0.05, 3, 0.38);
         value.WideVibratoDepth = InputLimits.ClampFinite(value.WideVibratoDepth, 0.05, 3, 0.94);
         value.VibratoSpeedHz = InputLimits.ClampFinite(value.VibratoSpeedHz, 1, 12, 5.5);
-        value.MetronomeClick = Math.Clamp(value.MetronomeClick, 0, MidiLimits.Max);
-        value.MetronomeAccent = Math.Clamp(value.MetronomeAccent, 0, MidiLimits.Max);
+        value.MetronomeClick = MidiLimits.Clamp(value.MetronomeClick);
+        value.MetronomeAccent = MidiLimits.Clamp(value.MetronomeAccent);
         value.MetronomeVolume = Math.Clamp(value.MetronomeVolume, 0, 100);
         value.MetronomeAccentVolume = Math.Clamp(value.MetronomeAccentVolume, 0, 100);
         value.MetronomeClickVolume = Math.Clamp(value.MetronomeClickVolume, 0, 100);

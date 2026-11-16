@@ -1,4 +1,5 @@
 using System;
+using TabForge.Avalonia.Platform;
 using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
@@ -28,16 +29,15 @@ public sealed class CommonFoldersWindow : Window
         Width = WindowWidth; Height = WindowHeight;
         ShowInTaskbar = false;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        this[!BackgroundProperty] = new DynamicResourceExtension("WindowBackground");
-        this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
+        this.UseWindowColours();
         _box.Text = string.Join(Environment.NewLine, lines);
-        var save = new Button { Content = "Save", Name = "SaveButton", IsDefault = true, Padding = DialogMetrics.ActionButtonPadding, Margin = new Thickness(0, 0, Gap, 0) };
-        var reset = new Button { Content = "Reset to defaults", Name = "ResetButton", Padding = DialogMetrics.ActionButtonPadding, Margin = new Thickness(0, 0, Gap, 0) };
-        var cancel = new Button { Content = "Cancel", Name = "CancelButton", IsCancel = true, Padding = DialogMetrics.ActionButtonPadding };
+        var save = DialogButtons.Action("Save", primary: true, name: "SaveButton");
+        var reset = DialogButtons.Action("Reset to defaults", name: "ResetButton");
+        var cancel = DialogButtons.Cancel();
         save.Click += (_, _) => Close(Lines());
         reset.Click += (_, _) => _box.Text = string.Join(Environment.NewLine, VstScannerService.DefaultCommonFolders);
         cancel.Click += (_, _) => Close(null);
-        var row = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Children = { save, reset, cancel } };
+        var row = DialogButtons.Footer(save, reset, cancel);
         var caption = new TextBlock { Text = "Common plug-in folders, one per line (%ENV% variables work; missing folders are skipped)" };
         var dock = new DockPanel { Margin = DialogMetrics.ContentInset };
         DockPanel.SetDock(caption, Dock.Top);

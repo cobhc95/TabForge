@@ -39,7 +39,7 @@ public sealed partial class ArticulationsPane : DockPanel
     private readonly Button _saveAs = Small("Save preset…", "Save the table as a preset of your own", "ArticulationSaveAsButton");
     private readonly Button _import = Small("Import…", "Read a preset from a .json file", "ArticulationImportButton");
     private readonly Button _export = Small("Export…", "Write the table to a .json file", "ArticulationExportButton");
-    private readonly Button _delete = Small("Delete", "Delete the selected preset of your own", "ArticulationDeleteButton");
+    private readonly Button _delete = Small(CommonText.Delete, "Delete the selected preset of your own", "ArticulationDeleteButton");
     private readonly Button _manage = Small("Manage…", "Rename, delete or reorder your articulation presets", "ArticulationManageButton");
     private readonly TextBox _lead = new() { Width = DialogMetrics.ArticulationLeadWidth, Name = "ArticulationLeadBox", VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBlock _description = new TextBlock { TextWrapping = TextWrapping.Wrap, Name = "ArticulationDescription" }.WithMargin(DialogMetrics.ArticulationTextGap);

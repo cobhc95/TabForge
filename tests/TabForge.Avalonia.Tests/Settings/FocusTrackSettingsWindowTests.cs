@@ -1,5 +1,8 @@
 using System.Linq;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.VisualTree;
 using TabForge.Avalonia.Features.LeftStrip;
@@ -59,8 +62,57 @@ public sealed class FocusTrackSettingsWindowTests
         bool? seen = null;
         var window = new FocusTrackSettingsWindow(new FocusTrackSettings(), false, on => seen = on, () => { });
         window.Show();
-        window.GetVisualDescendants().OfType<ToggleSwitch>().First(t => t.Name == "FocusSwitch").IsChecked = true;
+        window.GetVisualDescendants().OfType<ToggleButton>().First(t => t.Name == "FocusSwitch").IsChecked = true;
         Assert.True(seen);
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void SwitchMovesThumbAndSyncsFromOutside()
+    {
+        var calls = 0;
+        var window = new FocusTrackSettingsWindow(new FocusTrackSettings(), true, _ => calls++, () => { });
+        window.Show();
+        window.UpdateLayout();
+        var sw = window.GetVisualDescendants().OfType<ToggleButton>().First(t => t.Name == "FocusSwitch");
+        var thumb = sw.GetVisualDescendants().OfType<Border>().First(b => b.Name == "Thumb");
+        var onX = thumb.Bounds.X;
+
+        window.SyncSwitch(false);
+        window.UpdateLayout();
+        var offX = thumb.Bounds.X;
+
+        Assert.Equal(0, calls);
+        Assert.True(offX < onX, $"Expected thumb to move left when turned off (onX={onX}, offX={offX}).");
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void RightClickOnFocusTrackButtonRunsSettingsAndSuppressesContextMenu()
+    {
+        var window = new Window { Width = 400, Height = 600 };
+        var commands = new MainWindowCommands(window, () => { });
+        var toggled = 0;
+        var settingsOpened = 0;
+        commands.Add(MainWindowFocusTrack.CommandId, () => toggled++);
+        commands.Add(MainWindowFocusTrack.SettingsId, () => settingsOpened++);
+        var feature = new LeftStripFeature(commands, null);
+        var menuRow = new Border { Child = new DockPanel() };
+        var modeBar = new TabForge.Avalonia.Platform.Controls.CompactTrackStrip();
+        feature.Attach(menuRow, modeBar);
+        window.Content = new DockPanel { Children = { feature.Left, modeBar } };
+        window.Show();
+        global::Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        window.UpdateLayout();
+
+        var btn = feature.Left.GetVisualDescendants().OfType<ToggleButton>().First(b => Equals(b.Tag, MainWindowFocusTrack.CommandId));
+        var center = btn.TranslatePoint(new Point(btn.Bounds.Width / 2, btn.Bounds.Height / 2), window)!.Value;
+        window.MouseDown(center, global::Avalonia.Input.MouseButton.Right);
+        window.MouseUp(center, global::Avalonia.Input.MouseButton.Right);
+        global::Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal(1, settingsOpened);
+        Assert.Equal(0, toggled);
         window.Close();
     }
 }

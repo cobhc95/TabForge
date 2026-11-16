@@ -47,8 +47,7 @@ public sealed class TrackColoursWindow : Window
         MinHeight = 320;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         ShowInTaskbar = false;
-        this[!BackgroundProperty] = new DynamicResourceExtension("WindowBackground");
-        this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
+        this.UseWindowColours();
         FontSize = DialogMetrics.FontSize;
 
         var root = new DockPanel { Margin = new Thickness(14) };
@@ -99,10 +98,8 @@ public sealed class TrackColoursWindow : Window
             palette.Children.Add(button);
         }
         bottom.Children.Add(palette);
-        var close = new Button
-        {
-            Name = "CloseButton", Content = "Close", IsCancel = true, IsDefault = true, MinWidth = DialogMetrics.DialogButtonMinWidth, HorizontalAlignment = HorizontalAlignment.Right,
-        };
+        var close = DialogButtons.Close();
+        close.HorizontalAlignment = HorizontalAlignment.Right;
         close.Click += (_, _) => Close();
         bottom.Children.Add(close);
         return bottom;

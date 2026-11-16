@@ -547,7 +547,7 @@ public sealed partial class RemotePlugin : IPluginInstance
         try { _block?.Dispose(); } catch (Exception) { } // swallow: best-effort dispose during teardown.
         var blockPath = _blockPath;
         _blockPath = null;
-        if (blockPath is not null) try { File.Delete(blockPath); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { } // swallow: a stale runtime file is swept later.
+        if (blockPath is not null) BestEffortFile.TryDelete(blockPath);   // a stale runtime file is swept later
     }
 
     private void Release()

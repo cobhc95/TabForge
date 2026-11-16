@@ -91,8 +91,7 @@ public sealed partial class MixerWindow : Window
         if (sizing is not null) PropertyChanged += (_, e) => RememberSize(sizing, saveSettings, e);
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         ShowInTaskbar = false;
-        this[!BackgroundProperty] = new DynamicResourceExtension("WindowBackground");
-        this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
+        this.UseWindowColours();
 
         var top = BuildTopBar();
         var footer = BuildFooter();

@@ -78,15 +78,16 @@ public static class FretboardGeometryRules
 
         // Keep dimensions readable on wide windows; the selected anchor only changes its horizontal placement.
         var fullWidth = placementWidth > 0 && double.IsFinite(placementWidth) ? placementWidth : content.Width;
+        var legendReserve = LegendReserveOf(caps);
         // A board that clears the legend column gives way to it before it can run under it; the caps leave the board the whole content width.
         var available = caps.ClearsLegend
-            ? Math.Max(80, Math.Min(content.Width, fullWidth - LegendWidth) - BoardMargin)
+            ? Math.Max(80, Math.Min(content.Width, fullWidth - legendReserve) - BoardMargin)
             : Math.Max(80, content.Width - BoardMargin);
         var availableHeight = Math.Max(40, content.Height - TopPad - BottomPad);
-        if (caps.RealProportions) return ProportionalLayout(state, content, position, horizontalOffset, fullWidth, available, availableHeight);
+        if (caps.RealProportions) return ProportionalLayout(state, content, position, horizontalOffset, fullWidth, available, availableHeight, legendReserve);
 
         var boardWidth = Math.Max(80, Math.Min(available, caps.MaxBoardWidth) - LeftGutter);
-        var left = BoardLeft(content, fullWidth, boardWidth, available, position, horizontalOffset);
+        var left = BoardLeft(content, fullWidth, boardWidth, available, position, horizontalOffset, legendReserve);
 
         // Show every fret of the chosen range when they fit; otherwise slide a window that keeps
         // the current position visible (narrow windows only).
@@ -128,8 +129,11 @@ public static class FretboardGeometryRules
     /// in the pane (the narrower of the two limits); the spare room stays empty and the board is centred. The board's height is strings × pitch, so
     /// its strings sit one board-gap apart (strings / (strings - 1) of the pitch), the same board the owner's proportions describe.
     /// The user's string spacing stretches that pitch (Natural leaves the real board); the height limit then takes the stretched pitch.</summary>
+    private static double LegendReserveOf(FretboardBoardLimits caps) =>
+        caps.LegendReserve is { } r && double.IsFinite(r) ? Math.Max(0, r) : LegendWidth;
+
     private static Layout ProportionalLayout(Input state, UiRect content, FretboardHorizontalPosition position, double horizontalOffset,
-        double fullWidth, double available, double availableHeight)
+        double fullWidth, double available, double availableHeight, double legendReserve)
     {
         var strings = Math.Max(1, state.Strings);
         var total = ShownFrets(state);
@@ -139,7 +143,7 @@ public static class FretboardGeometryRules
         var scale = Math.Min(Math.Max(80, available - LeftGutter) / (total * cell), availableHeight / (strings * pitch));
         var boardWidth = total * cell * scale;
         var boardHeight = strings * pitch * scale;
-        var left = BoardLeft(content, fullWidth, boardWidth, available, position, horizontalOffset);
+        var left = BoardLeft(content, fullWidth, boardWidth, available, position, horizontalOffset, legendReserve);
         var top = content.Y + TopPad + Math.Max(0, (availableHeight - boardHeight) / 2);
         return new Layout(new UiRect(left, top, boardWidth, boardHeight), 1, total, cell * scale, boardHeight / gaps, strings, state.LeftHanded, state.CapoByString);
     }
@@ -157,10 +161,10 @@ public static class FretboardGeometryRules
 
     /// <summary>The board's left edge: the placement (Left, Centre or Right) inside the room beside the legend column, moved by the drag offset
     /// and kept inside the room.</summary>
-    private static double BoardLeft(UiRect content, double fullWidth, double boardWidth, double available, FretboardHorizontalPosition position, double horizontalOffset)
+    private static double BoardLeft(UiRect content, double fullWidth, double boardWidth, double available, FretboardHorizontalPosition position, double horizontalOffset, double legendReserve)
     {
         var minLeft = content.X + LeftGutter;
-        var maxLeft = Math.Max(minLeft, content.X + fullWidth - LegendWidth - boardWidth);
+        var maxLeft = Math.Max(minLeft, content.X + fullWidth - legendReserve - boardWidth);
         var centredLeft = minLeft + Math.Max(0, (available - (boardWidth + LeftGutter)) / 2);
         var anchoredLeft = position switch
         {
@@ -234,7 +238,8 @@ public static class FretboardGeometryRules
     /// <summary>The area the board is laid out in: the pane, narrowed when the board with its legend would run past the pane's right edge.</summary>
     public static UiRect ContentArea(Input state, UiRect pane, FretboardHorizontalPosition position = FretboardHorizontalPosition.Centre, FretboardBoardLimits? limits = null)
     {
-        var overflow = Compute(state, pane, position, limits: limits).Board.Right + LegendWidth - pane.Right;
+        var legendReserve = LegendReserveOf(limits ?? FretboardBoardLimits.Default);
+        var overflow = Compute(state, pane, position, limits: limits).Board.Right + legendReserve - pane.Right;
         return overflow > 0 ? new UiRect(pane.X, pane.Y, Math.Max(80, pane.Width - overflow), pane.Height) : pane;
     }
 

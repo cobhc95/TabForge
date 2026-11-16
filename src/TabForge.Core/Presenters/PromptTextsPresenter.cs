@@ -1,5 +1,5 @@
 // Owns: the wording, buttons, Enter default, radio choices, remember box and answer mapping of the small track and confirm prompts (Add track,
-//       Delete track, Convert to audio track, Convert to instrument track, Change instrument and the generic Confirm), and the Undo sentence they share.
+//       Delete track, Convert to audio track, Convert to instrument track and the generic Confirm), and the Undo sentence they share.
 // Does not own: showing a prompt (Avalonia Views/PromptWindow), the Undo key text (the caller passes it in), or whether
 //       a prompt is asked at all (the flows and TrackSetup).
 // Tests: none dedicated, PromptWindowTests (Avalonia headless).
@@ -54,14 +54,14 @@ public static class PromptTextsPresenter
 
     public static PromptSpec DeleteTrack(string trackName, string undoKey) => new(
         "Delete track", $"Delete the track '{trackName}'? {UndoHint(undoKey)}",
-        YesText: "Delete", NoText: "Cancel",
+        YesText: CommonText.Delete, NoText: CommonText.Cancel,
         YesToolTip: "Delete the track", NoToolTip: "Keep the track",
         ShowCancel: false, DefaultIsNo: true);
 
     /// <summary>Delete or Cut on several selected track rows: one question listing them ("Delete 2 tracks: A, B?"); one track keeps <see cref="DeleteTrack"/>.</summary>
     public static PromptSpec DeleteTracks(IReadOnlyList<string> trackNames, string undoKey) => trackNames.Count == 1 ? DeleteTrack(trackNames[0], undoKey) : new(
         "Delete tracks", $"Delete {trackNames.Count} tracks: {NamesShown(trackNames)}? {UndoHint(undoKey)}",
-        YesText: "Delete", NoText: "Cancel",
+        YesText: CommonText.Delete, NoText: CommonText.Cancel,
         YesToolTip: "Delete the tracks", NoToolTip: "Keep the tracks",
         ShowCancel: false, DefaultIsNo: true);
 
@@ -74,7 +74,7 @@ public static class PromptTextsPresenter
     /// <summary>Delete or Cut on the grey timeline highlight: the cells' notes go, the bars stay. "Don't ask again" turns the question off (Preferences > Editing turns it back on).</summary>
     public static PromptSpec ClearHighlightedBars(int cells) => new(
         "Clear highlighted bars", $"Clear the notes in {cells} highlighted {(cells == 1 ? "bar" : "bars")}? The bars stay.",
-        YesText: "Clear", NoText: "Cancel",
+        YesText: CommonText.Clear, NoText: CommonText.Cancel,
         YesToolTip: "Clear the notes in the highlighted bars", NoToolTip: "Keep the notes",
         ShowCancel: false, DefaultIsNo: false, RememberText: "Don't ask again");
 
@@ -82,21 +82,21 @@ public static class PromptTextsPresenter
         "Convert to audio/MIDI track",
         $"Convert '{trackName}' to an audio/MIDI track? Its notation becomes a MIDI clip on the track, so nothing is lost, and the bars are emptied. " +
         $"The track is silent unless an instrument plug-in is on it. Clips already on the track stay on their lanes. {UndoHint(undoKey)}",
-        YesText: "Convert", NoText: "Cancel",
+        YesText: CommonText.Convert, NoText: CommonText.Cancel,
         YesToolTip: "Convert the track", NoToolTip: "Keep the tab track",
         ShowCancel: false, DefaultIsNo: true);
 
     /// <summary>The question after the instrument pick of Convert to instrument track: what happens to the clips.</summary>
     public static PromptSpec ConvertTrackToInstrumentClips(string trackName, bool hasMidi) => hasMidi
         ? new PromptSpec("Convert to tab track", $"'{trackName}' has MIDI clips. What should happen to them?",
-            YesText: "Convert", NoText: "Cancel",
+            YesText: CommonText.Convert, NoText: CommonText.Cancel,
             YesToolTip: "Convert the track", NoToolTip: "Keep the audio/MIDI track",
             ShowCancel: false, DefaultIsNo: false,
             Choices: new[] { "Write them as notation", "Keep them as MIDI on a second lane" },
             RememberText: "Remember my choice")
         : new PromptSpec("Convert to tab track",
             $"'{trackName}' has audio clips. They stay on the track on a second lane under the new notation lane.",
-            YesText: "OK", NoText: "Cancel",
+            YesText: CommonText.Ok, NoText: CommonText.Cancel,
             YesToolTip: "Convert the track", NoToolTip: "Keep the audio/MIDI track",
             ShowCancel: false, DefaultIsNo: false);
 
@@ -111,17 +111,10 @@ public static class PromptTextsPresenter
         return (selectedChoice == 0 ? ClipAnswer.WriteNotation : ClipAnswer.KeepClips, rememberTicked);
     }
 
-    public static PromptSpec ChangeInstrument(string currentInstrument, string newInstrument) => new(
-        "Change instrument",
-        $"Change {currentInstrument} to {newInstrument}? Its notes are re-mapped to the new instrument.",
-        YesText: "OK", NoText: "Cancel",
-        YesToolTip: "Change the instrument and re-map the notes", NoToolTip: "Keep the current instrument",
-        ShowCancel: false, DefaultIsNo: false);
-
     /// <summary>The generic themed question; with <paramref name="withUndoHint"/> the Undo sentence follows the text.</summary>
     public static PromptSpec Confirm(string title, string text, string yesText, bool withUndoHint, string undoKey) => new(
         title, withUndoHint ? $"{text} {UndoHint(undoKey)}" : text,
-        YesText: yesText, NoText: "Cancel",
+        YesText: yesText, NoText: CommonText.Cancel,
         YesToolTip: yesText, NoToolTip: "Leave things as they are",
         ShowCancel: false, DefaultIsNo: false);
 }

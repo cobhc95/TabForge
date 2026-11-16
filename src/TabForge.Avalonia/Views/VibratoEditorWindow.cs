@@ -1,4 +1,5 @@
 using System;
+using TabForge.Avalonia.Platform;
 using System.Globalization;
 using Avalonia;
 using Avalonia.Automation;
@@ -27,7 +28,7 @@ public static class VibratoEditorWindow
         var speedRow = Row("Speed", SpeedMin, SpeedMax, speed, v => v.ToString("0.0", CultureInfo.InvariantCulture) + " Hz", out var speedSlider);
         var hint = new TextBlock { Text = "Per note (right-click) or global default (Settings)" };
         DialogMetrics.SpaceVibratoHint(hint);
-        hint[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        hint.UseMutedText();
         var fields = new StackPanel { MinWidth = DialogMetrics.VibratoFieldsWidth, Children = { kind, depthRow, speedRow, hint } };
         return new EffectValuesWindow("Vibrato settings", fields,
             () => new() { ["Type"] = kind.Value, ["Depth"] = depthSlider.Value, ["Speed"] = speedSlider.Value },

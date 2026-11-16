@@ -50,12 +50,12 @@ internal sealed partial class ScoreToMidiCompiler
     {
         if (point.Controller == ClipController.ProgramChange)
         {
-            statusBase = MidiStatus.ProgramChange; data1 = Math.Clamp(point.Value, 0, MidiLimits.Max); data2 = 0;
+            statusBase = MidiStatus.ProgramChange; data1 = MidiLimits.Clamp(point.Value); data2 = 0;
             return channel != ChannelAllocator.PercussionChannel;
         }
         if (point.Controller == ClipController.ChannelAftertouch)
         {
-            statusBase = MidiStatus.ChannelPressure; data1 = Math.Clamp(point.Value, 0, MidiLimits.Max); data2 = 0;
+            statusBase = MidiStatus.ChannelPressure; data1 = MidiLimits.Clamp(point.Value); data2 = 0;
             return true;
         }
         if (point.Controller == ClipController.PitchBend)
@@ -64,7 +64,7 @@ internal sealed partial class ScoreToMidiCompiler
             statusBase = MidiStatus.PitchBend; data1 = bend & 0x7F; data2 = bend >> 7;
             return true;
         }
-        statusBase = MidiStatus.ControlChange; data1 = Math.Clamp(point.Controller, 0, MidiLimits.Max); data2 = Math.Clamp(point.Value, 0, MidiLimits.Max);
+        statusBase = MidiStatus.ControlChange; data1 = MidiLimits.Clamp(point.Controller); data2 = MidiLimits.Clamp(point.Value);
         return true;
     }
 
@@ -101,8 +101,8 @@ internal sealed partial class ScoreToMidiCompiler
                     var onMs = (piece.StartSec + (srcOn - piece.OffsetSec) / speed) * 1000 * _speedScale - offsetMs;
                     var offMs = (piece.StartSec + (srcOff - piece.OffsetSec) / speed) * 1000 * _speedScale - offsetMs;
                     if (onMs < fromMs - 0.5 || onMs >= _timeline.TotalMs) continue;
-                    var pitch = Math.Clamp(note.Pitch + (int)Math.Round(clip.Pitch) + track.Transpose, 0, MidiLimits.Max);
-                    var velocity = Math.Clamp((int)Math.Round(note.Velocity * Gain.FromDb(clip.GainDb)), 1, MidiLimits.Max);
+                    var pitch = MidiLimits.Clamp(note.Pitch + (int)Math.Round(clip.Pitch) + track.Transpose);
+                    var velocity = MidiLimits.ClampVelocity((int)Math.Round(note.Velocity * Gain.FromDb(clip.GainDb)));
                     var noteChannel = note.Channel is int own and >= 0 and <= 15 ? own : channel;   // a note's own channel (set in the piano roll)
                     _timeline.Events.Add(new ScoreEvent { TimeMs = onMs, DeviceId = OutputDeviceOf(track), Channel = noteChannel, Status = MidiStatus.NoteOn | (noteChannel & 0x0F), Data1 = pitch, Data2 = velocity, TrackIndex = trackIndex });
                     _timeline.Events.Add(new ScoreEvent { TimeMs = Math.Min(offMs, _timeline.TotalMs), DeviceId = OutputDeviceOf(track), Channel = noteChannel, Status = MidiStatus.NoteOff | (noteChannel & 0x0F), Data1 = pitch, Data2 = 0, TrackIndex = trackIndex });

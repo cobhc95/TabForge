@@ -112,7 +112,7 @@ dotnet publish "$WORK/Source/src/TabForge.Avalonia/TabForge.Avalonia.csproj" -c 
 
 # 2a. The same licence and provenance documents the Windows package carries, plus the alphaTab patches (MPL-2.0 section 3.2:
 #     the Source Code Form of the modified files must accompany the binary). Without these the Linux package would carry the
-#     individual licence texts but no written offers (SoundTouch, LAME, mpg123, Wine), no TabForge MIT text and no SBOM.
+#     individual licence texts but no written offers (SoundTouch, LAME, mpg123, Wine), no TabForge licence text and no SBOM.
 cp "$SRC/LICENSE" "$PUBLISH/LICENSE.txt"
 cp "$SRC/docs/THIRD_PARTY.md" "$PUBLISH/THIRD_PARTY.md"
 [ -f "$SRC/docs/reference/SBOM.md" ] || { echo "SBOM.md not found: $SRC/docs/reference/SBOM.md" >&2; exit 1; }

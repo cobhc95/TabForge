@@ -13,8 +13,8 @@ public static class ClipOverlapPromptPresenter
     public const string KeepHint = "Both clips stay on the lane and play over each other.";
     public const string RememberText = "Remember my choice";
     public const string RememberHint = "(change in Settings › Editing)";
-    public const string CancelText = "Cancel";
-    public const string OkText = "OK";
+    public const string CancelText = CommonText.Cancel;
+    public const string OkText = CommonText.Ok;
     public const string CancelToolTip = "Undo the edit that made the clips overlap";
     public const string OkToolTip = "Apply the chosen option";
 

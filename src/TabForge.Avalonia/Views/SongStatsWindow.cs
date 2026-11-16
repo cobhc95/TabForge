@@ -20,7 +20,7 @@ public partial class SongStatsWindow : Window
     {
         InitializeComponent();
         Title = "Song stats";
-        CloseButton.Content = "Close";
+        CloseButton.Content = CommonText.Close;
         CloseButton.Click += (_, _) => Close();
         HeadingText.Text = SongStatsPresenter.Heading(project, path);
         CountsText.Text = SongStatsPresenter.CountsLine(project);

@@ -22,10 +22,10 @@ public static class MessageBoxPresenter
 {
     public static (string Label, MessageBoxAnswer Answer)[] Buttons(MessageBoxButtons buttons) => buttons switch
     {
-        MessageBoxButtons.OKCancel => new[] { ("OK", MessageBoxAnswer.OK), ("Cancel", MessageBoxAnswer.Cancel) },
-        MessageBoxButtons.YesNo => new[] { ("_Yes", MessageBoxAnswer.Yes), ("_No", MessageBoxAnswer.No) },
-        MessageBoxButtons.YesNoCancel => new[] { ("_Yes", MessageBoxAnswer.Yes), ("_No", MessageBoxAnswer.No), ("Cancel", MessageBoxAnswer.Cancel) },
-        _ => new[] { ("OK", MessageBoxAnswer.OK) },
+        MessageBoxButtons.OKCancel => new[] { (CommonText.Ok, MessageBoxAnswer.OK), (CommonText.Cancel, MessageBoxAnswer.Cancel) },
+        MessageBoxButtons.YesNo => new[] { (CommonText.Yes, MessageBoxAnswer.Yes), (CommonText.No, MessageBoxAnswer.No) },
+        MessageBoxButtons.YesNoCancel => new[] { (CommonText.Yes, MessageBoxAnswer.Yes), (CommonText.No, MessageBoxAnswer.No), (CommonText.Cancel, MessageBoxAnswer.Cancel) },
+        _ => new[] { (CommonText.Ok, MessageBoxAnswer.OK) },
     };
 
     /// <summary>The Enter button: the requested default, else the first button.</summary>

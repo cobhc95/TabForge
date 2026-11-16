@@ -113,6 +113,43 @@ public class FretboardLegendRowsTests
     }
 
     [AvaloniaFact]
+    public void MinimisingTheLegendExpandsTheFretboardAndHeightCapUntilReopened()
+    {
+        var (strip, window) = Open(lookAhead: true);
+        window.Height = 400;
+        Dispatcher.UIThread.RunJobs();
+        window.UpdateLayout();
+
+        var openLayout = strip.Panel.FretboardLayout();
+        var openCap = strip.Panel.WidthLimitedPaneHeight(3200);
+
+        var settings = new AppSettings();
+        settings.Editing.PreviewNotesEnabled = true;
+        settings.Editing.FretLegendMinimised = true;
+        strip.Panel.Look = FretboardSettingsBinding.Look.From(settings);
+        strip.Refresh();
+        Dispatcher.UIThread.RunJobs();
+        window.UpdateLayout();
+
+        var foldedLayout = strip.Panel.FretboardLayout();
+        var foldedCap = strip.Panel.WidthLimitedPaneHeight(3200);
+        Assert.True(foldedLayout.Board.Width > openLayout.Board.Width);
+        Assert.True(foldedCap > openCap);
+
+        settings.Editing.FretLegendMinimised = false;
+        strip.Panel.Look = FretboardSettingsBinding.Look.From(settings);
+        strip.Refresh();
+        Dispatcher.UIThread.RunJobs();
+        window.UpdateLayout();
+
+        var reopenedLayout = strip.Panel.FretboardLayout();
+        var reopenedCap = strip.Panel.WidthLimitedPaneHeight(3200);
+        Assert.Equal(openLayout.Board.Width, reopenedLayout.Board.Width, 6);
+        Assert.Equal(openCap, reopenedCap, 6);
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public void WithoutLookAheadOnlyTheNowRowShows()
     {
         var (strip, window) = Open(lookAhead: false);

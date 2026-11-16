@@ -1,6 +1,6 @@
 # TabForge.Core/Score
 
-The score layout without WPF: bar widths, system breaks, the per-bar staff layouts, the marks derived from notes and the geometry shared with drawing. The renderers draw through `IDrawContext`; the editor's WPF end is `Platform/Wpf/WpfScoreRenderSurface.cs`. The drawing reaches this layout through `IScoreLayoutHost`, `IScoreLayoutSettings` and `IScoreTextWidths`.
+The score layout without WPF: bar widths, system breaks, the per-bar staff layouts, the marks derived from notes and the geometry shared with drawing. The drawing reaches this layout through `IScoreLayoutHost`, `IScoreLayoutSettings` and `IScoreTextWidths`.
 
 ## Files
 | File | Purpose |

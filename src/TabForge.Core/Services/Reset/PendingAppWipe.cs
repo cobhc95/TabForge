@@ -75,11 +75,7 @@ public static class PendingAppWipe
         }
     }
 
-    private static void TryDelete(string path)
-    {
-        try { File.Delete(path); }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Trace.Error(Trace.Ui, "reset app: remove marker: " + ex.Message); }
-    }
+    private static void TryDelete(string path) => BestEffortFile.TryDelete(path, ex => Trace.Error(Trace.Ui, "reset app: remove marker: " + ex.Message));
 
     private sealed record PendingWipeRequest(int Version, string[] Items, bool BackupTaken);
 }

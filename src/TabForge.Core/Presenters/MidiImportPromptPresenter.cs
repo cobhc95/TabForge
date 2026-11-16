@@ -20,7 +20,7 @@ public static class MidiImportPromptPresenter
     public const string RememberText = "Remember my choice";
     public const string RememberHint = "You can change this in Settings.";
     public const string ImportText = "Import";
-    public const string CancelText = "Cancel";
+    public const string CancelText = CommonText.Cancel;
 
     public static string FileLine(string path) => System.IO.Path.GetFileName(path);
 

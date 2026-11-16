@@ -1,4 +1,5 @@
 using System;
+using TabForge.Avalonia.Platform;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -21,8 +22,8 @@ public sealed class RenderProgressWindow : Window
 {
     private const double WindowWidth = 420;
     private const double WindowHeight = 180;
-    private const string CancelLabel = "Cancel";
-    private const string CloseLabel = "Close";
+    private const string CancelLabel = CommonText.Cancel;
+    private const string CloseLabel = CommonText.Close;
 
     private readonly CancellationTokenSource _cancel = new();
     private readonly ProgressBar _bar = new() { Height = 10, Maximum = 1, Margin = new Thickness(0, 8, 0, 4) };
@@ -37,8 +38,7 @@ public sealed class RenderProgressWindow : Window
         Width = WindowWidth; Height = WindowHeight;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         ShowInTaskbar = false;
-        this[!BackgroundProperty] = new DynamicResourceExtension("WindowBackground");
-        this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
+        this.UseWindowColours();
         FontSize = DialogMetrics.FontSize;
 
         _cancelButton.Click += (_, _) => { if (_running) RequestCancel(); else Close(); };

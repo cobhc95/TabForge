@@ -74,15 +74,15 @@ public sealed class GroupRulesWindow : Window
     {
         var add = new Button { Content = "Add group", Padding = DialogMetrics.ActionButtonPadding, Margin = new Thickness(0, 0, 8, 0) };
         var reset = new Button { Content = "Reset to defaults", Padding = DialogMetrics.ActionButtonPadding };
-        var ok = new Button { Content = "OK", IsDefault = true, MinWidth = DialogMetrics.DialogButtonMinWidth, Margin = new Thickness(8, 0, 0, 0), Padding = DialogMetrics.ActionButtonPadding };
-        var cancel = new Button { Content = "Cancel", IsCancel = true, MinWidth = DialogMetrics.DialogButtonMinWidth, Margin = new Thickness(8, 0, 0, 0), Padding = DialogMetrics.ActionButtonPadding };
+        var ok = DialogButtons.Ok(name: null);
+        var cancel = DialogButtons.Cancel(name: null);
         add.Click += (_, _) => { _presenter.AddGroup(); Rebuild(); };
         reset.Click += (_, _) => { _presenter.ResetToDefaults(); Rebuild(); };
         ok.Click += (_, _) => Accept();
         cancel.Click += (_, _) => Close(null);
         var grid = new Grid { Margin = DialogMetrics.FooterGap };
         grid.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Children = { add, reset } });
-        grid.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Children = { ok, cancel } });
+        grid.Children.Add(DialogButtons.Row(ok, cancel));
         return grid;
     }
 

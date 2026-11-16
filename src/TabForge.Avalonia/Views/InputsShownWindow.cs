@@ -63,14 +63,14 @@ public sealed class InputsShownWindow : Window
             Text = (_device.Length > 0 ? $"Inputs of {_device}." : "The audio device has not reported its inputs yet: these are the inputs every device has.")
                    + " Untick an input to leave it out of the track input pickers (Recording) or the live input menu (Live input). An input in use stays listed where it is used.",
         };
-        var all = new Button { Content = "Show all", MinWidth = DialogMetrics.DialogButtonMinWidth, Margin = new Thickness(0, 0, 8, 0) };
+        var all = DialogButtons.Action("Show all");
         ToolTip.SetTip(all, "Tick every input in both columns");
-        var ok = new Button { Content = "OK", IsDefault = true, MinWidth = DialogMetrics.DialogButtonMinWidth, Margin = new Thickness(0, 0, 8, 0) };
-        var cancel = new Button { Content = "Cancel", IsCancel = true, MinWidth = DialogMetrics.DialogButtonMinWidth };
+        var ok = DialogButtons.Ok(name: null);
+        var cancel = DialogButtons.Cancel(name: null);
         all.Click += (_, _) => { foreach (var (_, recording, live) in _rows) recording.IsChecked = live.IsChecked = true; };
         ok.Click += (_, _) => Commit();
         cancel.Click += (_, _) => Close(false);
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = DialogMetrics.FooterGap, Children = { all, ok, cancel } };
+        var buttons = DialogButtons.Footer(all, ok, cancel);
 
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,90,90") };
         grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));

@@ -292,7 +292,7 @@ internal static partial class MidiToSong
                 if (!seen.Add(n.Pitch)) continue;
                 var note = drums ? (n.Pitch is >= 27 and <= 87 ? MidiClipToTab.DrumNote(n.Pitch) : null) : MidiClipToTab.StringNote(track, n.Pitch, used);
                 if (note is null) { lost.Notes++; continue; }
-                note.Velocity = Math.Clamp(n.Velocity, 1, MidiLimits.Max);
+                note.Velocity = MidiLimits.ClampVelocity(n.Velocity);
                 TechniqueMarker.Apply(note, n.Marker);
                 used.Add(note.StringIndex);
                 ev.Notes.Add(note);

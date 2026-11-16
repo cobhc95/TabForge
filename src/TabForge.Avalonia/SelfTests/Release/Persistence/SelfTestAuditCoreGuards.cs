@@ -9,7 +9,7 @@ using TabForge.Plugins;
 namespace TabForge;
 
 // Owns: guards that PresetFolderStore never replaces a preset unasked, the numbered-sibling ceiling and the atomic save claim.
-// Does not own: the preset UIs (TestPresetManagePanel) or the save flow bytes (TestSaveFlowCharacterization).
+// Does not own: the preset UIs or the save flow bytes.
 // Tests: TestPresetFolderStoreNoOverwrite, TestNumberedSiblingCeiling, TestSaveClaimAtomic.
 public static partial class SelfTest
 {

@@ -31,8 +31,8 @@ internal sealed class FxActiveOnPopup
     private readonly ComboBox _drivers = new() { Name = "ActiveOnDrivers", HorizontalAlignment = HorizontalAlignment.Stretch };
     private readonly ComboBox _devices = new() { Name = "ActiveOnDevices", HorizontalAlignment = HorizontalAlignment.Stretch };
     private readonly TextBlock _status = new() { Name = "ActiveOnStatus", TextWrapping = TextWrapping.Wrap };
-    private readonly Button _done = new() { Name = "ActiveOnDone", Content = ActiveOnPresenter.DoneText, MinWidth = DialogMetrics.PromptButtonMinWidth, IsDefault = true };
-    private readonly Button _cancel = new() { Name = "ActiveOnCancel", Content = ActiveOnPresenter.CancelText, MinWidth = DialogMetrics.PromptButtonMinWidth };
+    private readonly Button _done = PromptChrome.Action("ActiveOnDone", ActiveOnPresenter.DoneText, primary: true);
+    private readonly Button _cancel = PromptChrome.Action("ActiveOnCancel", ActiveOnPresenter.CancelText, primary: false);
     private readonly Button _clear = new() { Name = "ActiveOnClear", Content = ActiveOnPresenter.ClearText };
     private readonly Popup _popup;
     private bool _rebuilding, _closed;
@@ -100,14 +100,13 @@ internal sealed class FxActiveOnPopup
             Text = _model.Subtitle, Name = "ActiveOnSubtitle", TextWrapping = TextWrapping.Wrap, FontSize = DialogMetrics.ActiveOnSubtitleSize,
             [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted"),
         }.WithMargin(DialogMetrics.ActiveOnSubtitleMargin);
-        _status[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        _status.UseMutedText();
         _status.WithMargin(DialogMetrics.ActiveOnStatusMargin);
         AutomationProperties.SetName(_drivers, ActiveOnPresenter.DriverSection);
         AutomationProperties.SetName(_devices, ActiveOnPresenter.DeviceSection);
         AutomationProperties.SetName(_done, ActiveOnPresenter.DoneText);
         AutomationProperties.SetName(_cancel, ActiveOnPresenter.CancelText);
         AutomationProperties.SetName(_clear, ActiveOnPresenter.ClearText);
-        _done.Classes.Add(AvaloniaDefaultLooks.AccentLook);
         _cancel.Classes.Add(AvaloniaDefaultLooks.ButtonLook);
         _clear.Classes.Add(AvaloniaDefaultLooks.ButtonLook);
 

@@ -20,7 +20,7 @@ public enum FocusBoostMode
 // Tests: TabForge.Avalonia.Tests.PracticeFocusTests.
 public sealed class FocusBoost
 {
-    public const double MaxDecibels = 24, MaxPercent = 400, MaxLevel = 127;
+    public const double MaxDecibels = 24, MaxPercent = 100, MaxLevel = 127;
 
     public FocusBoostMode Mode { get; set; } = FocusBoostMode.Decibels;
     public double Amount { get; set; } = 6;

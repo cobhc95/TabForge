@@ -76,7 +76,7 @@ public sealed partial class FxChainWindow
     private void BuildBar()
     {
         ToolTip.SetTip(_presetBox, "Presets: the plug-in's own programs and your saved presets (rename, duplicate, delete or reorder them with Manage presets…)");
-        ToolTip.SetTip(_volume, "This plug-in's output volume (double-click or right-click: type a value; Ctrl+click: 0 dB)");
+        ToolTip.SetTip(_volume, $"This plug-in's output volume (double-click or right-click: type a value; {TabForge.Services.FixedKeys.CtrlClick}: 0 dB)");
         ToolTip.SetTip(_bypass, FxChainPresenter.BypassToolTip);
         _addPreset.Width = SaveButtonWidth;
         _addPreset.Padding = new Thickness(0, 2, 0, 4);

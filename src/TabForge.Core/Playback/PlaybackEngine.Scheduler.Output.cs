@@ -55,7 +55,7 @@ public sealed partial class PlaybackEngine : IDisposable
                 var note = beat == 0
                     ? (Preferences.CountInAccentNote >= 0 ? Preferences.CountInAccentNote : Volatile.Read(ref _metronomeAccentNote))
                     : (Preferences.CountInClickNote >= 0 ? Preferences.CountInClickNote : Volatile.Read(ref _metronomeClickNote));
-                var velocity = MetronomeVelocity(Math.Clamp((int)Math.Round(MidiLimits.Max * Preferences.CountInVolume / 100.0), 1, MidiLimits.Max), 9);
+                var velocity = MetronomeVelocity(MidiLimits.ClampVelocity((int)Math.Round(MidiLimits.Max * Preferences.CountInVolume / 100.0)), 9);
                 lock (_outputGate)
                 {
                     if (generation != Volatile.Read(ref _generation)) return;   // stopped meanwhile: no click after the device reset
@@ -118,7 +118,7 @@ public sealed partial class PlaybackEngine : IDisposable
                 var level = e.IsCountInClick ? Preferences.CountInVolume : Volatile.Read(ref _metronomeVolume);
                 data2 = (int)Math.Round(MidiLimits.Max * level / 100.0 * relativeVolume / 100.0);
                 if (data2 <= 0) return;
-                data2 = MetronomeVelocity(Math.Clamp(data2, 1, MidiLimits.Max), status);
+                data2 = MetronomeVelocity(MidiLimits.ClampVelocity(data2), status);
                 data1 = note;
                 _activeMetronomeNotes[e.MetronomePairId] = note;
             }

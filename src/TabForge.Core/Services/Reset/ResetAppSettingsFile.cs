@@ -149,11 +149,7 @@ public static class ResetAppSettingsFile
         return true;
     }
 
-    private static void TryDelete(string path)
-    {
-        try { File.Delete(path); }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { TabForge.Services.Trace.Error(TabForge.Services.Trace.Ui, "reset app: delete settings: " + ex.Message); }
-    }
+    private static void TryDelete(string path) => BestEffortFile.TryDelete(path, ex => TabForge.Services.Trace.Error(TabForge.Services.Trace.Ui, "reset app: delete settings: " + ex.Message));
 }
 
 /// <summary>What removing groups from settings.json did.</summary>

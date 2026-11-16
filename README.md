@@ -1,4 +1,4 @@
-# TabForge 0.9.6
+# TabForge 0.9.7
 
 **A keyboard-driven tablature and notation editor for Windows, with experimental Linux packages.** Opens .gp3, .gp4, .gp5, .gpx, .gp and TuxGuitar (.tg) files, and saves .gp, .tg and its own .tforge projects. Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard or keyboard, a piano roll, an arrangement timeline, audio and MIDI recording, a mixer, built-in effects, VST2, VST3 and CLAP plug-ins (32-bit and 64-bit VST), and offline audio and video rendering.
 
@@ -7,15 +7,15 @@
 ## Download
 
 > [!TIP]
-> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.9.6/TabForge-0.9.6-win-setup.exe)** · no administrator rights needed
+> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.9.7/TabForge-0.9.7-win-setup.exe)** · no administrator rights needed
 >
-> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.9.6/TabForge-0.9.6-win-x64-portable.zip)** · extract and run `TabForge.exe`
+> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.9.7/TabForge-0.9.7-win-x64-portable.zip)** · extract and run `TabForge.exe`
 
 Windows 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify your download](#verify-your-download). Older versions: [Releases](https://github.com/cobhc95/TabForge/releases).
 
 ### Linux packages (experimental)
 
-The main Linux download is the AppImage ([`TabForge-0.9.6-linux-x86_64.AppImage`](https://github.com/cobhc95/TabForge/releases/download/v0.9.6/TabForge-0.9.6-linux-x86_64.AppImage)). The archive ([`TabForge-0.9.6-linux-x64.tar.gz`](https://github.com/cobhc95/TabForge/releases/download/v0.9.6/TabForge-0.9.6-linux-x64.tar.gz)) is the fallback. Both include Wine 9.21 for Windows plug-ins, FFmpeg for video export and a General MIDI SoundFont, so sound works on first run.
+The main Linux download is the AppImage ([`TabForge-0.9.7-linux-x86_64.AppImage`](https://github.com/cobhc95/TabForge/releases/download/v0.9.7/TabForge-0.9.7-linux-x86_64.AppImage)). The archive ([`TabForge-0.9.7-linux-x64.tar.gz`](https://github.com/cobhc95/TabForge/releases/download/v0.9.7/TabForge-0.9.7-linux-x64.tar.gz)) is the fallback. Both include Wine 9.21 for Windows plug-ins, FFmpeg for video export and a General MIDI SoundFont, so sound works on first run.
 
 ```bash
 chmod +x TabForge-*-linux-x86_64.AppImage
@@ -36,9 +36,22 @@ chmod +x TabForge-*-linux-x86_64.AppImage
 </tr>
 </table>
 
-**Contents:** [Download](#download) · [What's new in 0.9.6](#whats-new-in-096) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Piano roll](#piano-roll) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Plug-ins](#plug-ins) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
+**Contents:** [Download](#download) · [What's new in 0.9.7](#whats-new-in-097) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Piano roll](#piano-roll) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Plug-ins](#plug-ins) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
 
-## What's new in 0.9.6
+## What's new in 0.9.7
+
+0.9.7 is a stable release. ✨
+
+- **Guitar Pro Mix Tables play as in Guitar Pro:** a Mix Table on the first beat now sets each track's starting sound. No More Lies starts on clean guitar, as it should, instead of distortion. Guitar Pro 3 fades and effect values are read too.
+- **Mix Table tabs per track:** one tab for each track that changes at the beat, in the track's own colour, opening on the track you came from. Each track shows its own changes and what it is playing at that point; ‹ › and ▾ reach tabs that don't fit.
+- **GM sound follows your instrument:** GM turns off whenever a VST instrument plays (including one auto-loaded when a song opens) and on when none does. Your own tick or untick always wins.
+- **Keyboard mode, Hear track:** a toggle to hear the practised track's own notes as well as yours.
+- **Faster Guitar Pro import:** about 31% faster, with less memory.
+- **New licence:** TabForge is now GPL-3.0-or-later. 0.9.6 and earlier stay MIT.
+
+Full list: the [changelog](docs/CHANGELOG.md#097).
+
+<details><summary>Earlier in 0.9.6: Mix Table changes, red bar marks, Focus track fixes</summary>
 
 0.9.6 is a stable release. ✨
 
@@ -49,6 +62,8 @@ chmod +x TabForge-*-linux-x86_64.AppImage
 - **Focus track shortcut:** Ctrl+Alt+F turns it on or off, also while the mixer or a plug-in window is in front (change it in Settings > Shortcuts).
 
 Full list: the [changelog](docs/CHANGELOG.md#096).
+
+</details>
 
 <details><summary>Earlier in 0.9.5: Focus track, accent sliders and switches</summary>
 
@@ -951,5 +966,5 @@ Downloads and release notes: [Releases](https://github.com/cobhc95/TabForge/rele
 
 The demo song in the screenshots, *Ashen Meridian*, is original and included (CC0).
 
-MIT — see [LICENSE](LICENSE). Score file reading/writing uses [alphaTab](https://github.com/CoderLine/alphaTab) (MPL-2.0);
+Copyright (C) 2026 cobhc95. TabForge is free software under the GNU General Public License, version 3 or (at your option) any later version (GPL-3.0-or-later) — see [LICENSE](LICENSE). Releases up to and including 0.9.6 were published under the MIT licence and stay available under it. Score file reading/writing uses [alphaTab](https://github.com/CoderLine/alphaTab) (MPL-2.0);
 see [THIRD_PARTY.md](docs/THIRD_PARTY.md). Full licence texts ship in the `licenses/` folder (SoundTouch.Net, LGPL-2.1, is a replaceable DLL). TabForge is an independent project and is not affiliated with, sponsored or endorsed by any other software maker.

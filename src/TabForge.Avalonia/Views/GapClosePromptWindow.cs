@@ -51,9 +51,9 @@ public sealed class GapClosePromptWindow : Window
         body.Children.Add(_section);
         body.Children.Add(_emptyOnly);
 
-        var cancel = PromptChrome.Action("CancelButton", "Cancel", primary: false, isCancel: true);
+        var cancel = PromptChrome.Action("CancelButton", CommonText.Cancel, primary: false, isCancel: true);
         cancel.Click += (_, _) => Close();
-        var ok = PromptChrome.Action("OkButton", "OK", primary: true);
+        var ok = PromptChrome.Action("OkButton", CommonText.Ok, primary: true);
         ok.Click += (_, _) => Confirm();
         body.Children.Add(PromptChrome.Footer(null, null, cancel, ok));
         Content = body;

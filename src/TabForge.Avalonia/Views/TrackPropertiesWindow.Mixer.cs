@@ -18,7 +18,7 @@ namespace TabForge.Avalonia.Views;
 public sealed partial class TrackPropertiesWindow
 {
     private const double MixerKnobSize = 34;
-    private const string KnobHelp = "Drag or scroll a knob; double-click to type a value; Ctrl+click to reset.";
+    private const string KnobHelp = "Drag or scroll a knob; double-click to type a value; " + TabForge.Services.FixedKeys.CtrlClick + " to reset.";
     private KnobControl? _volumeKnob, _panKnob;
 
     private Border MixerCard()

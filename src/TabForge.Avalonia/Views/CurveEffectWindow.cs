@@ -28,7 +28,7 @@ public enum CurveEffectAnswer { Cancel, Ok, Clean }
 /// </summary>
 public sealed class CurveEffectWindow : Window
 {
-    private const double ButtonGap = 6, ButtonMinWidth = DialogMetrics.PromptButtonMinWidth, FrameMargin = 16;
+    private const double ButtonGap = 6, FrameMargin = 16;
     // The frame of the ThemedEditorDialog: the title strip, the body and the footer, inside a bordered rounded panel shown with a margin.
     private const double TitleHeight = 34, TitleFontSize = 12, TitleLeftPadding = 14, FrameCorner = 8, FrameBorder = 1, FrameOuterMargin = 12;
     private const double FooterSide = 14, FooterTop = 10, FooterBottom = 12;
@@ -58,17 +58,17 @@ public sealed class CurveEffectWindow : Window
         titleBar[!Border.BackgroundProperty] = new DynamicResourceExtension("ChromeStripBrush");
         var body = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(FrameMargin), Children = { Editor, Side } };
 
-        var ok = new Button { Content = "OK", Name = "OkButton", MinWidth = ButtonMinWidth, IsDefault = true };
-        ok.Classes.Add(AvaloniaDefaultLooks.AccentLook);
+        var ok = DialogButtons.Ok();
         ok[!Button.BackgroundProperty] = new DynamicResourceExtension("AccentBrush");
         ok[!Button.ForegroundProperty] = new DynamicResourceExtension("OnAccentBrush");
         ok.Click += (_, _) => Finish(CurveEffectAnswer.Ok);
-        var remove = new Button { Content = "Remove", Name = "RemoveButton", MinWidth = ButtonMinWidth, IsEnabled = canClean };
+        var remove = DialogButtons.Action("Remove", name: "RemoveButton");
+        remove.IsEnabled = canClean;
         remove.Click += (_, _) => Finish(CurveEffectAnswer.Clean);
-        var reset = new Button { Content = "Reset", Name = "ResetButton", MinWidth = ButtonMinWidth };
+        var reset = DialogButtons.Action("Reset", name: "ResetButton");
         ToolTip.SetTip(reset, "Put back the curve the editor opened with");
         reset.Click += (_, _) => Reset();
-        var cancel = new Button { Content = "Cancel", Name = "CancelButton", MinWidth = ButtonMinWidth, IsCancel = true };
+        var cancel = DialogButtons.Cancel();
         cancel.Click += (_, _) => Finish(CurveEffectAnswer.Cancel);
         var actions = new StackPanel
         {

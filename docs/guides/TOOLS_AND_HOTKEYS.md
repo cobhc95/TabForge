@@ -1,6 +1,6 @@
 # TabForge icons, commands and hotkeys
 
-Generated from the source (the palette rows in `Views/ToolPaletteController.Tools.cs`, the palette command handling in `MainWindow.Palette.cs`, and `Services/Hotkeys/HotkeyCatalog.cs`). Almost every item here can be bound to a key in **Settings → Shortcuts** (one palette icon, Change accidental, is not yet bindable); palette icons are registered automatically as `Tool.<id>` commands, so new icons become mappable without editing this list.
+Generated from the source (the palette rows in `TabForge.Core/Presenters/PaletteToolCatalog.cs`, the palette command handling in `TabForge.Avalonia/MainWindow/Tools/MainWindowPaletteTools.cs`, and `Services/Hotkeys/HotkeyCatalog.cs`). Almost every item here can be bound to a key in **Settings → Shortcuts** (one palette icon, Change accidental, is not yet bindable); palette icons are registered automatically as `Tool.<id>` commands, so new icons become mappable without editing this list.
 
 *Verified 2026-10-19: 520 lines (generated; see header).*
 

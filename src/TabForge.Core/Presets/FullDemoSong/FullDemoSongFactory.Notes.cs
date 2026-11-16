@@ -134,7 +134,7 @@ internal static partial class FullDemoSongFactory
         if (s < 1 || s > t.StringTunings.Count)
             throw new ArgumentOutOfRangeException(nameof(s), $"Demo song: track '{t.Name}' has {t.StringTunings.Count} strings, s{s} does not exist.");
         if (fret < 0 || fret > 127) throw new ArgumentOutOfRangeException(nameof(fret), $"Demo song: track '{t.Name}': fret {fret}.");
-        var n = new TabNote { StringIndex = s - 1, Fret = fret, MidiValue = t.PitchOf(s - 1, fret), Velocity = Math.Clamp(vel, 1, MidiLimits.Max) };
+        var n = new TabNote { StringIndex = s - 1, Fret = fret, MidiValue = t.PitchOf(s - 1, fret), Velocity = MidiLimits.ClampVelocity(vel) };
         foreach (var x in tech) if (!string.IsNullOrEmpty(x)) n.Techniques.Add(x);
         return n;
     }
@@ -214,7 +214,7 @@ internal static partial class FullDemoSongFactory
     {
         for (var s = 0; s < keys.StringTunings.Count; s++)
             if (midi >= keys.StringTunings[s])
-                return new TabNote { StringIndex = s, Fret = midi - keys.StringTunings[s], MidiValue = midi, Velocity = Math.Clamp(vel, 1, MidiLimits.Max) };
+                return new TabNote { StringIndex = s, Fret = midi - keys.StringTunings[s], MidiValue = midi, Velocity = MidiLimits.ClampVelocity(vel) };
         throw new ArgumentOutOfRangeException(nameof(midi), $"Demo song: track '{keys.Name}': pitch {midi} is below its lowest string.");
     }
 
@@ -317,7 +317,7 @@ internal static partial class FullDemoSongFactory
         {
             Lane.Ghost => Math.Clamp(v, 1, 60),
             Lane.Grace => Math.Clamp(v, 55, 70),
-            _ => Math.Clamp(v, 1, MidiLimits.Max),
+            _ => MidiLimits.ClampVelocity(v),
         };
     }
 

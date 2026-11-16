@@ -242,7 +242,7 @@ public static partial class GuitarProExporter
             ShortName = source.Name is { Length: > 3 } n ? n[..3] : source.Name ?? "",
             PlaybackInfo = new PlaybackInformation
             {
-                Program = Math.Clamp(source.MidiProgram, 0, MidiLimits.Max),
+                Program = MidiLimits.Clamp(source.MidiProgram),
                 PrimaryChannel = source.MidiChannel, SecondaryChannel = source.MidiChannel,
                 // Mixer groups baked in. The 0..16 steps are alphaTab's own model; the exact fractions (patch 0002 of TabForge.AlphaTab) are what the gpif stores.
                 Volume = GpMixerScale.MixerToStep(MixerGroups.Volume(project, source)),

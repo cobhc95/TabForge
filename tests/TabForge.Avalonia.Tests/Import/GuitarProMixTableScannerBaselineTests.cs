@@ -211,7 +211,7 @@ public sealed class GuitarProMixTableScannerBaselineTests
         Assert.Equal(0, empty.Next(120));
 
         var v3 = FileWithVersion("FICHIER GUITAR PRO v3.00", Gp4Mix(8, -1, -1, -1, -1, -1, 120, new[] { 16, 4 }, 0));
-        Assert.Equal(0, new GuitarProMixTableScanner.TempoRampFinder(v3).Next(120));
+        Assert.Equal(4, new GuitarProMixTableScanner.TempoRampFinder(v3).Next(120));   // Guitar Pro 3 mix tables are read too (no flags byte)
     }
 
     [Fact]

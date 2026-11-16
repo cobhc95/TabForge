@@ -27,7 +27,7 @@ public sealed record CatalogPlatform(
 
 // Owns: the plain data a feature adds to the settings catalogue (IFeatureSettingsSource), the app-side
 //   calls those catalogues make (CatalogPlatform), and the one composition of both (CatalogComposition).
-// Does not own: the catalogues (SettingsCatalog, HotkeyCatalog; feature hotkey rows are in HotkeyCatalog.Features.cs), the feature modules (app FeatureRegistry), the device or theme code.
+// Does not own: the catalogues (SettingsCatalog, HotkeyCatalog; feature hotkey rows are in HotkeyCatalog.Features.cs), the device or theme code.
 // Tests: no dedicated test class.
 /// <summary>The feature sources and platform calls the catalogues read, installed once by the composition root.</summary>
 public static class CatalogComposition

@@ -33,8 +33,8 @@ public sealed class PluginPresetWindow : Window
     private readonly bool _confirmReplace;
     private readonly ComboBox _box = new() { IsEditable = true, Width = 230, Text = PluginPresetNamePresenter.DefaultName, Margin = new Thickness(0, 0, 6, 0), Name = "PromptText" };
     private readonly Button _deleteButton = new() { Content = PluginPresetNamePresenter.DeleteButton, Padding = new Thickness(14, 3, 14, 3), IsEnabled = false, Name = "DeleteButton" };
-    private readonly Button _ok = new() { Content = PluginPresetNamePresenter.OkButton, IsDefault = true, Padding = new Thickness(14, 3, 14, 3), Margin = new Thickness(0, 0, 6, 0), Name = "OkButton" };
-    private readonly Button _cancel = new() { Content = PluginPresetNamePresenter.CancelButton, IsCancel = true, Padding = new Thickness(14, 3, 14, 3), Name = "CancelButton" };
+    private readonly Button _ok = DialogButtons.Ok(PluginPresetNamePresenter.OkButton).WithMargin(DialogMetrics.FooterButtonGap);
+    private readonly Button _cancel = DialogButtons.Cancel(PluginPresetNamePresenter.CancelButton);
     private readonly TextBlock _note = new() { Name = "NoteText", TextWrapping = TextWrapping.Wrap, IsVisible = false };
     private List<string> _users;
 

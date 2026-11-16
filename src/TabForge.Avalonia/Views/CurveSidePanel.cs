@@ -110,7 +110,7 @@ internal sealed class CurveSidePanel : StackPanel
     private static TextBlock Heading(string text, Thickness gap)
     {
         var heading = new TextBlock { Text = text }.WithMargin(gap);
-        heading[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        heading.UseMutedText();
         return heading;
     }
 

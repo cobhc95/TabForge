@@ -79,8 +79,8 @@ public sealed class LiveInputArm
     /// <summary>Sets the stand-in's own volume and pan (0-127 each, pan 64 centre); the engine gets them at the next sync.</summary>
     public void SetLevel(int volume, int pan)
     {
-        Track.Volume = Math.Clamp(volume, 0, MidiLimits.Max);
-        Track.Pan = Math.Clamp(pan, 0, MidiLimits.Max);
+        Track.Volume = MidiLimits.Clamp(volume);
+        Track.Pan = MidiLimits.Clamp(pan);
         LevelChanged?.Invoke();
     }
 
@@ -110,5 +110,5 @@ public sealed class LiveInputArm
     }
 
     /// <summary>Engine sync: the stand-in's level and pan: its own volume under the master volume (0 silences it, as it does a song's tracks, and when muted unless soloed) and its pan under the master pan.</summary>
-    public (int Volume, int Pan) Mix => (Track.Mute && !Track.Solo ? 0 : Math.Clamp(Track.Volume * Math.Clamp(MasterPercent, 0, 100) / 100, 0, MidiLimits.Max), Math.Clamp(Track.Pan + MasterPan, 0, MidiLimits.Max));
+    public (int Volume, int Pan) Mix => (Track.Mute && !Track.Solo ? 0 : MidiLimits.Clamp(Track.Volume * Math.Clamp(MasterPercent, 0, 100) / 100), MidiLimits.Clamp(Track.Pan + MasterPan));
 }

@@ -48,7 +48,7 @@ public sealed class MidiPresetBars
     /// <summary>The whole list's presets: a drop-down, Save preset… and Delete.</summary>
     public ComboBox ListBox { get; } = new() { MinWidth = DialogMetrics.MidiChoiceMinWidth, HorizontalAlignment = HorizontalAlignment.Stretch, Name = "PresetBox" };
     public Button SaveList { get; } = Small("Save preset…", "Save the whole processor list as a preset", "SavePresetButton");
-    public Button DeleteList { get; } = Small("Delete", "Delete the selected saved preset", "DeletePresetButton");
+    public Button DeleteList { get; } = Small(CommonText.Delete, "Delete the selected saved preset", "DeletePresetButton");
     /// <summary>The selected processor's presets: a drop-down and Save preset….</summary>
     public ComboBox ProcessorBox { get; } = new() { MinWidth = DialogMetrics.MidiChoiceMinWidth, HorizontalAlignment = HorizontalAlignment.Stretch, Name = "ProcessorPresetBox" };
     public Button SaveProcessor { get; } = Small("Save preset…", "Save this processor's parameter values as a preset", "SaveProcessorPresetButton");

@@ -10,7 +10,7 @@ namespace TabForge;
 /// Characterization of the score clipboard: the exact clipboard text bytes of a copy, and the exact song state after pasting that text.
 /// Other TabForge instances read this text, so the bytes are pinned by hash. The song state is hashed uncompressed: a gzip stream differs
 /// between runtimes (the compression library), the content does not.
-/// Owns: the copy-bytes and paste-state pins. Does not own: paste rules (TestPasteCommands), timeline sharing (TestTimelineClipsShareClipboard).
+/// Owns: the copy-bytes and paste-state pins. Does not own: paste rules or timeline clip sharing.
 /// Tests: TestClipboardCopyPasteBytes.
 /// </summary>
 public static partial class SelfTest

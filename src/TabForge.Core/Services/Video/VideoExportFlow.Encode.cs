@@ -97,11 +97,7 @@ public static partial class VideoExportFlow
 
     private static void Log(string line) => Trace.Error(Trace.Engine, "video export: " + line);
 
-    private static bool TryDelete(string path)
-    {
-        try { File.Delete(path); return !File.Exists(path); }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return false; } // swallow: best-effort delete of a leftover (DeleteSoon tries again)
-    }
+    private static bool TryDelete(string path) => BestEffortFile.TryDelete(path) && !File.Exists(path);   // a failure is retried by DeleteSoon
 
     // A file a given-up encoder still holds is deleted once it lets go (tried for a minute, off the UI thread); a later export clears what is left.
     private static void DeleteSoon(string path)

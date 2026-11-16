@@ -29,7 +29,7 @@ public sealed class PluginApprovalWindow : Window
             Name = "PluginListExpander", Header = $"The {plugins.Count} {(plugins.Count == 1 ? "plug-in" : "plug-ins")}", IsExpanded = true,
             Content = new ScrollViewer { MaxHeight = DialogMetrics.PluginApprovalListMaxHeight, Content = list },
         });
-        var cancel = PromptChrome.Action("CancelButton", "Cancel", primary: false, isCancel: true);
+        var cancel = PromptChrome.Action("CancelButton", CommonText.Cancel, primary: false, isCancel: true);
         cancel.Click += (_, _) => Close();
         var approve = PromptChrome.Action("ApproveButton", PluginApprovalPresenter.ApproveLabel(plugins.Count), primary: false);
         approve.Click += (_, _) => { Confirmed = true; Close(); };

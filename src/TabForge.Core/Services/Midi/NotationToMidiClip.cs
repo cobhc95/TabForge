@@ -18,7 +18,7 @@ public static class NotationToMidiClip
         if (index < 0) return null;
         var timeline = new ScoreToMidiCompiler(project, new PlaybackOptions { RespectMuteSolo = false, SkipClips = true }).Build();
         var notes = timeline.NotesFor(index)
-            .Select(n => new ClipNote(n.OnsetMs / 1000.0, Math.Max(0.01, n.DurationMs / 1000.0), Math.Clamp(n.Midi - track.Transpose, 0, MidiLimits.Max), Math.Clamp(n.Velocity, 1, MidiLimits.Max)))
+            .Select(n => new ClipNote(n.OnsetMs / 1000.0, Math.Max(0.01, n.DurationMs / 1000.0), MidiLimits.Clamp(n.Midi - track.Transpose), MidiLimits.ClampVelocity(n.Velocity)))
             .ToList();
         if (notes.Count == 0) return null;
         var length = Math.Max(timeline.TotalMs / 1000.0, notes.Max(n => n.StartSec + n.LengthSec));

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Avalonia;
+using TabForge.Avalonia.Views.Dialogs;
 using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
 using Avalonia.Input;
@@ -162,11 +163,11 @@ public sealed class GlobalTuningWindow : Window
 
     private StackPanel ButtonRow()
     {
-        var apply = new Button { Name = "ApplyButton", Content = "Apply", Width = 80, IsDefault = true, Margin = new Thickness(0, 0, 6, 0) };
+        var apply = DialogButtons.Apply();
         apply.Click += (_, _) => Close(_presenter.Tuning);
-        var cancel = new Button { Name = "CancelButton", Content = "Cancel", Width = 80, IsCancel = true };
+        var cancel = DialogButtons.Cancel();
         cancel.Click += (_, _) => Close(null);
-        return new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Children = { apply, cancel } };
+        return DialogButtons.Row(apply, cancel);
     }
 
     private void OnKey(object? sender, KeyEventArgs e)

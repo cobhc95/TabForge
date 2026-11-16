@@ -41,6 +41,55 @@ public static class BeatMix
         return null;
     }
 
+    /// <summary>The mix point a track itself sets on a beat (not one shared from another track), or null.</summary>
+    public static MixChange? OwnMix(SongProject project, int track, int bar, int cell) => CellMix(project, track, bar, cell);
+
+    /// <summary>
+    /// The Mix Table's tabs for the beat at <paramref name="slot"/> of a bar: every track whose own beat at that slot carries a mix point, plus
+    /// <paramref name="openedTrack"/> whether or not it does, in track order, as (track, cell, has its own change).
+    /// </summary>
+    public static List<(int Track, int Cell, bool HasChange)> TracksAt(SongProject project, int bar, double slot, int openedTrack)
+    {
+        var tabs = new List<(int, int, bool)>();
+        for (var t = 0; t < project.Tracks.Count; t++)
+        {
+            if (bar >= project.Tracks[t].Measures.Count) continue;
+            var measure = project.Tracks[t].Measures[bar];
+            if (measure.Cells.Count == 0) continue;
+            var cell = CellAt(measure, slot);
+            var starts = MusicTime.Onsets(measure.Cells);
+            var own = Math.Abs(starts[cell] - slot) < SlotTolerance && CellMix(project, t, bar, cell) is not null;
+            if (own || t == openedTrack) tabs.Add((t, cell, own));
+        }
+        return tabs;
+    }
+
+    /// <summary>
+    /// The instrument, volume and pan (MIDI 0..127) a track plays with just before the beat at <paramref name="slot"/> of a bar: its own settings, then every
+    /// earlier mix point of its own or set for all tracks, in score order. What the Mix Table shows for a value the beat does not change.
+    /// </summary>
+    public static (int Program, int Volume, int Pan) InForce(SongProject project, int trackIndex, int bar, double slot)
+    {
+        var track = project.Tracks[trackIndex];
+        var (program, volume, pan) = (track.MidiProgram, track.Volume, track.Pan);
+        for (var b = 0; b <= bar; b++)
+            for (var t = 0; t < project.Tracks.Count; t++)
+            {
+                if (b >= project.Tracks[t].Measures.Count) continue;
+                var cells = project.Tracks[t].Measures[b].Cells;
+                var starts = MusicTime.Onsets(cells);
+                for (var c = 0; c < cells.Count; c++)
+                {
+                    if (b == bar && starts[c] >= slot - SlotTolerance) break;
+                    if (cells[c].Mix is not { IsEmpty: false } mix || (t != trackIndex && !mix.AllTracks)) continue;
+                    if (mix.Program is int p && !track.IsDrumTrack) program = p;
+                    if (mix.Volume is int v) volume = GpMixerScale.StepToMixer(v);
+                    if (mix.Pan is int n) pan = GpMixerScale.BalanceStepToPan(n + 8);
+                }
+            }
+        return (program, volume, pan);
+    }
+
     private static MixChange? CellMix(SongProject project, int track, int bar, int cell)
     {
         if (track < 0 || track >= project.Tracks.Count || bar >= project.Tracks[track].Measures.Count) return null;

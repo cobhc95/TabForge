@@ -135,7 +135,7 @@ public sealed partial class TrackChain : IDisposable
     private readonly float[] _inL, _inR;
 
     /// <summary>Track level and pan from the mixer (0..127 each).</summary>
-    public void SetMix(int volume, int pan) { _volume = Math.Clamp(volume, 0, MidiLimits.Max) / 127f; _pan = Math.Clamp(pan, 0, MidiLimits.Max) / 127f; Silent = volume <= 0; }
+    public void SetMix(int volume, int pan) { _volume = MidiLimits.Clamp(volume) / 127f; _pan = MidiLimits.Clamp(pan) / 127f; Silent = volume <= 0; }
 
     /// <summary>
     /// The mixer's mute gate: set by <see cref="SetMix"/> with level 0 (what the client sends for a muted / not-soloed track), cleared by any other level.

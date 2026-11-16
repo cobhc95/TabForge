@@ -6,7 +6,7 @@ using TabForge.Services;
 namespace TabForge;
 
 // Owns: settings store and settings file safety checks (a change during a save, a bad workspace in an otherwise good file).
-// Does not own: the settings snapshot bytes (TestSettingsFileSplitSnapshots) and the security bounds (TestSecurityInputBoundaries).
+// Does not own: the settings snapshot bytes or the security bounds.
 // Tests: TestSettingsChangeDuringSaveStaysPending, TestSettingsBadWorkspaceKeepsOtherSettings.
 public static partial class SelfTest
 {

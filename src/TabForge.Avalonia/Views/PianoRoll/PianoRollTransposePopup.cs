@@ -14,6 +14,7 @@ using Avalonia.Media;
 using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Presenters;
+using TabForge.Services;
 
 namespace TabForge.Avalonia.Views;
 
@@ -57,7 +58,7 @@ public sealed partial class PianoRollTransposePopup
             Background = AvaloniaPalette.TransparentBrush,
         };
         AutomationProperties.SetName(_value, "Amount to move");
-        ToolTip.SetTip(_value, "Click to type a number (a negative number goes down). Up and Down change it by 1, Shift+Up and Shift+Down by 12");
+        ToolTip.SetTip(_value, $"Click to type a number (a negative number goes down). {FixedKeys.Up} and {FixedKeys.Down} change it by 1, {FixedKeys.ShiftUp} and {FixedKeys.ShiftDown} by 12");
         _value.TextChanged += (_, _) => PreviewTyped();
         _value.GotFocus += (_, _) => ShowValue();
         _value.LostFocus += (_, _) => { if (_closed) return; if (Parse(_value.Text) is { } typed) _model.SetDelta(typed); ShowAll(); };
@@ -79,12 +80,12 @@ public sealed partial class PianoRollTransposePopup
         AutomationProperties.SetName(_snap, "Snap the result to the key");
         _snap.IsCheckedChanged += (_, _) => { _model.SnapToKey = _snap.IsChecked == true; ShowAll(); };
 
-        var cancel = PromptChrome.Action("TransposeCancel", "Cancel", primary: false, isCancel: true);
+        var cancel = PromptChrome.Action("TransposeCancel", CommonText.Cancel, primary: false, isCancel: true);
         cancel.Click += (_, _) => Close();
         var ok = PromptChrome.Action("TransposeOk", "Move notes", primary: true);
         ok.Click += (_, _) => Confirm();
         AutomationProperties.SetName(ok, "Move notes");
-        AutomationProperties.SetName(cancel, "Cancel");
+        AutomationProperties.SetName(cancel, CommonText.Cancel);
 
         var frame = BuildFrame(cancel, ok);
         frame.AddHandler(InputElement.KeyDownEvent, OnKey, RoutingStrategies.Tunnel);
@@ -137,7 +138,7 @@ public sealed partial class PianoRollTransposePopup
     private static TextBlock Small(string name)
     {
         var block = new TextBlock { Name = name, FontSize = DialogMetrics.MoveSmallSize, TextWrapping = TextWrapping.Wrap };
-        block[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        block.UseMutedText();
         return block;
     }
 
@@ -207,7 +208,7 @@ public sealed partial class PianoRollTransposePopup
         Control Line(string name, string label, StackPanel chips)
         {
             var text = new TextBlock { Name = name, Text = label, Width = DialogMetrics.MoveRowLabelWidth, FontSize = DialogMetrics.MoveSmallSize, VerticalAlignment = VerticalAlignment.Center };
-            text[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+            text.UseMutedText();
             chips.VerticalAlignment = VerticalAlignment.Center;
             return new StackPanel { Orientation = Orientation.Horizontal, Children = { text, chips } }.WithMargin(DialogMetrics.MoveChipRowGap);
         }

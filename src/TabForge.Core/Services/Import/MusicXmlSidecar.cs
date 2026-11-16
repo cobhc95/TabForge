@@ -44,8 +44,8 @@ internal static class MusicXmlSidecar
             var number = Number(value);
             switch (key)
             {
-                case "v" when number is { } v: note.Velocity = (int)Math.Clamp(v, 0, MidiLimits.Max); break;
-                case "m" when number is { } m: note.MidiValue = (int)Math.Clamp(m, 0, MidiLimits.Max); break;
+                case "v" when number is { } v: note.Velocity = (int)MidiLimits.Clamp(v); break;
+                case "m" when number is { } m: note.MidiValue = (int)MidiLimits.Clamp(m); break;
                 case "t":
                     var keep = note.Techniques.Contains("Tie");   // the tie origin mark is derived from the tie destinations when the bars are read
                     note.Techniques = new HashSet<string>(value.Split(',', StringSplitOptions.RemoveEmptyEntries), StringComparer.OrdinalIgnoreCase);

@@ -1,4 +1,5 @@
 using System;
+using TabForge.Avalonia.Platform;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -40,7 +41,7 @@ internal sealed class SoundBankLicenceWindow : Window
         var source = new Button { Content = "Open source page", HorizontalAlignment = HorizontalAlignment.Left };
         source.Click += async (_, _) => await OpenSourceAsync(bank.SourcePage);
         ToolTip.SetTip(source, bank.SourcePage);
-        var close = new Button { Content = "Close", IsDefault = true, IsCancel = true, HorizontalAlignment = HorizontalAlignment.Right };
+        var close = DialogButtons.Close();
         close.Click += (_, _) => Close();
         var actions = new DockPanel { LastChildFill = false };
         DockPanel.SetDock(source, Dock.Left);
@@ -62,7 +63,7 @@ internal sealed class SoundBankLicenceWindow : Window
     private static TextBlock Muted(string text)
     {
         var block = new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap };
-        block[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        block.UseMutedText();
         return block;
     }
 

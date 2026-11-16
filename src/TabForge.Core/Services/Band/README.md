@@ -1,14 +1,11 @@
 # Services/Band
 
-The Band view's feature module: what Band adds to the central tables, merged by `Services/Features/FeatureRegistry.cs`. No WPF. The view is in `Views/Band/`.
+The Band view's rules and its Preferences rows. The view is in `TabForge.Avalonia`.
 
 ## Files
-| File | Purpose |
+| File | Owns |
 | --- | --- |
-| `BandFeatureModule.cs` | `IBandCommandHost` and the module: the eight Band hotkey rows (each after the one before, from `View.BandView`), their commands, and the "Band view" Preferences group on the Timeline page |
-| `BandSettingsRows.cs` | The "Band view" Preferences rows (a `SettingsCatalog` partial) |
+| `BandRowRules.cs` | the rules of how many rows (systems) a track's Band pane shows: the limits, the snap of a dragged height to whole rows, and the   per-song store of the chosen counts (SongProject.BandPaneRows, by track id). |
+| `BandSettingsRows.cs` | the "Band view" rows of the settings catalogue (Timeline page); BandFeatureSettings (Services/Features/FeatureSettingsRows.cs) hands them to the catalogue. |
 
-## Not module-driven
-The View menu's "Band view" item (a checkable XAML item), the Band menu in `Views/ContextMenuSpecs.cs`, the Band settings bounds in `Services/Settings/SettingsValidator.cs`, and the `Band.*` case labels of `RunHotkey` in `MainWindow.Settings.cs`, which run before the module's commands and reach the same handler.
-
-## Tests
+Tests: see the `// Tests:` line at the top of each file.

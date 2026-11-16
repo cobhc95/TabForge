@@ -8,7 +8,7 @@ namespace TabForge;
 
 // Owns: the golden check of the MP4 writer: a fixed moving synthetic clip (1080p, 60 frames, a stereo tone) through the real
 // VideoEncoder, decoded back with the Media Foundation source reader, one digest per stream over every sample (timestamp, length, bytes).
-// Does not own: queue, drop and setting behaviour (SelfTestVideoEncoder).
+// Does not own: queue, drop and setting behaviour of the encoder.
 public static partial class SelfTest
 {
 #if WINDOWS

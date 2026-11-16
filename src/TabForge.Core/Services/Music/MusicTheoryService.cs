@@ -114,7 +114,7 @@ public static class MusicTheoryService
                     {
                         // The stored sounding pitch moves by the interval (a harmonic keeps its offset over the fret).
                         var onString = n.StringIndex >= 0 && n.StringIndex < track.StringTunings.Count;
-                        var newMidi = Math.Clamp((n.MidiValue > 0 || !onString ? n.MidiValue : track.PitchOf(n.StringIndex, n.Fret)) + semitones, 0, MidiLimits.Max);
+                        var newMidi = MidiLimits.Clamp((n.MidiValue > 0 || !onString ? n.MidiValue : track.PitchOf(n.StringIndex, n.Fret)) + semitones);
                         var nf = n.Fret + semitones;
                         if (onString && nf >= 0 && nf <= track.NumberOfFrets) n.Fret = nf;
                         else if (onString && FreeStringFor(track, notes, n, track.PitchOf(n.StringIndex, n.Fret) + semitones) is var (s, f) && s >= 0)
@@ -125,8 +125,8 @@ public static class MusicTheoryService
                         }
                         else unplaced++;
                         n.MidiValue = newMidi;
-                        if (n.SlideTargetMidi > 0) n.SlideTargetMidi = Math.Clamp(n.SlideTargetMidi + semitones, 0, MidiLimits.Max);
-                        if (n.TrillTargetMidi > 0) n.TrillTargetMidi = Math.Clamp(n.TrillTargetMidi + semitones, 0, MidiLimits.Max);
+                        if (n.SlideTargetMidi > 0) n.SlideTargetMidi = MidiLimits.Clamp(n.SlideTargetMidi + semitones);
+                        if (n.TrillTargetMidi > 0) n.TrillTargetMidi = MidiLimits.Clamp(n.TrillTargetMidi + semitones);
                         moved++;
                     }
                 }

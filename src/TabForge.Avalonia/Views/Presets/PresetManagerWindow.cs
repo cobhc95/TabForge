@@ -67,7 +67,7 @@ public sealed partial class PresetManagerWindow : Window
     private readonly Button _duplicate = ToolButton("Duplicate");
     private readonly Button _up = ToolButton("Move up");
     private readonly Button _down = ToolButton("Move down");
-    private readonly Button _delete = ToolButton("Delete");
+    private readonly Button _delete = ToolButton(CommonText.Delete);
     private readonly Button _import = ToolButton("Import…");
     private readonly Button _export = ToolButton("Export…");
     private readonly Button _show = ToolButton("Show in tree");
@@ -110,14 +110,13 @@ public sealed partial class PresetManagerWindow : Window
         MinHeight = MinWindowHeight;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         ShowInTaskbar = false;
-        this[!BackgroundProperty] = new DynamicResourceExtension("WindowBackground");
-        this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
+        this.UseWindowColours();
         FontSize = WindowFontSize;
 
         _tree[!BackgroundProperty] = new DynamicResourceExtension("PanelBackground");
         _list[!BackgroundProperty] = new DynamicResourceExtension("PanelBackground");
         _message[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
-        _empty[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        _empty.UseMutedText();
         _delete[!ForegroundProperty] = new DynamicResourceExtension("Danger");
         AutomationProperties.SetName(_search, AutomationSearch);
         AutomationProperties.SetName(_tree, AutomationTree);

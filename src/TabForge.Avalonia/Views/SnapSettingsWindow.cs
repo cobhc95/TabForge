@@ -60,7 +60,8 @@ public sealed class SnapSettingsWindow : Window
         distanceRow.Children.Add(new TextBlock { Text = SnapSettingsPresenter.DistanceUnit, Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
         root.Children.Add(distanceRow);
 
-        var close = new Button { Content = SnapSettingsPresenter.CloseButton, IsDefault = true, IsCancel = true, MinWidth = DialogMetrics.DialogButtonMinWidth, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 14, 0, 0) };
+        var close = DialogButtons.Close(SnapSettingsPresenter.CloseButton).WithMargin(DialogMetrics.FooterGap);
+        close.HorizontalAlignment = HorizontalAlignment.Right;
         close.Click += (_, _) => Close();
         root.Children.Add(close);
         Content = root;

@@ -1,4 +1,5 @@
 using System;
+using TabForge.Avalonia.Platform;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -73,8 +74,7 @@ public sealed class VideoExportWindow : Window
         Width = 640; Height = 760; MinWidth = 520; MinHeight = 480;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         ShowInTaskbar = false;
-        this[!BackgroundProperty] = new DynamicResourceExtension("WindowBackground");
-        this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
+        this.UseWindowColours();
         FontSize = DialogMetrics.FontSize;
 
         var stack = new StackPanel { Margin = DialogMetrics.ContentInset };

@@ -37,10 +37,10 @@ public sealed class EngineStringRinger : IStringRinger
     /// <summary>Starts one ring of this sounding pitch; the engine fades it out by itself after <see cref="StringVibration.RingMs"/>.</summary>
     public void Ring(int midi)
     {
-        var pitch = Math.Clamp(midi, 0, MidiLimits.Max);
+        var pitch = MidiLimits.Clamp(midi);
         var channel = _track.MidiChannel & 0x0F;
         var device = _track.MidiOutputDeviceId;
-        var program = Math.Clamp(_track.MidiProgram, 0, MidiLimits.Max);
+        var program = MidiLimits.Clamp(_track.MidiProgram);
         // A new pitch takes the one owned slot: the old note is cut first (same note re-rings: the engine retriggers it).
         if (_owned is { } owned && (owned.Device != device || owned.Channel != channel || owned.Pitch != pitch)) Silence();
         _owned = (device, channel, pitch);

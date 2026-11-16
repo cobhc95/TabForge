@@ -1,8 +1,12 @@
 # Services/Features
 
-Feature modules: one object per feature that adds its rows to the central tables.
+Plain data the features (Band, Video, Keyboard mode, Live input) add to the central settings and hotkey catalogues. The rows themselves are merged by `SettingsCatalog` and `HotkeyCatalog.Features.cs`.
 
-- `IFeatureModule.cs`: the contract (settings rows, preferences layout, hotkey rows, commands, menu rows, bounds) and the row records.
-- `FeatureRegistry.cs`: the list of modules and the merge into `SettingsCatalog`, `HotkeyCatalog`, the command table, the main menu and `SettingsValidator`.
+## Files
+| File | Owns |
+| --- | --- |
+| `FeatureHotkeyIds.cs` | the ids of the hotkey rows the feature modules add to the catalogue (the rows are in HotkeyCatalog.Features.cs), and the ids of the FX chain window's commands. |
+| `FeatureSettingsRows.cs` | the Preferences groups, rows and settings bounds of the four features that add settings rows (Band, Video, Keyboard mode, Live input), as plain data for the catalogues. The feature modules and TabForge both derive from these classes, so both read the same groups, rows and bounds. |
+| `FeatureSettingsSources.cs` | the plain data a feature adds to the settings catalogue (IFeatureSettingsSource), the app-side   calls those catalogues make (CatalogPlatform), and the one composition of both (CatalogComposition). |
 
-Pilots: `Services/Video/VideoFeatureModule.cs` (Video), `Services/Band/BandFeatureModule.cs` (Band) and `Services/Export/ExportFeatureModule.cs` (export formats). Recipe: "Add a feature module".
+Tests: see the `// Tests:` line at the top of each file.

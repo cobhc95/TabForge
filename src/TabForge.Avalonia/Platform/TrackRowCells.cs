@@ -124,7 +124,7 @@ public static class TrackRowCells
     }
 
     /// <summary>The slider value the sliders show: volume 0..127, pan -64..63 (the model's 0..127 less the centre).</summary>
-    public static int SliderValue(TrackModel track, Cell cell) => cell == Cell.Volume ? Math.Clamp(track.Volume, 0, MidiLimits.Max) : Math.Clamp(track.Pan, 0, MidiLimits.Max) - 64;
+    public static int SliderValue(TrackModel track, Cell cell) => cell == Cell.Volume ? MidiLimits.Clamp(track.Volume) : MidiLimits.Clamp(track.Pan) - 64;
 
     /// <summary>The slider value at <paramref name="x"/> across <paramref name="box"/>, over <paramref name="range"/> (the cell's own range when null).</summary>
     public static int SliderValueAt(Cell cell, Rect box, double x, (int Minimum, int Maximum)? range = null)

@@ -7,6 +7,7 @@
 
 using TabForge.Commands;
 using TabForge.Presenters;
+using TabForge.Services;
 
 namespace TabForge.Menus;
 
@@ -22,7 +23,7 @@ public static class ScoreNoteMenus
         DurationGroup = "Duration", DynamicsGroup = "Dynamics", EffectsGroup = "Effects", BeatGroup = "Beat", PitchAndStringHeader = "Pitch and string";
 
     /// <summary>The shortcut text of Delete: the editor's fixed Backspace key, which is not a bindable command.</summary>
-    public const string DeleteShortcut = "Backspace";
+    public const string DeleteShortcut = FixedKeys.Backspace;
 
     /// <summary>The prefix a duration tool's id carries; the rest of the id is the key <see cref="ScoreNoteMenuState.CanSetDuration"/> reads.</summary>
     private const string DurationToolPrefix = "duration:";

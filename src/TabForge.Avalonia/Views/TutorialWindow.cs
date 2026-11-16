@@ -1,4 +1,5 @@
 using System;
+using TabForge.Avalonia.Platform;
 using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
@@ -40,7 +41,7 @@ public sealed class TutorialWindow : Window
     private readonly Button _next = new() { Name = "Next", Content = "Next chapter ›" };
     private readonly Button _exportPdf = new() { Name = "ExportPdf", Content = "Export PDF…" };
     private readonly Button _clearSearch = new() { Name = "ClearSearch", Content = "✕" };
-    private readonly TextBox _search = new() { Name = "Search", Watermark = "Search the guide (Ctrl+F)", MinWidth = 220 };
+    private readonly TextBox _search = new() { Name = "Search", Watermark = $"Search the guide ({FixedKeys.Find})", MinWidth = 220 };
     private readonly ListBox _contents = new() { Name = "Contents", MinHeight = 200 };
     private readonly ListBox _results = new() { Name = "Results", MinHeight = 200, IsVisible = false };
     private readonly TextBlock _noResults = ToolWindowParts.Small("Nothing matches that search.");
@@ -66,8 +67,7 @@ public sealed class TutorialWindow : Window
         Width = 960; Height = 660; MinWidth = 640; MinHeight = 420;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         ShowInTaskbar = false;
-        this[!BackgroundProperty] = new DynamicResourceExtension("WindowBackground");
-        this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
+        this.UseWindowColours();
         FontSize = DialogMetrics.FontSize;
 
         _readerScroll = new ScrollViewer { Content = _reader, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
@@ -110,7 +110,7 @@ public sealed class TutorialWindow : Window
         ToolTip.SetTip(_forward, "Forward");
         ToolTip.SetTip(_previous, "Previous chapter");
         ToolTip.SetTip(_next, "Next chapter");
-        ToolTip.SetTip(_search, "Search the whole guide (Ctrl+F). Esc clears the search.");
+        ToolTip.SetTip(_search, $"Search the whole guide ({FixedKeys.Find}). {FixedKeys.Escape} clears the search.");
         ToolTip.SetTip(_clearSearch, "Clear the search (Esc)");
         ToolTip.SetTip(_exportPdf, "Save the whole guide as a PDF");
         var guideRow = ToolWindowParts.Row(_basicChoice, _detailedChoice);

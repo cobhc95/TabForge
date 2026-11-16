@@ -14,7 +14,7 @@ public sealed class InstrumentPickerPresenter
     public const string Title = "Choose instrument";
     public const string SearchHint = "Search instruments (e.g. \"bass\", \"strings\", \"drum\")…";
     public const string SelectButton = "Select";
-    public const string CancelButton = "Cancel";
+    public const string CancelButton = CommonText.Cancel;
 
     /// <summary>What a family header shows: whether the header is visible, whether its tiles are, whether the family is open, and how many sounds it lists under the search.</summary>
     public readonly record struct FamilyState(string Family, bool HeaderVisible, bool TilesVisible, bool Open, int Count);

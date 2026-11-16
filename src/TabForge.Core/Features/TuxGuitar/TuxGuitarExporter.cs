@@ -74,15 +74,15 @@ public static class TuxGuitarExporter
     {
         var isDrums = track.IsDrumTrack;
         var bank = isDrums ? 128 : track.MidiBankMsb >= 0 ? track.MidiBankMsb : 0;
-        var program = isDrums ? 0 : Math.Clamp(track.MidiProgram, 0, 127);
+        var program = isDrums ? 0 : MidiLimits.Clamp(track.MidiProgram);
         return new XElement("TGChannel",
             new XElement("id", id),
             new XElement("bank", bank),
             new XElement("program", program),
-            new XElement("volume", Math.Clamp(track.Volume, 0, 127)),
-            new XElement("balance", Math.Clamp(track.Pan, 0, 127)),
-            new XElement("chorus", Math.Clamp(track.Chorus, 0, 127)),
-            new XElement("reverb", Math.Clamp(track.Reverb, 0, 127)),
+            new XElement("volume", MidiLimits.Clamp(track.Volume)),
+            new XElement("balance", MidiLimits.Clamp(track.Pan)),
+            new XElement("chorus", MidiLimits.Clamp(track.Chorus)),
+            new XElement("reverb", MidiLimits.Clamp(track.Reverb)),
             new XElement("phaser", 0),
             new XElement("tremolo", 0),
             new XElement("name", track.InstrumentName ?? ""),
@@ -166,7 +166,7 @@ public static class TuxGuitarExporter
         }
         else
         {
-            foreach (var tuning in track.StringTunings) element.Add(new XElement("TGString", Math.Clamp(tuning, 0, 127)));
+            foreach (var tuning in track.StringTunings) element.Add(new XElement("TGString", MidiLimits.Clamp(tuning)));
         }
         element.Add(new XElement("TGLyric", new XAttribute("from", 1)));
         long start = TickPerQuarter;
@@ -278,12 +278,12 @@ public static class TuxGuitarExporter
 
     private static XElement BuildNote(TrackModel track, TabNote note, TabCell cell)
     {
-        var element = new XElement("note", new XAttribute("string", note.StringIndex + 1), new XAttribute("value", note.Fret), new XAttribute("velocity", Math.Clamp(note.Velocity, 0, 127)));
+        var element = new XElement("note", new XAttribute("string", note.StringIndex + 1), new XAttribute("value", note.Fret), new XAttribute("velocity", MidiLimits.Clamp(note.Velocity)));
         if (note.Tied) element.SetAttributeValue("tiedNote", "true");
         var grace = cell.Notes.FirstOrDefault(n => n.IsGraceNote && n.StringIndex == note.StringIndex);
         if (grace is not null)
         {
-            element.Add(new XElement("grace", new XAttribute("dead", grace.Dead ? "true" : "false"), new XAttribute("duration", 64), new XAttribute("dynamic", Math.Clamp(grace.Velocity, 0, 127)), new XAttribute("fret", grace.Fret), new XAttribute("onBeat", grace.GraceBeforeBeat ? "false" : "true"), new XAttribute("transition", grace.Techniques.Contains("Slide") ? "slide" : grace.Techniques.Contains("Bend") ? "bend" : "none")));
+            element.Add(new XElement("grace", new XAttribute("dead", grace.Dead ? "true" : "false"), new XAttribute("duration", 64), new XAttribute("dynamic", MidiLimits.Clamp(grace.Velocity)), new XAttribute("fret", grace.Fret), new XAttribute("onBeat", grace.GraceBeforeBeat ? "false" : "true"), new XAttribute("transition", grace.Techniques.Contains("Slide") ? "slide" : grace.Techniques.Contains("Bend") ? "bend" : "none")));
         }
         if (cell.Accent == 1 && note.Techniques.Contains("Accent")) element.Add(new XElement("accentuatedNote"));
         else if (cell.Accent == 2 && note.Techniques.Contains("HeavyAccent")) element.Add(new XElement("heavyAccentuatedNote"));

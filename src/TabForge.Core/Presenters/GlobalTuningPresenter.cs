@@ -61,7 +61,7 @@ public sealed class GlobalTuningPresenter
     {
         if (!int.TryParse(text.Trim().TrimStart('+'), out var semitones)) return false;
         semitones = Math.Clamp(semitones, -MaxSemitoneShift, MaxSemitoneShift);
-        for (var s = 0; s < StringCount; s++) _tuning[s] = Math.Clamp(_tuning[s] + semitones, 0, MidiLimits.Max);
+        for (var s = 0; s < StringCount; s++) _tuning[s] = MidiLimits.Clamp(_tuning[s] + semitones);
         return true;
     }
 

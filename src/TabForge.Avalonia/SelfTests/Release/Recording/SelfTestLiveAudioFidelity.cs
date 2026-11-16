@@ -10,7 +10,7 @@ namespace TabForge;
 
 // Owns: the whole live recording audio path against ground truth: the real engine (Null driver, which reads the mix through the same
 // byte[] wrapper as WASAPI, ASIO and DirectSound) plays a known harmonic chord; the tap's output and the decoded MP4 are fitted to it.
-// Does not own: the encoder basics (SelfTestVideoEncoder), the tap protocol (SelfTestLiveVideo), the tone-only checks (SelfTestLiveAudio).
+// Does not own: the encoder basics, the tap protocol or the tone-only checks.
 public static partial class SelfTest
 {
     private const int ChordPeriod = 480;   // 100 Hz at 48 kHz: every partial is a multiple of 100 Hz, so the chord repeats every 480 frames

@@ -2,6 +2,39 @@
 
 TabForge is actively developed; please report anything odd on the Issues page.
 
+## 0.9.7
+
+### Added
+
+- The Mix Table has a tab for each track that changes at the beat (red dot), plus the track you opened it from (hollow dot when it has no change there). It opens on that track's tab. Each tab holds its own instrument, volume, pan, effects, transition and All tracks; the tempo sits below the tabs because every track shares it. When the tabs don't fit, ‹ › and the mouse wheel scroll them and ▾ lists every track. Clear removes only the selected track's change. Each tab has a strip in its track's colour, and the selected tab is shaded in that colour. Values a beat doesn't change show what the track plays at that point, not its starting sound. A drum track's instrument reads as its drum kit.
+- Keyboard mode has a Hear track toggle. It is off by default, so only the notes you play sound on the practised track. Turn it on to hear the track's own notes too, so the song sounds complete.
+
+### Changed
+
+- TabForge's licence is now the GNU General Public License, version 3 or any later version (GPL-3.0-or-later), instead of MIT. You can still use, share and change TabForge freely; anyone who distributes it or a modified version must share the source under the same licence. Releases up to and including 0.9.6 stay available under MIT. The bundled components keep their own licences (see THIRD_PARTY.md).
+- Dialog footers match across about 25 windows: OK, Cancel, Apply and Close buttons share one minimum width (80), padding and gap, and the main button has the accent look and answers Enter. Before, widths ranged from 72 to 92 and gaps from 6 to 20, and most OK buttons had no accent.
+- In the light theme, OK and Apply buttons are a darker blue (about #1F6DD3 instead of #3A86E8), so their white text is easy to read.
+- Shortcuts shown in the piano roll's right-click menu, the Legato toolbar tooltip and the timeline's "Clear loop" tooltip follow your own bindings. Before, they showed the default keys even after you changed them.
+- Guitar Pro files open about 31% faster (all 1,944 samples: 190 s before, 132 s now; Master of Puppets: about 1.5 s before, 1.1 s now), and allocate 27% to 40% less memory while opening (40% for Master of Puppets: 991 MB before, 595 MB now).
+- Under the hood: the code was tidied for readability, with no change to what you hear.
+  - Dead code and stale headers, READMEs and docs were removed or corrected.
+  - Common captions (OK, Cancel, Apply, Close, Yes, No, Delete, Save and others) come from one list (`CommonText`), and keys that can't be rebound from another (`FixedKeys`). Hotkeys stay in `HotkeyCatalog`.
+  - Dialog buttons come from one builder (`DialogButtons`).
+  - Sizes, paddings and corners come from the design tokens.
+  - New shared helpers cover MIDI value limits (replacing about 160 copies), Guitar Pro scale conversions, theme colour bindings and file clean-up.
+  - New architecture tests fail when someone hard-codes a hotkey, a common caption, a corner radius or a default button.
+  - New opt-in speed and stress tests cover opening every sample, many-track playback, play/seek/stop loops and long renders.
+
+### Fixed
+
+- GM sound sometimes played alongside a VST instrument, most often when a song opened and its instrument was loaded automatically ("Auto-load for this instrument"). The automatic switch only turned off a GM tick it had made itself, and auto-load brought back whatever GM state was saved with the chain. Now GM turns off whenever an instrument plays and on when none does. Your own tick or untick (FX window or mixer) always wins and is saved with the song and with the auto-load chain.
+- The Mix Table showed a drum track's kit (program 0) as "1 - Grand Piano".
+- A Mix Table on a song's first beat was ignored. Guitar Pro plays it from the first note, but TabForge treated the track header as the starting sound. In No More Lies (GP3), the guitars began on distortion instead of clean guitar, so every later change sounded wrong. The first beat's instrument, volume, pan, chorus and reverb now set the track's starting sound. This corrects 424 tracks across the sample songs. The first beat also keeps its Mix Table, as in Guitar Pro, so bar 1 shows the red timeline button and F10 opens it. Only values that differ from the track's own settings are kept there, so the Mix Table ticks only real changes. For example, No More Lies' Keyboards repeat their own Strings sound at bar 1, so their box isn't ticked.
+- The Mix Table showed another track's change as the selected track's. In No More Lies at bar 50, opening it from the Bass showed Distortion Guitar, which was Guitar 1's change. The selected track now stays selected and shows its own values; other tracks' changes are on their own tabs.
+- Guitar Pro 3 Mix Tables lost their transitions and effect values. A GP3 volume fade played as a sudden drop, and chorus, reverb, phaser, tremolo and tempo-change lengths were dropped. They are now read as they already were for GP4 and GP5.
+- The OK caption in the plug-in preset dialog and the prompt text in the light theme were below the 4.5:1 readability contrast.
+- Two playback tests failed now and then on a busy machine (seek during a timeline swap, and volume/pan automation timing). The tests now wait for the engine properly; the engine itself was already correct.
+
 ## 0.9.6
 
 ### Added

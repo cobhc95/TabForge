@@ -14,7 +14,7 @@ public static class PluginSaveChoicePresenter
 
     public const string Title = "Save song with audio settings";
     public const string Headline = "This song uses TabForge audio settings (VST plug-ins, FX chains or mixer groups).";
-    public const string CancelButton = "Cancel";
+    public const string CancelButton = CommonText.Cancel;
 
     public static string Detail(string fileName) =>
         $"Other programs do not know these settings: they play {fileName} with their own sounds, and if one saves the file, "

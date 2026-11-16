@@ -13,7 +13,7 @@ public static partial class EngineHost
     {
         var m = MeasurePitchMessage.Read(r);
         var (slot, index, requestId) = (m.Slot, m.Index, m.RequestId); var channel = m.Channel & 0x0F;
-        var notes = m.Notes.Select(n => Math.Clamp(n, 0, MidiLimits.Max)).ToArray();
+        var notes = m.Notes.Select(n => MidiLimits.Clamp(n)).ToArray();
         Threads.Post(() => _session.StartMeasurePitch(slot, index, requestId, channel, notes));
     }
 

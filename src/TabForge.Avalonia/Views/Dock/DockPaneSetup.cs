@@ -1,4 +1,5 @@
 using System;
+using TabForge.Avalonia.Platform;
 using System.Collections.Generic;
 using System.Linq;
 using Avalonia.Controls;
@@ -66,7 +67,7 @@ public sealed class DockPaneSetup
     private static Control Placeholder(string title)
     {
         var label = new TextBlock { Text = title + " (not ported yet)", HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-        label[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        label.UseMutedText();
         return label;
     }
 

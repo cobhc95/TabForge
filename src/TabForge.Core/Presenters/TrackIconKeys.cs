@@ -41,5 +41,5 @@ public static class TrackIconKeys
     }
 
     /// <summary>Icon for a GM program (0-127) or a drum kit.</summary>
-    public static string KeyFor(int program, bool drumKit) => drumKit ? DrumKitKey : ByProgram[Math.Clamp(program, 0, MidiLimits.Max)];
+    public static string KeyFor(int program, bool drumKit) => drumKit ? DrumKitKey : ByProgram[MidiLimits.Clamp(program)];
 }

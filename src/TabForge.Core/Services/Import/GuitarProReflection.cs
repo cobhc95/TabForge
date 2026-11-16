@@ -20,25 +20,35 @@ internal static class GuitarProReflection
     internal static string? FirstNonEmpty(params string?[] values) =>
         values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
 
-    internal static readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> MissingNames = new();
-
     /// <summary>Diagnostics: "Type.Name" of every property the importer asked for that alphaTab does not have.</summary>
-    internal static IReadOnlyCollection<string> MissingPropertyNames => MissingNames.Keys.ToList();
+    internal static IReadOnlyCollection<string> MissingPropertyNames => Properties.Where(p => p.Value.Missing).Select(p => p.Key.Type.Name + "." + p.Key.Name).ToList();
 
     internal static object? Get(object? target, string property)
     {
         if (target is null) return null;
         // Reflection over alphaTab's model tolerates version differences: a missing property, or a
         // getter that throws on this particular object, reads as "absent".
+        try { return PropertyOf(target.GetType(), property)?.GetValue(target); }
+        catch (TargetInvocationException) { return null; } // Not logged: optional alphaTab member probe: the fallback value is used
+    }
+
+    // The case-insensitive lookup per (type, name), found once: an import asks for the same few dozen names millions of times
+    // (performance audit 2026-11: the uncached lookup was over half of the conversion time of a large song). Info null: absent
+    // (Missing: recorded so a self-test can fail on a silently lost feature) or ambiguous.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Type Type, string Name), (PropertyInfo? Info, bool Missing)> Properties = new();
+
+    private static PropertyInfo? PropertyOf(Type type, string property)
+    {
+        if (Properties.TryGetValue((type, property), out var known)) return known.Info;
+        PropertyInfo? info;
+        var missing = false;
         try
         {
-            var info = target.GetType().GetProperty(property, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
-            // Record names that do not exist so a self-test can fail on a silently lost feature.
-            if (info is null) MissingNames.TryAdd(target.GetType().Name + "." + property, 0);
-            return info?.GetValue(target);
+            info = type.GetProperty(property, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+            missing = info is null;
         }
-        catch (AmbiguousMatchException) { return null; } // Not logged: optional alphaTab member probe: the fallback value is used
-        catch (TargetInvocationException) { return null; } // Not logged: optional alphaTab member probe: the fallback value is used
+        catch (AmbiguousMatchException) { info = null; } // Not logged: optional alphaTab member probe: the fallback value is used
+        return Properties.GetOrAdd((type, property), (info, missing)).Info;
     }
 
     internal static IEnumerable<object> AsObjects(object? value)

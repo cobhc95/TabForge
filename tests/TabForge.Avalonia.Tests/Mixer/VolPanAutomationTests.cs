@@ -68,8 +68,7 @@ public class VolPanAutomationTests
             song.Tracks[0].Volume = 50;
             output.Take();
             engine.PushLiveChannelState(song);
-            Thread.Sleep(200);
-            var got = output.Take();
+            var got = output.TakeOnceSent(channel, 7);
             engine.Stop();
             Assert.Equal(32, got.Last(c => c.Ch == channel && c.Cc == 7).Value);
             Assert.Equal(50, song.Tracks[0].Volume);
@@ -90,8 +89,7 @@ public class VolPanAutomationTests
         song.Tracks[0].Volume = 50;
         output.Take();
         engine.PushLiveChannelState(song);
-        Thread.Sleep(200);
-        var got = output.Take();
+        var got = output.TakeOnceSent(ChannelAllocator.Assign(song)[0], 7);
         engine.Stop();
         Assert.Equal(32, got.Last(c => c.Ch == ChannelAllocator.Assign(song)[0] && c.Cc == 7).Value);
         Assert.Equal(50, song.Tracks[0].Volume);
@@ -115,15 +113,13 @@ public class VolPanAutomationTests
             song.Tracks[0].Volume = volume;
             output.Take();
             engine.PushLiveChannelState(song);
-            Thread.Sleep(200);
-            sent.Add(output.Take().Last(c => c.Ch == channel && c.Cc == 7).Value);
+            sent.Add(output.TakeOnceSent(channel, 7).Last(c => c.Ch == channel && c.Cc == 7).Value);
         }
         engine.Seek(song, 0, 0);
         Thread.Sleep(1500);
         output.Take();
         engine.PushLiveChannelState(song);
-        Thread.Sleep(200);
-        sent.Add(output.Take().Last(c => c.Ch == channel && c.Cc == 7).Value);
+        sent.Add(output.TakeOnceSent(channel, 7).Last(c => c.Ch == channel && c.Cc == 7).Value);
         engine.Stop();
         Assert.Equal(new[] { 32, 32, 60 }, sent);
     }
@@ -136,8 +132,7 @@ public class VolPanAutomationTests
             engine.Pause();
             output.Take();
             engine.Resume();
-            Thread.Sleep(500);
-            var got = output.Take();
+            var got = output.TakeOnceSent(channel, cc);
             engine.Stop();
             return got.Last(c => c.Ch == channel && c.Cc == cc).Value;
         }
@@ -182,6 +177,23 @@ public class VolPanAutomationTests
             lock (_cc) { _any = true; if ((status & 0xF0) == 0xB0 && (data1 == 7 || data1 == 10)) _cc.Add((status & 0x0F, data1, data2)); }
         }
         public List<(int Ch, int Cc, int Value)> Take() { lock (_cc) { var c = _cc.ToList(); _cc.Clear(); return c; } }
+
+        /// <summary>
+        /// Everything sent until the controller arrives for the channel (then a short settle for its neighbours), up to 5 s. The sends come from the
+        /// engine's output thread, so a fixed sleep raced it under a loaded full run (the old flake): this waits for the send itself.
+        /// </summary>
+        public List<(int Ch, int Cc, int Value)> TakeOnceSent(int channel, int cc)
+        {
+            var got = new List<(int Ch, int Cc, int Value)>();
+            var timer = System.Diagnostics.Stopwatch.StartNew();
+            while (timer.ElapsedMilliseconds < 5000)
+            {
+                got.AddRange(Take());
+                if (got.Any(c => c.Ch == channel && c.Cc == cc)) { Thread.Sleep(100); got.AddRange(Take()); break; }
+                Thread.Sleep(10);
+            }
+            return got;
+        }
         public void ResetAll() { }
         public void Close() { }
         public void Dispose() { }

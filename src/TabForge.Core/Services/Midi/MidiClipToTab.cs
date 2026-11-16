@@ -34,7 +34,7 @@ public static class MidiClipToTab
             if (slot >= slots) { bar++; slot = 0; if (bar >= bars) continue; }
             var (endBar, endFraction) = barAt(songSec + n.LengthSec / speed);
             var lengthSlots = endBar == bar ? (endFraction * slots - slot) : (slots - slot) + endFraction * MusicTime.BarSlots(project, Math.Min(endBar, bars - 1));
-            var pitch = Math.Clamp(n.Pitch + (int)Math.Round(clip.Pitch), 0, MidiLimits.Max);
+            var pitch = MidiLimits.Clamp(n.Pitch + (int)Math.Round(clip.Pitch));
             if (!beats.TryGetValue((bar, slot), out var list)) beats[(bar, slot)] = list = new();
             if (list.All(x => x.Pitch != pitch)) list.Add((pitch, n.Velocity, Math.Max(0.5, lengthSlots)));
         }
@@ -58,7 +58,7 @@ public static class MidiClipToTab
             {
                 var note = drums ? DrumNote(pitch) : StringNote(track, pitch, usedStrings);
                 if (note is null) continue;
-                note.Velocity = Math.Clamp(velocity, 1, MidiLimits.Max);
+                note.Velocity = MidiLimits.ClampVelocity(velocity);
                 usedStrings.Add(note.StringIndex);
                 cell.Notes.Add(note);
             }

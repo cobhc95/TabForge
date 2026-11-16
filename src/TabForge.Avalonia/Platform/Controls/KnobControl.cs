@@ -83,7 +83,7 @@ public sealed class KnobControl : Control
     /// <summary>The value as displayed (what the type-in is filled with).</summary>
     public string DisplayText() => Format?.Invoke(_value) ?? _value.ToString("0.##", CultureInfo.InvariantCulture);
 
-    private string TipText() => $"{Label}: {DisplayText()}\nDrag or scroll to change · double-click or right-click to type a value · Ctrl+click to reset";
+    private string TipText() => $"{Label}: {DisplayText()}\nDrag or scroll to change · double-click or right-click to type a value · {TabForge.Services.FixedKeys.CtrlClick} to reset";
 
     /// <summary>Reads typed text into a clamped, stepped value; false when it is not understood.</summary>
     public bool TryParseInput(string text, out double knobValue)

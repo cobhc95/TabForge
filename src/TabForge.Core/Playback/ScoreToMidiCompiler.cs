@@ -384,15 +384,15 @@ internal sealed partial class ScoreToMidiCompiler
                 if (effect >= 0) Add(device, effect, statusBase, data1, data2, at, index);
             }
             if (mix.Program is int program && channel != ChannelAllocator.PercussionChannel)
-                AddBoth(MidiStatus.ProgramChange, Math.Clamp(program, 0, MidiLimits.Max), 0, atMs);
+                AddBoth(MidiStatus.ProgramChange, MidiLimits.Clamp(program), 0, atMs);
             void Controller(int number, int? step, int current, bool pan = false)
             {
                 if (step is not int value) return;
                 // Mixer groups scale mix-table volume and offset its pan, like the track's own settings.
                 var levels = MixerGroups.LevelsFor(_project, target);
-                var end = pan ? Math.Clamp(64 + value * 8 + levels.Pan, 0, MidiLimits.Max)
-                    : number == 7 ? Math.Clamp((int)Math.Round(value * 8 * levels.Volume / 100.0), 0, MidiLimits.Max)
-                    : Math.Clamp(value * 8, 0, MidiLimits.Max);
+                var end = pan ? MidiLimits.Clamp(64 + value * 8 + levels.Pan)
+                    : number == 7 ? MidiLimits.Clamp((int)Math.Round(value * 8 * levels.Volume / 100.0))
+                    : MidiLimits.Clamp(value * 8);
                 var ramp = Math.Max(0, mix.TransitionBeats);
                 // Ramps used to start from the track's base level, jumping back after an earlier change.
                 if (_mixLevels.TryGetValue((index, number), out var last)) current = last;

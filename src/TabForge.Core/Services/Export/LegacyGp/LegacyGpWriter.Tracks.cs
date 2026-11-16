@@ -24,7 +24,7 @@ internal sealed partial class LegacyGpWriter
     private static int StringsOf(Track track) => StaffOf(track).IsPercussion ? DrumStrings : Math.Min(MaxStrings, Math.Max(1, StaffOf(track).Tuning.Count));
 
     /// <summary>A 0..127 level as the 0..16 step of the channel table.</summary>
-    private static int Step(int value127) => Math.Clamp((int)Math.Round(value127 * 16 / 127.0), 0, 16);
+    private static int Step(int value127) => GpMixerScale.MixerToLegacyStep(value127);
 
     /// <summary>Gives every track its own mixer channel and a spare one for effects (drums on the percussion channel), as the program itself does.</summary>
     private void AllocateChannels()

@@ -81,7 +81,7 @@ public static class SectionScaleDetector
                 if (note.Dead || note.Tied || note.IsGraceNote) continue;
                 var pitch = note.StringIndex >= 0 && note.StringIndex < track.StringTunings.Count ? track.PitchOf(note.StringIndex, note.Fret) : note.MidiValue > 0 ? note.MidiValue : -1;
                 if (pitch < 0) continue;
-                histogram.Add(pitch, length * Math.Clamp(note.Velocity, 1, 127) / 127.0 * (note.Ghost ? 0.5 : 1));
+                histogram.Add(pitch, length * MidiLimits.ClampVelocity(note.Velocity) / (double)MidiLimits.Max * (note.Ghost ? 0.5 : 1));
             }
         }
     }
@@ -102,7 +102,7 @@ public static class SectionScaleDetector
                     if (note.Muted || note.StartSec < clip.OffsetSec) continue;
                     var onset = clip.StartSec + (note.StartSec - clip.OffsetSec) / speed;
                     if (onset < from - 1e-6 || onset >= to - 1e-6) continue;
-                    histogram.Add(note.Pitch, Math.Max(0.0625, note.LengthSec / speed / wholeNoteSec) * Math.Clamp(note.Velocity, 1, 127) / 127.0);
+                    histogram.Add(note.Pitch, Math.Max(0.0625, note.LengthSec / speed / wholeNoteSec) * MidiLimits.ClampVelocity(note.Velocity) / (double)MidiLimits.Max);
                 }
             }
     }

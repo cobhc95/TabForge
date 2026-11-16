@@ -89,7 +89,7 @@ public sealed partial class PresetRows
     private static void AddHeader(Grid grid, string text)
     {
         var header = new TextBlock { Text = text, FontSize = DialogMetrics.PresetHeaderSize, FontWeight = FontWeight.SemiBold, IsHitTestVisible = false }.WithMargin(DialogMetrics.PresetHeaderGap);
-        header[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        header.UseMutedText();
         Grid.SetRow(header, HeaderRow);
         Grid.SetColumnSpan(header, ToolsColumn + 1);
         grid.Children.Add(header);

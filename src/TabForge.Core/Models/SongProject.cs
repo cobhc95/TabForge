@@ -204,7 +204,7 @@ public sealed class TrackModel
 
     /// <summary>The MIDI value of an entered fret: <see cref="PitchOf"/> clamped to 0..127; on a drum track the number written is the GM percussion note itself.</summary>
     public int NoteMidi(int stringIndex, int fret)
-        => StringTunings.Count == 0 || IsDrumTrack ? fret : Math.Clamp(PitchOf(stringIndex, fret), 0, MidiLimits.Max);
+        => StringTunings.Count == 0 || IsDrumTrack ? fret : MidiLimits.Clamp(PitchOf(stringIndex, fret));
 
     /// <summary>Inverse of <see cref="PitchOf"/>: the fret that sounds <paramref name="pitch"/> on the string.</summary>
     public int FretOf(int stringIndex, int pitch)
@@ -256,6 +256,8 @@ public sealed class TrackModel
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public bool MidiSoundAuto { get; set; }
     /// <summary>The user unticked GM sound themselves: automatic switching leaves it off. Saved, so it holds after a reopen.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public bool MidiSoundManualOff { get; set; }
+    /// <summary>The user ticked GM sound themselves: it keeps playing beside a VST instrument. Saved, so it holds after a reopen.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public bool MidiSoundManualOn { get; set; }
     /// <summary>Set on a track added from a startup template (FX window "Add as a track on startup"): it is left out of the saved file.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? StartupTemplateId { get; set; }

@@ -125,7 +125,7 @@ public sealed partial class PlaybackEngine : IDisposable
     private int MasterScaled(int status, int data1, int data2)
     {
         if ((status & 0xF0) != MidiStatus.ControlChange || data1 != MidiCc.Volume) return data2;
-        var scaled = Math.Clamp((int)Math.Round(data2 * Volatile.Read(ref _masterVolume) / 100.0), 0, MidiLimits.Max);
+        var scaled = MidiLimits.Clamp((int)Math.Round(data2 * Volatile.Read(ref _masterVolume) / 100.0));
         Volatile.Write(ref _channelVolume[status & 0x0F], scaled);
         return scaled;
     }
@@ -138,7 +138,7 @@ public sealed partial class PlaybackEngine : IDisposable
     {
         var master = Volatile.Read(ref _masterVolume) / 100.0;
         var channelLevel = Math.Max(8, Volatile.Read(ref _channelVolume[channel & 0x0F])) / MidiLimits.Max;
-        return Math.Clamp((int)Math.Round(velocity * master / channelLevel), 1, MidiLimits.Max);
+        return MidiLimits.ClampVelocity((int)Math.Round(velocity * master / channelLevel));
     }
 
     private void SendChannelSetupCore(ScoreTimeline timeline)
@@ -163,7 +163,7 @@ public sealed partial class PlaybackEngine : IDisposable
     private async Task PreviewCoreAsync(int deviceId, int channel, int note, int ms, Action<int, int, int, int> send, int? program)
     {
         var ch = channel & 0x0F;
-        var pitch = Math.Clamp(note, 0, MidiLimits.Max);
+        var pitch = MidiLimits.Clamp(note);
         var key = (deviceId, ch, pitch);
         long token;
         lock (_outputGate)
@@ -172,8 +172,8 @@ public sealed partial class PlaybackEngine : IDisposable
             var retrigger = _previewTokens.ContainsKey(key);
             _previewTokens[key] = token;
             if (retrigger) send(deviceId, MidiStatus.NoteOff | ch, pitch, 0);
-            if (program is { } p) _output.Send(deviceId, MidiStatus.ProgramChange | ch, Math.Clamp(p, 0, MidiLimits.Max), 0);
-            var velocity = Math.Clamp((int)Math.Round(100 * Volatile.Read(ref _masterVolume) / 100.0), 1, MidiLimits.Max);
+            if (program is { } p) _output.Send(deviceId, MidiStatus.ProgramChange | ch, MidiLimits.Clamp(p), 0);
+            var velocity = MidiLimits.ClampVelocity((int)Math.Round(100 * Volatile.Read(ref _masterVolume) / 100.0));
             send(deviceId, MidiStatus.NoteOn | ch, pitch, velocity);
         }
         try { await Task.Delay(Math.Clamp(ms, 60, 8000)).ConfigureAwait(false); }

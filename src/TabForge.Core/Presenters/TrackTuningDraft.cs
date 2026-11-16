@@ -219,8 +219,8 @@ public sealed class TrackTuningDraft
     private static void ShiftTargets(TabNote note, int delta)
     {
         if (delta == 0) return;
-        if (note.SlideTargetMidi > 0) note.SlideTargetMidi = Math.Clamp(note.SlideTargetMidi + delta, 0, MidiLimits.Max);
-        if (note.TrillTargetMidi > 0) note.TrillTargetMidi = Math.Clamp(note.TrillTargetMidi + delta, 0, MidiLimits.Max);
+        if (note.SlideTargetMidi > 0) note.SlideTargetMidi = MidiLimits.Clamp(note.SlideTargetMidi + delta);
+        if (note.TrillTargetMidi > 0) note.TrillTargetMidi = MidiLimits.Clamp(note.TrillTargetMidi + delta);
     }
 
     private static IEnumerable<TabNote> AllNotes(TrackModel track) =>

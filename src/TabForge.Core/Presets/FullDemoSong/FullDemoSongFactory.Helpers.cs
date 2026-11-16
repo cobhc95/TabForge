@@ -167,7 +167,7 @@ internal static partial class FullDemoSongFactory
             throw new InvalidOperationException(
                 $"Demo song: track '{t.Name}' bar {bar} voice {voice + 1}: the tokens add up to {cursor:0.###} slots, the bar has {barSlots}. Tokens: {tokens}");
 
-        var vel = Math.Clamp(baseVel + velOffset, 1, MidiLimits.Max);
+        var vel = MidiLimits.ClampVelocity(baseVel + velOffset);
         var sec = SectionOf(bar);
         foreach (var (slot, tok) in parsed)
         {

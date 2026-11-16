@@ -92,14 +92,13 @@ public sealed class PasteOptionsWindow : Window
 
     private Control Footer()
     {
-        var paste = new Button { Name = "PasteButton", Content = "Paste", MinWidth = DialogMetrics.PromptButtonMinWidth, IsDefault = true };
-        paste.Classes.Add(AvaloniaDefaultLooks.AccentLook);
+        var paste = PromptChrome.Action("PasteButton", "Paste", primary: true);
         ToolTip.SetTip(paste, PasteOptionsPresenter.PasteToolTip);
         AutomationProperties.SetName(paste, "Paste");
         paste.Click += (_, _) => Close(Current());
-        var cancel = new Button { Name = "CancelButton", Content = "Cancel", MinWidth = DialogMetrics.PromptButtonMinWidth, IsCancel = true };
+        var cancel = PromptChrome.Action("CancelButton", CommonText.Cancel, primary: false, isCancel: true);
         ToolTip.SetTip(cancel, PasteOptionsPresenter.CancelToolTip);
-        AutomationProperties.SetName(cancel, "Cancel");
+        AutomationProperties.SetName(cancel, CommonText.Cancel);
         cancel.Click += (_, _) => Close(null);
         var actions = new StackPanel
         {

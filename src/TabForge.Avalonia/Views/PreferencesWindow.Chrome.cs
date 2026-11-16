@@ -31,7 +31,7 @@ public sealed partial class PreferencesWindow
     private StackPanel BuildHeader()
     {
         _searchBar.Changed += Rebuild;
-        _pageSubtitle[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        _pageSubtitle.UseMutedText();
         var header = new StackPanel { Margin = new Thickness(16, 12, 16, 4), Spacing = 4 };
         header[!Panel.BackgroundProperty] = new DynamicResourceExtension("WindowBrush");
         DockPanel.SetDock(_resetPage, Dock.Right);

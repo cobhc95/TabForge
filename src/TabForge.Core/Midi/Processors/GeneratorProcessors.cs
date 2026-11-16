@@ -116,7 +116,7 @@ public sealed class ArpeggiatorProcessor : IMidiProcessor
             }
             var key = _list[idx];
             var ch2 = key >> 7;
-            var note2 = Math.Clamp((key & 0x7F) + (int)(pass % (_variants + 1)) * _varOffset, 0, MidiLimits.Max);
+            var note2 = MidiLimits.Clamp((key & 0x7F) + (int)(pass % (_variants + 1)) * _varOffset);
             var vel = _velocity > 0 ? _velocity : _vel[key];
             var t = (long)_next;
             output.Add((int)Math.Clamp(t - blockStart, 0, ctx.Frames - 1), (byte)(MidiStatus.NoteOn | ch2), (byte)note2, (byte)vel);
@@ -289,7 +289,7 @@ public sealed class LfoProcessor : IMidiProcessor
         {
             var frame = (int)Math.Clamp(_nextTick - ctx.BlockStart, 0, ctx.Frames - 1);
             var w = Wave(_shape, _phase + (_nextTick - ctx.BlockStart) * inc);
-            var v = _target == 0 ? (int)Math.Clamp(Math.Round(_center + w * _range), 0, MidiLimits.Max) : (int)Math.Clamp(Math.Round(8192 + w * _maxBend / 100.0 * 8191), 0, 16383);
+            var v = _target == 0 ? (int)MidiLimits.Clamp(Math.Round(_center + w * _range)) : (int)Math.Clamp(Math.Round(8192 + w * _maxBend / 100.0 * 8191), 0, 16383);
             if (v != _last) { Send(output, frame, v); _last = v; }
             _nextTick += tick;
         }
@@ -359,7 +359,7 @@ public sealed class StepSequencerProcessor : IMidiProcessor
                 var n = pattern[inPat % pattern.Length];
                 if (n != Rest)
                 {
-                    var note = Math.Clamp(_root + n, 0, MidiLimits.Max);
+                    var note = MidiLimits.Clamp(_root + n);
                     var at = (long)(_grid + ((_k & 1) == 1 ? _swing / 100.0 * sl * 0.5 : 0));
                     var vel = _vel.Length > 0 && _vel[inPat % _vel.Length] > 0 ? _vel[inPat % _vel.Length] : _velDefault;
                     var gate = _gate.Length > 0 && _gate[inPat % _gate.Length] > 0 ? _gate[inPat % _gate.Length] : _gateDefault;

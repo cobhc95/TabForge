@@ -44,7 +44,7 @@ public sealed class RadioCard : Border
         DialogMetrics.StyleChoiceCard(this);
         _radio = new RadioButton { Name = name + "Radio", Content = title, GroupName = group.Name, IsChecked = selected, FontWeight = FontWeight.SemiBold, IsHitTestVisible = false, Focusable = false };
         var text = new TextBlock { Name = name + "Hint", Text = hint, TextWrapping = TextWrapping.Wrap, FontSize = DialogMetrics.MediaSmallText }.WithMargin(DialogMetrics.SectionAudioHintIndent);
-        text[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        text.UseMutedText();
         var stack = new StackPanel { Children = { _radio, text } };
         if (preview is not null) stack.Children.Add(preview.WithMargin(DialogMetrics.SectionAudioHintIndent));
         Child = stack;

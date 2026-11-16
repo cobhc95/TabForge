@@ -173,7 +173,7 @@ public sealed partial class ScoreEditCommands
     /// <summary>Set the dynamic on selected notes, or the pending entry dynamic at an empty cursor.</summary>
     public void SetDynamicVelocity(int velocity)
     {
-        _c.Tools.Velocity = Math.Clamp(velocity, 1, MidiLimits.Max);
+        _c.Tools.Velocity = MidiLimits.ClampVelocity(velocity);
         var notes = _c.HasSelection
             ? ToolCells(createVoice: true).SelectMany(cell => cell.Notes).ToList()
             : CurrentCell()?.Notes.Where(note => note.StringIndex == _c.SelectedString).ToList() ?? new List<TabNote>();

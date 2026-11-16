@@ -44,6 +44,10 @@ public sealed partial class InstrumentPanelView : Control
     /// the legend), so there is no width or aspect cap; the string gap cap of 44 only sets how far the pane's height grows.
     /// Only this panel uses them.</summary>
     internal static readonly FretboardBoardLimits BoardLimits = new(double.PositiveInfinity, 44, double.PositiveInfinity, ClearsLegend: true, RealProportions: true);
+    /// <summary>Width kept clear to the right of the board while the legend is folded into its round restore button (gap + button + margin).</summary>
+    private const double MinimisedLegendReserve = (LegendGap - LegendCardPad) + LegendRestoreSize + 8;
+    internal static readonly FretboardBoardLimits MinimisedBoardLimits = new(double.PositiveInfinity, 44, double.PositiveInfinity, ClearsLegend: true, RealProportions: true, LegendReserve: MinimisedLegendReserve);
+    internal FretboardBoardLimits ActiveLimits => LegendMinimised ? MinimisedBoardLimits : BoardLimits;
     internal const string Font = ChromeMetrics.UiFontFamily;
     /// <summary>The placeholder texts and size: no track selected, and an audio track selected.</summary>
     private const string NoTrackPlaceholderText = "Select a track to see the instrument";
@@ -208,15 +212,15 @@ public sealed partial class InstrumentPanelView : Control
     {
         var s = FretboardScale();
         var pane = new UiRect(0, 0, (Bounds.Width - CloseButtonReserve) / s, Bounds.Height / s);
-        return FretboardGeometryRules.ContentArea(FretInput, pane, _look.FretboardPosition, BoardLimits);
+        return FretboardGeometryRules.ContentArea(FretInput, pane, _look.FretboardPosition, ActiveLimits);
     }
 
     /// <summary>The board's layout in the panel's virtual space: the Core rules place it (Left, Centre or Right) beside the legend column.</summary>
     internal FretboardGeometryRules.Layout FretboardLayout() =>
-        FretboardGeometryRules.Compute(FretInput, FretboardArea(), _look.FretboardPosition, horizontalOffset: _dragOffset / FretboardScale(), limits: BoardLimits);
+        FretboardGeometryRules.Compute(FretInput, FretboardArea(), _look.FretboardPosition, horizontalOffset: _dragOffset / FretboardScale(), limits: ActiveLimits);
 
     /// <summary>The pane height at which the board of this track stops growing at <paramref name="paneWidth"/> (see <see cref="FretboardSizeRules.WidthLimitedPaneHeight"/>).</summary>
-    internal double WidthLimitedPaneHeight(double paneWidth) => FretboardSizeRules.WidthLimitedPaneHeight(FretInput, paneWidth, CloseButtonReserve, BoardLimits);
+    internal double WidthLimitedPaneHeight(double paneWidth) => FretboardSizeRules.WidthLimitedPaneHeight(FretInput, paneWidth, CloseButtonReserve, ActiveLimits);
 
     /// <summary>The white keys of the keyboard size this look shows.</summary>
     internal int WhiteKeyCount => KeyboardPaneSizeRules.WhiteKeysFor(_look.KeyboardKeys);
@@ -311,7 +315,7 @@ public sealed partial class InstrumentPanelView : Control
         {
             case InstrumentPanelKind.Fretboard:
                 var scale = FretboardScale();
-                if (!FretboardGeometryRules.HitTest(FretInput, FretboardArea(), new UiPoint(point.X / scale, point.Y / scale), out var s, out var fret, _look.FretboardPosition, limits: BoardLimits)) return null;
+                if (!FretboardGeometryRules.HitTest(FretInput, FretboardArea(), new UiPoint(point.X / scale, point.Y / scale), out var s, out var fret, _look.FretboardPosition, limits: ActiveLimits)) return null;
                 return new InstrumentNotePick(_track?.PitchOf(s, fret) ?? Tuning[s] + fret, s, fret);
             case InstrumentPanelKind.Keyboard:
                 var (lowest, highest) = KeyRange();

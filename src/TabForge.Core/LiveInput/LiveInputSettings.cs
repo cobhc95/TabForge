@@ -4,7 +4,7 @@ using TabForge.Plugins;
 namespace TabForge.LiveInput;
 
 // Owns: what the live input feature keeps in the app settings: the last live FX chain, the input, its options, its level, gain and mute, and the tuner's reference and window.
-// Does not own: loading and saving (AppSettingsStore), the running chain (LiveInputArm), the settings bounds call (LiveInputFeatureModule).
+// Does not own: loading and saving (AppSettingsStore), the running chain (LiveInputArm), the settings bounds (LiveInputFeatureSettings).
 // Tests: LiveInputStripTests.
 /// <summary>App-wide live input settings. Never part of a song: not saved with it, not exported, not rendered.</summary>
 public sealed class LiveInputSettings
@@ -42,8 +42,8 @@ public sealed class LiveInputSettings
         Chain ??= new RigPreset();
         if (Input != "" && !AudioInputs.TryParse(Input, out _, out _)) Input = AudioInputs.Input1;   // well-formed is enough: the device's list may not be known yet
         if (!RestoreChoices.Contains(Restore)) Restore = RestoreAlways;
-        Volume = Math.Clamp(Volume, 0, MidiLimits.Max);
-        Pan = Math.Clamp(Pan, 0, MidiLimits.Max);
+        Volume = MidiLimits.Clamp(Volume);
+        Pan = MidiLimits.Clamp(Pan);
         GainDb = LiveStripRules.ClampGainDb(GainDb);
         TunerReferenceHz = Math.Clamp(TunerReferenceHz, LiveStripRules.MinReferenceHz, LiveStripRules.MaxReferenceHz);
         if (!LiveStripRules.WindowChoicesMs.Contains(TunerWindowMs)) TunerWindowMs = LiveStripRules.DefaultWindowMs;

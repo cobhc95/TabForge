@@ -92,9 +92,9 @@ public static partial class TrackSetup
                         var delta = PartialCapoRules.EffectiveCapo(capo, next, note.StringIndex)
                             - PartialCapoRules.EffectiveCapo(oldCapo, track.PartialCapos, note.StringIndex);
                         if (delta == 0) continue;
-                        note.MidiValue = Math.Clamp(note.MidiValue + delta, 0, MidiLimits.Max);
-                        if (note.SlideTargetMidi > 0) note.SlideTargetMidi = Math.Clamp(note.SlideTargetMidi + delta, 0, MidiLimits.Max);
-                        if (note.TrillTargetMidi > 0) note.TrillTargetMidi = Math.Clamp(note.TrillTargetMidi + delta, 0, MidiLimits.Max);
+                        note.MidiValue = MidiLimits.Clamp(note.MidiValue + delta);
+                        if (note.SlideTargetMidi > 0) note.SlideTargetMidi = MidiLimits.Clamp(note.SlideTargetMidi + delta);
+                        if (note.TrillTargetMidi > 0) note.TrillTargetMidi = MidiLimits.Clamp(note.TrillTargetMidi + delta);
                     }
         }
         track.Capo = capo;
@@ -117,9 +117,9 @@ public static partial class TrackSetup
                     if (keepFrets)
                     {
                         var delta = note.StringIndex < old.Count ? tunings[note.StringIndex] - old[note.StringIndex] : 0;
-                        note.MidiValue = Math.Clamp(note.MidiValue + delta, 0, MidiLimits.Max);
-                        if (note.SlideTargetMidi > 0) note.SlideTargetMidi = Math.Clamp(note.SlideTargetMidi + delta, 0, MidiLimits.Max);
-                        if (note.TrillTargetMidi > 0) note.TrillTargetMidi = Math.Clamp(note.TrillTargetMidi + delta, 0, MidiLimits.Max);
+                        note.MidiValue = MidiLimits.Clamp(note.MidiValue + delta);
+                        if (note.SlideTargetMidi > 0) note.SlideTargetMidi = MidiLimits.Clamp(note.SlideTargetMidi + delta);
+                        if (note.TrillTargetMidi > 0) note.TrillTargetMidi = MidiLimits.Clamp(note.TrillTargetMidi + delta);
                     }
                     else
                     {

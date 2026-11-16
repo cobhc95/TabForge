@@ -444,7 +444,7 @@ public static class NoteMapper
     {
         report.Kind = NoteMapKind.RhythmToDrumSound;
         var track = DrumTrack(target);
-        var midi = Math.Clamp(options.DrumSound, 0, MidiLimits.Max);
+        var midi = MidiLimits.Clamp(options.DrumSound);
         var line = DrumLine(track, target, midi);
         var result = new List<TabCell>(beats.Count);
         foreach (var beat in beats)

@@ -18,7 +18,7 @@ public static class SnapSettingsPresenter
     public const string DistanceLabel = "Snap distance";
     public const string DistanceUnit = "pixels";
     public const string DistanceTip = "How near (in pixels) an edge must be to snap to a clip or the playhead";
-    public const string CloseButton = "Close";
+    public const string CloseButton = CommonText.Close;
 
     /// <summary>One switch: its label, tip, left indent and the setting it reads and writes.</summary>
     public sealed record Switch(string Label, string Tip, double Indent, Func<SnapSettings, bool> Get, Action<SnapSettings, bool> Set);

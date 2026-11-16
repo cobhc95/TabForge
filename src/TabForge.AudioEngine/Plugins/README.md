@@ -14,7 +14,7 @@ In-process plug-in hosting: the instance interface, the one loader that builds a
 | `Vst3ClassInfo.cs` | What a loaded plug-in reports about itself (`LoadedPluginInfo`): VST2 id, pin counts and names from the instance; VST3 class id, name and vendor from the module's class factory |
 | `Vst3Plugin.cs` | Hosts a VST3 plug-in through `tfvst3.dll`, a small C interface over the VST3 SDK |
 | `Vst3Plugin.RunLoop.cs` | Linux: the VST3 host run loop entry point of libtfvst3.so (the open editors' timers and file descriptors), run by the X11 editor host |
-| `Vst3Plugin.Parameters.cs` / `.Parameters.Windows.cs` | The parameter list and live changes of a VST3 plug-in (tfv3_param_* of the shim) for the generic controls panel |
+| `Vst3Plugin.Parameters.cs` | The parameter list and live changes of a VST3 plug-in (tfv3_param_* of the shim) for the generic controls panel |
 
 ## Pathway
 Plug-in trust is decided at scan or approval in `Source/src/TabForge.Core/Plugins/`, not at load.

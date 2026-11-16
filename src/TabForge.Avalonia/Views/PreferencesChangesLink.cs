@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TabForge.Avalonia.Platform;
 using System.Linq;
 using Avalonia;
 using Avalonia.Automation;
@@ -101,7 +102,7 @@ public sealed class PreferencesChangesLink
         TextLinkButton.Apply(name);
         name.Click += (_, _) => { _popup.IsOpen = false; _host.JumpToChange(change.Key); };
         var detail = new TextBlock { Text = $": {change.OldText} → {change.NewText}", VerticalAlignment = VerticalAlignment.Center };
-        detail[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        detail.UseMutedText();
         return new StackPanel { Orientation = Orientation.Horizontal, Spacing = LineGap, Children = { undo, name, detail } };
     }
 }

@@ -59,7 +59,7 @@ public sealed class SavePromptWindow : Window
         actions.Children.Add(ActionButton("YesButton", "Yes", prompt.YesToolTip, PromptButton.Yes, isDefault: !defaultIsNo));
         actions.Children.Add(ActionButton("NoButton", "No", prompt.NoToolTip, PromptButton.No, isDefault: defaultIsNo));
         // Where "No" already means "go back", a Cancel button would just duplicate it.
-        if (showCancel) actions.Children.Add(ActionButton("CancelButton", "Cancel", "Return without closing", PromptButton.Cancel));
+        if (showCancel) actions.Children.Add(ActionButton("CancelButton", CommonText.Cancel, "Return without closing", PromptButton.Cancel));
         footer.Children.Add(actions);
 
         var body = new DockPanel { Margin = new Thickness(18), LastChildFill = true };

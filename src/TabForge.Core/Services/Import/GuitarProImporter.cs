@@ -366,7 +366,7 @@ public static class GuitarProImporter
             "Artificial" or "Pinch" => openPitch + fret + interval,
             _ => openPitch + fret + ArtificialInterval(node)
         };
-        return Math.Clamp(midi, 0, MidiLimits.Max);
+        return MidiLimits.Clamp(midi);
     }
 
     /// <summary>Artificial/pinch/tapped harmonics sound an octave above the fretted note unless the node is an explicit fifth (7) or double octave (5).</summary>

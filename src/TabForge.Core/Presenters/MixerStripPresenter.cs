@@ -35,13 +35,13 @@ public static class MixerStripPresenter
     public const int VolumeDefault = 100, PanDefault = 0, MasterVolumeDefault = 100, GroupVolumeDefault = 100, ReverbDefault = 24, ChorusDefault = 0;
 
     /// <summary>The pan slider value (-64 left .. +63 right) for a model pan of 0..127.</summary>
-    public static int PanSlider(int pan) => Math.Clamp(pan, 0, MidiLimits.Max) - 64;
+    public static int PanSlider(int pan) => MidiLimits.Clamp(pan) - 64;
 
     /// <summary>The model pan (0..127) for a pan slider value.</summary>
-    public static int PanFromSlider(int slider) => Math.Clamp(64 + slider, 0, MidiLimits.Max);
+    public static int PanFromSlider(int slider) => MidiLimits.Clamp(64 + slider);
 
     /// <summary>A track volume kept to the model range 0..127.</summary>
-    public static int ClampVolume(int volume) => Math.Clamp(volume, 0, MidiLimits.Max);
+    public static int ClampVolume(int volume) => MidiLimits.Clamp(volume);
 
     /// <summary>Units one mouse-wheel notch moves a fader.</summary>
     public const int WheelStep = 1, WheelStepWithCtrl = 8;

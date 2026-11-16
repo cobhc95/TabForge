@@ -36,7 +36,7 @@ public static class FxPresetLoadPresenter
     public const string ReplaceTitle = "Replace the existing chain";
     public const string AddTitle = "Add to the existing chain";
     public const string RememberText = "Remember my choice (changeable in Settings)";
-    public const string CancelText = "Cancel", LoadText = "Load";
+    public const string CancelText = CommonText.Cancel, LoadText = "Load";
     public const string TwoInstrumentsLine = "Two instruments will play together.";
 
     /// <summary>The window title and heading: Load "Warm".</summary>

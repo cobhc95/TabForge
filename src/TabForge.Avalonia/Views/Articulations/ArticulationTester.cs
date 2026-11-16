@@ -28,7 +28,7 @@ internal static class ArticulationTester
             case ArticulationAction.Cc:
                 if (!host.SendInstrumentMidi(track, 0xB0, rule.A, rule.B)) return NotRouted;
                 break;
-            case ArticulationAction.Velocity: velocity = Math.Clamp(rule.A, 1, MidiLimits.Max); break;
+            case ArticulationAction.Velocity: velocity = MidiLimits.ClampVelocity(rule.A); break;
             case ArticulationAction.Replace: pitch = rule.A; break;
         }
         try

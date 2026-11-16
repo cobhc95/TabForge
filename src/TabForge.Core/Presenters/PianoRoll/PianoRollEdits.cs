@@ -14,9 +14,9 @@ public static partial class PianoRollEdits
     /// <summary>The shortest note an edit leaves (a 128th note, in beats).</summary>
     public const double MinLength = 1.0 / 32;
 
-    public static int ClampPitch(int pitch) => Math.Clamp(pitch, 0, MidiLimits.Max);
+    public static int ClampPitch(int pitch) => MidiLimits.Clamp(pitch);
 
-    public static int ClampVelocity(int velocity) => Math.Clamp(velocity, 1, MidiLimits.Max);
+    public static int ClampVelocity(int velocity) => MidiLimits.ClampVelocity(velocity);
 
     private static List<int> Valid(IReadOnlyList<PianoRollNote> notes, IReadOnlyCollection<int> selected) =>
         selected.Where(i => i >= 0 && i < notes.Count).Distinct().ToList();

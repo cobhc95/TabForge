@@ -114,6 +114,10 @@ public static class ChromeMetrics
     public const double LeftStripWindowWidth = 720, LeftStripWindowHeight = 480, LeftStripListWidth = 220, LeftStripGap = 6, LeftStripColumnGap = 12, LeftStripGlyphSize = 16;
     /// <summary>The Focus track settings window: its width, the gap between its sections and inside a row, and the roundness of its chips and bars.</summary>
     public const double FocusWindowWidth = 460, FocusGap = 12, FocusTightGap = 6, FocusCorner = 6;
+    /// <summary>The Focus track window's parts: the header glyph and its badge, the value badge's least width, a mode segment's least height,
+    /// the slider's height, track thickness and thumb edge, and the mix preview bar's height, in DIPs.</summary>
+    public const double FocusIconGlyph = 18, FocusIconBadge = 34, FocusValueMinWidth = 68, FocusSegmentMinHeight = 26,
+        FocusSliderHeight = 24, FocusSliderTrack = 6, FocusSliderThumb = 16, FocusMixBarHeight = 32;
 
     /// <summary>The Help window: default and minimum size, the chapter list's width, the reading column's widest line, and the search results' most rows.</summary>
     public const double HelpWindowWidth = 960, HelpWindowHeight = 680, HelpWindowMinWidth = 600, HelpWindowMinHeight = 420, HelpNavWidth = 248, HelpReadingWidth = 760;

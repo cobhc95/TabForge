@@ -15,8 +15,8 @@ public static class DrumSampleLanePromptPresenter
     public const string MidiHint = "A MIDI clip on the track's take lanes: edit note by note in the piano roll, on the GM drum channel.";
     public const string RememberText = "Remember my choice";
     public const string RememberHint = "(change in Settings › Editing)";
-    public const string CancelText = "Cancel";
-    public const string OkText = "OK";
+    public const string CancelText = CommonText.Cancel;
+    public const string OkText = CommonText.Ok;
     public const string CancelToolTip = "Do not add the sample";
     public const string OkToolTip = "Add the sample to the chosen lane";
 

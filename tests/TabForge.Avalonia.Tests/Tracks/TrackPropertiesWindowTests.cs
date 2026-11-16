@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Views.Dialogs;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -65,8 +66,8 @@ public class TrackPropertiesWindowTests
         }, tools);
         var ok = Named<Button>(window, "OkButton");
         var cancel = Named<Button>(window, "CancelButton");
-        Assert.Equal((true, false, 92d), (ok.IsDefault, ok.IsCancel, ok.Width));
-        Assert.Equal((false, true, 92d), (cancel.IsDefault, cancel.IsCancel, cancel.Width));
+        Assert.Equal((true, false, DialogMetrics.DialogButtonMinWidth), (ok.IsDefault, ok.IsCancel, ok.MinWidth));
+        Assert.Equal((false, true, DialogMetrics.DialogButtonMinWidth), (cancel.IsDefault, cancel.IsCancel, cancel.MinWidth));
         Assert.Equal(track.StringTunings.Count - TrackPropertiesPresenter.FewestStrings, Named<ComboBox>(window, "StringCountBox").SelectedIndex);
         window.Close();
     }

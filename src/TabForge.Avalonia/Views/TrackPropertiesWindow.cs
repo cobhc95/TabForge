@@ -87,8 +87,7 @@ public sealed partial class TrackPropertiesWindow : Window
         MinWidth = 640;
         ShowInTaskbar = false;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        this[!BackgroundProperty] = new DynamicResourceExtension("WindowBackground");
-        this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
+        this.UseWindowColours();
         FontSize = DialogMetrics.FontSize;
 
         _name = Box("NameBox", "Track name", track.Name, double.NaN);
@@ -170,8 +169,8 @@ public sealed partial class TrackPropertiesWindow : Window
 
     private DockPanel Footer()
     {
-        var ok = new Button { Name = "OkButton", Content = "OK", Width = 92, IsDefault = true, Margin = new Thickness(0, 0, 8, 0), HorizontalContentAlignment = HorizontalAlignment.Center };
-        var cancel = new Button { Name = "CancelButton", Content = "Cancel", Width = 92, IsCancel = true, HorizontalContentAlignment = HorizontalAlignment.Center };
+        var ok = DialogButtons.Ok().WithMargin(DialogMetrics.FooterButtonGap);
+        var cancel = DialogButtons.Cancel();
         ok.Click += (_, _) => Platform.UiTasks.Forget(OnOk(), "Applying the track properties", text => _error.Text = text);
         cancel.Click += (_, _) => Close();
         var footer = new DockPanel { Margin = new Thickness(12, 6, 12, 8), LastChildFill = true };
@@ -411,7 +410,7 @@ public sealed partial class TrackPropertiesWindow : Window
     private static TextBlock Hint(string text)
     {
         var hint = new TextBlock { Text = text, FontSize = ChromeMetrics.TextSmall, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) };
-        hint[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        hint.UseMutedText();
         return hint;
     }
 

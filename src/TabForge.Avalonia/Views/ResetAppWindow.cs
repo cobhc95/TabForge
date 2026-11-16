@@ -61,7 +61,7 @@ internal sealed class ResetAppWindow : Window
         _stepOne.Children.Add(new ScrollViewer { MaxHeight = DialogMetrics.ResetAppListMaxHeight, Content = ItemList() });
         _stepOne.Children.Add(ToolWindowParts.Row(_selectAll, _selectNone));
         _stepOne.Children.Add(_status);
-        _cancel = PromptChrome.Action("ResetAppCancel", "Cancel", primary: false, isCancel: true);
+        _cancel = PromptChrome.Action("ResetAppCancel", CommonText.Cancel, primary: false, isCancel: true);
         _cancel.Click += (_, _) => Cancel();
         KeyDown += (_, e) => { if (e.Key == Key.Escape) { e.Handled = true; Cancel(); } };
         _stepOne.Children.Add(PromptChrome.Footer(backup, backupHint, _cancel, _wipe));

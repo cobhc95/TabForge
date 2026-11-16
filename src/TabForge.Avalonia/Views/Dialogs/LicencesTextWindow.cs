@@ -20,7 +20,8 @@ internal sealed class LicencesTextWindow : Window
         DialogMetrics.CentreOnOwner(this);
         this[!BackgroundProperty] = new DynamicResourceExtension("WindowBackground");
         var box = DialogMetrics.Inset(new TextBox { Name = "LicencesText", Text = text, IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, FontFamily = TabForge.Avalonia.Platform.AvaloniaFonts.Family("Consolas, Menlo, monospace") });
-        var close = DialogMetrics.Inset(new Button { Content = "Close", IsDefault = true, IsCancel = true, HorizontalAlignment = HorizontalAlignment.Right });
+        var close = DialogMetrics.Inset(DialogButtons.Close());
+        close.HorizontalAlignment = HorizontalAlignment.Right;
         close.Click += (_, _) => Close();
         var dock = new DockPanel { LastChildFill = true };
         DockPanel.SetDock(close, Dock.Bottom);

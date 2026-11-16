@@ -6,7 +6,7 @@ The full licence texts of the bundled components are in the `licenses` folder ne
 tree: `Source/src/TabForge.Avalonia/licenses/`). Every text there is taken from the package or runtime it belongs to; where a
 NuGet package states MIT only in its metadata (Avalonia, Tmds.DBus.Protocol, MicroCom.Runtime), the standard MIT text is
 used with that package's own copyright line.
-Both the Windows package and the Linux package also carry `LICENSE` (TabForge's MIT text), this `THIRD_PARTY.md` and
+Both the Windows package and the Linux package also carry `LICENSE` (TabForge's licence, GPL-3.0-or-later), this `THIRD_PARTY.md` and
 `SBOM.md` beside the program; the Linux package additionally carries the Wine and SoundFont notices under `ThirdParty/`
 and `SoundFonts/`.
 
@@ -60,7 +60,7 @@ shipped as the assembly `TabForge.AlphaTab.dll` (NuGet package `TabForge.AlphaTa
   for a charge no more than the cost of physically performing the distribution. Ask through
   https://github.com/cobhc95/TabForge/issues.
 - An earlier TabForge file that replayed alphaTab's reader through private reflection (`Gp3To5LongSongReader.cs`) is gone; no
-  other alphaTab-derived source file remains in TabForge. The rest of TabForge stays under its MIT licence.
+  other alphaTab-derived source file remains in TabForge. The rest of TabForge is under its own licence, GPL-3.0-or-later (MPL-2.0 permits this combination; the alphaTab files keep MPL-2.0).
 - Copyright (c) 2025, Daniel Kuschny and Contributors.
 - Project: https://www.alphatab.net/
 - Source code form (tag `v1.8.4`, commit `022a45c8e42370f9e12e68949d11eada370da83d`):
@@ -234,7 +234,7 @@ The **standard release packages do not contain FFmpeg**. The Linux packager can 
 written offer below applies.
 
 - Project: https://ffmpeg.org/ . Licence: LGPL-2.1-or-later, or GPL-2.0-or-later for builds with libx264; which one applies is a property of the
-  ffmpeg you install, not of TabForge. TabForge itself stays MIT because it only runs the program.
+  ffmpeg you install, not of TabForge. TabForge's own licence (GPL-3.0-or-later) is unaffected because it only runs the program.
 - Official sources and builds: https://ffmpeg.org/download.html (for example `brew install ffmpeg`, `apt install ffmpeg`, or the Windows builds linked there).
 - Written offer (only when a package includes the BtbN build): for at least three years from the date of that release we will give any third party,
   on request, a complete machine-readable copy of the corresponding FFmpeg source, for a charge no more than the cost of physically performing the
@@ -259,7 +259,7 @@ TabForge is a self-contained .NET 10 application: the .NET runtime (10.0.14) is 
 TabForge hosts VST 2 plug-ins through its own, independent C# implementation of the plug-in binary interface: a
 plug-in is a 64-bit DLL that exports `VSTPluginMain`, and TabForge talks to it through the plain C structures and
 dispatcher opcodes that such a DLL expects. The code is in `Source/src/TabForge.AudioEngine/Plugins/Vst2Plugin.cs` (and, for
-the headless tests, `Vst2TestEffect.cs`) and is covered by TabForge's own MIT licence.
+the headless tests, `Vst2TestEffect.cs`) and is covered by TabForge's own licence (GPL-3.0-or-later).
 
 - TabForge contains no Steinberg VST 2 SDK headers or code (no `aeffect.h`, `aeffectx.h` or other file from the VST 2
   SDK, and none of their text), and none are distributed with TabForge. To work with existing plug-ins, the code has
@@ -271,7 +271,7 @@ the headless tests, `Vst2TestEffect.cs`) and is covered by TabForge's own MIT li
 ## 32-bit VST2 helper (`tfvst32.exe`, TabForge's own code)
 
 32-bit VST2 plug-ins are hosted by `tfvst32.exe`, a small native helper (about 210 KB) built from its original C++ source
-with MSVC and a static runtime. It is original TabForge code under TabForge's MIT licence: it uses only the Windows SDK
+with MSVC and a static runtime. It is original TabForge code under TabForge's licence (GPL-3.0-or-later): it uses only the Windows SDK
 and the C++ standard library, links no third-party library, and contains no Steinberg VST2 SDK header or code (the minimal
 `AEffect`/opcode declarations are hand-written from the public binary interface, as in the C# VST2 host above).
 Its build record (compiler, Windows SDK, source hashes and output SHA-256) is kept with the release tooling and is not part
@@ -293,7 +293,7 @@ The checked-in `Source/src/TabForge.AudioEngine/native/tfvst3.dll` is a build of
 - License: MIT, Copyright (c) 2026 Steinberg Media Technologies GmbH (the `LICENSE.txt` of the SDK and of each of
   those three components). Since SDK version 3.8.0 the SDK is MIT only; the earlier GPLv3 and Steinberg
   proprietary licences are no longer offered, and this project uses no earlier version. MIT is compatible with
-  TabForge's own MIT licence. Its terms require the copyright notice and licence text to accompany copies of the
+  TabForge's own licence (GPL-3.0-or-later). Its terms require the copyright notice and licence text to accompany copies of the
   Software, including a redistributed `tfvst3.dll`; the notice is reproduced here and in
   [licenses/MIT_Steinberg_VST3_SDK.txt](../src/TabForge.Avalonia/licenses/MIT_Steinberg_VST3_SDK.txt):
 - VST is a registered trademark of Steinberg Media Technologies GmbH. ASIO is a trademark of Steinberg Media
@@ -359,7 +359,7 @@ as C# structs; their layout is checked against the official headers by a unit te
 and no CLAP code is linked or bundled; a `.clap` file is loaded from the user's own plug-in folders only.
 
 - Source: https://github.com/free-audio/clap (headers read at commit `a47f6badb49d948fd009998f28309cdab78979c9`, CLAP 1.2.10)
-- License: MIT, Copyright (c) 2021 Alexandre BIQUE. MIT is compatible with TabForge's own MIT licence; the notice is kept with the licence texts:
+- License: MIT, Copyright (c) 2021 Alexandre BIQUE. MIT is compatible with TabForge's own licence (GPL-3.0-or-later); the notice is kept with the licence texts:
   [licenses/MIT_CLAP.txt](../src/TabForge.Avalonia/licenses/MIT_CLAP.txt)
 - TabForge is not affiliated with the CLAP project or its maintainers.
 
@@ -372,6 +372,6 @@ transcriptions are included.
 ## Icons
 
 All icon sets (`Source/src/TabForge.Avalonia/Assets/Icons/`: Transport, Tools, Instruments) and the application icon were designed
-for TabForge. They are part of TabForge and covered by its MIT licence (see `LICENSE`). The dynamics, trill and digit
+for TabForge. They are part of TabForge and covered by its licence, GPL-3.0-or-later (see `LICENSE`). The dynamics, trill and digit
 glyphs of some tool icons are outlines taken from the Bravura font (SIL OFL 1.1, see above). Details:
 `Source/src/TabForge.Avalonia/Assets/ASSETS.md`.

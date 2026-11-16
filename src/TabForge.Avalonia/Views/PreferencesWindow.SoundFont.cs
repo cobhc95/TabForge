@@ -83,7 +83,7 @@ public sealed partial class PreferencesWindow
             again = BankButton(DownLabel(bank), () => _ = RunBankDownloadAsync(bank, downloaded, again));
             buttons.Children.Add(again);
         }
-        if (state.ShowDelete) buttons.Children.Add(BankButton("Delete", () => _ = DeleteBankAsync(bank)));
+        if (state.ShowDelete) buttons.Children.Add(BankButton(CommonText.Delete, () => _ = DeleteBankAsync(bank)));
         if (state.ShowUse) buttons.Children.Add(BankButton("Use", () => UseBank(bank.Name)));
         if (state.ShowDownload)
         {

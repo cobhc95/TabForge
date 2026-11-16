@@ -69,7 +69,7 @@ public static class VideoExportPresenter
     /// <summary>Export button text.</summary>
     public const string ExportButton = "Export";
     /// <summary>Close button text.</summary>
-    public const string CloseButton = "Close";
+    public const string CloseButton = CommonText.Close;
     /// <summary>Cancel-export button text.</summary>
     public const string CancelExportButton = "Cancel export";
     /// <summary>Status text while the audio renders.</summary>

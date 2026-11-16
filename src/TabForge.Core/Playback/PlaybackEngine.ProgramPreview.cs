@@ -17,7 +17,7 @@ public sealed partial class PlaybackEngine
     public void BeginProgramPreview(SongProject project, int deviceId, int channel, int program)
     {
         var ch = channel & 0x0F;
-        Volatile.Write(ref _programPreview[ch], Math.Clamp(program, 0, MidiLimits.Max));
+        Volatile.Write(ref _programPreview[ch], MidiLimits.Clamp(program));
         PushChannelProgram(project, deviceId, ch);
     }
 

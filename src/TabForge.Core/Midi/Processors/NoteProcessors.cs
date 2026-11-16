@@ -91,7 +91,7 @@ public sealed class TransposeProcessor : NoteTransform
     protected override bool MapNote(ref int ch, ref int note, ref int vel)
     {
         if (note < _low || note > _high) return true;
-        note = (int)Math.Clamp(Math.Round(note * _mult + _semis), 0, MidiLimits.Max);
+        note = (int)MidiLimits.Clamp(Math.Round(note * _mult + _semis));
         return true;
     }
 }

@@ -65,7 +65,7 @@ public abstract class BarDialogWindow<TAnswer> : Window where TAnswer : class
     {
         var ok = PromptChrome.Action("OkButton", OkText, primary: true);
         ok.Click += (_, _) => { if (CanAccept()) Close(Answer()); };
-        var cancel = PromptChrome.Action("CancelButton", "Cancel", primary: false, isCancel: true);
+        var cancel = PromptChrome.Action("CancelButton", CommonText.Cancel, primary: false, isCancel: true);
         cancel.Click += (_, _) => Close(null);
         var panel = new StackPanel { Margin = DialogMetrics.PromptInset, Spacing = 8 };
         foreach (var control in body) panel.Children.Add(control);
@@ -84,7 +84,7 @@ public sealed class TimeSignatureWindow : BarDialogWindow<TimeSignatureAnswer>
     private readonly CheckBox _onlyThisBar;
 
     /// <param name="selectedBars">"bars 3-6" when a range is selected (the change then reaches exactly those bars), else null.</param>
-    public TimeSignatureWindow(int numerator, int denominator, string? selectedBars) : base("Time signature", 320, "OK")
+    public TimeSignatureWindow(int numerator, int denominator, string? selectedBars) : base("Time signature", 320, CommonText.Ok)
     {
         _beats = new TextBox { Name = "Beats", Text = numerator.ToString(), Width = 56, VerticalAlignment = VerticalAlignment.Center };
         _beatValue = new ComboBox { Name = "BeatValue", Width = 76, ItemsSource = SignatureChoices.Denominators.Select(value => value.ToString()).ToList(), VerticalAlignment = VerticalAlignment.Center };
@@ -111,7 +111,7 @@ public sealed class KeySignatureWindow : BarDialogWindow<KeySignatureAnswer>
     private readonly CheckBox _minor;
     private readonly CheckBox _onlyThisBar;
 
-    public KeySignatureWindow(int signature, bool minor, string? selectedBars) : base("Key signature", 340, "OK")
+    public KeySignatureWindow(int signature, bool minor, string? selectedBars) : base("Key signature", 340, CommonText.Ok)
     {
         _key = new ComboBox { Name = "Key", HorizontalAlignment = HorizontalAlignment.Stretch, ItemsSource = SignatureChoices.KeyNames.ToList(), SelectedIndex = StandardDialogsPresenter.KeyIndex(signature) };
         _minor = new CheckBox { Name = "Minor", Content = "Minor mode", IsChecked = minor };
@@ -132,7 +132,7 @@ public sealed class DirectionsWindow : BarDialogWindow<DirectionsAnswer>
     private readonly TextBox _ending;
     private readonly string[] _existing;
 
-    public DirectionsWindow(string current, int ending) : base("Score directions", 370, "Apply")
+    public DirectionsWindow(string current, int ending) : base("Score directions", 370, CommonText.Apply)
     {
         _existing = StandardDialogsPresenter.SplitDirections(current);
         var body = new List<Control> { new TextBlock { Text = "Musical navigation marks and jumps", FontWeight = FontWeight.SemiBold } };

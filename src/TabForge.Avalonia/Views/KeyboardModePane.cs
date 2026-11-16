@@ -29,7 +29,7 @@ public sealed class KeyboardModePane : DockPanel
         _watch.Marked = _ => ShowDocumentTracks();
         _watch.ProjectChanged = (_, _) => ShowDocumentTracks();
         var heading = new TextBlock { Text = Heading, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(11, 0, 0, 0) };
-        heading[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        heading.UseMutedText();
         var pop = new Button { Content = PopOutText, Margin = new Thickness(0, 0, 4, 0) };
         pop.Click += (_, _) => popOut();
         var shut = new Button { Content = CloseText, Margin = new Thickness(0, 0, 4, 0) };

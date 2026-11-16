@@ -40,7 +40,7 @@ internal static class GuitarProTrackConverter
         var isDrums = isPercussion;
         // The file's own MIDI program is authoritative (0 = Acoustic Grand Piano is a real program).
         // A few strings does not make a bass: mandolin, violin and ukulele have 4.
-        var program = Math.Clamp(GetInt(Get(sourceTrack, "PlaybackInfo"), "Program", 0), 0, MidiLimits.Max);
+        var program = MidiLimits.Clamp(GetInt(Get(sourceTrack, "PlaybackInfo"), "Program", 0));
         // A piano, synth or pad exported with the pitch-only octave ladder is not fretted (it would come back as a 7-string guitar).
         var isBass = !isDrums && (lowerName.Contains("bass") || program is >= 32 and <= 39);
         var fretted = !isDrums && tuning.Count > 0 && (isBass || !TrackInstrumentRules.IsPitchOnlyTuning(tuning));
@@ -56,9 +56,11 @@ internal static class GuitarProTrackConverter
 
         LinkTieOrigins(result);
 
-        // The song's very first beat carries the track's initial mixer values, not a Mix Table change.
+        // A Mix Table on the song's very first beat sets the track's starting sound: Guitar Pro plays it from the first note,
+        // overriding the track header (no_more_lies.gp3 starts on clean guitar 26/27 while the header says distortion 30).
+        // Its values become the track's own settings; for Guitar Pro 3-5 the mix point also stays, so bar 1 shows its Mix Table marker.
         if (result.Measures.FirstOrDefault()?.Cells.FirstOrDefault(c => c.Notes.Count > 0 || c.IsRest || c.Mix is not null) is { } opening)
-            opening.Mix = null;
+            FoldOpeningMix(result, opening, isDrums, kind, tuning.Count, keepMixPoint: budget.Context.Gp3To5);
 
         if (fretted && result.StringTunings.Count > 0) InferTuningFromNotes(result);
 
@@ -87,6 +89,31 @@ internal static class GuitarProTrackConverter
         return staves.Where(s => !IsTab(s) && !GetBool(s, "ShowTablature", false) && ReadStaffTuning(s).Count < 4).ToList();
     }
 
+    /// <summary>Moves the first beat's mix values onto the track (program, volume, pan, chorus, reverb) and drops them from the beat.</summary>
+    internal static void FoldOpeningMix(TrackModel track, TabCell opening, bool isDrums, TrackKind kind, int stringCount, bool keepMixPoint = false)
+    {
+        if (opening.Mix is not { } mix) return;
+        // A value equal to the track's own header changes nothing: it is dropped, so the Mix Table ticks (and the timeline marks) only real changes.
+        if (mix.Program is { } program && (isDrums || MidiLimits.Clamp(program) == track.MidiProgram)) mix.Program = null;
+        if (mix.Volume is { } same && GuitarProChannelBlock.ToMidi(same) == track.Volume) mix.Volume = null;
+        if (mix.Pan is { } centre && GpMixerScale.BalanceStepToPan(centre + 8) == track.Pan) mix.Pan = null;
+        if (mix.Chorus is { } c0 && GuitarProChannelBlock.ToMidi(c0) == track.Chorus) mix.Chorus = null;
+        if (mix.Reverb is { } r0 && GuitarProChannelBlock.ToMidi(r0) == track.Reverb) mix.Reverb = null;
+        if (mix.Program is { } changed)
+        {
+            track.MidiProgram = MidiLimits.Clamp(changed);
+            track.InstrumentName = InstrumentNaming.ForStringCount(GeneralMidi.NameOf(track.MidiProgram), kind, stringCount);
+        }
+        if (mix.Volume is { } volume) track.Volume = GuitarProChannelBlock.ToMidi(volume);
+        if (mix.Pan is { } pan) track.Pan = GpMixerScale.BalanceStepToPan(pan + 8);
+        if (mix.Chorus is { } chorus) track.Chorus = GuitarProChannelBlock.ToMidi(chorus);
+        if (mix.Reverb is { } reverb) track.Reverb = GuitarProChannelBlock.ToMidi(reverb);
+        // Guitar Pro 3-5 only carry a first-beat mix point when the file really has a Mix Table there: what changes stays on it, so the
+        // timeline marks bar 1 and Save writes it back, as Guitar Pro shows it. Other formats repeat the track header there.
+        if (!keepMixPoint) { mix.Program = mix.Volume = mix.Pan = mix.Chorus = mix.Reverb = null; mix.TransitionBeats = 0; }
+        if (mix.IsEmpty) opening.Mix = null;
+    }
+
     /// <summary>The track with its instrument, colour, mixer values (Guitar Pro 0..16 steps or the exact fractions), sends and tuning, before any bar is read.</summary>
     private static TrackModel NewTrackModel(object sourceTrack, string name, TrackKind kind, bool isDrums, bool isBass, List<int> tuning, int midiProgram, int fallbackChannel, ImportBudget budget)
     {
@@ -112,7 +139,7 @@ internal static class GuitarProTrackConverter
             ColorHex = ReadColor(sourceTrack),
             MidiOutputDeviceId = -1,
             Volume = gpVolumeFraction >= 0 ? GpMixerScale.FromFraction(gpVolumeFraction) : GuitarProChannelBlock.ToMidi(gpVolume),   // truncated, as Guitar Pro and TuxGuitar do (step 6 is 47, not 48)
-            Pan = gpBalanceFraction >= 0 ? GpMixerScale.FromFraction(gpBalanceFraction) : Math.Clamp((int)Math.Round(gpBalance * 127.0 / 16.0), 0, MidiLimits.Max),
+            Pan = gpBalanceFraction >= 0 ? GpMixerScale.FromFraction(gpBalanceFraction) : GpMixerScale.BalanceStepToPan(gpBalance),
             Chorus = channelSends is { } sends ? GuitarProChannelBlock.ToMidi(sends.Chorus) : 0,
             Reverb = channelSends is { } sent ? GuitarProChannelBlock.ToMidi(sent.Reverb) : 0,
             // The mixer's mute and solo buttons are part of the file (the exporter wrote them; the importer used to drop them).

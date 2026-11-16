@@ -14,7 +14,7 @@ public sealed class MidiNoteSlot
     public long Packed => Volatile.Read(ref _packed);
 
     /// <summary>Any thread, no waiting: notes a note-on of <paramref name="velocity"/> (1..127) heard at <paramref name="nowMs"/>.</summary>
-    public void Record(int velocity, long nowMs) => Volatile.Write(ref _packed, (nowMs << 8) | (uint)Math.Clamp(velocity, 1, 127));
+    public void Record(int velocity, long nowMs) => Volatile.Write(ref _packed, (nowMs << 8) | (uint)MidiLimits.ClampVelocity(velocity));
 }
 
 /// <summary>

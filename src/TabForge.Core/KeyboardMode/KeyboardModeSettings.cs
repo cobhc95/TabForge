@@ -38,6 +38,8 @@ public sealed class KeyboardModeSettings
     public bool ShowNoteNames { get; set; } = true;
     /// <summary>Finger numbers on the falling bars when the score has them.</summary>
     public bool ShowFingers { get; set; } = true;
+    /// <summary>Hear the practised track's own notes too, so the song sounds complete (off: only the notes you play sound on that track).</summary>
+    public bool HearTrack { get; set; }
 
     /// <summary>How much of the window Keyboard mode takes: Normal, Large or Full (the falling notes take the score's place).</summary>
     public string KeyboardSize { get; set; } = SizeFull;

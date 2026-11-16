@@ -204,7 +204,7 @@ public sealed partial class MixerWindow
             Name = "MidiSound", IsChecked = track.MidiSound, IsEnabled = MixerStripPresenter.MidiSoundEnabled(track.SoundSource), HorizontalAlignment = HorizontalAlignment.Center,
         };
         ToolTip.SetTip(midi, "MIDI sound: the track's General MIDI instrument plays while the FX chain is on (the effects shape it when there is no VST instrument). Off: only a VST instrument sounds.");
-        midi.IsCheckedChanged += (_, _) => { if (!_building) ClickEdit(() => OnTrack(live => { live.MidiSound = midi.IsChecked == true; live.MidiSoundAuto = false; live.MidiSoundManualOff = !live.MidiSound; })); };
+        midi.IsCheckedChanged += (_, _) => { if (!_building) ClickEdit(() => OnTrack(live => { live.MidiSound = midi.IsChecked == true; live.MidiSoundAuto = false; live.MidiSoundManualOff = !live.MidiSound; live.MidiSoundManualOn = live.MidiSound; })); };
         fx.OpenChain += (_, _) => OnTrack(OpenChain);
         fx.TogglePower += (_, _) =>
         {
@@ -220,15 +220,15 @@ public sealed partial class MixerWindow
         pitch.IsVisible = !_compact;
         Put(grid, pitch, MixerColumnLayout.Pitch);
         Put(grid, Fader(() => MixerStripPresenter.PanSlider(Now()?.Pan ?? track.Pan), -64, 63, MixerStripPresenter.PanDefault, v => OnTrack(live => live.Pan = MixerStripPresenter.PanFromSlider(v)),
-            $"Track pan ({MixerStripPresenter.PanRange}; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: centre)"), MixerColumnLayout.Pan);
+            $"Track pan ({MixerStripPresenter.PanRange}; mouse wheel: 1 step, {TabForge.Services.FixedKeys.CtrlWheel}: 8; double-click: centre)"), MixerColumnLayout.Pan);
         // The volume cell also holds the track's reverb and chorus sends (0..SendMax), each an undoable song edit like the other faders.
         var volumeCell = new StackPanel();
         volumeCell.Children.Add(Fader(() => MixerStripPresenter.ClampVolume(Now()?.Volume ?? track.Volume), 0, MidiLimits.Max, MixerStripPresenter.VolumeDefault, v => OnTrack(live => live.Volume = MixerStripPresenter.ClampVolume(v)),
-            "Track volume (0-127; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: 100)"));
+            $"Track volume (0-127; mouse wheel: 1 step, {TabForge.Services.FixedKeys.CtrlWheel}: 8; double-click: 100)"));
         volumeCell.Children.Add(Fader(() => Math.Clamp(Now()?.Reverb ?? track.Reverb, 0, SendMax), 0, SendMax, MixerStripPresenter.ReverbDefault, v => OnTrack(live => live.Reverb = Math.Clamp(v, 0, SendMax)),
-            "Reverb send (0-127; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: 24)"));
+            $"Reverb send (0-127; mouse wheel: 1 step, {TabForge.Services.FixedKeys.CtrlWheel}: 8; double-click: 24)"));
         volumeCell.Children.Add(Fader(() => Math.Clamp(Now()?.Chorus ?? track.Chorus, 0, SendMax), 0, SendMax, MixerStripPresenter.ChorusDefault, v => OnTrack(live => live.Chorus = Math.Clamp(v, 0, SendMax)),
-            "Chorus send (0-127; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: 0)"));
+            $"Chorus send (0-127; mouse wheel: 1 step, {TabForge.Services.FixedKeys.CtrlWheel}: 8; double-click: 0)"));
         Put(grid, volumeCell, MixerColumnLayout.Volume);
         var row = RowBorder(grid, accent: false, MixerStripPresenter.StripName(track.Name, track.Mute, track.Solo));
         Put(grid, MuteSolo(track.Mute, track.Solo, v => ClickEdit(() => OnTrack(live => live.Mute = v)), v => ClickEdit(() => OnTrack(live => live.Solo = v)),

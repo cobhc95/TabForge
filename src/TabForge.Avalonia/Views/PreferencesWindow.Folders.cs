@@ -25,7 +25,7 @@ public sealed partial class PreferencesWindow
     /// <summary>A typable folder field with Browse… beside it: the picker starts at the field's folder (empty: the default one) and a pick is an ordinary pending change.</summary>
     private Control FolderFieldWithBrowse(SettingDescriptor row, TextBox field)
     {
-        var browse = new Button { Content = "Browse…", Name = "BrowseFolderButton", VerticalAlignment = VerticalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Center, Classes = { AvaloniaFormControlStyles.PrefsFieldClass } };
+        var browse = new Button { Content = CommonText.Browse, Name = "BrowseFolderButton", VerticalAlignment = VerticalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Center, Classes = { AvaloniaFormControlStyles.PrefsFieldClass } };
         AutomationProperties.SetName(browse, "Browse for " + row.Title);
         AutomationProperties.SetName(field, row.Title);
         browse.Click += async (_, _) =>

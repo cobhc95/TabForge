@@ -232,7 +232,7 @@ public sealed class AvaloniaPlaybackSessions : IDisposable
     /// on the same output, nothing else. Never creates a session and never panics; a song playing the same pitch keeps playing.</summary>
     public void SilencePreview(SongDocument song, int deviceId, int channel, int pitch)
     {
-        var note = Math.Clamp(pitch, 0, 127);
+        var note = MidiLimits.Clamp(pitch);
         var status = 0x80 | (channel & 0x0F);
         // The ring went out through the test engine (PlayTestNoteAsync), so its cut goes there too; without one yet,
         // the song's session reaches the same shared output. No For: a silent window must not start an engine.

@@ -102,10 +102,9 @@ public sealed class PasteSpecialWindow : Window
         }
         SetOctave(0);
 
-        var paste = new Button { Name = "PasteButton", Content = "Paste", MinWidth = DialogMetrics.PromptButtonMinWidth, IsDefault = true };
-        paste.Classes.Add(AvaloniaDefaultLooks.AccentLook);
+        var paste = PromptChrome.Action("PasteButton", "Paste", primary: true);
         paste.Click += (_, _) => Close(Current());
-        var cancel = new Button { Name = "CancelButton", Content = "Cancel", MinWidth = DialogMetrics.PromptButtonMinWidth, IsCancel = true };
+        var cancel = PromptChrome.Action("CancelButton", CommonText.Cancel, primary: false, isCancel: true);
         cancel.Click += (_, _) => Close(null);
         body.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8, Margin = DialogMetrics.FooterGap, Children = { paste, cancel } });
         Content = body;

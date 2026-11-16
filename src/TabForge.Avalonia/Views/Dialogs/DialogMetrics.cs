@@ -37,6 +37,12 @@ internal static class DialogMetrics
     /// <summary>The minimum width of a dialog's footer action button (OK, Cancel and the like).</summary>
     public const double DialogButtonMinWidth = 80;
 
+    /// <summary>The gap between two footer action buttons (DialogButtons.Row).</summary>
+    public const double FooterButtonSpacing = 8;
+
+    /// <summary>The same gap as a right margin, for a footer whose buttons sit in a docked row rather than DialogButtons.Row.</summary>
+    public static readonly Thickness FooterButtonGap = new(0, 0, FooterButtonSpacing, 0);
+
     /// <summary>The minimum width of a prompt dialog's OK/Cancel buttons, the tighter of the two dialog button widths.</summary>
     public const double PromptButtonMinWidth = 76;
 
@@ -51,6 +57,9 @@ internal static class DialogMetrics
 
     public static readonly Thickness HairlineAll = new(1), HairlineTop = new(0, 1, 0, 0), HairlineBottom = new(0, 0, 0, 1);
     public static readonly Thickness FocusRowPad = new(12, 8), FocusSectionTop = new(0, 12, 0, 0), FocusLabelGap = new(0, 0, 0, 6), FocusButtonGap = new(0, 0, 8, 0), FocusValueGap = new(10, 0, 0, 0);
+    /// <summary>The Focus track window's insets: segment strip, value badge, a segment, the thumb ring, the amount rule and its inset and margin, the mix track and a mix column.</summary>
+    public static readonly Thickness FocusStripPad = new(2), FocusValuePad = new(8, 3), FocusSegmentPad = new(8, 4), FocusThumbRing = new(2),
+        FocusAmountRule = new(2, 0, 0, 0), FocusAmountPad = new(10, 4, 0, 6), FocusAmountMargin = new(12, 0, 12, 6), FocusMixTrackPad = new(2), FocusMixColumnGap = new(3, 0);
 
     /// <summary>The top and bottom margin of a dialog row, so rows in a column keep their two-pixel rhythm.</summary>
     public static readonly Thickness RowMargin = new(0, 2, 0, 2);
@@ -72,8 +81,13 @@ internal static class DialogMetrics
 
     /// <summary>The Mix Table row: toggle column width, value readout width, accent bar width and minimum row height.</summary>
     public const double MixToggleWidth = 120, MixReadoutWidth = 64, MixBarWidth = 3, MixRowMinHeight = 32;
+    /// <summary>Mix Table track tabs: the change dot, the arrow and list buttons, and how far one arrow click scrolls the strip.</summary>
+    public const double MixTabDot = 7, MixTabArrowWidth = 26, MixTabArrowHeight = 26, MixTabScrollStep = 160,
+        MixWindowWidth = 560, MixTempoBoxWidth = 80, MixTransitionWidth = 130, MixInstrumentWidth = 180, MixTitleSize = 18, MixTabRule = 1, MixTabDotStroke = 1, MixTempoGap = 12, MixTabStrip = 3, MixTabListBar = 16, MixTabSelectedShade = 0.38, MixTabHoverShade = 0.18;
 
     /// <summary>The Mix Table row gaps: around the readout, around the control, around the accent bar and between rows.</summary>
+    public static readonly Thickness MixTabPad = new(10, 5), MixTabGap = new(0, 0, 2, 0), MixTabStripMargin = new(0, 4, 0, 8), MixTabArrowMargin = new(2, 0), MixTabDotGap = new(0, 0, 6, 0), MixTabNoteMargin = new(3, 8, 0, 0),
+        MixWindowPad = new(16), MixHeaderMargin = new(0, 0, 0, 4), MixFooterMargin = new(3, 16, 3, 0), MixAllTracksMargin = new(16, 0, 0, 0), MixOptionsMargin = new(3, 12, 0, 8), MixTabArrowPad = new(0), MixTabStripBorder = new(0, 0, 0, 3);
     public static readonly Thickness MixReadoutMargin = new(8, 0, 6, 0), MixEditorMargin = new(0, 4), MixBarMargin = new(0, 3), MixRowGap = new(0, 1);
 
     /// <summary>The "Unsaved changes" question: its width range, content inset, the gaps between its parts and lines, and the colour swatch (size and corner).</summary>
@@ -113,9 +127,9 @@ internal static class DialogMetrics
     public static readonly Thickness SelectedOutline = new(2);
 
     /// <summary>Score text &amp; fonts window: the area list, form rows, read-outs and button row.</summary>
-    public const double TextStyleAreasWidth = 190, TextStyleSizeWidth = 140, TextStyleOutlineWidth = 100, TextStyleReadOutWidth = 44, TextStyleLabelWidth = 90, TextStyleButtonWidth = 80, TextStyleWindowWidth = 520;
+    public const double TextStyleAreasWidth = 190, TextStyleSizeWidth = 140, TextStyleOutlineWidth = 100, TextStyleReadOutWidth = 44, TextStyleLabelWidth = 90, TextStyleWindowWidth = 520;
     public static readonly Thickness TextStyleAreasGap = new(0, 0, 12, 0), TextStyleItalicGap = new(12, 0, 0, 0), TextStyleOutlineGap = new(8, 0, 0, 0), TextStyleInset = new(14),
-        TextStyleInheritGap = new(6, 0, 0, 0), TextStyleResetGap = new(0, 8, 0, 0), TextStyleRowGap = new(0, 3, 0, 3), TextStyleOkGap = new(0, 0, 6, 0), TextStyleButtonsGap = new(0, 12, 0, 0);
+        TextStyleInheritGap = new(6, 0, 0, 0), TextStyleResetGap = new(0, 8, 0, 0), TextStyleRowGap = new(0, 3, 0, 3), TextStyleButtonsGap = new(0, 12, 0, 0);
 
     /// <summary>Preferences window: the rail's right border, the page cards' margin, a row group's gap above and the "More options" toggle's pull to the left.</summary>
     public static readonly Thickness PrefsRailBorder = new(0, 0, 1, 0), PrefsCardsMargin = new(16, 8, 16, 16), PrefsRowsGap = new(0, 4, 0, 0), PrefsMoreToggleMargin = new(-6, 0, 0, 0);

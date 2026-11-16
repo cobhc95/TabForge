@@ -75,8 +75,7 @@ public sealed partial class FxChainWindow : Window
         ShowInTaskbar = false;
         Title = FxChainPresenter.WindowTitle(track.Name);
         Width = host.LiveStrip is null ? 980 : 960; Height = host.LiveStrip is null ? 620 : 480; MinWidth = 640; MinHeight = 380;   // the live input window has no plug-in list to fill, so it opens smaller
-        this[!BackgroundProperty] = new DynamicResourceExtension("WindowBackground");
-        this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
+        this.UseWindowColours();
         _area = new FxEditorArea(() => PluginEditorPopup);
         _parameters = new FxParameterPane(host, track, _ui);
         _editors = new FxEditorController(host, track, _area, _ui, () => OwnerHandle, () => ActualThemeVariant != ThemeVariant.Light,

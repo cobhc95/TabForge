@@ -1,4 +1,5 @@
 using System;
+using TabForge.Avalonia.Platform;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -79,8 +80,7 @@ public sealed class DrumMapEditorWindow : Window
         Title = "Drum map";
         Width = WindowWidth; Height = WindowHeight; MinWidth = WindowMinWidth; MinHeight = WindowMinHeight;
         ShowInTaskbar = false;
-        this[!BackgroundProperty] = new DynamicResourceExtension("WindowBackground");
-        this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
+        this.UseWindowColours();
         _error[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextBrush");
 
         var create = Push("New", "Start a new, empty map");
@@ -102,7 +102,7 @@ public sealed class DrumMapEditorWindow : Window
         list.Children.Add(_rows);
         var scroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = list, Focusable = false };
 
-        var cancel = Push("Cancel", "Close without saving");
+        var cancel = Push(CommonText.Cancel, "Close without saving");
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 10, 0, 0) };
         buttons.Children.Add(_save); buttons.Children.Add(cancel);
 

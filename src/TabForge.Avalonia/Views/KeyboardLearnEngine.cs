@@ -200,6 +200,8 @@ public sealed partial class KeyboardLearnEngine : IDisposable
             Change(learn, s => s.ShowNoteNames = bar.ShowNames);
         if (learn.ShowFingers != bar.ShowFingers)
             Change(learn, s => s.ShowFingers = bar.ShowFingers);
+        if (learn.HearTrack != bar.HearTrack)
+            Change(learn, s => s.HearTrack = bar.HearTrack);
     }
 
     private void Change(KeyboardModeSettings learn, Action<KeyboardModeSettings> change)
@@ -294,7 +296,8 @@ public sealed partial class KeyboardLearnEngine : IDisposable
             Feedback.Scan(Judge, Now());
             RefreshAwaited();
         }
-        ApplyPracticeSilence(listen && IsListening ? track : -1);
+        // Hear track on: the practised track keeps its own notes, so the song sounds complete; off (the default) only the player's notes sound on it.
+        ApplyPracticeSilence(listen && IsListening && Learn?.HearTrack != true ? track : -1);
 
         strip.Source = _source ?? KeyboardNoteSource.Empty();
         strip.Judge = Judge;
@@ -358,6 +361,7 @@ public sealed partial class KeyboardLearnEngine : IDisposable
             bar.LookAheadSeconds = learn.LookAheadSeconds;
         bar.ShowNames = learn?.ShowNoteNames ?? true;
         bar.ShowFingers = learn?.ShowFingers ?? true;
+        bar.HearTrack = learn?.HearTrack == true;
         bar.HasFingers = _source?.HasFingers == true;
 
         // Track list follows the window's selection.

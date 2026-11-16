@@ -12,7 +12,7 @@ public static class TrackOutputPresenter
 {
     public const string Title = "MIDI output";
     public const string TestButton = "Test sound";
-    public const string CloseButton = "Close";
+    public const string CloseButton = CommonText.Close;
     public const string Hint = "The track's notes are sent to this device. Test sound plays a note on it.";
 
     public static string Heading(string trackName) => $"MIDI output device for {trackName}";

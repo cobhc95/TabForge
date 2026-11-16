@@ -39,8 +39,7 @@ public sealed class UpdateAvailableWindow : Window
         _previewOnly = previewOnly;
         Title = presenter.Title;
         Width = 460; SizeToContent = SizeToContent.Height; CanResize = false;
-        this[!BackgroundProperty] = new DynamicResourceExtension("WindowBackground");
-        this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
+        this.UseWindowColours();
 
         var root = new StackPanel { Margin = new Thickness(18, 16, 18, 14) };
         root.Children.Add(new TextBlock
@@ -100,7 +99,7 @@ public sealed class UpdateAvailableWindow : Window
 
     private static TextBlock Muted(TextBlock block)
     {
-        block[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        block.UseMutedText();
         return block;
     }
 }

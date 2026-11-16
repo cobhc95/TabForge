@@ -1,4 +1,5 @@
 using System;
+using TabForge.Avalonia.Platform;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -40,7 +41,7 @@ public sealed partial class PianoRollView
         foreach (var (label, box) in new[] { ("Start", _start), ("End", _end), ("Length", _length), ("Pitch", _pitch), ("Velocity", _velocity), ("Channel", _channel) })
         {
             var caption = new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center };
-            caption[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+            caption.UseMutedText();
             PianoRollToolbarLayout.StyleField(box, FieldSize);
             var field = ReferenceEquals(box, _channel) ? _channelRow : new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
             field.Spacing = PianoRollToolbarLayout.GroupGap;

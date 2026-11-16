@@ -16,7 +16,7 @@ public static class SectionStretchPromptPresenter
 {
     public const string RememberText = "Remember my choice";
     public const string RememberHint = "(Settings › Editing › Sections)";
-    public const string CancelText = "Cancel";
+    public const string CancelText = CommonText.Cancel;
     public const string StretchText = "Stretch";
     public const string CancelToolTip = "Leave the section as it was";
     public const string StretchToolTip = "Stretch the section with the chosen option";

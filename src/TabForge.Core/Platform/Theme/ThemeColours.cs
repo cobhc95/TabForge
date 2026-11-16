@@ -157,8 +157,8 @@ public static class ThemeColours
     // the slider fill #6FA6EE and (before the ink check) the primary fill #3A86E8.
     private const double LightTintWhite = 0.9, LightBorderWhite = 0.52, LightSliderWhite = 0.31, LightFillWhite = 0.05;
 
-    /// <summary>Lowest contrast of the light ink on the light theme's one solid fill (the OK / primary button): the WCAG figure for interface parts and large text.</summary>
-    public const double LightFillInkContrast = 3.0;
+    /// <summary>Lowest contrast of the light ink on the light theme's one solid fill (the OK / primary button): the WCAG AA figure for normal text, since the fill carries a text label.</summary>
+    public const double LightFillInkContrast = 4.5;
 
     /// <summary>Lowest contrast of the selected text (accent ink) on the pale selected tint.</summary>
     public const double SelectedInkContrast = 5.0;

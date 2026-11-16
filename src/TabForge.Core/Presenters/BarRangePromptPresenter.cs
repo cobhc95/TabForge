@@ -12,8 +12,8 @@ public readonly record struct BarRangeAnswer(BarRangeAction Action, bool AllTrac
 public static class BarRangePromptPresenter
 {
     public const string Title = "Delete bars";
-    public const string OkText = "OK";
-    public const string CancelText = "Cancel";
+    public const string OkText = CommonText.Ok;
+    public const string CancelText = CommonText.Cancel;
     public const string OkToolTip = "Do the selected option";
     public const string CancelToolTip = "Leave things as they are";
     public const string RememberText = "Remember my choice";

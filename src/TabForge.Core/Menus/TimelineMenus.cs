@@ -1,4 +1,5 @@
 ﻿using TabForge.Commands;
+using TabForge.Services;
 
 // Owns: the arrangement-timeline right-click menus as data: the bar, loop region, ruler, section and clip menus, and the command each row runs (TimelineCommand).
 // Does not own: opening the menus or running their commands (the Avalonia timeline menu).
@@ -114,7 +115,7 @@ public static class TimelineMenus
     public static List<MenuSpec> Ruler(RulerMenuState s, Func<string, string> key) => new()
     {
         Check(TimelineCommand.RulerLoop, "Loop", s.Looping, "transport state (not saved as a preference)", key(CommandIds.Transport.Loop), "Repeats the loop region (or the whole song) while on; the region stays when it is turned off"),
-        Item(TimelineCommand.RulerClearLoop, "Clear loop", "Esc twice", s.HasLoop, "Removes the loop region; the Loop button stays as it is (Ctrl+Z brings it back)"),
+        Item(TimelineCommand.RulerClearLoop, "Clear loop", FixedKeys.EscTwice, s.HasLoop, $"Removes the loop region; the Loop button stays as it is ({key(CommandIds.Edit.Undo)} brings it back)"),
         MenuSpec.Separator(),
         Item(TimelineCommand.RulerLoopSection, "Loop this section", enabled: s.InSection, toolTip: "Loops the bars of the section under the click"),
         Item(TimelineCommand.RulerLoopSelectedBars, "Loop selected bars", enabled: s.HasSelection, toolTip: "Loops the bars of the selected notes or clips"),

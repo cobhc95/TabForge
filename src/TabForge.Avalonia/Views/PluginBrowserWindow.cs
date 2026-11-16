@@ -1,4 +1,5 @@
 using System;
+using TabForge.Avalonia.Platform;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
@@ -179,7 +180,7 @@ public sealed class PluginBrowserWindow : Window
     // The status line, the remember option and the button row, below the list as in the window.
     private Control BuildBottom()
     {
-        _status[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        _status.UseMutedText();
         _remember.Content = TabForge.Services.PluginSettings.RememberScanLabel;
         _remember.IsChecked = _session.Settings.RememberScan;
         ToolTip.SetTip(_remember, "On: the plug-ins found are saved and this window opens instantly from that list; use Rescan after installing new plug-ins. Off: the folders are scanned each time this window opens.");
@@ -225,7 +226,7 @@ public sealed class PluginBrowserWindow : Window
         });
         AddButton("Edit list…", "Plugins.EditList", "Edit the list of common folders (also in Settings > Audio & Plug-ins), with Reset to defaults.", () => Platform.UiTasks.Forget(EditCommonFolders(), "Common folders", text => _status.Text = text));
         AddButton("Folder settings…", "Plugins.FolderSettings", "Plug-in folders, remembered scans and plug-in window options (Settings > Audio & Plug-ins).", () => { Close(false); _openSettings(this); });
-        AddButton("Cancel", "Plugins.Cancel", "Close without adding", () => Close(false)).IsCancel = true;
+        AddButton(CommonText.Cancel, "Plugins.Cancel", "Close without adding", () => Close(false)).IsCancel = true;
         return scanStandard;
     }
 

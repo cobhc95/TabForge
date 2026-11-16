@@ -1,6 +1,6 @@
 # TabForge assets: provenance
 
-All artwork in this folder is original TabForge artwork under the project's MIT licence (see `LICENSE.txt`), except the
+All artwork in this folder is original TabForge artwork under the project's licence, GPL-3.0-or-later (see `LICENSE.txt`), except the
 Bravura-derived glyph outlines listed below, which stay under the SIL Open Font License 1.1.
 
 | Group | Path | Made by / how |

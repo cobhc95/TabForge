@@ -77,5 +77,6 @@ public sealed class LargeSwitch : ToggleButton
         _track[!Border.BackgroundProperty] = new DynamicResourceExtension(on ? "AccentBrush" : "CheckBoxBorderBrush");
         _thumb[!Border.BackgroundProperty] = new DynamicResourceExtension(on ? "OnAccentBrush" : "TextBrush");
         _thumb.HorizontalAlignment = on ? HorizontalAlignment.Right : HorizontalAlignment.Left;
+        _track.InvalidateArrange();
     }
 }

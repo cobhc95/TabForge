@@ -149,7 +149,7 @@ public sealed class LightThemeTests
         Near("#EAF2FC", ThemeColours.LightRole(ThemeColours.LightAccentRole.Tint, accent));
         Near("#9CC0F2", ThemeColours.LightRole(ThemeColours.LightAccentRole.Border, accent));
         Near("#6FA6EE", ThemeColours.LightRole(ThemeColours.LightAccentRole.Slider, accent));
-        Near("#3A86E8", ThemeColours.LightRole(ThemeColours.LightAccentRole.Fill, accent), 16);
+        Near("#1F6DD3", ThemeColours.LightRole(ThemeColours.LightAccentRole.Fill, accent), 16);
         Near("#1F5FBF", ThemeColours.LightRole(ThemeColours.LightAccentRole.Ink, accent), 24);
     }
 

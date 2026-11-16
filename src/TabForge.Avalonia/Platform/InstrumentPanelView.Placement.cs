@@ -146,7 +146,7 @@ public sealed partial class InstrumentPanelView
 
     /// <summary>The place the fretboard lands at when it is dragged <paramref name="dx"/> DIPs from its place (the Core rule, in the panel's drawing scale).</summary>
     private FretboardHorizontalPosition PlaceForOffset(double dx) =>
-        FretboardGeometryRules.NearestPlacement(FretInput, FretboardArea(), _look.FretboardPosition, dx / FretboardScale(), BoardLimits);
+        FretboardGeometryRules.NearestPlacement(FretInput, FretboardArea(), _look.FretboardPosition, dx / FretboardScale(), ActiveLimits);
 
     private void EndGesture()
     {
@@ -164,9 +164,10 @@ public sealed partial class InstrumentPanelView
         if (_landing is not { } target) return;
         var scale = FretboardScale();
         var paneWidth = Bounds.Width / scale;
-        var targetBoard = FretboardGeometryRules.Compute(FretInput, FretboardArea(), target, limits: BoardLimits).Board;
+        var limits = ActiveLimits;
+        var targetBoard = FretboardGeometryRules.Compute(FretInput, FretboardArea(), target, limits: limits).Board;
         var left = Math.Max(0, targetBoard.X - FretboardGeometryRules.LeftGutter);
-        var right = Math.Min(paneWidth, targetBoard.Right + FretboardGeometryRules.LegendWidth);
+        var right = Math.Min(paneWidth, targetBoard.Right + (limits.LegendReserve ?? FretboardGeometryRules.LegendWidth));
         if (right <= left) return;
 
         var accent = ink("Accent");

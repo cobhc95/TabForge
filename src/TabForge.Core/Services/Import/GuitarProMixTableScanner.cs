@@ -3,7 +3,7 @@ using AlphaTab.Model;
 
 namespace TabForge.Services;
 
-// Owns: the GP4/GP5 mix-table details the score library discards (transition lengths, apply-to-all flags, chorus and reverb).
+// Owns: the GP3/GP4/GP5 mix-table details the score library discards (transition lengths, apply-to-all flags, chorus and reverb).
 // Does not own: the rest of the import.
 // Tests: no dedicated test class.
 /// <summary>
@@ -17,14 +17,15 @@ public static class GuitarProMixTableScanner
 {
     public sealed record RawMix(int Volume, int Balance, int Chorus, int Reverb, int Phaser, int Tremolo, int Tempo, int TransitionBeats, bool AllTracks, int TempoTransitionBeats = 0);
 
-    /// <summary>Raw mix-table data per alphaTab beat (by reference); empty for anything but GP4/GP5.</summary>
+    /// <summary>Raw mix-table data per alphaTab beat (by reference); empty for anything but GP3/GP4/GP5.</summary>
     public static Dictionary<object, RawMix> Scan(byte[] data, Score score)
     {
         var result = new Dictionary<object, RawMix>(ReferenceEqualityComparer.Instance);
         var version = data.Length > 31 ? Encoding.ASCII.GetString(data, 1, Math.Min(data[0], (byte)30)) : "";
         var gp5 = version.Contains("v5.", StringComparison.Ordinal);
         var hideTempoByte = gp5 && !version.Contains("v5.00", StringComparison.Ordinal);
-        if (!gp5 && !version.Contains("v4.", StringComparison.Ordinal)) return result;
+        var gp3 = version.Contains("v3.", StringComparison.Ordinal);
+        if (!gp5 && !gp3 && !version.Contains("v4.", StringComparison.Ordinal)) return result;
 
         var cursor = 0;
         for (var bar = 0; bar < score.MasterBars.Count; bar++)
@@ -45,7 +46,7 @@ public static class GuitarProMixTableScanner
                             for (var p = cursor; p < data.Length - 16; p++)
                             {
                                 if ((sbyte)data[p] != vol || (sbyte)data[p + 1] != bal) continue;
-                                if (TryParse(data, p, gp5, hideTempoByte, out var mix, out var end)) { result[beat] = mix; cursor = end; break; }
+                                if (TryParse(data, p, gp5, hideTempoByte, out var mix, out var end, gp3)) { result[beat] = mix; cursor = end; break; }
                             }
                         }
                 }
@@ -60,7 +61,7 @@ public static class GuitarProMixTableScanner
     public sealed class TempoRampFinder
     {
         private readonly byte[] _data;
-        private readonly bool _gp5, _hideTempoByte, _enabled;
+        private readonly bool _gp5, _gp3, _hideTempoByte, _enabled;
         private int _cursor;
 
         public TempoRampFinder(byte[] data)
@@ -69,7 +70,8 @@ public static class GuitarProMixTableScanner
             var version = data.Length > 31 ? Encoding.ASCII.GetString(data, 1, Math.Min(data[0], (byte)30)) : "";
             _gp5 = version.Contains("v5.", StringComparison.Ordinal);
             _hideTempoByte = _gp5 && !version.Contains("v5.00", StringComparison.Ordinal);
-            _enabled = _gp5 || version.Contains("v4.", StringComparison.Ordinal);
+            _gp3 = version.Contains("v3.", StringComparison.Ordinal);
+            _enabled = _gp5 || _gp3 || version.Contains("v4.", StringComparison.Ordinal);
         }
 
         /// <summary>Transition beats of the next tempo change (which sets <paramref name="tempo"/>), 0 if instant/unknown.</summary>
@@ -78,7 +80,7 @@ public static class GuitarProMixTableScanner
             if (!_enabled) return 0;
             for (var p = _cursor; p < _data.Length - 16; p++)
             {
-                if (!TryParse(_data, p, _gp5, _hideTempoByte, out var mix, out var end) || mix.Tempo != tempo) continue;
+                if (!TryParse(_data, p, _gp5, _hideTempoByte, out var mix, out var end, _gp3) || mix.Tempo != tempo) continue;
                 _cursor = end;
                 return Math.Clamp(mix.TempoTransitionBeats, 0, 64);
             }
@@ -87,7 +89,8 @@ public static class GuitarProMixTableScanner
     }
 
     /// <summary>Parses a mix table from its volume byte: six values, tempo name, tempo, durations, flags.</summary>
-    internal static bool TryParse(byte[] d, int p, bool gp5, bool hideTempoByte, out RawMix mix, out int end)
+    /// <remarks>Guitar Pro 3 mix tables have no apply-to-all flags byte (the change applies to its own track).</remarks>
+    internal static bool TryParse(byte[] d, int p, bool gp5, bool hideTempoByte, out RawMix mix, out int end, bool gp3 = false)
     {
         mix = null!; end = p;
         var v = new int[6];
@@ -114,6 +117,7 @@ public static class GuitarProMixTableScanner
             if (i == 6) tempoDuration = dur;
             if (i == 6 && hideTempoByte) q++; // GP5.10 "hide tempo" flag
         }
+        if (gp3) { mix = new RawMix(v[0], v[1], v[2], v[3], v[4], v[5], tempo, duration, false, tempoDuration); end = q; return true; }
         if (q >= d.Length) return false;
         var flags = d[q++];
         var allTracks = v[0] >= 0 ? (flags & 1) != 0 : v[1] >= 0 && (flags & 2) != 0;

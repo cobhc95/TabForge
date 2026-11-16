@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TabForge.Avalonia.Platform;
 using Avalonia.Controls;
 using TabForge.Services;
 
@@ -29,7 +30,7 @@ internal sealed class StatusBarScaleHost : ReadoutScaleHost
         panel.Children.Add(ScalePanelParts.Check("ScaleMusicalNames", MusicalText, Settings.MusicalKeyNames, v => { Settings.MusicalKeyNames = v; SettingChanged(); }));
         panel.Children.Add(ScalePanelParts.Check("ScalePreferCommon", PreferText, Settings.PreferCommon, v => { Settings.PreferCommon = v; SettingChanged(); }));
         var note = new TextBlock { Name = "ScaleOptionsFootnote", Text = Footnote, TextWrapping = global::Avalonia.Media.TextWrapping.Wrap };
-        note[!TextBlock.ForegroundProperty] = new global::Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("TextMuted");
+        note.UseMutedText();
         panel.Children.Add(note);
         return panel;
     }

@@ -1,4 +1,5 @@
 using System;
+using TabForge.Avalonia.Platform;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
@@ -39,7 +40,7 @@ public sealed class LiveStripTuner : Grid
         _note.Width = TextWidth("G#4", _note) + ChromeMetrics.LiveStripCellPad;   // cells as wide as the widest text they show, so no empty gap sits between them
         _cents.Width = TextWidth("-50 ¢", _cents) + ChromeMetrics.LiveStripCellPad;
         _note[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
-        _cents[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        _cents.UseMutedText();
         ToolTip.SetTip(_bar, "How far the note is from true, in cents");
         ToolTip.SetTip(_switch, "Tune by the raw live input, before the FX chain");
         foreach (var ms in LiveStripRules.WindowChoicesMs) _window.Items.Add(LiveStripRules.WindowItemText(ms));

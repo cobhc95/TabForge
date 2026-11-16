@@ -78,7 +78,8 @@ public sealed partial class PianoRollView
             _toolButtons[tool] = button;
             tools.Add(button);
         }
-        var legato = Command(IconGeometry.ToolLegato, "Legato (Ctrl+L): each selected note (or every note) lasts to the next one", () => Surface.Run(Presenter.LegatoAsync()));
+        var legato = Command(IconGeometry.ToolLegato, "Legato: each selected note (or every note) lasts to the next one", () => Surface.Run(Presenter.LegatoAsync()));
+        TabForge.Avalonia.Platform.Controls.HotkeyTip.Set(legato, PianoRollKeyIds.Legato, "Legato: each selected note (or every note) lasts to the next one");
         // The audition group is configured here with the other toggles and appended after the selection fields by BuildInfoLine.
         PianoRollToolbarLayout.StyleButton(_magnet).Content = Icon(IconGeometry.Magnet);
         _magnet.Focusable = false;
@@ -112,7 +113,7 @@ public sealed partial class PianoRollView
         _chipDot.Width = PianoRollToolbarLayout.ChipDot;
         _chipDot.Height = PianoRollToolbarLayout.ChipDot;
         _chipDot.VerticalAlignment = VerticalAlignment.Center;
-        _chipKind[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        _chipKind.UseMutedText();
         PianoRollToolbarLayout.StyleCombo(_source);
         ToolTip.SetTip(_source, "What the piano roll edits on this track: its written tab, or a lane of MIDI takes (every take on the lane). Takes never touch the tab.");
         _source.SelectionChanged += (_, _) =>
@@ -140,8 +141,8 @@ public sealed partial class PianoRollView
     /// <summary>Append independently wrapping view groups: Audition, Follow with zoom, Ghosts and the track chip.</summary>
     private void BuildViewControls(WrapPanel flow)
     {
-        var zoomOut = Command(IconGeometry.ZoomOut, "Zoom out (Ctrl+wheel)", () => Surface.ZoomOut());
-        var zoomIn = Command(IconGeometry.ZoomIn, "Zoom in (Ctrl+wheel)", () => Surface.ZoomIn());
+        var zoomOut = Command(IconGeometry.ZoomOut, $"Zoom out ({FixedKeys.CtrlWheel})", () => Surface.ZoomOut());
+        var zoomIn = Command(IconGeometry.ZoomIn, $"Zoom in ({FixedKeys.CtrlWheel})", () => Surface.ZoomIn());
         var chip = new StackPanel { Orientation = Orientation.Horizontal, Spacing = PianoRollToolbarLayout.InnerGap, VerticalAlignment = VerticalAlignment.Center, Children = { _chipDot, _chipName, _chipKind, _source } };
         flow.Children.Add(PianoRollToolbarLayout.Frame(_audition));
         flow.Children.Add(PianoRollToolbarLayout.Frame(_followButton, zoomOut, zoomIn));
@@ -213,7 +214,7 @@ public sealed partial class PianoRollView
             return row;
         }
         var hint = new TextBlock { Text = "Acts on the selection, or every note when none is selected.", TextWrapping = TextWrapping.Wrap, MaxWidth = PopupSize };
-        hint[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        hint.UseMutedText();
         var panel = new StackPanel
         {
             Spacing = PianoRollToolbarLayout.GroupGap, MinWidth = PopupSize,

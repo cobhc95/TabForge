@@ -72,7 +72,7 @@ public sealed class TransportPopupFrame
         close.Click += (_, _) => Close();
         DockPanel.SetDock(close, Dock.Right);
         var heading = new TextBlock { Text = title, FontSize = SmallFontSize, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center };
-        heading[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        heading.UseMutedText();
         _titleRow = new DockPanel { Margin = new Thickness(0, 0, 0, TitleBottomMargin), Children = { close, heading } };
         Rows.Children.Add(_titleRow);
         _panel = new Border
@@ -118,7 +118,7 @@ public sealed class TransportPopupFrame
     {
         var toggle = new LargeSwitch { Name = "ScaleShowSwitch", IsChecked = isOn, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, HeaderSwitchGap, 0) }.Named(tip, tip);
         var label = new TextBlock { Text = caption, FontSize = SmallFontSize, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, HeaderSwitchGap, 0) };
-        label[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        label.UseMutedText();
         DockPanel.SetDock(toggle, Dock.Right);
         DockPanel.SetDock(label, Dock.Right);
         _titleRow.Children.Insert(1, toggle);   // after the × (first)
@@ -179,7 +179,7 @@ public sealed class TransportPopupFrame
     public Slider AddSlider(string label, int value, Action<int> store, Action changed, double topMargin = SliderHeaderTopMargin, int? defaultValue = null)
     {
         var amount = new TextBlock { Text = PercentText(value), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
-        amount[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        amount.UseMutedText();
         DockPanel.SetDock(amount, Dock.Right);
         Rows.Children.Add(new DockPanel { Margin = new Thickness(0, topMargin, 0, 0), Children = { amount, new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center } } });
         var slider = new Slider { Orientation = Orientation.Horizontal, Minimum = 0, Maximum = PercentMaximum, Value = value, TickFrequency = SliderTickFrequency, IsSnapToTickEnabled = false, VerticalAlignment = VerticalAlignment.Center };
@@ -236,7 +236,7 @@ public sealed class TransportPopupFrame
     public static TextBlock Helper(string text)
     {
         var helper = new TextBlock { Text = text, FontSize = SmallFontSize, TextWrapping = TextWrapping.Wrap };
-        helper[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        helper.UseMutedText();
         return helper;
     }
 

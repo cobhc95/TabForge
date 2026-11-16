@@ -36,7 +36,8 @@ public sealed partial class PianoRollView : IMenuCommandRunner
     {
         var inside = LoopSpan() is var (from, to) && Surface.MenuBeat >= from && Surface.MenuBeat < to;
         var state = new PianoRollMenuState(Surface.MenuNote >= 0, Presenter.Clipboard.Count > 0, inside, Presenter.Notes.Count > 0, _host.Editing().PianoRollColours,
-            SectionAt(Surface.MenuBeat) is not null, _host.Editing().PianoRollPlaybackNeedle);
+            SectionAt(Surface.MenuBeat) is not null, _host.Editing().PianoRollPlaybackNeedle,
+            id => TabForge.Services.HotkeyCatalog.DisplayAll(Surface.Hotkeys?.Invoke() ?? new TabForge.Services.HotkeySettings(), id));
         if (Surface.MenuInKeys) return new List<MenuSpec>();   // a right-click on the key strip selects; it never opens a menu
         return Surface.MenuInRuler ? PianoRollMenus.RulerRows(state) : PianoRollMenus.Rows(state);
     }
@@ -113,7 +114,7 @@ public sealed partial class PianoRollView : IMenuCommandRunner
     {
         var text = await _host.AskText("Any CC", "CC number (0 to 127):", "2");
         if (text is null || !int.TryParse(text.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var cc)) return;
-        ShowLane(Math.Clamp(cc, 0, 127));
+        ShowLane(MidiLimits.Clamp(cc));
     }
 
     private void AfterSelection()

@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using TabForge.Avalonia.Platform;
 using Avalonia.Layout;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using TabForge.Docking;
@@ -35,7 +36,7 @@ public sealed class DockPreviewWindow : Window
     private static Control Placeholder(string id)
     {
         var label = new TextBlock { Text = id, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-        label[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        label.UseMutedText();
         return new Border { Name = "Pane_" + id, Child = label };
     }
 }

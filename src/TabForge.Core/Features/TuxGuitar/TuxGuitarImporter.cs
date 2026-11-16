@@ -317,7 +317,7 @@ public static class TuxGuitarImporter
         var tunings = trackEl.Elements("TGString").Select(e => int.TryParse(e.Value.Trim(), out var v) ? v : -1).ToList();
         if (tunings.Count > Services.InputLimits.MaxStringsPerTrack)
             throw new InvalidDataException("A score track contains too many strings.");
-        var program = channel is not null ? Math.Clamp(channel.Program, 0, MidiLimits.Max) : 25;
+        var program = channel is not null ? MidiLimits.Clamp(channel.Program) : 25;
         var lower = name.ToLowerInvariant();
         var isBass = !isDrums && (lower.Contains("bass", StringComparison.Ordinal) || program is >= 32 and <= 39);
         List<int> finalTunings;
@@ -330,7 +330,7 @@ public static class TuxGuitarImporter
         else
         {
             var usable = tunings.Where(v => v is >= 0 and <= 127).ToList();
-            if (usable.Count == 0) usable = tunings.Count == 0 ? new() : tunings.Select(v => Math.Clamp(v, 0, 127)).ToList();
+            if (usable.Count == 0) usable = tunings.Count == 0 ? new() : tunings.Select(v => MidiLimits.Clamp(v)).ToList();
             finalTunings = usable.Count >= 1 ? usable : (isBass ? new() { 43, 38, 33, 28 } : new() { 64, 59, 55, 50, 45, 40 });
             var ladder = finalTunings.Count >= 4 && Enumerable.Range(1, finalTunings.Count - 1).All(i => finalTunings[i - 1] - finalTunings[i] == 12) && finalTunings.SequenceEqual(PitchLadder);
             var pitchOnly = ladder || finalTunings.Count >= 4 && Enumerable.Range(1, finalTunings.Count - 1).All(i => finalTunings[i - 1] - finalTunings[i] == 12);
@@ -349,10 +349,10 @@ public static class TuxGuitarImporter
             MidiBankMsb = channel is not null && !isDrums && channel.Bank is >= 0 and <= 127 ? channel.Bank : -1,
             InstrumentName = isDrums ? Services.GeneralMidi.DrumKit : (string.IsNullOrWhiteSpace(channel?.Name) ? Services.InstrumentNaming.ForStringCount(Services.GeneralMidi.NameOf(program), kind, finalTunings.Count) : channel!.Name),
             ColorHex = ReadColor(trackEl),
-            Volume = Math.Clamp(channel?.Volume ?? 100, 0, 127),
-            Pan = Math.Clamp(channel?.Balance ?? 64, 0, 127),
-            Chorus = Math.Clamp(channel?.Chorus ?? 0, 0, 127),
-            Reverb = Math.Clamp(channel?.Reverb ?? 0, 0, 127),
+            Volume = MidiLimits.Clamp(channel?.Volume ?? 100),
+            Pan = MidiLimits.Clamp(channel?.Balance ?? 64),
+            Chorus = MidiLimits.Clamp(channel?.Chorus ?? 0),
+            Reverb = MidiLimits.Clamp(channel?.Reverb ?? 0),
             StringTunings = finalTunings,
             Rig = new RigPreset { Name = isDrums ? "Imported Drum Kit" : isBass ? "Imported Bass" : "Imported Guitar", ArticulationMap = isDrums ? "GM Drums" : isBass ? "Generic Bass" : "Generic Guitar" },
         };
@@ -485,7 +485,7 @@ public static class TuxGuitarImporter
         {
             stringIndex = Math.Clamp(stringIndex, 0, Math.Max(0, track.StringTunings.Count - 1));
         }
-        var note = new TabNote { StringIndex = stringIndex, Fret = Math.Clamp(fret, 0, Services.InputLimits.MaxFrets), Velocity = Math.Clamp(velocity, 0, 127), Tied = tied };
+        var note = new TabNote { StringIndex = stringIndex, Fret = Math.Clamp(fret, 0, Services.InputLimits.MaxFrets), Velocity = MidiLimits.Clamp(velocity), Tied = tied };
         note.MidiValue = track.IsDrumTrack ? fret : track.PitchOf(stringIndex, note.Fret);
         foreach (var child in noteEl.Elements())
         {

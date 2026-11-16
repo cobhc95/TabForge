@@ -44,7 +44,7 @@ internal static class GuitarProChannelBlock
     }
 
     /// <summary>A 0..16 mixer step as a 0..127 value, rounded down the way Guitar Pro and TuxGuitar do (step 8 is 63, 16 is 127).</summary>
-    internal static int ToMidi(int step) => Math.Clamp(step * 127 / 16, 0, MidiLimits.Max);
+    internal static int ToMidi(int step) => GpMixerScale.StepToMixer(step);
 
     /// <summary>
     /// The entry of a track's channel. The score reader's channel numbers do not index the 64 entries, so the entry is the first whose

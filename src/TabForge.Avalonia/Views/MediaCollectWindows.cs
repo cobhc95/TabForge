@@ -41,9 +41,9 @@ public sealed class MediaCopyProgressWindow : Window
         ShowInTaskbar = false;
         this[!BackgroundProperty] = new DynamicResourceExtension("PanelBackground");
         this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
-        _bytes[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        _bytes.UseMutedText();
         FontSize = DialogMetrics.FontSize;
-        var cancel = new Button { Name = "CancelButton", Content = "Cancel", MinWidth = DialogMetrics.PromptButtonMinWidth, Height = DialogMetrics.MediaButtonHeight, HorizontalAlignment = HorizontalAlignment.Right }.WithMargin(DialogMetrics.FooterGap);
+        var cancel = new Button { Name = "CancelButton", Content = CommonText.Cancel, MinWidth = DialogMetrics.PromptButtonMinWidth, Height = DialogMetrics.MediaButtonHeight, HorizontalAlignment = HorizontalAlignment.Right }.WithMargin(DialogMetrics.FooterGap);
         cancel.Click += (_, _) => RequestCancel();
         Content = new StackPanel { Children = { _file, _bar.WithMargin(DialogMetrics.MediaBarGap), _bytes, MediaWindowParts.Muted("Cancel keeps the copies made so far; the rest stay linked."), cancel } }.WithMargin(DialogMetrics.ContentInset);
         Closing += OnClosing;
@@ -89,7 +89,7 @@ internal static class MediaWindowParts
     public static TextBlock Muted(string text)
     {
         var block = new TextBlock { Text = text, FontSize = DialogMetrics.MediaSmallText, TextWrapping = TextWrapping.Wrap };
-        block[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        block.UseMutedText();
         return block;
     }
 

@@ -19,7 +19,7 @@ internal sealed partial class ScoreToMidiCompiler
         var midi = note.MidiValue;
         if (midi <= 0 && note.StringIndex >= 0 && note.StringIndex < track.StringTunings.Count)
             midi = track.PitchOf(note.StringIndex, note.Fret);
-        midi = Math.Clamp(midi + MixerGroups.Transpose(_project, track) + cell.OctaveShiftSemitones, 0, MidiLimits.Max);
+        midi = MidiLimits.Clamp(midi + MixerGroups.Transpose(_project, track) + cell.OctaveShiftSemitones);
         // No harmonic transposition here: alphaTab's RealValue is already the sounding pitch.
 
         ApplyGraceTiming(trackIndex, voiceIndex, cell, note, slotMs, ref onset, ref noteMs, out var importedGraceNotes, out var graceDelaySlots);
@@ -282,7 +282,7 @@ internal sealed partial class ScoreToMidiCompiler
         // The written speed is the rate (a 1/16 tremolo or trill repeats every sixteenth), not the note length split evenly.
         var sub = tremoloDenominator > 0 ? slotMs * 16 / tremoloDenominator : length / repeats;
         var trillTarget = note.TrillTargetMidi > 0
-            ? Math.Clamp(note.TrillTargetMidi + MixerGroups.Transpose(_project, track), 0, MidiLimits.Max)
+            ? MidiLimits.Clamp(note.TrillTargetMidi + MixerGroups.Transpose(_project, track))
             : Math.Min(MidiLimits.Max, midi + 2);
         for (var k = 0; k < repeats; k++)
         {
@@ -379,7 +379,7 @@ internal sealed partial class ScoreToMidiCompiler
                     techniques.Contains("LegatoSlide");
         if (!slide) return null;
         var target = note.SlideTargetMidi > 0
-            ? Math.Clamp(note.SlideTargetMidi + MixerGroups.Transpose(_project, track) + cell.OctaveShiftSemitones, 0, MidiLimits.Max)
+            ? MidiLimits.Clamp(note.SlideTargetMidi + MixerGroups.Transpose(_project, track) + cell.OctaveShiftSemitones)
             : NextNoteMidi(track, playBar, cellIndex, note.StringIndex);
         return target is int value && value != midi ? value : null;
     }
@@ -417,8 +417,8 @@ internal sealed partial class ScoreToMidiCompiler
     /// <summary>The pitch the note is written at (its string and fret), whatever pitch the file gives a tie destination.</summary>
     private int WrittenMidi(TrackModel track, TabCell cell, TabNote note) =>
         note.StringIndex >= 0 && note.StringIndex < track.StringTunings.Count
-            ? Math.Clamp(track.PitchOf(note.StringIndex, note.Fret) + MixerGroups.Transpose(_project, track) + cell.OctaveShiftSemitones, 0, MidiLimits.Max)
-            : Math.Clamp(note.MidiValue + MixerGroups.Transpose(_project, track) + cell.OctaveShiftSemitones, 0, MidiLimits.Max);
+            ? MidiLimits.Clamp(track.PitchOf(note.StringIndex, note.Fret) + MixerGroups.Transpose(_project, track) + cell.OctaveShiftSemitones)
+            : MidiLimits.Clamp(note.MidiValue + MixerGroups.Transpose(_project, track) + cell.OctaveShiftSemitones);
 
     /// <summary>The sounding pitch of a note of <paramref name="cell"/> (transposition and the cell's 8va shift included).</summary>
     private int NoteMidi(TrackModel track, TabCell cell, TabNote note)
@@ -426,7 +426,7 @@ internal sealed partial class ScoreToMidiCompiler
         var midi = note.MidiValue > 0 ? note.MidiValue
             : note.StringIndex >= 0 && note.StringIndex < track.StringTunings.Count ? track.PitchOf(note.StringIndex, note.Fret)
             : note.Fret;
-        return Math.Clamp(midi + MixerGroups.Transpose(_project, track) + cell.OctaveShiftSemitones, 0, MidiLimits.Max);
+        return MidiLimits.Clamp(midi + MixerGroups.Transpose(_project, track) + cell.OctaveShiftSemitones);
     }
 
     /// <summary>Non-pitch expressions and grace attacks for one melodic note.</summary>

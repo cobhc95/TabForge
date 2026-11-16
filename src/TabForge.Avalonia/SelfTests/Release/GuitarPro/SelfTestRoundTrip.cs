@@ -72,7 +72,7 @@ public static partial class SelfTest
         values.Count == 0 ? "" : $"{RtF(values[0])}/{RtF(values.Max())}/{RtF(values[^1])}";
 
     private static bool RtIsDrums(TrackModel t) => t.IsDrumTrack;
-    private static int RtDrumMidi(TabNote n) => Math.Clamp(n.MidiValue > 0 ? n.MidiValue : n.Fret, 0, MidiLimits.Max);
+    private static int RtDrumMidi(TabNote n) => MidiLimits.Clamp(n.MidiValue > 0 ? n.MidiValue : n.Fret);
 
     /// <summary>The score of a song as facts. Rests and annotation-only beats are not facts (silence is checked through note onsets/durations).</summary>
     private static Dictionary<string, string> RtScoreFacts(SongProject p, out int noteCount, out int beatCount)
@@ -454,7 +454,7 @@ public static partial class SelfTest
             {
                 if (!tuning) (n.StringIndex, n.Fret) = GuitarProExporter.TransposedPosition(t, n.StringIndex, n.Fret, semitones);
                 n.MidiValue = t.PitchOf(n.StringIndex, n.Fret);
-                if (n.TrillTargetMidi > 0) n.TrillTargetMidi = Math.Clamp(n.TrillTargetMidi + semitones, 0, MidiLimits.Max);
+                if (n.TrillTargetMidi > 0) n.TrillTargetMidi = MidiLimits.Clamp(n.TrillTargetMidi + semitones);
             }
         }
         return copy;

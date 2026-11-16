@@ -1,4 +1,5 @@
 using System;
+using TabForge.Avalonia.Platform;
 using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
@@ -51,7 +52,7 @@ public sealed class EffectValuesWindow : Window
         this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
 
         var heading = new TextBlock { Text = "Presets", Margin = new Thickness(0, 0, 0, 4) };
-        heading[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        heading.UseMutedText();
         AutomationProperties.SetName(_list, "Presets");
         var saveButton = new Button { Content = "Save as preset…", Margin = new Thickness(0, 10, 0, 0), Name = "SavePresetButton" };
         ToolTip.SetTip(saveButton, "Keep these settings as a preset of your own");
@@ -64,11 +65,11 @@ public sealed class EffectValuesWindow : Window
         if (showPresets) body.Children.Add(side);
 
         var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(14, 10, 14, 12) };
-        actions.Children.Add(AnswerButton("OK", EffectValuesAnswer.Ok, "Apply the effect  (Enter)"));
+        actions.Children.Add(AnswerButton(CommonText.Ok, EffectValuesAnswer.Ok, "Apply the effect  (Enter)"));
         var clean = AnswerButton(cleanLabel, EffectValuesAnswer.Clean, "Remove the effect from the note");
         clean.IsEnabled = canClean;
         actions.Children.Add(clean);
-        actions.Children.Add(AnswerButton("Cancel", EffectValuesAnswer.Cancel, "Close without changing anything  (Esc)"));
+        actions.Children.Add(AnswerButton(CommonText.Cancel, EffectValuesAnswer.Cancel, "Close without changing anything  (Esc)"));
         Content = new StackPanel { Children = { body, actions } };
         // Perf: the preset list is virtualized (ItemsSource + recycling template over a VirtualizingStackPanel).
         _list.ItemsPanel = new FuncTemplate<Panel?>(() => new VirtualizingStackPanel());

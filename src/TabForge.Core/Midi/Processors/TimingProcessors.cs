@@ -91,7 +91,7 @@ public sealed class HumanizeProcessor : IMidiProcessor
                     _shift[key] = shift;
                     var v = _baseline > 0 ? _baseline : d2;
                     if (_velRandom > 0) v += (int)Math.Round(_rng.Bipolar() * _velRandom);
-                    d2 = (byte)Math.Clamp(v, 1, MidiLimits.Max);
+                    d2 = (byte)MidiLimits.ClampVelocity(v);
                 }
                 else shift = _shift[key];
             }

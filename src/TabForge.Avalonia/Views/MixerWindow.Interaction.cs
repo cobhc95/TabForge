@@ -93,8 +93,8 @@ public sealed partial class MixerWindow
         Put(grid, fx, MixerColumnLayout.Fx);
         var pan = 0; var volume = 100;
         Put(grid, Fader(() => pan, -64, 63, MixerStripPresenter.PanDefault, v => pan = v,
-            "Live input pan (−64 left … 0 centre … +63 right; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: centre)"), MixerColumnLayout.Pan);
-        Put(grid, Fader(() => volume, 0, MidiLimits.Max, MixerStripPresenter.VolumeDefault, v => volume = v, "Live input volume (0-127; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: 100)"), MixerColumnLayout.Volume);
+            $"Live input pan (−64 left … 0 centre … +63 right; mouse wheel: 1 step, {TabForge.Services.FixedKeys.CtrlWheel}: 8; double-click: centre)"), MixerColumnLayout.Pan);
+        Put(grid, Fader(() => volume, 0, MidiLimits.Max, MixerStripPresenter.VolumeDefault, v => volume = v, $"Live input volume (0-127; mouse wheel: 1 step, {TabForge.Services.FixedKeys.CtrlWheel}: 8; double-click: 100)"), MixerColumnLayout.Volume);
         var muteOnly = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 6, 0, 0) };
         muteOnly.Children.Add(Toggle("M", "Mute", false, _ => { }, null));
         Put(grid, muteOnly, MixerColumnLayout.MuteSolo);

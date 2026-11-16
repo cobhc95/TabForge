@@ -29,8 +29,8 @@ internal sealed partial class ScoreToMidiCompiler
             Setup(track, trackIndex, channel, MidiStatus.ProgramChange, track.MidiProgram, atMs);
             Setup(track, trackIndex, channel, MidiStatus.ControlChange, MidiCc.Volume, atMs, MixerGroups.Volume(_project, track));
             Setup(track, trackIndex, channel, MidiStatus.ControlChange, MidiCc.Pan, atMs, MixerGroups.Pan(_project, track));
-            Setup(track, trackIndex, channel, MidiStatus.ControlChange, MidiCc.Reverb, atMs, Math.Clamp(track.Reverb, 0, MidiLimits.Max));
-            Setup(track, trackIndex, channel, MidiStatus.ControlChange, MidiCc.Chorus, atMs, Math.Clamp(track.Chorus, 0, MidiLimits.Max));
+            Setup(track, trackIndex, channel, MidiStatus.ControlChange, MidiCc.Reverb, atMs, MidiLimits.Clamp(track.Reverb));
+            Setup(track, trackIndex, channel, MidiStatus.ControlChange, MidiCc.Chorus, atMs, MidiLimits.Clamp(track.Chorus));
             if (channel != ChannelAllocator.PercussionChannel)
             {
                 // Define the wheel scale instead of inheriting a synth/device default. Slides and
@@ -101,7 +101,7 @@ internal sealed partial class ScoreToMidiCompiler
         // General MIDI's dedicated metronome sounds (34 bell / 33 click), matching TuxGuitar.
         var note = accent ? _opt.MetronomeAccentNote : _opt.MetronomeClickNote;
         var level = accent ? _opt.MetronomeAccentVolume : _opt.MetronomeClickVolume;
-        var vel = Math.Clamp((int)Math.Round(110 * Math.Clamp(_opt.MetronomeVolume, 0, 100) / 100.0 * Math.Clamp(level, 0, 100) / 100.0), 0, MidiLimits.Max);
+        var vel = MidiLimits.Clamp((int)Math.Round(110 * Math.Clamp(_opt.MetronomeVolume, 0, 100) / 100.0 * Math.Clamp(level, 0, 100) / 100.0));
         var pairId = ++_metronomePairId;
         _timeline.Events.Add(new ScoreEvent
         {

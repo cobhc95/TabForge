@@ -36,7 +36,7 @@ namespace TabForge.Avalonia.Views;
 /// </summary>
 public sealed class RenderWindow : Window
 {
-    private const string CancelLabel = "Cancel", CancelRenderLabel = "Cancel render", CloseLabel = "Close";
+    private const string CancelLabel = CommonText.Cancel, CancelRenderLabel = "Cancel render", CloseLabel = CommonText.Close;
     private const string Mp3MissingTip = "MP3 needs the Windows Media Foundation encoder, which this Windows edition does not have.";
 
     private readonly SongProject _project;
@@ -89,8 +89,7 @@ public sealed class RenderWindow : Window
         Width = 760; Height = 700; MinWidth = 620; MinHeight = 520;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         ShowInTaskbar = false;
-        this[!BackgroundProperty] = new DynamicResourceExtension("WindowBackground");
-        this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
+        this.UseWindowColours();
         FontSize = DialogMetrics.FontSize;
         _sections = SectionLayout.Sorted(project);
         _barCount = BarRangeEditor.MaxMeasures(project);
@@ -160,7 +159,7 @@ public sealed class RenderWindow : Window
 
     private Border BuildOutputGroup()
     {
-        var browse = new Button { Name = "Browse", Content = "Browse…", Padding = new Thickness(10, 2, 10, 2) };
+        var browse = new Button { Name = "Browse", Content = CommonText.Browse, Padding = new Thickness(10, 2, 10, 2) };
         browse.Click += async (_, _) => await BrowsePressed();
         ToolWindowParts.NotAvailable(browse, _pickFolder is null);
         var output = new StackPanel();

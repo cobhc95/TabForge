@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Views.Dialogs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -106,9 +107,8 @@ public sealed partial class FretboardSettingsWindow : Window
         cancel.Click += (_, _) => Close();
         _apply.Classes.Add("PrefsActionButton");
         _apply.Click += (_, _) => Apply();
-        var ok = new Button { Name = "FretboardSettingsOk", Content = SettingsCatalog.Special(SettingsCatalog.ActionOk).Label, IsDefault = true };
+        var ok = DialogButtons.Ok(SettingsCatalog.Special(SettingsCatalog.ActionOk).Label, "FretboardSettingsOk");
         ok.Classes.Add("PrefsActionButton");
-        ok.Classes.Add(AvaloniaDefaultLooks.AccentLook);
         ok.Click += (_, _) => { Apply(); Close(); };
         ShowStatus();
         var right = ToolWindowParts.Row(_status.WithMargin(0, 0, FretboardChromeMetrics.FooterGap, 0), cancel, _apply, ok);

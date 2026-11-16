@@ -33,10 +33,9 @@ public sealed class TextPromptWindow : Window
         FontSize = DialogMetrics.FontSize;
 
         _box = new TextBox { Name = "PromptText", Text = initial };
-        var ok = new Button { Name = "OkButton", Content = "OK", MinWidth = DialogMetrics.PromptButtonMinWidth, IsDefault = true };
-        ok.Classes.Add(AvaloniaDefaultLooks.AccentLook);
+        var ok = PromptChrome.Action("OkButton", CommonText.Ok, primary: true);
         ok.Click += (_, _) => Close(_box.Text);
-        var cancel = new Button { Name = "CancelButton", Content = "Cancel", MinWidth = DialogMetrics.PromptButtonMinWidth, IsCancel = true };
+        var cancel = PromptChrome.Action("CancelButton", CommonText.Cancel, primary: false, isCancel: true);
         cancel.Click += (_, _) => Close(null);
         Content = new StackPanel
         {

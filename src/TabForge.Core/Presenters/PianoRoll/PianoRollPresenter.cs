@@ -77,7 +77,7 @@ public sealed class PianoRollPresenter
         $"Edit the tab of “{trackName}”?",
         "This is a tab track. Changing pitch, timing or length here rewrites its tab: strings and frets are picked automatically.\n\n"
         + "Asked once per visit to the piano roll. Velocity and mute changes never ask.",
-        YesText: "Edit the tab", NoText: "Cancel",
+        YesText: "Edit the tab", NoText: CommonText.Cancel,
         YesToolTip: "Apply this edit and the next ones in this visit to the tab",
         NoToolTip: "Discard this edit: nothing is applied, so there is nothing to undo",
         ShowCancel: false, DefaultIsNo: false);

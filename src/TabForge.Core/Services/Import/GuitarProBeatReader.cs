@@ -44,7 +44,7 @@ internal static class GuitarProBeatReader
             {
                 case "Volume": cell.Mix.Volume = Math.Clamp(value, 0, 16); break;
                 case "Balance": cell.Mix.Pan = Math.Clamp(value - 8, -8, 8); break;
-                case "Instrument": cell.Mix.Program = Math.Clamp(value, 0, MidiLimits.Max); break;
+                case "Instrument": cell.Mix.Program = MidiLimits.Clamp(value); break;
             }
         }
         if (budget.Context.RawMixes is { } rawMixes && rawMixes.TryGetValue(beat, out var raw))

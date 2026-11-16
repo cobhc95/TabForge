@@ -68,7 +68,7 @@ internal sealed class HelpWindow : Window
         body.Children.Add(divider);
         body.Children.Add(right);
 
-        var close = DialogMetrics.ActionButton(new Button { Content = "Close", Name = "CloseButton", HorizontalContentAlignment = HorizontalAlignment.Center });
+        var close = DialogMetrics.ActionButton(new Button { Content = CommonText.Close, Name = "CloseButton", HorizontalContentAlignment = HorizontalAlignment.Center });
         close.Click += (_, _) => Close();
         var footer = DialogMetrics.Inset(new DockPanel { LastChildFill = false });
         DockPanel.SetDock(close, Dock.Right);

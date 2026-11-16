@@ -118,7 +118,7 @@ public static partial class MusicXmlExportService
                 xml.WriteStartElement("midi-instrument");
                 xml.WriteAttributeString("id", PartId(t) + "-I1");
                 xml.WriteElementString("midi-channel", Num(Math.Clamp(track.MidiChannel, 0, 15) + 1));
-                xml.WriteElementString("midi-program", Num(Math.Clamp(track.MidiProgram, 0, MidiLimits.Max) + 1));
+                xml.WriteElementString("midi-program", Num(MidiLimits.Clamp(track.MidiProgram) + 1));
                 WriteMixer(xml, track);
                 xml.WriteEndElement();
             }
@@ -170,7 +170,7 @@ public static partial class MusicXmlExportService
 
     private static bool HasTab(TrackModel track) => !track.IsDrumTrack && track.StringTunings.Count > 0 && track.Kind is TrackKind.Guitar or TrackKind.Bass;
 
-    private static int DrumMidi(TabNote note) => Math.Clamp(note.MidiValue > 0 ? note.MidiValue : note.Fret, 0, MidiLimits.Max);
+    private static int DrumMidi(TabNote note) => MidiLimits.Clamp(note.MidiValue > 0 ? note.MidiValue : note.Fret);
 
     private static readonly string[] DrumNames =
     {
@@ -206,7 +206,7 @@ public static partial class MusicXmlExportService
 
     private static (string Step, int Alter, int Octave) Pitch(int midi, bool flats)
     {
-        midi = Math.Clamp(midi, 0, MidiLimits.Max);
+        midi = MidiLimits.Clamp(midi);
         var pc = midi % 12;
         var octave = midi / 12 - 1;
         return flats ? (FlatSteps[pc], FlatAlters[pc], octave) : (SharpSteps[pc], SharpAlters[pc], octave);

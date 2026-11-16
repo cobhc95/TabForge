@@ -145,11 +145,11 @@ public sealed class ScoreTextStyleWindow : Window
 
     private StackPanel ButtonRow()
     {
-        var ok = new Button { Content = "OK", Width = DialogMetrics.TextStyleButtonWidth, IsDefault = true, Margin = DialogMetrics.TextStyleOkGap };
-        var cancel = new Button { Content = "Cancel", Width = DialogMetrics.TextStyleButtonWidth, IsCancel = true };
+        var ok = DialogButtons.Ok();
+        var cancel = DialogButtons.Cancel();
         ok.Click += (_, _) => Close(true);
         cancel.Click += (_, _) => Close(null);
-        return new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = DialogMetrics.TextStyleButtonsGap, Children = { ok, cancel } };
+        return DialogButtons.Row(ok, cancel).WithMargin(DialogMetrics.TextStyleButtonsGap);
     }
 
     private void Refresh() { Load(); _preview?.Invoke(); }

@@ -203,7 +203,7 @@ public static class WiringPresenter
         /// <summary>Tip for the instrument output mode.</summary>
         public const string RowInstrumentOutputTip = "Instrument output: add to / replace the audio arriving from earlier plug-ins";
         /// <summary>Close button text.</summary>
-        public const string Close = "Close";
+        public const string Close = CommonText.Close;
         /// <summary>Choice text for no sidechain source.</summary>
         public const string NotConnected = "Not connected";
         /// <summary>Choice text for MIDI forwarding off.</summary>

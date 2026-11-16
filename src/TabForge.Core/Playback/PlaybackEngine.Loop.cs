@@ -54,8 +54,8 @@ public sealed partial class PlaybackEngine
         Volatile.Write(ref _metronomeVolume, Math.Clamp(volume, 0, 100));
         Volatile.Write(ref _metronomeAccentVolume, Math.Clamp(accentVolume, 0, 100));
         Volatile.Write(ref _metronomeClickVolume, Math.Clamp(clickVolume, 0, 100));
-        Volatile.Write(ref _metronomeAccentNote, Math.Clamp(accentNote, 0, MidiLimits.Max));
-        Volatile.Write(ref _metronomeClickNote, Math.Clamp(clickNote, 0, MidiLimits.Max));
+        Volatile.Write(ref _metronomeAccentNote, MidiLimits.Clamp(accentNote));
+        Volatile.Write(ref _metronomeClickNote, MidiLimits.Clamp(clickNote));
         Volatile.Write(ref _metronomeSubdivision, subdivisions is 1 or 2 or 3 or 4 ? subdivisions : 1);
 
         if (_options is not { } options) return;
@@ -63,8 +63,8 @@ public sealed partial class PlaybackEngine
         options.MetronomeVolume = Math.Clamp(volume, 0, 100);
         options.MetronomeAccentVolume = Math.Clamp(accentVolume, 0, 100);
         options.MetronomeClickVolume = Math.Clamp(clickVolume, 0, 100);
-        options.MetronomeAccentNote = Math.Clamp(accentNote, 0, MidiLimits.Max);
-        options.MetronomeClickNote = Math.Clamp(clickNote, 0, MidiLimits.Max);
+        options.MetronomeAccentNote = MidiLimits.Clamp(accentNote);
+        options.MetronomeClickNote = MidiLimits.Clamp(clickNote);
         options.MetronomeSubdivision = subdivisions is 1 or 2 or 3 or 4 ? subdivisions : 1;
     }
 

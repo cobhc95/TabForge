@@ -164,7 +164,7 @@ public sealed partial class PresetManagerWindow
     private static TextBlock Muted(string text, Thickness margin)
     {
         var block = new TextBlock { Text = text, Margin = margin, VerticalAlignment = VerticalAlignment.Center };
-        block[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        block.UseMutedText();
         return block;
     }
 }

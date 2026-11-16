@@ -84,7 +84,7 @@ public static class PianoRollScale
         foreach (var note in notes)
         {
             if (note.Pitch < 0 || note.Pitch > 127) continue;
-            var weight = Math.Max(0.0625, note.Length) * Math.Clamp(note.Velocity, 1, 127) / 127.0 * (note.Muted ? 0.5 : 1);
+            var weight = Math.Max(0.0625, note.Length) * MidiLimits.ClampVelocity(note.Velocity) / (double)MidiLimits.Max * (note.Muted ? 0.5 : 1);
             histogram.Add(note.Pitch, weight);
         }
         return histogram;

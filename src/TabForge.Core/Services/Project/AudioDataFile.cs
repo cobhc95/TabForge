@@ -31,6 +31,9 @@ public static class AudioDataFile
         public string Id { get; set; } = "";
         public string SoundSource { get; set; } = SoundSources.Midi;
         public bool MidiSound { get; set; } = true;
+        /// <summary>The user's own GM choice (ticked or unticked by hand); missing in older files, where GM follows the instrument.</summary>
+        public bool MidiSoundManualOn { get; set; }
+        public bool MidiSoundManualOff { get; set; }
         public string? MixerGroup { get; set; }
         /// <summary>The track's own volume / pan (0-127), before any group offset. The .gp beside it holds these with the group baked in
         /// (and rounded to the standard 0..16 scale), so they are restored from here. Null in FormatVersion 1 files.</summary>
@@ -66,7 +69,7 @@ public static class AudioDataFile
             FormatVersion = 2,
             GpSha256 = gpSha256,
             Mixer = project.Mixer,
-            Tracks = project.Tracks.Select((t, i) => new TrackAudio { Index = i, Name = t.Name, Id = t.Id.ToString("N"), Volume = t.Volume, Pan = t.Pan, SoundSource = t.SoundSource, MidiSound = t.MidiSound, MixerGroup = t.MixerGroup, Rig = t.Rig, AudioClips = t.AudioClips, Lanes = t.Lanes }).ToList()
+            Tracks = project.Tracks.Select((t, i) => new TrackAudio { Index = i, Name = t.Name, Id = t.Id.ToString("N"), Volume = t.Volume, Pan = t.Pan, SoundSource = t.SoundSource, MidiSound = t.MidiSound, MidiSoundManualOn = t.MidiSoundManualOn, MidiSoundManualOff = t.MidiSoundManualOff, MixerGroup = t.MixerGroup, Rig = t.Rig, AudioClips = t.AudioClips, Lanes = t.Lanes }).ToList()
         };
         var bytes = JsonSerializer.SerializeToUtf8Bytes(contents, Options);
         if (bytes.LongLength > MaxBytes) throw new InvalidDataException(TooLargeMessage(project, bytes.LongLength));
@@ -210,6 +213,8 @@ public static class AudioDataFile
             if (saved.Id is { Length: > 0 } oldId) idMap[oldId] = track.Id.ToString("N");
             track.SoundSource = saved.SoundSource;
             track.MidiSound = saved.MidiSound;
+            track.MidiSoundManualOn = saved.MidiSoundManualOn;
+            track.MidiSoundManualOff = saved.MidiSoundManualOff;
             track.MixerGroup = saved.MixerGroup;
             track.Rig = saved.Rig ?? new RigPreset();
             track.AudioClips = saved.AudioClips ?? new List<AudioClip>();
@@ -232,14 +237,14 @@ public static class AudioDataFile
         {
             if (saved.Volume is int volume && saved.Pan is int pan && formatVersion >= 2)
             {
-                track.Volume = Math.Clamp(volume, 0, MidiLimits.Max);
-                track.Pan = Math.Clamp(pan, 0, MidiLimits.Max);
+                track.Volume = MidiLimits.Clamp(volume);
+                track.Pan = MidiLimits.Clamp(pan);
                 continue;
             }
             var levels = MixerGroups.LevelsFor(project, track);
-            if (levels.Volume > 0 && levels.Volume != 100) track.Volume = Math.Clamp((int)Math.Round(track.Volume * 100.0 / levels.Volume), 0, MidiLimits.Max);
+            if (levels.Volume > 0 && levels.Volume != 100) track.Volume = MidiLimits.Clamp((int)Math.Round(track.Volume * 100.0 / levels.Volume));
             var offset = levels.Pan + project.Mixer.MasterPan;
-            if (offset != 0) track.Pan = Math.Clamp(track.Pan - offset, 0, MidiLimits.Max);
+            if (offset != 0) track.Pan = MidiLimits.Clamp(track.Pan - offset);
         }
     }
 

@@ -177,7 +177,7 @@ public sealed class MidiInputMonitor : IDisposable
         else _host.WriteFallback(t.Track, s, (byte)data1, (byte)data2);
     }
 
-    private void SendProgram(Target t) { if (!t.Silent) Send(t, MidiStatus.ProgramChange, Math.Clamp(t.Program, 0, 127), 0); }
+    private void SendProgram(Target t) { if (!t.Silent) Send(t, MidiStatus.ProgramChange, MidiLimits.Clamp(t.Program), 0); }
 
     // Sustain off first (under it All Notes Off keeps notes sounding), then the ordered all notes off, then the bend back to centre.
     private void Silence(Target t)

@@ -1,4 +1,5 @@
 using TabForge.Platform.Theme;
+using TabForge.Avalonia.Platform;
 using System;
 using System.Collections.Generic;
 using Avalonia;
@@ -44,18 +45,14 @@ public sealed class QuarantineWindow : Window
         ShowInTaskbar = false;
         Title = QuarantinePresenter.Title;
         Width = ChromeMetrics.QuarantineWidth; Height = ChromeMetrics.QuarantineHeight; MinWidth = ChromeMetrics.QuarantineMinWidth; MinHeight = ChromeMetrics.QuarantineMinHeight;
-        this[!BackgroundProperty] = new DynamicResourceExtension("WindowBackground");
-        this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
+        this.UseWindowColours();
 
         var caption = new TextBlock
         {
             Name = "CaptionText", Text = QuarantinePresenter.Caption, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 8)
         };
-        var close = new Button
-        {
-            Name = "CloseButton", Content = QuarantinePresenter.CloseText, IsCancel = true, IsDefault = true,
-            Padding = new Thickness(14, 3, 14, 3), HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 8, 0, 0)
-        };
+        var close = DialogButtons.Close(QuarantinePresenter.CloseText).WithMargin(DialogMetrics.FooterGap);
+        close.HorizontalAlignment = HorizontalAlignment.Right;
         close.Click += (_, _) => Close();
         var footer = new StackPanel { Children = { _status, close } };
 
@@ -80,7 +77,7 @@ public sealed class QuarantineWindow : Window
         if (presenter.IsEmpty)
         {
             var none = new TextBlock { Name = "EmptyText", Text = QuarantinePresenter.EmptyText };
-            none[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+            none.UseMutedText();
             _rows.Children.Add(none);
             return;
         }

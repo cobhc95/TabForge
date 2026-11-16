@@ -50,7 +50,7 @@ internal static class PianoRollToolbarLayout
     public static Border Group(string caption, bool divider, params Control[] content)
     {
         var label = new TextBlock { Name = "PianoRollCaption" + caption.Replace(" ", ""), Text = caption.ToUpperInvariant(), FontSize = DialogMetrics.PianoRollCaptionSize };
-        label[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        label.UseMutedText();
         label.WithMargin(DialogMetrics.PianoRollCaptionGap);
         AutomationProperties.SetName(label, caption);
         var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = GroupGap, VerticalAlignment = VerticalAlignment.Center };

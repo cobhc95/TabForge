@@ -57,7 +57,7 @@ internal static class MidiImportExtras
         var clipNotes = notes.OrderBy(n => n.Start).ThenBy(n => n.Pitch).Select(n =>
         {
             var start = Math.Max(0, clock.Ms(n.Start)) / 1000.0;
-            return new ClipNote(start, Math.Max(0.001, clock.Ms(Math.Max(n.End, n.Start + 1)) / 1000.0 - start), n.Pitch, Math.Clamp(n.Velocity, 1, MidiLimits.Max));
+            return new ClipNote(start, Math.Max(0.001, clock.Ms(Math.Max(n.End, n.Start + 1)) / 1000.0 - start), n.Pitch, MidiLimits.ClampVelocity(n.Velocity));
         }).ToList();
         var points = new List<ClipController>();
         foreach (var point in source.Controllers)
@@ -65,7 +65,7 @@ internal static class MidiImportExtras
             if (!Belongs(point, partChannel, drums)) continue;
             var at = Math.Max(0, clock.Ms(point.Tick)) / 1000.0;
             if (point.Kind == 0xE0) points.Add(new ClipController(at, ClipController.PitchBend, Math.Clamp(point.Value, -8192, 8191)));
-            else points.Add(new ClipController(at, Math.Clamp(point.Controller, 0, MidiLimits.Max), Math.Clamp(point.Value, 0, MidiLimits.Max)));
+            else points.Add(new ClipController(at, MidiLimits.Clamp(point.Controller), MidiLimits.Clamp(point.Value)));
         }
         var length = Math.Max(0.001, Math.Max(clipNotes.Count == 0 ? 0 : clipNotes.Max(n => n.StartSec + n.LengthSec), points.Count == 0 ? 0 : points.Max(p => p.StartSec) + 0.001));
         track.AudioClips.Add(new AudioClip

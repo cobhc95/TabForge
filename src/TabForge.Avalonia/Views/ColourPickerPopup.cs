@@ -165,14 +165,14 @@ public sealed class ColourPickerPopup
     private static TextBlock Heading(string text)
     {
         var heading = new TextBlock { Text = text, FontWeight = FontWeight.SemiBold };
-        heading[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        heading.UseMutedText();
         return heading;
     }
 
     private Control Header()
     {
         var close = new Button { Name = CloseName, Content = "✕", HorizontalAlignment = HorizontalAlignment.Right };
-        AutomationProperties.SetName(close, "Close");
+        AutomationProperties.SetName(close, CommonText.Close);
         close.Click += (_, _) => Finish(_presenter.UseColourText);
         DockPanel.SetDock(close, Dock.Right);
         return new DockPanel { Children = { close, Heading("Colours") } };
@@ -213,7 +213,7 @@ public sealed class ColourPickerPopup
     private StackPanel ButtonRow()
     {
         var reset = new Button { Content = "Default" }.WithMargin(DialogMetrics.ColourButtonGap);
-        var cancel = new Button { Content = "Cancel" }.WithMargin(DialogMetrics.ColourButtonGap);
+        var cancel = new Button { Content = CommonText.Cancel }.WithMargin(DialogMetrics.ColourButtonGap);
         reset.Click += (_, _) => Finish(_presenter.DefaultValue);
         cancel.Click += (_, _) => Cancel();
         return new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Children = { reset, cancel } };

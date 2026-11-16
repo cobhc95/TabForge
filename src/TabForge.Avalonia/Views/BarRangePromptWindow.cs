@@ -62,11 +62,10 @@ public sealed class BarRangePromptWindow : Window
         ToolTip.SetTip(_remember, ConfirmDialogPresenter.RememberToolTip(hasChoices: true));
         body.Children.Add(_remember);
 
-        var ok = new Button { Name = "OkButton", Content = BarRangePromptPresenter.OkText, MinWidth = DialogMetrics.PromptButtonMinWidth, IsDefault = true };
-        ok.Classes.Add(AvaloniaDefaultLooks.AccentLook);
+        var ok = PromptChrome.Action("OkButton", BarRangePromptPresenter.OkText, primary: true);
         ToolTip.SetTip(ok, ConfirmDialogPresenter.ToolTip(PromptButton.Yes, BarRangePromptPresenter.OkToolTip, defaultIsNo: false));
         ok.Click += (_, _) => Close(Current());
-        var cancel = new Button { Name = "CancelButton", Content = BarRangePromptPresenter.CancelText, MinWidth = DialogMetrics.PromptButtonMinWidth, IsCancel = true };
+        var cancel = PromptChrome.Action("CancelButton", BarRangePromptPresenter.CancelText, primary: false, isCancel: true);
         ToolTip.SetTip(cancel, ConfirmDialogPresenter.ToolTip(PromptButton.No, BarRangePromptPresenter.CancelToolTip, defaultIsNo: false));
         cancel.Click += (_, _) => Close(null);
         body.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8, Margin = DialogMetrics.FooterGap, Children = { ok, cancel } });

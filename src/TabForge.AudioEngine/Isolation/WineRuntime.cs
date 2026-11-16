@@ -199,7 +199,7 @@ public sealed class WineRuntime
                 return;
             }
             Prepare(version, marker, bootTimeoutMs);
-            try { File.Delete(Path.Combine(PrefixPath, FailedName)); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* swallow: a stale failure marker is optional. */ }
+            BestEffortFile.TryDelete(Path.Combine(PrefixPath, FailedName));   // a stale failure marker is optional
         }
         catch (Exception ex) when (ex is not InvalidOperationException)
         {

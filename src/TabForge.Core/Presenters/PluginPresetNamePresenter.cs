@@ -8,10 +8,10 @@ public static class PluginPresetNamePresenter
 {
     public const string Title = "Save preset";
     public const string DefaultName = "My preset";
-    public const string DeleteButton = "Delete";
+    public const string DeleteButton = CommonText.Delete;
     public const string DeleteTip = "Delete the chosen preset";
-    public const string BuiltInError = "A preset that comes with the app has this name. Choose another name.";    public const string OkButton = "OK";
-    public const string CancelButton = "Cancel";
+    public const string BuiltInError = "A preset that comes with the app has this name. Choose another name.";    public const string OkButton = CommonText.Ok;
+    public const string CancelButton = CommonText.Cancel;
 
     public static string Prompt(string pluginName) => $"Preset name for {pluginName}:";
 

@@ -266,7 +266,7 @@ public sealed partial class MainWindow
         var audioDrop = MainWindowAudioDrop.Register(panes, songs, showStatus, status =>
         {
             if (status.CancelVisible && status.StatusText is not null)
-                topBar.Show(status.StatusText, NotificationKind.Info, NoticeCategory.Info, ("Cancel", () =>
+                topBar.Show(status.StatusText, NotificationKind.Info, NoticeCategory.Info, (CommonText.Cancel, () =>
                 {
                     topBar.HideSticky(NotificationBar.ImportSource);
                     topBar.Show("Import cancelled", NotificationKind.Info, NoticeCategory.Info);

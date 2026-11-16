@@ -1,4 +1,5 @@
 using System;
+using TabForge.Avalonia.Platform;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
@@ -66,7 +67,7 @@ public static class LoopSettingsPopup
         var frame = new TransportPopupFrame(Title, CloseTip, TransportPopupFrame.WideWidth);
         frame.AddPower(LoopPowerName, loopOn(), setLoopOn, changed);
         var area = new TextBlock { Text = areaText, Margin = new Thickness(0, 0, 0, AreaBottomMargin) };
-        area[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        area.UseMutedText();
         frame.Rows.Children.Add(area);
         frame.AddCheck(LoopButtonText, audio.LoopButtonLoopsSection, value => audio.LoopButtonLoopsSection = value, changed, LoopButtonCheckMargin)
             .Margin = new Thickness(0, LoopButtonCheckMargin, 0, LoopButtonCheckBottomMargin);

@@ -245,7 +245,7 @@ public sealed partial class TrackPropertiesWindow
         var saveSave = new Button { Name = "SavePresetSave", Content = "Save", VerticalAlignment = VerticalAlignment.Center };
         global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.WithPadding(saveSave, global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.TrackTuningButtonPadding);
         saveSave.Click += (_, _) => CommitSave();
-        var saveCancel = new Button { Name = "SavePresetCancel", Content = "Cancel", VerticalAlignment = VerticalAlignment.Center };
+        var saveCancel = new Button { Name = "SavePresetCancel", Content = CommonText.Cancel, VerticalAlignment = VerticalAlignment.Center };
         global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.WithPadding(saveCancel, global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.TrackTuningButtonPadding);
         global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.WithMargin(saveCancel, global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.TrackTuningHeaderPartGap);
         saveCancel.Click += (_, _) => HideSaveEditor();
@@ -390,7 +390,7 @@ public sealed partial class TrackPropertiesWindow
             var save = new Button { Name = "RenamePresetSave", Content = "Save", VerticalAlignment = VerticalAlignment.Center };
             global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.WithPadding(save, global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.TrackTuningButtonPadding);
             save.Click += (_, _) => CommitRename();
-            var cancel = new Button { Name = "RenamePresetCancel", Content = "Cancel", VerticalAlignment = VerticalAlignment.Center };
+            var cancel = new Button { Name = "RenamePresetCancel", Content = CommonText.Cancel, VerticalAlignment = VerticalAlignment.Center };
             global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.WithPadding(cancel, global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.TrackTuningButtonPadding);
             global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.WithMargin(cancel, global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.TrackTuningHeaderPartGap);
             cancel.Click += (_, _) => CancelRename();

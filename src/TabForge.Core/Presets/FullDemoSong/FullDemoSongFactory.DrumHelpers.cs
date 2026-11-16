@@ -238,7 +238,7 @@ internal static partial class FullDemoSongFactory
 
     /// <summary>A drum note: StringIndex = GuitarProImporter.DrumLine(midi), Fret = MidiValue = midi (plan B35).</summary>
     internal static TabNote Drum(int midi, int vel, bool ghost = false) =>
-        new() { StringIndex = GuitarProImporter.DrumLine(midi), Fret = midi, MidiValue = midi, Velocity = Math.Clamp(vel, 1, MidiLimits.Max), Ghost = ghost };
+        new() { StringIndex = GuitarProImporter.DrumLine(midi), Fret = midi, MidiValue = midi, Velocity = MidiLimits.ClampVelocity(vel), Ghost = ghost };
 
     /// <summary>Removes notes (all, or those matching <paramref name="which"/>) from beats starting in [from, to); emptied beats are dropped.</summary>
     private static void Clear(MeasureModel m, double from, double to, Func<TabNote, bool>? which)

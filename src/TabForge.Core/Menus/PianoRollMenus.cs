@@ -10,7 +10,8 @@ using TabForge.Services;
 namespace TabForge.Menus;
 
 /// <summary>What the piano roll's menu depends on: a note under the pointer or a selection, a clipboard, and whether the pointer is inside the loop.</summary>
-public sealed record PianoRollMenuState(bool OnNotes, bool CanPaste, bool InsideLoop, bool HasNotes = true, string ColourMode = "Track", bool OnSection = false, bool Needle = true);
+public sealed record PianoRollMenuState(bool OnNotes, bool CanPaste, bool InsideLoop, bool HasNotes = true, string ColourMode = "Track", bool OnSection = false, bool Needle = true,
+    Func<string, string>? Key = null);
 
 public static class PianoRollMenus
 {
@@ -32,6 +33,11 @@ public static class PianoRollMenus
     private static MenuSpec NeedleRow(bool on) =>
         new() { Id = PlaybackNeedle, Header = "Show playback needle", Checkable = true, Checked = on, SettingKey = NeedleSettingKey };
 
+    private static readonly HotkeySettings DefaultKeys = new();
+
+    /// <summary>The live key text of a bindable piano roll command (the menu state's lookup, else the catalogue default).</summary>
+    private static string Key(PianoRollMenuState s, string id) => s.Key?.Invoke(id) ?? HotkeyCatalog.DisplayAll(DefaultKeys, id);
+
     private static MenuSpec Row(string id, string header, string shortcut = "", bool enabled = true) =>
         new() { Id = id, Header = header, Shortcut = shortcut, Enabled = enabled };
 
@@ -41,23 +47,23 @@ public static class PianoRollMenus
     private static List<MenuSpec> NoteRows(PianoRollMenuState s)
     {
         var list = new List<MenuSpec>();
-        if (s.InsideLoop) list.AddRange(new[] { Row(ClearLoop, "Clear loop", "Esc twice"), MenuSpec.Separator() });
-        list.Add(Row(Cut, "Cut", "Ctrl+X"));
-        list.Add(Row(Copy, "Copy", "Ctrl+C"));
-        list.Add(Row(Paste, "Paste", "Ctrl+V", s.CanPaste));
-        list.Add(Row(Delete, "Delete", "Del"));
-        list.Add(Row(Duplicate, "Duplicate", "Ctrl+D"));
+        if (s.InsideLoop) list.AddRange(new[] { Row(ClearLoop, "Clear loop", FixedKeys.EscTwice), MenuSpec.Separator() });
+        list.Add(Row(Cut, "Cut", FixedKeys.Cut));
+        list.Add(Row(Copy, "Copy", FixedKeys.Copy));
+        list.Add(Row(Paste, "Paste", FixedKeys.Paste, s.CanPaste));
+        list.Add(Row(Delete, "Delete", FixedKeys.Delete));
+        list.Add(Row(Duplicate, "Duplicate", Key(s, Duplicate)));
         list.Add(MenuSpec.Separator());
-        list.Add(Row(Quantize, "Quantize", "Q"));
+        list.Add(Row(Quantize, "Quantize", Key(s, Quantize)));
         list.Add(Row(QuantizeSettings, "Quantize settings…"));
-        list.Add(Row(Mute, "Mute / unmute", "M"));
+        list.Add(Row(Mute, "Mute / unmute", Key(s, Mute)));
         list.Add(new MenuSpec
         {
             Header = "Transpose",
             Children = new List<MenuSpec>
             {
-                Row(TransposeUp, "Up a semitone", "Up"), Row(TransposeDown, "Down a semitone", "Down"),
-                Row(OctaveUp, "Up an octave", "Shift+Up"), Row(OctaveDown, "Down an octave", "Shift+Down"),
+                Row(TransposeUp, "Up a semitone", FixedKeys.Up), Row(TransposeDown, "Down a semitone", FixedKeys.Down),
+                Row(OctaveUp, "Up an octave", FixedKeys.ShiftUp), Row(OctaveDown, "Down an octave", FixedKeys.ShiftDown),
                 MenuSpec.Separator(), Row(TransposeBy, "By…"),
             },
         });
@@ -71,11 +77,11 @@ public static class PianoRollMenus
         });
         list.Add(MenuSpec.Separator());
         list.Add(Row(Humanise, "Humanise timing…"));
-        list.Add(Row(Legato, "Legato", "Ctrl+L"));
+        list.Add(Row(Legato, "Legato", Key(s, Legato)));
         list.Add(Row(Glue, "Glue same-pitch notes"));
         list.Add(MenuSpec.Separator());
-        list.Add(Row(SelectAll, "Select all", "Ctrl+A"));
-        list.Add(Row(InvertSelection, "Invert selection", "Ctrl+I"));
+        list.Add(Row(SelectAll, "Select all", FixedKeys.SelectAll));
+        list.Add(Row(InvertSelection, "Invert selection", Key(s, InvertSelection)));
         list.Add(Row(SelectPitch, "Select all notes of this pitch"));
         list.Add(ColourRows(s.ColourMode));
         list.Add(NeedleRow(s.Needle));
@@ -96,19 +102,19 @@ public static class PianoRollMenus
     public static List<MenuSpec> RulerRows(PianoRollMenuState s)
     {
         var list = new List<MenuSpec> { Row(MovePlayhead, "Move playhead here"), Row(LoopBar, "Loop this bar"), Row(LoopSection, "Loop this section", enabled: s.OnSection) };
-        if (s.InsideLoop) list.AddRange(new[] { MenuSpec.Separator(), Row(ClearLoop, "Clear loop", "Esc twice") });
+        if (s.InsideLoop) list.AddRange(new[] { MenuSpec.Separator(), Row(ClearLoop, "Clear loop", FixedKeys.EscTwice) });
         return list;
     }
 
     private static List<MenuSpec> EmptyRows(PianoRollMenuState s)
     {
         var list = new List<MenuSpec>();
-        if (s.InsideLoop) list.AddRange(new[] { Row(ClearLoop, "Clear loop", "Esc twice"), MenuSpec.Separator() });
-        list.Add(Row(Paste, "Paste", "Ctrl+V", s.CanPaste));
-        list.Add(Row(SelectAll, "Select all", "Ctrl+A", s.HasNotes));
-        list.Add(Row(InvertSelection, "Invert selection", "Ctrl+I", s.HasNotes));
-        list.Add(Row(Quantize, "Quantize all", "Q", s.HasNotes));
-        list.Add(Row(Legato, "Legato all", "Ctrl+L", s.HasNotes));
+        if (s.InsideLoop) list.AddRange(new[] { Row(ClearLoop, "Clear loop", FixedKeys.EscTwice), MenuSpec.Separator() });
+        list.Add(Row(Paste, "Paste", FixedKeys.Paste, s.CanPaste));
+        list.Add(Row(SelectAll, "Select all", FixedKeys.SelectAll, s.HasNotes));
+        list.Add(Row(InvertSelection, "Invert selection", Key(s, InvertSelection), s.HasNotes));
+        list.Add(Row(Quantize, "Quantize all", Key(s, Quantize), s.HasNotes));
+        list.Add(Row(Legato, "Legato all", Key(s, Legato), s.HasNotes));
         list.Add(ColourRows(s.ColourMode));
         list.Add(NeedleRow(s.Needle));
         list.Add(MenuSpec.Separator());

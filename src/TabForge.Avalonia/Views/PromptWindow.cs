@@ -62,7 +62,7 @@ public sealed class PromptWindow : Window
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8 };
         buttons.Children.Add(AnswerButton(spec.YesText, PromptAnswer.Yes, isDefault: !spec.DefaultIsNo, isCancel: false));
         buttons.Children.Add(AnswerButton(spec.NoText, PromptAnswer.No, isDefault: spec.DefaultIsNo, isCancel: !spec.ShowCancel));
-        if (spec.ShowCancel) buttons.Children.Add(AnswerButton("Cancel", PromptAnswer.Cancel, isDefault: false, isCancel: true));
+        if (spec.ShowCancel) buttons.Children.Add(AnswerButton(CommonText.Cancel, PromptAnswer.Cancel, isDefault: false, isCancel: true));
         body.Children.Add(buttons);
         Content = body;
 

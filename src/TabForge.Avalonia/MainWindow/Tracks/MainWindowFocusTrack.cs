@@ -21,15 +21,18 @@ public sealed class MainWindowFocusTrack
     /// <summary>The command ids this class handles.</summary>
     public static readonly IReadOnlyList<string> Commands = new[] { CommandId, SettingsId };
 
+    private readonly global::Avalonia.Controls.Window _owner;
     private readonly MainWindowTabs _songs;
     private readonly Transport.AvaloniaPlaybackSessions? _playback;
     private readonly MainWindowSettings? _settings;
     private readonly PracticeFocus _focus;
     private SongDocument? _watched;
+    private Features.LeftStrip.FocusTrackSettingsWindow? _openSettings;
     private bool _on;
 
-    private MainWindowFocusTrack(MainWindowTabs songs, Transport.AvaloniaPlaybackSessions? playback, MainWindowSettings? settings)
+    private MainWindowFocusTrack(global::Avalonia.Controls.Window owner, MainWindowTabs songs, Transport.AvaloniaPlaybackSessions? playback, MainWindowSettings? settings)
     {
+        _owner = owner;
         _songs = songs;
         _playback = playback;
         _settings = settings;
@@ -40,14 +43,18 @@ public sealed class MainWindowFocusTrack
     /// <summary>Registers the command and starts following the shown song; Focus Track starts as it was saved (off the first time).</summary>
     public static MainWindowFocusTrack Register(MainWindowCommands commands, global::Avalonia.Controls.Window owner, MainWindowTabs songs, Transport.AvaloniaPlaybackSessions? playback, MainWindowSettings? settings)
     {
-        var focus = new MainWindowFocusTrack(songs, playback, settings);
+        var focus = new MainWindowFocusTrack(owner, songs, playback, settings);
         commands.Add(CommandId, focus.Toggle);
         commands.Add(SettingsId, () => focus.OpenSettings(owner));
         commands.AddCheckState(CommandId, () => focus._on);
+        owner.Opened += (_, _) => MainWindowViewMenu.SetRowChecks(owner, CommandId, focus._on);
         songs.ActiveChanged += focus.Rebind;
         focus.Rebind();
         return focus;
     }
+
+    /// <summary>Raised whenever Focus Track turns on or off from any source (strip icon, menu, hotkey, or settings window).</summary>
+    public event Action<bool>? StateChanged;
 
     /// <summary>True while Focus Track is on.</summary>
     public bool IsOn => _on;
@@ -60,7 +67,20 @@ public sealed class MainWindowFocusTrack
     // Right-click the icon (or View > Focus track settings): the rules window; Apply works the levels out again at once.
     private void OpenSettings(global::Avalonia.Controls.Window owner)
     {
+        if (_openSettings is not null)
+        {
+            _openSettings.Activate();
+            return;
+        }
         var window = new Features.LeftStrip.FocusTrackSettingsWindow(Rules, _on, on => { if (on != _on) Toggle(); }, () => { _settings?.SaveSettingsDeferred(); Apply(true); });
+        _openSettings = window;
+        void Sync(bool isOn) => window.SyncSwitch(isOn);
+        StateChanged += Sync;
+        window.Closed += (_, _) =>
+        {
+            StateChanged -= Sync;
+            if (ReferenceEquals(_openSettings, window)) _openSettings = null;
+        };
         window.Show(owner);
     }
 
@@ -69,6 +89,8 @@ public sealed class MainWindowFocusTrack
         _on = !_on;
         if (_settings is not null) { _settings.Settings.Audio.FocusTrack = _on; _settings.SaveSettingsDeferred(); }
         Apply();
+        MainWindowViewMenu.SetRowChecks(_owner, CommandId, _on);
+        StateChanged?.Invoke(_on);
     }
 
     private void Rebind()

@@ -114,7 +114,7 @@ public sealed partial class IrLoaderEditor : UserControl
     // A file row: its label, the file's path (trimmed in the middle by the column) and Browse.
     private StackPanel FileRow(string label, TextBlock path, string key)
     {
-        var browseButton = new Button { Content = "Browse…", Name = "IrBrowse" + key, Classes = { AvaloniaDefaultLooks.ButtonLook } };
+        var browseButton = new Button { Content = CommonText.Browse, Name = "IrBrowse" + key, Classes = { AvaloniaDefaultLooks.ButtonLook } };
         DialogMetrics.WithPadding(browseButton, DialogMetrics.IrButtonPadding);
         ToolTip.SetTip(browseButton, "Open the file browser to pick a WAV impulse response.");
         browseButton.Click += (_, _) => Platform.UiTasks.Forget(Browse(key), "Browse for an impulse response", text => _status.Text = text);

@@ -141,7 +141,7 @@ internal static class PortableSharedMemory
         {
             throw new IOException("The shared memory folder is not owned by this user.");
         }
-        finally { try { File.Delete(probe); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { } }
+        finally { BestEffortFile.TryDelete(probe); }
         return folder;
     }
 }

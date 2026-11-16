@@ -437,9 +437,7 @@ public sealed class Recorder : IDisposable
         return staging;
     }
 
-    private static void TryDelete(string path) { try { if (File.Exists(path)) File.Delete(path); } catch (IOException) { } // swallow: best-effort delete of a staging file
- catch (UnauthorizedAccessException) { } // swallow: best-effort delete of a staging file
- }
+    private static void TryDelete(string path) => BestEffortFile.TryDelete(path);   // a staging file
 
     public void Dispose() => Finish();
 }

@@ -29,7 +29,7 @@ internal sealed class InstrumentFamilyHeader : Border
         var name = new TextBlock { Text = family, FontSize = DialogMetrics.FontSize, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center };
         name[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextSecondary");
         _chevron[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextSecondary");
-        _count[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        _count.UseMutedText();
         var row = new DockPanel { LastChildFill = true };
         DockPanel.SetDock(_count, Dock.Right);
         row.Children.Add(_count);

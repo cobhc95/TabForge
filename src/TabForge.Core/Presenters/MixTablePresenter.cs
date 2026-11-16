@@ -17,6 +17,16 @@ public sealed record MixTableEdits(
     bool InstrumentOn, int InstrumentIndex, MixFieldValue Volume, MixFieldValue Pan, MixFieldValue Chorus, MixFieldValue Reverb,
     MixFieldValue Phaser, MixFieldValue Tremolo, bool TempoOn, string TempoText, int TransitionIndex, bool AllTracks);
 
+/// <summary>One tab of the Mix Table: a track's own beat at the opened position, whether it carries a change there, and its rules.</summary>
+/// <param name="ColorHex">The track's own colour: the tab's selection shade and strip.</param>
+/// <param name="IsDrums">A drum track: its instrument is a drum kit, not a General MIDI melody program.</param>
+public sealed record MixTableTab(int TrackIndex, int Cell, string Name, bool HasChange, MixTablePresenter Presenter, string? ColorHex = null, bool IsDrums = false);
+
+/// <summary>
+/// What OK or Clear hands back: each tab's mix point (null removes it), the shared tempo of the beat (null removes it) and that tempo's ramp in beats.
+/// </summary>
+public sealed record MixTableOutcome(IReadOnlyList<(MixTableTab Tab, MixChange? Mix)> Mixes, int? Tempo, int TempoTransitionBeats);
+
 /// <summary>
 /// Mix Table rules for one beat. Built from the beat's mix point and the track's values. The window reads the start values and labels
 /// from it, and <see cref="Build"/> turns the window's controls into the result. Thread: UI thread only.
@@ -41,9 +51,9 @@ public sealed class MixTablePresenter
     public const string TempoLabel = "Tempo (bar)";
     public const string TransitionLabel = "Transition";
     public const string AllTracksLabel = "All tracks";
-    public const string ClearButton = "Clear";
-    public const string OkButton = "OK";
-    public const string CancelButton = "Cancel";
+    public const string ClearButton = CommonText.Clear;
+    public const string OkButton = CommonText.Ok;
+    public const string CancelButton = CommonText.Cancel;
 
     /// <summary>The window's answer: the mix point to set on the beat (null when none) and the tempo for the bar (null when none).</summary>
     public sealed record Result(MixChange? Mix, int? Tempo);

@@ -80,8 +80,8 @@ public sealed partial class PlaybackEngine
             case MidiStatus.ControlChange when e.Data1 == 32: value = Math.Max(0, track.MidiBankLsb); return track.MidiBankLsb >= 0;
             case MidiStatus.ControlChange when e.Data1 == 7: value = MixerGroups.Volume(project, track); return true;   // the song's own level: Focus Track is applied when it is sent (Outgoing)
             case MidiStatus.ControlChange when e.Data1 == 10: value = MixerGroups.Pan(project, track); return true;
-            case MidiStatus.ControlChange when e.Data1 == MidiCc.Reverb: value = Math.Clamp(track.Reverb, 0, MidiLimits.Max); return true;
-            case MidiStatus.ControlChange when e.Data1 == MidiCc.Chorus: value = Math.Clamp(track.Chorus, 0, MidiLimits.Max); return true;
+            case MidiStatus.ControlChange when e.Data1 == MidiCc.Reverb: value = MidiLimits.Clamp(track.Reverb); return true;
+            case MidiStatus.ControlChange when e.Data1 == MidiCc.Chorus: value = MidiLimits.Clamp(track.Chorus); return true;
             default: return false;
         }
     }

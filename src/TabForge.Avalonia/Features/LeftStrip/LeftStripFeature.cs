@@ -142,7 +142,7 @@ public sealed class LeftStripFeature
             button.Content = _state.Labels ? Labelled(icon, item.Label, vertical) : icon;
             if (_state.Large || _state.Labels) button.Height = double.NaN;
             if (_state.Large) button.MinHeight = UiMetrics.QuickButtonHeight * LargeScale;
-            if (item.Id == MainWindowFocusTrack.CommandId) button.ContextMenu = FocusTrackMenu();
+            if (item.Id == MainWindowFocusTrack.CommandId) OpenFocusSettingsOnRightClick(button);
             ToolTip.SetServiceEnabled(button, _state.Tooltips);
             ConfigureTip(button, vertical);
             panel.Children.Add(button);
@@ -185,12 +185,21 @@ public sealed class LeftStripFeature
         return line;
     }
 
-    // Right-click the Focus track icon: its rules window (a left click turns it on or off).
-    private ContextMenu FocusTrackMenu()
+    // Right-click the Focus track icon: open its rules window directly without showing a context menu (a left click turns it on or off).
+    private void OpenFocusSettingsOnRightClick(Control button)
     {
-        var settings = new MenuItem { Header = "Focus track settings…" };
-        settings.Click += (_, _) => _commands.Run(MainWindowFocusTrack.SettingsId);
-        return new ContextMenu { Items = { settings } };
+        button.AddHandler(InputElement.PointerPressedEvent, (_, e) =>
+        {
+            if (e.GetCurrentPoint(button).Properties.IsRightButtonPressed) e.Handled = true;
+        }, RoutingStrategies.Tunnel);
+        button.AddHandler(InputElement.PointerReleasedEvent, (_, e) =>
+        {
+            if (e.InitialPressMouseButton != MouseButton.Right) return;
+            e.Handled = true;
+            if (new Rect(button.Bounds.Size).Contains(e.GetPosition(button)))
+                _commands.Run(MainWindowFocusTrack.SettingsId);
+        }, RoutingStrategies.Tunnel);
+        button.AddHandler(Control.ContextRequestedEvent, (_, e) => e.Handled = true, RoutingStrategies.Tunnel | RoutingStrategies.Bubble);
     }
 
     private ContextMenu StripMenu()

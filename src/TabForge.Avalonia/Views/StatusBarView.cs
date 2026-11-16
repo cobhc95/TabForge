@@ -75,7 +75,7 @@ public sealed class StatusBarView : UserControl
         _audioDeviceText.Name = "AudioDeviceText";
         _cancelImport = new Button
         {
-            Name = "CancelImport", Content = "Cancel", IsVisible = false, Margin = new Thickness(6, 0, 0, 0), Padding = new Thickness(8, 1),
+            Name = "CancelImport", Content = CommonText.Cancel, IsVisible = false, Margin = new Thickness(6, 0, 0, 0), Padding = new Thickness(8, 1),
             VerticalAlignment = VerticalAlignment.Center,
         };
         AutomationProperties.SetName(_cancelImport, "Cancel import");
@@ -193,7 +193,7 @@ public sealed class StatusBarView : UserControl
         if (tip.Channels is not null)
         {
             var channels = new TextBlock { Name = "AudioTipChannels", Text = tip.Channels, FontSize = AudioDeviceFontSize };
-            channels[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+            channels.UseMutedText();
             panel.Children.Add(channels);
         }
         ToolTip.SetTip(_audioDevice, panel);

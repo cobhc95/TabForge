@@ -1,4 +1,5 @@
 using System;
+using TabForge.Avalonia.Platform;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -31,7 +32,7 @@ public sealed class LinkedAudioReviewWindow : Window
     public const string NoneText = "No linked audio folders are waiting or allowed.";
     public const string AllowSelectedText = "Allow selected";
     public const string RevokeSelectedText = "Revoke selected";
-    public const string CloseText = "Close";
+    public const string CloseText = CommonText.Close;
 
     private const string SessionPrefix = "session:";
 
@@ -45,8 +46,7 @@ public sealed class LinkedAudioReviewWindow : Window
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         Title = TitleText;
         Width = 720; Height = 480; MinWidth = 420; MinHeight = 260;
-        this[!BackgroundProperty] = new DynamicResourceExtension("WindowBackground");
-        this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
+        this.UseWindowColours();
 
         var list = new StackPanel();
         if (waiting.Count > 0) list.Children.Add(Heading(WaitingHeading, 0));
@@ -61,29 +61,26 @@ public sealed class LinkedAudioReviewWindow : Window
         AddGiven(list, OlderHeading, older);
         if (_allowBoxes.Count == 0 && _revokeBoxes.Count == 0) list.Children.Add(new TextBlock { Text = NoneText });
 
-        var allowButton = ActionButton(AllowSelectedText, "AllowSelectedButton", _allowBoxes.Count > 0);
-        allowButton.IsDefault = true;
+        var allowButton = DialogButtons.Action(AllowSelectedText, primary: true, name: "AllowSelectedButton");
+        allowButton.IsEnabled = _allowBoxes.Count > 0;
         allowButton.Click += (_, _) =>
         {
             var chosen = _allowBoxes.Where(b => b.Box.IsChecked == true).Select(b => b.Decision).ToList();
             Close();
             allow(chosen);
         };
-        var revokeButton = ActionButton(RevokeSelectedText, "RevokeSelectedButton", _revokeBoxes.Count > 0);
+        var revokeButton = DialogButtons.Action(RevokeSelectedText, name: "RevokeSelectedButton");
+        revokeButton.IsEnabled = _revokeBoxes.Count > 0;
         revokeButton.Click += (_, _) =>
         {
             var chosen = _revokeBoxes.Where(b => b.Box.IsChecked == true).Select(b => b.Approval).ToList();
             Close();
             revoke(chosen);
         };
-        var closeButton = ActionButton(CloseText, "CloseButton", true);
-        closeButton.IsCancel = true;
+        var closeButton = DialogButtons.Cancel(CloseText, "CloseButton");
         closeButton.Click += (_, _) => Close();
 
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 10, 0, 0) };
-        buttons.Children.Add(allowButton);
-        buttons.Children.Add(revokeButton);
-        buttons.Children.Add(closeButton);
+        var buttons = DialogButtons.Footer(allowButton, revokeButton, closeButton);
 
         var intro = new TextBlock { Text = IntroText, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 8) };
         var dock = new DockPanel { Margin = new Thickness(12) };
@@ -129,9 +126,6 @@ public sealed class LinkedAudioReviewWindow : Window
         ToolTip.SetTip(box, toolTip);
         return box;
     }
-
-    private static Button ActionButton(string text, string name, bool enabled) =>
-        new() { Name = name, Content = text, Padding = new Thickness(12, 3, 12, 3), Margin = new Thickness(0, 0, 6, 0), IsEnabled = enabled };
 }
 
 /// <summary>
@@ -153,8 +147,7 @@ public sealed class PluginReviewWindow : Window
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         Title = TitleText;
         Width = 720; Height = 420; MinWidth = 420; MinHeight = 240;
-        this[!BackgroundProperty] = new DynamicResourceExtension("WindowBackground");
-        this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
+        this.UseWindowColours();
 
         var boxes = new List<(CheckBox Box, string Path)>();
         var list = new StackPanel();
@@ -167,18 +160,16 @@ public sealed class PluginReviewWindow : Window
             list.Children.Add(box);
         }
 
-        var allow = new Button { Name = "AllowSelectedButton", Content = AllowSelectedText, Padding = DialogMetrics.ActionButtonPadding, Margin = new Thickness(0, 0, 6, 0), IsDefault = true };
+        var allow = DialogButtons.Action(AllowSelectedText, primary: true, name: "AllowSelectedButton");
         allow.Click += (_, _) =>
         {
             var chosen = boxes.Where(b => b.Box.IsChecked == true).Select(b => b.Path).ToList();
             Close();
             if (chosen.Count > 0) approve(chosen);
         };
-        var keep = new Button { Name = "KeepDisabledButton", Content = KeepDisabledText, Padding = DialogMetrics.ActionButtonPadding, IsCancel = true };
+        var keep = DialogButtons.Cancel(KeepDisabledText, "KeepDisabledButton");
         keep.Click += (_, _) => Close();
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 10, 0, 0) };
-        buttons.Children.Add(allow);
-        buttons.Children.Add(keep);
+        var buttons = DialogButtons.Footer(allow, keep);
 
         var intro = new TextBlock { Text = PluginTrust.RightsNotice + IntroTail, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 8) };
         var dock = new DockPanel { Margin = new Thickness(12) };

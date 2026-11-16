@@ -144,8 +144,8 @@ public sealed class LiveInputSession : IDisposable
     /// <summary>Sets the live input's volume and pan: saved program-wide, sent to the engine at once while on.</summary>
     public void SetLevel(int volume, int pan)
     {
-        Saved.Volume = Math.Clamp(volume, 0, MidiLimits.Max);
-        Saved.Pan = Math.Clamp(pan, 0, MidiLimits.Max);
+        Saved.Volume = MidiLimits.Clamp(volume);
+        Saved.Pan = MidiLimits.Clamp(pan);
         _arm.SetLevel(Saved.Volume, Saved.Pan);
         _host.SaveLevelQuietly();
         SyncLevelSoon();

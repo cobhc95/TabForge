@@ -68,6 +68,7 @@ public sealed partial class FxChainWindow
                 _track.MidiSound = _midiSound.IsChecked == true;
                 _track.MidiSoundAuto = false;
                 _track.MidiSoundManualOff = !_track.MidiSound;   // a manual untick is respected by the automatic switch
+                _track.MidiSoundManualOn = _track.MidiSound;     // and so is a manual tick: GM keeps playing beside the instrument
             });
         };
         _autoGm.IsCheckedChanged += (_, _) =>

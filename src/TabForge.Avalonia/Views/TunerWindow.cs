@@ -74,10 +74,9 @@ public sealed class TunerWindow : Window
         _presenter = new TunerPresenter(track());
         Title = "Tuner"; Width = ChromeMetrics.TunerWindowWidth; Height = ChromeMetrics.TunerWindowHeight; MinWidth = ChromeMetrics.TunerWindowMinWidth; MinHeight = ChromeMetrics.TunerWindowMinHeight;
         ShowInTaskbar = false;
-        this[!BackgroundProperty] = new DynamicResourceExtension("WindowBackground");
-        this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
-        _detail[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
-        _hint[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        this.UseWindowColours();
+        _detail.UseMutedText();
+        _hint.UseMutedText();
         RefreshBrushes();
         BuildStringBoxes(_presenter.StringNames);
         // A live theme switch re-resolves the two outlines and repaints the boxes with them, keeping the current highlight.

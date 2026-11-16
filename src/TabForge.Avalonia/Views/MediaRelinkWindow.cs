@@ -28,7 +28,7 @@ namespace TabForge.Avalonia.Views;
 public sealed class MediaRelinkWindow : Window
 {
     public const string TitleText = "Find missing audio";
-    public const string CancelText = "Cancel";
+    public const string CancelText = CommonText.Cancel;
     public const string SearchText = "Search", StopText = "Stop", BrowseText = "Browse\u2026", LocateText = "Locate\u2026";
     private const string Tick = "\u2713", Cross = "\u2717", Dot = " \u00B7 ";
 

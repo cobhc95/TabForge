@@ -101,8 +101,7 @@ public sealed partial class MidiProcessingWindow : Window
         Title = slot is null ? $"MIDI processing: {track.Name}" : $"MIDI processing: {slot.Name}";
         Width = DialogMetrics.MidiWindowWidth; Height = DialogMetrics.MidiWindowHeight; MinWidth = DialogMetrics.MidiWindowMinWidth; MinHeight = DialogMetrics.MidiWindowMinHeight;
         ShowInTaskbar = false;
-        this[!BackgroundProperty] = new DynamicResourceExtension("WindowBackground");
-        this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
+        this.UseWindowColours();
         if (slot is not null)
         {
             _editors = new MidiParamEditors(host, track, slot, edit, _learn);
@@ -174,7 +173,7 @@ public sealed partial class MidiProcessingWindow : Window
         var root = new Grid { RowDefinitions = RowDefinitions.Parse("Auto,*,Auto") };
         root.WithMargin(DialogMetrics.MidiContentInset);
         var note = new TextBlock { Text = MidiProcessingListPresenter.NoInstrumentDescription, TextWrapping = TextWrapping.Wrap, Name = "NoInstrumentNote" };
-        note[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        note.UseMutedText();
         var processors = new StackPanel { Children = { Heading("Processors"), note } };
         Grid.SetRow(_status, 2);
         root.Children.Add(_status);

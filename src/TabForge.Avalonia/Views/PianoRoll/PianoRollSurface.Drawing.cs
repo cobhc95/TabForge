@@ -56,7 +56,7 @@ public sealed partial class PianoRollSurface
 
     /// <summary>A note's fill: the track colour, brighter the louder (a quiet note fades towards the row colour).</summary>
     internal static UiColor NoteFill(UiColor track, UiColor row, int velocity) =>
-        UiTokens.Blend(track, row, (1 - Math.Clamp(velocity, 1, 127) / 127.0) * QuietShare);
+        UiTokens.Blend(track, row, (1 - MidiLimits.VelocityFraction(velocity)) * QuietShare);
 
     public override void Render(DrawingContext context)
     {
@@ -159,8 +159,8 @@ public sealed partial class PianoRollSurface
     /// <summary>A note's colour in the chosen mode: the track colour brighter the louder, velocity heat, pitch class or channel.</summary>
     private UiColor FillOf(PianoRollNote note, UiColor track, UiColor row, int velocity) => ColourMode switch
     {
-        "Velocity" => Heat(Math.Clamp(velocity, 1, 127) / 127.0),
-        "Lane" => LaneId == PianoRollControllers.Velocity ? Heat(Math.Clamp(velocity, 1, 127) / 127.0) : Heat(LaneShare(note.Start)),
+        "Velocity" => Heat(MidiLimits.VelocityFraction(velocity)),
+        "Lane" => LaneId == PianoRollControllers.Velocity ? Heat(MidiLimits.VelocityFraction(velocity)) : Heat(LaneShare(note.Start)),
         "Pitch" => Ink(Swatches[((note.Pitch % 12) + 12) % 12]),
         "Channel" => note.Channel >= 0 ? Ink(Swatches[note.Channel % Swatches.Count]) : NoteFill(track, row, velocity),
         _ => NoteFill(track, row, velocity),
@@ -195,7 +195,7 @@ public sealed partial class PianoRollSurface
 
     private string ValueLabel(int value)
     {
-        var v = Math.Clamp(value, 0, 127);
+        var v = MidiLimits.Clamp(value);
         return _values[v] ??= v.ToString(CultureInfo.InvariantCulture);
     }
 
@@ -206,7 +206,7 @@ public sealed partial class PianoRollSurface
         var r = NoteRect(note);
         if (r.Height >= ValueLineRows)
         {
-            var y = r.Bottom - Math.Clamp(velocity, 0, 127) / 127.0 * r.Height;
+            var y = r.Bottom - MidiLimits.Fraction(velocity) * r.Height;
             d.Line(new UiStroke(Ink("PianoRollNoteValue"), Line), r.X + 1, y, r.Right - 1, y);
         }
         if (!dragging) return;
@@ -347,7 +347,7 @@ public sealed partial class PianoRollSurface
     }
 
     /// <summary>The y of a velocity bar's top in the lane.</summary>
-    internal double VelocityY(int velocity) => LaneTop + Lane - HeadRadius - Math.Clamp(velocity, 0, 127) / 127.0 * Math.Max(1, Lane - 2 * HeadRadius - 2);
+    internal double VelocityY(int velocity) => LaneTop + Lane - HeadRadius - MidiLimits.Fraction(velocity) * Math.Max(1, Lane - 2 * HeadRadius - 2);
 
     /// <summary>The velocity a note shows now: a lane drag's preview, else its own.</summary>
     private int VelocityOf(int index, PianoRollNote note) => _velocityPreview.TryGetValue(index, out var v) ? v : note.Velocity;

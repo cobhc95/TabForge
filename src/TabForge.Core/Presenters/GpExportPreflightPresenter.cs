@@ -18,7 +18,7 @@ public static class GpExportPreflightPresenter
     public const string ListName = "What a compatible .gp file leaves out";
     public const string Intro = "A compatible .gp file keeps the notes and the common marks, but these things are changed or left out:";
     public const string KeepLabel = "Keep a full TabForge copy";
-    public const string CancelLabel = "Cancel";
+    public const string CancelLabel = CommonText.Cancel;
 
     private const string SaveAdvice =
         "Keep a full TabForge copy writes a .tforge project with everything first, and your song then follows that copy. "

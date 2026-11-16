@@ -15,7 +15,7 @@ public sealed class UpdateAvailablePresenter
     public const string PrivacyText = "One anonymous request to GitHub; nothing is downloaded or installed by TabForge.";
     public const string DownloadButtonText = "Open download page";
     public const string LaterButtonText = "Later";
-    public const string OkButtonText = "OK";
+    public const string OkButtonText = CommonText.Ok;
 
     public UpdateAvailablePresenter(ReleaseInfo? release, string currentVersion, bool checkAutomatically)
     {

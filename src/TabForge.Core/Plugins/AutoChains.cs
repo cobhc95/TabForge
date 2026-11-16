@@ -7,7 +7,10 @@ namespace TabForge.Plugins;
 public sealed class AutoChain
 {
     public string Key { get; set; } = "";
+    /// <summary>GM sound as it was when the chain was saved (older settings files). Not applied: only <see cref="MidiSoundManualOn"/> is the user's choice.</summary>
     public bool MidiSound { get; set; } = true;
+    /// <summary>The user had ticked GM sound themselves when saving: tracks that get this chain keep GM playing beside the instrument.</summary>
+    public bool MidiSoundManualOn { get; set; }
     public List<PluginSlot> Plugins { get; set; } = new();
 }
 
@@ -31,7 +34,7 @@ public static class AutoChains
         var plugins = Clone(track.Rig.Plugins);
         ChainTree.Pack(plugins, track.Rig.Containers);   // on the copy: the containers travel with the list
         ChainStateStore.Externalise(plugins);   // states go to their own files, not into settings.json
-        settings.AutoChains.Add(new AutoChain { Key = KeyOf(track), MidiSound = track.MidiSound, Plugins = plugins });
+        settings.AutoChains.Add(new AutoChain { Key = KeyOf(track), MidiSound = track.MidiSound, MidiSoundManualOn = track.MidiSound && track.MidiSoundManualOn, Plugins = plugins });
     }
 
     public static void Remove(PluginSettings settings, TrackModel track) => settings.AutoChains.RemoveAll(a => a.Key == KeyOf(track));
@@ -44,7 +47,11 @@ public static class AutoChains
         ChainStateStore.Resolve(track.Rig.Plugins);
         ChainTree.Refresh(track.Rig);
         track.SoundSource = SoundSources.Plugins;
-        track.MidiSound = auto.MidiSound;
+        // GM sound follows the instrument (off while it plays, see MixerGroups.ApplyAutoGm) unless the user ticked it on for this chain.
+        track.MidiSound = auto.MidiSoundManualOn;
+        track.MidiSoundManualOn = auto.MidiSoundManualOn;
+        track.MidiSoundManualOff = false;
+        track.MidiSoundAuto = false;
         return true;
     }
 

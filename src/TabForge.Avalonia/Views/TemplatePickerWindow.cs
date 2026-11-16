@@ -27,7 +27,7 @@ public sealed class TemplatePickerWindow : Window
     private const string PickerTitle = "New from template";
     private const string PickerLabel = "Choose a starting point";
     private const string CreateText = "Create";
-    private const string CancelText = "Cancel";
+    private const string CancelText = CommonText.Cancel;
 
     private readonly ComboBox _choices;
 
@@ -45,10 +45,9 @@ public sealed class TemplatePickerWindow : Window
         FontSize = DialogMetrics.FontSize;
 
         _choices = new ComboBox { Name = "TemplateChoices", ItemsSource = startingPoints, SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch };
-        var create = new Button { Name = "CreateButton", Content = CreateText, MinWidth = DialogMetrics.PromptButtonMinWidth, IsDefault = true };
-        create.Classes.Add(AvaloniaDefaultLooks.AccentLook);
+        var create = PromptChrome.Action("CreateButton", CreateText, primary: true);
         create.Click += (_, _) => Close(_choices.SelectedItem as string);
-        var cancel = new Button { Name = "CancelButton", Content = CancelText, MinWidth = DialogMetrics.PromptButtonMinWidth, IsCancel = true };
+        var cancel = PromptChrome.Action("CancelButton", CancelText, primary: false, isCancel: true);
         cancel.Click += (_, _) => Close(null);
         Content = new StackPanel
         {

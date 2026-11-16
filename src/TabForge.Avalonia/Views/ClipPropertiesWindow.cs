@@ -61,17 +61,17 @@ public sealed class ClipPropertiesWindow : Window
         var muted = new CheckBox { Content = ClipPropertiesPresenter.MutedLabel, IsChecked = clip.Muted, Margin = new Thickness(0, 6, 0, 6), VerticalAlignment = VerticalAlignment.Center };
         Row("", muted);
         var info = new TextBlock { Text = ClipPropertiesPresenter.Note(clip), TextWrapping = TextWrapping.Wrap, FontSize = ChromeMetrics.TextSmall, Margin = new Thickness(0, 10, 0, 10) };
-        info[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        info.UseMutedText();
 
-        var ok = new Button { Content = ClipPropertiesPresenter.OkButton, IsDefault = true, MinWidth = 72, Margin = new Thickness(0, 0, 6, 0) };
-        var cancel = new Button { Content = ClipPropertiesPresenter.CancelButton, IsCancel = true, MinWidth = 72 };
+        var ok = DialogButtons.Ok(ClipPropertiesPresenter.OkButton, name: null);
+        var cancel = DialogButtons.Cancel(ClipPropertiesPresenter.CancelButton, name: null);
         ok.Click += (_, _) =>
         {
             ClipPropertiesPresenter.Apply(clip, name.Text ?? "", gain.Value, pitch.Value, speed.Value, muted.IsChecked == true);
             Close(true);
         };
         cancel.Click += (_, _) => Close(false);
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Children = { ok, cancel } };
+        var buttons = DialogButtons.Row(ok, cancel);
         Content = new StackPanel { Margin = new Thickness(16), Children = { grid, info, buttons } };
     }
 }

@@ -91,6 +91,6 @@ public sealed class PracticeFocus
         double factor;
         if (track == s.Track) factor = s.FocusFactor;
         else if (!s.Others.TryGetValue(track, out factor)) return level;   // a track of a song that is not shown
-        return factor == 1 ? level : Math.Clamp((int)Math.Round(level * factor), 0, MidiLimits.Max);
+        return factor == 1 ? level : MidiLimits.Clamp((int)Math.Round(level * factor));
     }
 }

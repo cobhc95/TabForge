@@ -164,7 +164,7 @@ public static partial class GuitarProExporter
         if (t.Contains("LeftTap")) note.IsLeftHandTapped = true;
         if (t.Contains("Trill"))
         {
-            note.TrillValue = Math.Clamp((n.TrillTargetMidi > 0 ? n.TrillTargetMidi : n.MidiValue + 2) + shift.Sounding, 0, MidiLimits.Max);   // an absolute pitch: follows the track transpose
+            note.TrillValue = MidiLimits.Clamp((n.TrillTargetMidi > 0 ? n.TrillTargetMidi : n.MidiValue + 2) + shift.Sounding);   // an absolute pitch: follows the track transpose
             note.TrillSpeed = DurationOf(n.TrillDurationDenominator > 0 ? n.TrillDurationDenominator : 16);
         }
         var bendScale = 60 / BendPointModel.SpanOf(n.BendPoints);

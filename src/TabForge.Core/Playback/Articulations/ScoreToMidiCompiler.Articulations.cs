@@ -93,8 +93,8 @@ internal sealed partial class ScoreToMidiCompiler
                 EmitArticulationMessage(state.Message, state.Map.LeadMs, track.MidiSound && _opt.ArticulationExport is null, device, channel, onset, trackIndex);
             _articulationState[key] = state.MessageId;
         }
-        if (state.FixedVelocity is int fixedValue) velocity = Math.Clamp(fixedValue, 1, MidiLimits.Max);
-        return state.Replace is int pitch ? Math.Clamp(pitch, 0, MidiLimits.Max) : midi;
+        if (state.FixedVelocity is int fixedValue) velocity = MidiLimits.ClampVelocity(fixedValue);
+        return state.Replace is int pitch ? MidiLimits.Clamp(pitch) : midi;
     }
 
     private void EmitArticulationMessage(ArticulationRule rule, int leadMs, bool alsoGeneralMidi, int device, int channel, double onset, int trackIndex)

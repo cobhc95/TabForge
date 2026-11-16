@@ -37,7 +37,7 @@ internal static class PromptChrome
     {
         var block = new TextBlock { Name = name, Text = text, FontSize = DialogMetrics.PromptMutedSize, TextWrapping = TextWrapping.Wrap }.WithMargin(DialogMetrics.PromptMutedGap);
         if (maxLines > 0) { block.MaxLines = maxLines; block.TextTrimming = TextTrimming.CharacterEllipsis; }
-        block[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        block.UseMutedText();
         if (tip is not null) ToolTip.SetTip(block, tip);
         return block;
     }

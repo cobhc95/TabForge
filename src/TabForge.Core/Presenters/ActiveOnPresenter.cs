@@ -20,7 +20,7 @@ public static class ActiveOnPresenter
     public const string InactiveHint = "Inactive on this device";
     public const string NotConnected = "not connected";
     public const string DoneText = "Done";
-    public const string CancelText = "Cancel";
+    public const string CancelText = CommonText.Cancel;
     public const string ClearText = "Clear rule";
     public const string Subtitle = "{0} plays only when both match. Leave a choice on Any to ignore it.";
     public const string StatusActive = "Right now: active (matches)";

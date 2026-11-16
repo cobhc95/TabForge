@@ -3,6 +3,7 @@
 // Does not own: the density factors (UiDensity), the working area (WindowMetrics), or any view layout (each window keeps its own).
 // Tests: UiMetricsTests.
 using System;
+using TabForge.Avalonia.Platform;
 using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
@@ -150,7 +151,7 @@ public static class ScalePopupLayout
     public static TextBlock SectionLabel(string text)
     {
         var label = new TextBlock { Text = text, FontSize = ChromeMetrics.TextSmall, FontWeight = FontWeight.SemiBold, Margin = new Thickness(0, SectionTopGap, 0, SectionBottomGap) };
-        label[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        label.UseMutedText();
         return label;
     }
 

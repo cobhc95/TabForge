@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Views.Dialogs;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
@@ -17,9 +18,7 @@ public sealed class ScoreInfoWindow : Window
 {
     private const double WindowWidth = 480;
     private const double WindowHeight = 560;
-    private const double ButtonWidth = 80;
     private const double PageMargin = 10;
-    private const double ButtonRowTopMargin = 8;
     private const double LabelTopMargin = 6;
     private const double LabelBottomMargin = 2;
     private const double SingleLineMinHeight = 26;
@@ -56,17 +55,11 @@ public sealed class ScoreInfoWindow : Window
         Field(page, "Instructions", _instructions);
         Field(page, "Notice", _notice);
 
-        var ok = new Button { Content = "OK", Width = ButtonWidth, IsDefault = true };
-        var cancel = new Button { Content = "Cancel", Width = ButtonWidth, IsCancel = true };
+        var ok = DialogButtons.Ok();
+        var cancel = DialogButtons.Cancel();
         ok.Click += (_, _) => Close(ReadValues());
         cancel.Click += (_, _) => Close(null);
-        var buttons = new StackPanel
-        {
-            Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right,
-            Margin = new Thickness(0, ButtonRowTopMargin, 0, 0),
-        };
-        buttons.Children.Add(ok);
-        buttons.Children.Add(cancel);
+        var buttons = DialogButtons.Footer(ok, cancel);
         page.Children.Add(buttons);
 
         Content = new ScrollViewer { Content = page };

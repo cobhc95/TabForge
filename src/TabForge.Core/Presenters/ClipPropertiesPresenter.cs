@@ -13,8 +13,8 @@ public static class ClipPropertiesPresenter
     public const string NameLabel = "Name";
     public const string MutedLabel = "Muted";
     public const string ResetTip = "Double-click to reset";
-    public const string OkButton = "OK";
-    public const string CancelButton = "Cancel";
+    public const string OkButton = CommonText.Ok;
+    public const string CancelButton = CommonText.Cancel;
 
     /// <summary>One slider row: its label, range, step, the value a double-click restores and how a value reads.</summary>
     public sealed record SliderRow(string Label, double Minimum, double Maximum, double Step, double Reset, Func<double, string> Format);

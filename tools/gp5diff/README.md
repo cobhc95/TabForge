@@ -9,7 +9,7 @@ which the two scores differ. Not part of the product; nothing here ships.
 | `gen.py` | Seeded generator of 20-80-action sequences (`python gen.py <run> <first seed> <count>`; `--trivial` for hand-checkable ones). |
 | `Gp5Driver/` | C# console tool. `run <desktop> <run> <k>/<n>` drives one GP5 on its own hidden desktop: File > New, the actions, a save after every action (`steps/<id>/NNN.gp5`), the final file (`out/<id>.gp5`). `do <desktop> <ops>` is the exploration tool (keys, menus, captures). |
 | `gp5.ps1` | Starts N drivers in parallel (one hidden desktop and one GP5 each), with a timeout. |
-| `tf.ps1` | Runs `TestGp5DiffReplay` (tests/full-suite/Editor/SelfTestGp5Diff.cs) in a build of the app: `replay` writes TabForge's song after every action (`tf/<id>.json`), `import` reads GP5's files with TabForge's importer (`gp5/<id>.json`). |
+| `tf.ps1` | Ran `TestGp5DiffReplay` in a build of the app (that self-test has since been removed, so this script no longer works as is): `replay` writes TabForge's song after every action (`tf/<id>.json`), `import` reads GP5's files with TabForge's importer (`gp5/<id>.json`). |
 | `gpdump.py`, `dumpgp.py` | pyguitarpro readings of GP5's files (the comparator's reference; a quick bar-by-bar print). |
 | `compare.py` | First divergent action per sequence, and where TabForge's importer reads a GP5 file differently from pyguitarpro. |
 | `cluster.py` | Groups divergences by action and kind of difference, keeps the shortest repro of each. |

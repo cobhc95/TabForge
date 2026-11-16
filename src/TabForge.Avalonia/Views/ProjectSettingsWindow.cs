@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using TabForge.Avalonia.Platform;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
@@ -71,8 +72,8 @@ public sealed class ProjectSettingsWindow : Window
         _tabs.Items.Add(TabPage("Notes & lyrics", NotesAndLyrics()));
         _tabs.Items.Add(TabPage("Summary", Summary()));
 
-        var cancel = new Button { Content = "Cancel", Width = 88, IsCancel = true };
-        var ok = new Button { Content = "OK", Width = 88, IsDefault = true, Margin = new Thickness(0, 0, 8, 0) };
+        var cancel = DialogButtons.Cancel(name: null);
+        var ok = DialogButtons.Ok(name: null).WithMargin(DialogMetrics.FooterButtonGap);
         cancel.Click += (_, _) => Close();
         ok.Click += (_, _) => Accept();
         _error[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("Danger");
@@ -209,7 +210,7 @@ public sealed class ProjectSettingsWindow : Window
     private static TextBlock Hint(string text, Thickness margin)
     {
         var note = new TextBlock { Text = text, FontSize = 11.5, Margin = margin, TextWrapping = TextWrapping.Wrap };
-        note[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        note.UseMutedText();
         return note;
     }
 
@@ -217,7 +218,7 @@ public sealed class ProjectSettingsWindow : Window
     {
         var row = new Grid { Margin = new Thickness(0, 5, 0, 5), ColumnDefinitions = new ColumnDefinitions($"{StatLabelColumn},*") };
         var name = new TextBlock { Text = label };
-        name[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        name.UseMutedText();
         var figure = new TextBlock { Text = value, FontWeight = FontWeight.SemiBold };
         Grid.SetColumn(figure, 1);
         row.Children.Add(name);

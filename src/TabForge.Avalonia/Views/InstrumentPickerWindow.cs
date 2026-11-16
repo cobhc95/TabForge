@@ -73,11 +73,11 @@ public sealed class InstrumentPickerWindow : Window
         var host = new StackPanel();
         var firstFamily = _presenter.CurrentFamily ?? _presenter.Families.FirstOrDefault();
         foreach (var family in _presenter.Families) host.Children.AddRange(FamilyRows(family, buildNow: family == firstFamily));
-        var ok = new Button { Content = InstrumentPickerPresenter.SelectButton, Width = 90, IsDefault = true, Margin = new Thickness(0, 0, 6, 0) };
-        var cancel = new Button { Content = InstrumentPickerPresenter.CancelButton, Width = 90, IsCancel = true };
+        var ok = DialogButtons.Ok(InstrumentPickerPresenter.SelectButton, name: null);
+        var cancel = DialogButtons.Cancel(InstrumentPickerPresenter.CancelButton, name: null);
         ok.Click += (_, _) => Close(_presenter.Chosen);
         cancel.Click += (_, _) => Close(null);
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = DialogMetrics.FooterGap, Children = { ok, cancel } };
+        var buttons = DialogButtons.Footer(ok, cancel);
         DockPanel.SetDock(_search, Dock.Top);
         DockPanel.SetDock(buttons, Dock.Bottom);
         var layout = new DockPanel { Margin = new Thickness(14), Children = { _search, buttons, new ScrollViewer { Content = host } } };

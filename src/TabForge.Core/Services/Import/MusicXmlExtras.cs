@@ -16,10 +16,10 @@ internal static class MusicXmlExtras
     private static readonly Regex HexColour = new("^#(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$", RegexOptions.Compiled);
 
     // ---- units shared with the exporter ----
-    internal static string VolumeText(int volume) => (Math.Clamp(volume, 0, MidiLimits.Max) * 100.0 / MidiLimits.Max).ToString("0.####", CultureInfo.InvariantCulture);
-    internal static string PanText(int pan) => ((Math.Clamp(pan, 0, MidiLimits.Max) - 64) * 90.0 / 64.0).ToString("0.####", CultureInfo.InvariantCulture);
-    internal static int VolumeOf(double percent) => (int)Math.Clamp(Math.Round(percent * MidiLimits.Max / 100.0), 0, MidiLimits.Max);
-    internal static int PanOf(double degrees) => (int)Math.Clamp(Math.Round(degrees * 64.0 / 90.0 + 64.0), 0, MidiLimits.Max);
+    internal static string VolumeText(int volume) => (MidiLimits.Clamp(volume) * 100.0 / MidiLimits.Max).ToString("0.####", CultureInfo.InvariantCulture);
+    internal static string PanText(int pan) => ((MidiLimits.Clamp(pan) - 64) * 90.0 / 64.0).ToString("0.####", CultureInfo.InvariantCulture);
+    internal static int VolumeOf(double percent) => (int)MidiLimits.Clamp(Math.Round(percent * MidiLimits.Max / 100.0));
+    internal static int PanOf(double degrees) => (int)MidiLimits.Clamp(Math.Round(degrees * 64.0 / 90.0 + 64.0));
     internal const string MetaPrefix = "tabforge-meta-";
     /// <summary>The song details MusicXML has no field for (or alphaTab does not read, or trims), as name / value pairs; the title and artist also travel in the standard elements.</summary>
     internal static IEnumerable<(string Key, string? Value)> MetaFields(SongProject p)
@@ -73,7 +73,7 @@ internal static class MusicXmlExtras
             if (own is not null)
             {
                 track.Mute = own.GetValueOrDefault("mute") == 1; track.Solo = own.GetValueOrDefault("solo") == 1;
-                track.Chorus = Math.Clamp(own.GetValueOrDefault("chorus"), 0, MidiLimits.Max); track.Reverb = Math.Clamp(own.GetValueOrDefault("reverb", 24), 0, MidiLimits.Max);
+                track.Chorus = MidiLimits.Clamp(own.GetValueOrDefault("chorus")); track.Reverb = MidiLimits.Clamp(own.GetValueOrDefault("reverb", 24));
             }
             if (colour is not null && HexColour.IsMatch(colour))
             {

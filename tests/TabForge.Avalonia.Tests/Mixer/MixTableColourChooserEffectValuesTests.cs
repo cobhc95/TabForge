@@ -38,9 +38,10 @@ public class MixTableColourChooserEffectValuesTests
         Assert.Equal(MixTablePresenter.Title, window.Title);
         var checks = window.GetLogicalDescendants().OfType<CheckBox>().Select(c => (string)c.Content!).ToList();
         Assert.Equal(new[] { MixTablePresenter.InstrumentLabel, MixTablePresenter.VolumeLabel, MixTablePresenter.PanLabel, MixTablePresenter.ChorusLabel,
-            MixTablePresenter.ReverbLabel, MixTablePresenter.PhaserLabel, MixTablePresenter.TremoloLabel, MixTablePresenter.TempoLabel,
-            MixTablePresenter.AllTracksLabel }, checks);
-        Assert.Equal(new[] { MixTablePresenter.ClearButton, MixTablePresenter.OkButton, MixTablePresenter.CancelButton }, ButtonTexts(window));
+            MixTablePresenter.ReverbLabel, MixTablePresenter.PhaserLabel, MixTablePresenter.TremoloLabel, MixTablePresenter.AllTracksLabel,
+            MixTablePresenter.TempoLabel }, checks);   // the tempo is shared by every track, so it sits below the track's own page
+        // ‹ › ▾ scroll and list the track tabs (hidden while every tab fits), then the footer.
+        Assert.Equal(new[] { "‹", "›", "▾", MixTablePresenter.ClearButton, MixTablePresenter.OkButton, MixTablePresenter.CancelButton }, ButtonTexts(window));
         window.Close();
     }
 
@@ -50,7 +51,7 @@ public class MixTableColourChooserEffectValuesTests
         var owner = new Window();
         owner.Show();
         var window = new MixTableWindow(MixTableWindow.SamplePresenter());
-        var pending = window.ShowDialog<MixTablePresenter.Result?>(owner);
+        var pending = window.ShowDialog<MixTableOutcome?>(owner);
         window.GetLogicalDescendants().OfType<CheckBox>().Single(c => (string)c.Content! == MixTablePresenter.TempoLabel).IsChecked = true;
         window.GetLogicalDescendants().OfType<TextBox>().Single().Text = "999";
         Click(ButtonNamed(window, MixTablePresenter.OkButton));
@@ -99,7 +100,7 @@ public class MixTableColourChooserEffectValuesTests
         var owner = new Window();
         owner.Show();
         var window = new MixTableWindow(presenter);
-        var pending = window.ShowDialog<MixTablePresenter.Result?>(owner);
+        var pending = window.ShowDialog<MixTableOutcome?>(owner);
         foreach (var c in window.GetLogicalDescendants().OfType<CheckBox>()) c.IsChecked = true;
         var sliders = window.GetLogicalDescendants().OfType<Slider>().ToList();
         for (var i = 0; i < sliders.Count; i++) sliders[i].Value = i == 1 ? -2 : i + 3;
@@ -110,7 +111,7 @@ public class MixTableColourChooserEffectValuesTests
         var expected = presenter.Build(new MixTableEdits(true, presenter.InstrumentStartIndex, F(0), F(1), F(2), F(3), F(4), F(5), true, "133", presenter.TransitionStartIndex, true));
         var actual = (await pending)!;
         Assert.Equal(expected.Tempo, actual.Tempo);
-        Assert.Equal(System.Text.Json.JsonSerializer.Serialize(expected.Mix), System.Text.Json.JsonSerializer.Serialize(actual.Mix));
+        Assert.Equal(System.Text.Json.JsonSerializer.Serialize(expected.Mix), System.Text.Json.JsonSerializer.Serialize(actual.Mixes.Single().Mix));
         owner.Close();
     }
 

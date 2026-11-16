@@ -21,7 +21,7 @@ namespace TabForge.Avalonia.Views;
 /// </summary>
 public sealed class TrackDrumMapWindow : Window
 {
-    private const double LineBoxWidth = 70, StepBoxWidth = 90, HeadBoxWidth = 110, PresetBoxWidth = 150, FooterButtonWidth = 80, Gap = 14;
+    private const double LineBoxWidth = 70, StepBoxWidth = 90, HeadBoxWidth = 110, PresetBoxWidth = 150, Gap = 14;
     private const string ColumnWidths = "220,90,90,110,*";
     private const string Intro = "Choose how each drum sound is written. TAB line 1 is the top line; staff position counts half-spaces down from the top staff line (0 = top line, 7 = kick space, negative = above the staff).";
 
@@ -68,11 +68,14 @@ public sealed class TrackDrumMapWindow : Window
         foreach (var preset in DrumMaps.Presets.Where(p => p != DrumMaps.Custom)) _basePreset.Items.Add(new ComboBoxItem { Content = DrumMaps.DisplayName(preset), Tag = preset });
         var reset = new Button { Name = "ResetFromButton", Content = "Reset from", Margin = new Thickness(0, 0, 6, 0), Padding = new Thickness(10, 0) };
         reset.Click += (_, _) => ResetFromPicked();
-        var ok = new Button { Name = "OkButton", Content = "OK", Width = FooterButtonWidth, IsDefault = true, Margin = new Thickness(20, 0, 6, 0) };
+        var ok = DialogButtons.Ok();
         ok.Click += (_, _) => Close(_entries);
-        var cancel = new Button { Name = "CancelButton", Content = "Cancel", Width = FooterButtonWidth, IsCancel = true };
+        var cancel = DialogButtons.Cancel();
         cancel.Click += (_, _) => Close(null);
-        return new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = DialogMetrics.FooterGap, Children = { reset, _basePreset, ok, cancel } };
+        var row = DialogButtons.Footer(ok, cancel);
+        row.Children.Insert(0, _basePreset);
+        row.Children.Insert(0, reset);
+        return row;
     }
 
     // "Reset from": every row as the picked preset writes it; nothing happens until a preset is picked.

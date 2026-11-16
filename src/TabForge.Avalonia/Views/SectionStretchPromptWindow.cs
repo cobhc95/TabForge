@@ -79,7 +79,7 @@ public sealed class SectionStretchPromptWindow : Window
 
         var body = DialogMetrics.Inset(new StackPanel());
         var message = new TextBlock { Name = "MessageText", Text = text, TextWrapping = TextWrapping.Wrap }.WithMargin(DialogMetrics.SectionAudioQuestionGap);
-        message[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        message.UseMutedText();
         body.Children.Add(message);
         var group = new RadioCardGroup("SectionStretchChoice");
         foreach (var option in options)
@@ -90,7 +90,7 @@ public sealed class SectionStretchPromptWindow : Window
             if (option.Reason is not { } reason) continue;
             card.IsEnabled = false;
             var why = new TextBlock { Name = option.Name + "Reason", Text = reason, TextWrapping = TextWrapping.Wrap, FontSize = DialogMetrics.MediaSmallText }.WithMargin(DialogMetrics.SectionAudioHintIndent);
-            why[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+            why.UseMutedText();
             body.Children.Add(why);
         }
 
@@ -99,11 +99,10 @@ public sealed class SectionStretchPromptWindow : Window
         hint[!ForegroundProperty] = new DynamicResourceExtension("TextMuted");
         body.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { _remember, hint } }.WithMargin(DialogMetrics.SectionAudioRememberGap));
 
-        var cancel = new Button { Name = "CancelButton", Content = SectionStretchPromptPresenter.CancelText, MinWidth = DialogMetrics.PromptButtonMinWidth, IsCancel = true };
+        var cancel = PromptChrome.Action("CancelButton", SectionStretchPromptPresenter.CancelText, primary: false, isCancel: true);
         ToolTip.SetTip(cancel, SectionStretchPromptPresenter.CancelToolTip);
         cancel.Click += (_, _) => Close();
-        var ok = new Button { Name = "OkButton", Content = SectionStretchPromptPresenter.StretchText, MinWidth = DialogMetrics.PromptButtonMinWidth, IsDefault = true };
-        ok.Classes.Add(AvaloniaDefaultLooks.AccentLook);
+        var ok = PromptChrome.Action("OkButton", SectionStretchPromptPresenter.StretchText, primary: true);
         ToolTip.SetTip(ok, SectionStretchPromptPresenter.StretchToolTip);
         ok.Click += (_, _) => Accept();
         body.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8, Children = { cancel, ok } }.WithMargin(DialogMetrics.FooterGap));

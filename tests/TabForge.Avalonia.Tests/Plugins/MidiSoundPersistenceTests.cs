@@ -52,7 +52,9 @@ public class MidiSoundPersistenceTests
     [Fact]
     public void AManualGmSoundNextToAPlayingInstrumentIsKeptAfterReopen()
     {
-        var reopened = Reopen(DrumTrack(midiSound: true, auto: false, manualOff: false));
+        var track = DrumTrack(midiSound: true, auto: false, manualOff: false);
+        track.MidiSoundManualOn = true;   // ticked by hand: GM on alone (not automatic) is no longer read as a choice
+        var reopened = Reopen(track);
 
         Assert.False(MixerGroups.ApplyAutoGm(reopened, new MixerOptions()));
         Assert.True(reopened.MidiSound);

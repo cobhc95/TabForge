@@ -323,11 +323,11 @@ public static class MixerGroups
 
     /// <summary>Track volume (0–127) after its group's level.</summary>
     public static int Volume(SongProject project, TrackModel track) =>
-        Math.Clamp((int)Math.Round(track.Volume * LevelsFor(project, track).Volume / 100.0), 0, MidiLimits.Max);
+        MidiLimits.Clamp((int)Math.Round(track.Volume * LevelsFor(project, track).Volume / 100.0));
 
     /// <summary>Track pan (0–127) after its group's pan offset.</summary>
     public static int Pan(SongProject project, TrackModel track) =>
-        Math.Clamp(track.Pan + LevelsFor(project, track).Pan + project.Mixer.MasterPan, 0, MidiLimits.Max);
+        MidiLimits.Clamp(track.Pan + LevelsFor(project, track).Pan + project.Mixer.MasterPan);
 
     /// <summary>Track transpose in semitones after its group's pitch.</summary>
     public static int Transpose(SongProject project, TrackModel track) =>
@@ -417,7 +417,8 @@ public static class MixerGroups
 
     /// <summary>
     /// Keeps "GM sound" in line with reality: when no VST instrument plays the track (chain off, instrument bypassed or removed) GM is
-    /// ticked, and when an instrument plays again an automatic tick is taken back. A manual untick is respected (then silence is correct).
+    /// ticked, and whenever an instrument plays GM is unticked, including a track that opened with GM on and then auto-loaded its
+    /// instrument. Only the user's own choice wins: a manual untick keeps GM off, a manual tick keeps it playing beside the instrument.
     /// Returns true when it changed the track.
     /// </summary>
     public static bool ApplyAutoGm(TrackModel track, MixerOptions options)
@@ -427,7 +428,7 @@ public static class MixerGroups
         if (track.Rig.Plugins.Count == 0 && track.SoundSource != SoundSources.Plugins) return false;
         var instrumentPlays = InstrumentPlays(track);
         if (!instrumentPlays && !track.MidiSound && !track.MidiSoundManualOff) { track.MidiSound = true; track.MidiSoundAuto = true; return true; }
-        if (instrumentPlays && track.MidiSound && track.MidiSoundAuto) { track.MidiSound = false; track.MidiSoundAuto = false; return true; }
+        if (instrumentPlays && track.MidiSound && !track.MidiSoundManualOn) { track.MidiSound = false; track.MidiSoundAuto = false; return true; }
         return false;
     }
 

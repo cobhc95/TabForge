@@ -49,15 +49,15 @@ public static class GlobalRetune
         {
             var count = track.StringTunings.Count;
             int DeltaOf(int stringIndex) => delta[Math.Clamp(count <= ReferenceStringCount ? stringIndex + (ReferenceStringCount - count) : Math.Min(stringIndex, ReferenceStringCount - 1), 0, ReferenceStringCount - 1)];
-            track.StringTunings = track.StringTunings.Select((p, s) => Math.Clamp(p + DeltaOf(s), 0, MidiLimits.Max)).ToList();
+            track.StringTunings = track.StringTunings.Select((p, s) => MidiLimits.Clamp(p + DeltaOf(s))).ToList();
             foreach (var measure in track.Measures)
                 foreach (var cell in measure.Cells.Concat(measure.Voice2Cells))
                     foreach (var note in cell.Notes)
                     {
                         var d = DeltaOf(note.StringIndex);
-                        note.MidiValue = Math.Clamp(note.MidiValue + d, 0, MidiLimits.Max);
-                        if (note.SlideTargetMidi > 0) note.SlideTargetMidi = Math.Clamp(note.SlideTargetMidi + d, 0, MidiLimits.Max);
-                        if (note.TrillTargetMidi > 0) note.TrillTargetMidi = Math.Clamp(note.TrillTargetMidi + d, 0, MidiLimits.Max);
+                        note.MidiValue = MidiLimits.Clamp(note.MidiValue + d);
+                        if (note.SlideTargetMidi > 0) note.SlideTargetMidi = MidiLimits.Clamp(note.SlideTargetMidi + d);
+                        if (note.TrillTargetMidi > 0) note.TrillTargetMidi = MidiLimits.Clamp(note.TrillTargetMidi + d);
                     }
         }
     }

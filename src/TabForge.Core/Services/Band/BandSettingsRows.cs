@@ -1,7 +1,7 @@
 namespace TabForge.Services;
 
-// Owns: the "Band view" rows of the settings catalogue (Timeline page); BandFeatureModule hands them to the catalogue.
-// Does not own: page layout (BandFeatureModule.Layout) or the stored values (TimelineSettings.Band).
+// Owns: the "Band view" rows of the settings catalogue (Timeline page); BandFeatureSettings (Services/Features/FeatureSettingsRows.cs) hands them to the catalogue.
+// Does not own: page layout (BandFeatureSettings) or the stored values (TimelineSettings.Band).
 // Tests: no dedicated test class.
 public static partial class SettingsCatalog
 {

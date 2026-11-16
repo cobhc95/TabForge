@@ -51,5 +51,5 @@ public static class Dynamics
     }
 
     /// <summary>The velocity playback and export use for a note (always 1..127).</summary>
-    public static int Clamp(int velocity) => Math.Clamp(velocity, 1, MidiLimits.Max);
+    public static int Clamp(int velocity) => MidiLimits.ClampVelocity(velocity);
 }

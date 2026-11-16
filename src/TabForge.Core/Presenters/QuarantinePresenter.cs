@@ -15,7 +15,7 @@ public sealed class QuarantinePresenter
     public const string EmptyText = "No plug-ins are switched off.";
     public const string AllowAgainText = "Allow again";
     public const string AllowAgainToolTip = "Load this plug-in again on the next playback";
-    public const string CloseText = "Close";
+    public const string CloseText = CommonText.Close;
 
     public QuarantinePresenter(IReadOnlyList<string> quarantinedPaths)
     {

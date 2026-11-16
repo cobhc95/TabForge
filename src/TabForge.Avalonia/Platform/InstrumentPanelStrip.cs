@@ -299,7 +299,7 @@ public sealed class InstrumentPanelStrip : Grid
     /// strip has a width (not yet arranged) only the gap cap applies.</summary>
     private double FretboardMaxHeight(int strings, double padding)
     {
-        var gapCapHeight = FretboardSizeRules.GapCapPaneHeight(strings, padding, Bounds.Width, InstrumentPanelView.BoardLimits);
+        var gapCapHeight = FretboardSizeRules.GapCapPaneHeight(strings, padding, Bounds.Width, Panel.ActiveLimits);
         return Bounds.Width > 0 ? Math.Min(gapCapHeight, Panel.WidthLimitedPaneHeight(Bounds.Width)) : gapCapHeight;
     }
 

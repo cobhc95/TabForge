@@ -27,7 +27,7 @@ public static partial class SelfTest
         }
         finally
         {
-            try { Directory.Delete(scratch, true); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+            BestEffortFile.TryDeleteFolder(scratch);
         }
     }
 

@@ -30,11 +30,11 @@ public sealed class KeyboardModeBar
     private readonly ComboBox _speed = new() { MinWidth = 76 };
     private readonly ComboBox _hands = new() { MinWidth = 128 };
     private readonly ComboBox _midi = new() { MinWidth = 168, MaxWidth = 260 };
-    private readonly Button _play, _wait, _loop, _names, _fingers;
+    private readonly Button _play, _wait, _loop, _names, _fingers, _hear;
     private readonly TextBlock _look = new() { MinWidth = 30, TextAlignment = TextAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
     private readonly global::Avalonia.Controls.Shapes.Ellipse _dot = new() { Width = 10, Height = 10, StrokeThickness = 1.5, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 4, 0) };
     private readonly TextBlock _heard = new() { VerticalAlignment = VerticalAlignment.Center, MaxWidth = 220, TextTrimming = TextTrimming.CharacterEllipsis };
-    private bool _syncing, _playing, _waitOn, _loopOn, _namesOn = true, _fingersOn = true;
+    private bool _syncing, _playing, _waitOn, _loopOn, _namesOn = true, _fingersOn = true, _hearOn;
     private int _lookSeconds = KeyboardModeSettings.DefaultLookAheadSeconds;
 
     public KeyboardModeBar(WrapPanel row)
@@ -62,6 +62,7 @@ public sealed class KeyboardModeBar
         Add(Make("+", "More seconds on screen: shorter notes, see further ahead", () => StepLook(1)), "Look-ahead longer: shorter notes", gap: 0);
         _names = Add(Make("Note names", "Note names on the falling notes", () => { _namesOn = !_namesOn; Show(); Raise(); }), gap: RowGap);
         _fingers = Add(Make("Fingers", "Finger numbers on the falling notes (when the score has fingering)", () => { _fingersOn = !_fingersOn; Show(); Raise(); }));
+        _hear = Add(Make("Hear track", "Hear track: the practised track plays its own notes too, so the song sounds complete. Off: only the notes you play sound on it", () => { _hearOn = !_hearOn; Show(); Raise(); }), gap: RowGap);
         Group("MIDI in", _midi, "The MIDI keyboard to play along with: any available device (new ones are picked up), one device, or off");
         _midi.Items.Add(new ComboBoxItem { Content = OffDeviceText, Tag = KeyboardModeSettings.MidiOff });
         _midi.Items.Add(new ComboBoxItem { Content = AnyDeviceText, Tag = KeyboardModeSettings.MidiAny });
@@ -81,6 +82,8 @@ public sealed class KeyboardModeBar
     public bool LoopOn { get => _loopOn; set { _loopOn = value; Show(); } }
     public bool ShowNames { get => _namesOn; set { _namesOn = value; Show(); } }
     public bool ShowFingers { get => _fingersOn; set { _fingersOn = value; Show(); } }
+    /// <summary>On: the practised track's written notes sound too (not only the player's).</summary>
+    public bool HearTrack { get => _hearOn; set { _hearOn = value; Show(); } }
     /// <summary>False when the track has no fingering written: the Fingers toggle is disabled.</summary>
     public bool HasFingers { get => _fingers.IsEnabled; set => _fingers.IsEnabled = value; }
     public int LookAheadSeconds { get => _lookSeconds; set { _lookSeconds = KeyboardModeSettings.NormalizeLookAhead(value); Show(); } }
@@ -204,6 +207,7 @@ public sealed class KeyboardModeBar
         SetOn(_loop, "Loop", _loopOn);
         SetOn(_names, "Note names", _namesOn);
         SetOn(_fingers, "Fingers", _fingersOn);
+        SetOn(_hear, "Hear track", _hearOn);
         _look.Text = _lookSeconds.ToString(CultureInfo.InvariantCulture) + " s";
     }
 

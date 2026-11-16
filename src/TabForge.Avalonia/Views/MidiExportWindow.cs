@@ -1,4 +1,5 @@
 using System;
+using TabForge.Avalonia.Platform;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -48,7 +49,7 @@ public sealed partial class MidiExportWindow : Window
         _secFrom = Field(DialogMetrics.MidiExportSecWidth), _secTo = Field(DialogMetrics.MidiExportSecWidth);
     private readonly TextBlock _hint = ToolWindowParts.Small(""), _status = ToolWindowParts.Status("StatusText");
     private readonly Button _export = new Button { Content = "Export" }.WithPadding(DialogMetrics.MidiExportPrimaryPadding);
-    private readonly Button _cancel = new Button { Name = "Cancel", Content = "Close" }.WithPadding(DialogMetrics.MidiExportSecondaryPadding);
+    private readonly Button _cancel = new Button { Name = "Cancel", Content = CommonText.Close }.WithPadding(DialogMetrics.MidiExportSecondaryPadding);
     private bool _loading = true;
 
     /// <param name="project">The song to export.</param>
@@ -74,8 +75,7 @@ public sealed partial class MidiExportWindow : Window
         Width = DialogMetrics.MidiExportWidth; Height = DialogMetrics.MidiExportHeight; MinWidth = DialogMetrics.MidiExportMinWidth; MinHeight = DialogMetrics.MidiExportMinHeight;
         DialogMetrics.CentreOnOwner(this);
         ShowInTaskbar = false;
-        this[!BackgroundProperty] = new DynamicResourceExtension("WindowBackground");
-        this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
+        this.UseWindowColours();
         FontSize = DialogMetrics.FontSize;
 
         var stack = DialogMetrics.Inset(new StackPanel());

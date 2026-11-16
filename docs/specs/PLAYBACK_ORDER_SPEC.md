@@ -379,6 +379,8 @@ Everything else in section 7 matches the current build exactly.
 
 ## 9. Acceptance gate (existing self-tests)
 
+> **Note (Nov 2026 hygiene audit):** the self-test methods named in the table below no longer exist. The order rules are now covered by the xUnit project, mainly `tests/TabForge.Avalonia.Tests/Playback/PlaybackOrderEdgeTests.cs` and `PlaybackStartOrderTests.cs`. The table is kept as the list of behaviours that must stay covered.
+
 These `--selftest` checks must still pass unchanged:
 
 | Test method (file) | Checks that rely on this spec |

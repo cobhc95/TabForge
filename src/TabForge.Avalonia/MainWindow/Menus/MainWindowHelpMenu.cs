@@ -26,7 +26,7 @@ public static class MainWindowHelpMenu
 {
     private const string AboutCaption = "About TabForge";
     // The About dialog's second button and the two buttons' tooltips (its yesToolTip/noToolTip).
-    internal const string CloseButtonText = "Close";
+    internal const string CloseButtonText = CommonText.Close;
     internal const string LicencesButtonText = "Third-party licences";
     internal const string CloseButtonToolTip = "Close this window";
     internal const string LicencesButtonToolTip = "Open the third-party licence notices";
