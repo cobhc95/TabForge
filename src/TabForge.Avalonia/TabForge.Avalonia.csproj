@@ -7,7 +7,9 @@
     <TargetFramework Condition="!$([MSBuild]::IsOSPlatform('Windows')) Or '$(TabForgePortableBuild)' == 'true'">net10.0</TargetFramework>
     <!-- The portable (non-Windows) build has its own lock file, so the shipped one is untouched; -p:TabForgePortableBuild=true builds it on Windows too. -->
     <NuGetLockFilePath Condition="'$(TargetFramework)' == 'net10.0'">packages.portable.lock.json</NuGetLockFilePath>
-    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <RuntimeIdentifiers Condition="!('$(TargetFramework)' == 'net10.0')">win-x64</RuntimeIdentifiers>
+    <!-- The portable build restores for both runtimes its lock file records (linux-x64 for the Linux package, win-x64), with or without -r. -->
+    <RuntimeIdentifiers Condition="'$(TargetFramework)' == 'net10.0'">linux-x64;win-x64</RuntimeIdentifiers>
     <AssemblyName>TabForge</AssemblyName>
     <RootNamespace>TabForge.Avalonia</RootNamespace>
     <!-- Precompiled code (no start-up JIT) and tiered PGO, and a GC that conserves memory (5), as in the WPF build. -->
