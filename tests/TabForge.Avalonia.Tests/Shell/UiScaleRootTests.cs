@@ -43,3 +43,23 @@ public class UiScaleRootTests
         finally { WindowUiScale.CurrentAppearance.UiScale = 1.0; }
     }
 }
+
+public class UiScaleRootPromptTests
+{
+    [AvaloniaTheory]
+    [InlineData(0.75)] [InlineData(1.5)]
+    public void AWindowSizedToItsContentKeepsItsContentHeight(double scale)
+    {
+        WindowUiScale.CurrentAppearance.UiScale = scale;
+        try
+        {
+            var content = new StackPanel { Margin = new Thickness(10), Children = { new TextBlock { Text = "Open them now?" }, new Button { Content = "Yes" } } };
+            var window = new Window { SizeToContent = SizeToContent.WidthAndHeight, Content = content };
+            window.Show();
+            for (var i = 0; i < 8; i++) { DialogTestKit.RunQueuedUiWork(); window.UpdateLayout(); }
+            Assert.True(window.Bounds.Height < 200 * scale, $"prompt grew to {window.Bounds.Height}");
+            window.Close();
+        }
+        finally { WindowUiScale.CurrentAppearance.UiScale = 1.0; }
+    }
+}

@@ -28,8 +28,12 @@ public sealed class UiScaleRoot : LayoutTransformControl
             var scale = LayoutTransform is ScaleTransform s && s.ScaleX > 0 && Math.Abs(s.ScaleX - s.ScaleY) < 1e-9 ? s.ScaleX : 1.0;
             var margin = child.Margin;
             // Only content meant to stretch is filled: a fixed size or a non-stretch alignment keeps its own size.
-            var fillWidth = double.IsNaN(child.Width) && child.HorizontalAlignment == HorizontalAlignment.Stretch;
-            var fillHeight = double.IsNaN(child.Height) && child.VerticalAlignment == VerticalAlignment.Stretch;
+            // A window sized to its content (a prompt) is never stretched in that direction: its size comes from the content.
+            var sizeToContent = (TopLevel.GetTopLevel(this) as Window)?.SizeToContent ?? SizeToContent.Manual;
+            var fillWidth = double.IsNaN(child.Width) && child.HorizontalAlignment == HorizontalAlignment.Stretch
+                && sizeToContent is not (SizeToContent.Width or SizeToContent.WidthAndHeight);
+            var fillHeight = double.IsNaN(child.Height) && child.VerticalAlignment == VerticalAlignment.Stretch
+                && sizeToContent is not (SizeToContent.Height or SizeToContent.WidthAndHeight);
             child.MinWidth = fillWidth ? Fill(availableSize.Width, scale, margin.Left + margin.Right, _ownMinWidth) : _ownMinWidth;
             child.MinHeight = fillHeight ? Fill(availableSize.Height, scale, margin.Top + margin.Bottom, _ownMinHeight) : _ownMinHeight;
         }
