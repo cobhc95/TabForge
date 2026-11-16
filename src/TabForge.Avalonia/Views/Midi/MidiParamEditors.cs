@@ -84,19 +84,25 @@ public sealed class MidiParamEditors
             MidiParamKind.Text => Text(proc, values, p),
             _ => new TextBlock { Text = "" },
         };
-        return Wrap(Viewer is null ? MidiSharedRows.ParamRow(p.Label, tip, editor) : MidiSharedRows.ParamRow(p.Label, tip, editor, Viewer));
+        var min = p.Kind switch
+        {
+            MidiParamKind.Number => DialogMetrics.MidiKnobSize + DialogMetrics.MidiValueGap.Left + DialogMetrics.MidiValueMinWidth,
+            MidiParamKind.Choice => DialogMetrics.MidiChoiceMinWidth,
+            _ => DialogMetrics.MidiTextMinWidth,
+        };
+        return Wrap(new MidiFieldRow(p.Label, tip, editor) { EditorMinWidth = min, Name = "ParamRow_" + p.Key });
     }
 
     private static Control Wrap(Control content)
     {
         content.HorizontalAlignment = HorizontalAlignment.Stretch;
-        content.WithMargin(DialogMetrics.MidiRowGap);
+        content.WithMargin(DialogMetrics.MidiFieldPad);
         return content;
     }
 
     private CheckBox Check(PluginMidiProcessor proc, JsonObject values, MidiParamInfo p)
     {
-        var box = new CheckBox { Content = p.Label, IsChecked = values[p.Key]!.GetValue<double>() >= 0.5, VerticalAlignment = VerticalAlignment.Center, Name = "Param_" + p.Key, HorizontalAlignment = HorizontalAlignment.Left };
+        var box = new CheckBox { Content = new TextBlock { Text = p.Label, TextWrapping = TextWrapping.Wrap }, IsChecked = values[p.Key]!.GetValue<double>() >= 0.5, VerticalAlignment = VerticalAlignment.Center, Name = "Param_" + p.Key, HorizontalAlignment = HorizontalAlignment.Left };
         box.WithMargin(DialogMetrics.MidiCheckGap);
         if (p.Tip.Length > 0) MidiSharedRows.Tip(box, p.Tip);
         box.IsCheckedChanged += (_, _) =>

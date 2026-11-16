@@ -25,9 +25,15 @@ public sealed record MidiParamInfo(string Key, string Label, MidiParamKind Kind,
 /// <summary>A processor type of the catalog. Parameters travel to the engine as a flat JSON object keyed by <see cref="MidiParamInfo.Key"/>.</summary>
 public sealed record MidiProcessorInfo(string Type, string Name, string Category, string Description, string Keywords, IReadOnlyList<MidiParamInfo> Params)
 {
+    /// <summary>The key of the catalog group the window lists this processor under (see <see cref="MidiProcessorCatalog.Groups"/>).</summary>
+    public string Group { get; init; } = "";
+
     /// <summary>Precomputed lowercase text the search box filters on (name, description, keywords).</summary>
     public string SearchText { get; } = $"{Name} {Category} {Description} {Keywords}".ToLowerInvariant();
 }
+
+/// <summary>One heading of the processor catalog: its key, its shown name and the processor types under it, in order.</summary>
+public sealed record MidiProcessorGroup(string Key, string Name, IReadOnlyList<string> Types);
 
 /// <summary>
 /// The MIDI processors TabForge offers in front of a plug-in (functional spec: docs/specs/MIDI_PROCESSORS_SPEC.md). Each entry describes its
@@ -71,6 +77,22 @@ public static partial class MidiProcessorCatalog
         ["noteMap"] = new[] { "Overrides" },
     };
 
+    /// <summary>The catalog headings in the order the window lists them; every processor type is under exactly one.</summary>
+    public static readonly IReadOnlyList<MidiProcessorGroup> Groups = new MidiProcessorGroup[]
+    {
+        new("notes", "Notes and pitch", new[] { "transpose", "noteRange", "scaleSnap", "chord" }),
+        new("velocity", "Velocity and feel", new[] { "velocity", "velVariation", "humanize" }),
+        new("timing", "Timing", new[] { "delay", "noteHold", "repeater" }),
+        new("drums", "Drums", new[] { "noteMap", "choke", "chokeGroup", "audioDrum" }),
+        new("generate", "Generate", new[] { "arp", "stepSeq", "lfo", "noteRandom", "modalRandom", "scaleVariation" }),
+        new("channels", "Channels and controllers", new[] { "channelMap", "channelRoute", "programBank", "ccSender", "ccMapper" }),
+        new("audio", "Audio and loops", new[] { "audioDucker", "loopSampler", "looper" }),
+        new("utilities", "Utilities", new[] { "sanitizer", "panic", "log" }),
+    };
+
+    /// <summary>The key of the group a processor type is listed under; "utilities" for a type no group names.</summary>
+    public static string GroupOf(string type) => Groups.FirstOrDefault(g => g.Types.Contains(type))?.Key ?? "utilities";
+
     public static readonly IReadOnlyList<MidiProcessorInfo> All = Raw.Select(Scope).ToArray();
 
     private static MidiProcessorInfo Scope(MidiProcessorInfo info)
@@ -83,7 +105,7 @@ public static partial class MidiProcessorCatalog
                 Choices: new[] { (0, "All notes"), (1, "Only these notes"), (2, "All except these notes") }, Group: "Applies to"));
             list.Add(new MidiParamInfo("NoteSet", "Notes", MidiParamKind.NoteSet, Tip: "Note numbers or names: 36, 38, 40-45, C2, D#3. Learn adds the next note you play", Group: "Applies to"));
         }
-        return info with { Params = list };
+        return info with { Params = list, Group = GroupOf(info.Type) };
     }
 
     public sealed record SearchHit(MidiProcessorInfo Info, MidiParamInfo? Param, string Display);

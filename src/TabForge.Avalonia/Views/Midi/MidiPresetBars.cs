@@ -11,6 +11,7 @@ using Avalonia.Layout;
 using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Avalonia.Views.Fx;
 using TabForge.Avalonia.Views.Presets;
+using TabForge.Platform.Theme;
 using TabForge.Plugins;
 using TabForge.Presets;
 using TabForge.Presenters;
@@ -47,12 +48,13 @@ public sealed class MidiPresetBars
 
     /// <summary>The whole list's presets: a drop-down, Save preset… and Delete.</summary>
     public ComboBox ListBox { get; } = new() { MinWidth = DialogMetrics.MidiChoiceMinWidth, HorizontalAlignment = HorizontalAlignment.Stretch, Name = "PresetBox" };
-    public Button SaveList { get; } = Small("Save preset…", "Save the whole processor list as a preset", "SavePresetButton");
-    public Button DeleteList { get; } = Small(CommonText.Delete, "Delete the selected saved preset", "DeletePresetButton");
+    public Button SaveList { get; } = MidiSharedRows.IconButton(IconGeometry.SaveDisk, "SavePresetButton", "Save preset…", "Save the whole processor list as a preset");
+    public Button DeleteList { get; } = MidiSharedRows.IconButton(IconGeometry.Trash, "DeletePresetButton", CommonText.Delete, "Delete the selected saved preset");
     /// <summary>The selected processor's presets: a drop-down and Save preset….</summary>
-    public ComboBox ProcessorBox { get; } = new() { MinWidth = DialogMetrics.MidiChoiceMinWidth, HorizontalAlignment = HorizontalAlignment.Stretch, Name = "ProcessorPresetBox" };
-    public Button SaveProcessor { get; } = Small("Save preset…", "Save this processor's parameter values as a preset", "SaveProcessorPresetButton");
-    public WrapPanel ProcessorRow { get; } = new() { Orientation = Orientation.Horizontal, IsVisible = false, Name = "ProcessorPresetRow" };
+    public ComboBox ProcessorBox { get; } = new() { MinWidth = DialogMetrics.MidiPresetBoxMinWidth, MaxWidth = DialogMetrics.MidiPresetBoxWidth, HorizontalAlignment = HorizontalAlignment.Stretch, Name = "ProcessorPresetBox" };
+    public Button SaveProcessor { get; } = MidiSharedRows.IconButton(IconGeometry.SaveDisk, "SaveProcessorPresetButton", "Save preset…", "Save this processor's parameter values as a preset");
+    /// <summary>The selected processor's preset drop-down with its save button beside it: one line, never wrapped.</summary>
+    public Grid ProcessorRow { get; } = new() { ColumnDefinitions = ColumnDefinitions.Parse("Auto,Auto"), IsVisible = false, Name = "ProcessorPresetRow", HorizontalAlignment = HorizontalAlignment.Left };
 
     /// <param name="current">The plug-in's processors as they are now (what Save preset… writes).</param>
     /// <param name="applyList">Replaces the plug-in's whole list with a preset's processors (one undo step).</param>
@@ -63,9 +65,10 @@ public sealed class MidiPresetBars
         (_owner, _dialogs, _current, _slot, _applyList, _applyProcessor) = (owner, dialogs, current, slot, applyList, applyProcessor);
         MidiSharedRows.Tip(ListBox, "Load a preset: replaces this plug-in's whole processor list (Undo works in the FX window). Delete or reorder your own with Manage presets…");
         MidiSharedRows.Tip(ProcessorBox, "Presets of this processor: picking one sets its parameters (one undo step). Delete or reorder your own with Manage presets…");
+        Grid.SetColumn(SaveProcessor, 1);   // the box fills the row and Save preset… stays beside it, never wrapped below
+        SaveProcessor.VerticalAlignment = VerticalAlignment.Stretch;
         ProcessorRow.Children.Add(ProcessorBox);
         ProcessorRow.Children.Add(SaveProcessor);
-        ProcessorRow.WithMargin(DialogMetrics.MidiNoteGap);
         _ = PresetRows.Attach(ListBox, () => _listStore, item => item is Entry { Name: not null, Manage: false } entry ? entry.Name : null,
             () => PresetCatalogKind.MidiChain, () => null, () => FillList(ListSelectedKey()), item => item is Entry { Manage: true }, isBuiltIn: item => item is Entry { Build: not null });
         _ = PresetRows.Attach(ProcessorBox, () => _processorStore, item => item is Entry { Name: not null, Manage: false } entry ? entry.Name : null,
@@ -79,15 +82,6 @@ public sealed class MidiPresetBars
         FillList(null);
         PresetCombo.Watch(ListBox, () => _slot.AppliedMidiPreset, () => Snapshot(_current()), () => FillList(ListSelectedKey()));
         PresetCombo.Watch(ProcessorBox, () => _processor?.AppliedPreset, () => _processor is { } p ? Normalize(p.Type, p.Params) : null, FillProcessor);
-    }
-
-    private static Button Small(string text, string tip, string name)
-    {
-        var button = new Button { Content = text, Name = name, HorizontalAlignment = HorizontalAlignment.Left };
-        DialogMetrics.WithPadding(button, DialogMetrics.MidiItemPad);
-        button.WithMargin(DialogMetrics.MidiButtonGap);
-        MidiSharedRows.Tip(button, tip);
-        return button;
     }
 
     private static string PresetName(string key) => Path.GetFileNameWithoutExtension(key);

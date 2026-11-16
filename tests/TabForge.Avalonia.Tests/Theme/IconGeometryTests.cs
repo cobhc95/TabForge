@@ -102,4 +102,139 @@ public class IconGeometryTests
 
     [Fact]
     public void StepInputPath() => Assert.Equal("M2.5,6 L7,6 L7,9.5 L2.5,9.5 Z M9,7.75 L13.5,7.75 M11.5,5.5 L13.5,7.75 L11.5,10", IconGeometry.StepInput);
+
+    [Fact]
+    public void ChevronDownPath() => Assert.Equal("M 3.5,6 L 8,10.5 L 12.5,6", IconGeometry.ChevronDown);
+
+    [Fact]
+    public void DragHandlePath() => Assert.Equal("M6,4 L6.1,4 M10,4 L10.1,4 M6,8 L6.1,8 M10,8 L10.1,8 M6,12 L6.1,12 M10,12 L10.1,12", IconGeometry.DragHandle);
+
+    [Fact]
+    public void PowerPath() => Assert.Equal("M8,2 L8,7.5 M4.6,4.2 A5,5 0 1 0 11.4,4.2", IconGeometry.Power);
+
+    [Fact]
+    public void SaveDiskPath() => Assert.Equal("M2.5,2.5 L11.5,2.5 L13.5,4.5 L13.5,13.5 L2.5,13.5 Z M5,2.5 L5,6 L10.5,6 L10.5,2.5 M5,13.5 L5,9.5 L11,9.5 L11,13.5", IconGeometry.SaveDisk);
+
+    [Fact]
+    public void TrashPath() => Assert.Equal("M2.5,4 L13.5,4 M6,4 L6,2.5 L10,2.5 L10,4 M4,4 L4.8,13.5 L11.2,13.5 L12,4 M6.8,6.5 L6.8,11 M9.2,6.5 L9.2,11", IconGeometry.Trash);
+
+    [Fact]
+    public void TargetPath() => Assert.Equal("M2.5,8 A5.5,5.5 0 1 1 13.5,8 A5.5,5.5 0 1 1 2.5,8 M5.5,8 A2.5,2.5 0 1 1 10.5,8 A2.5,2.5 0 1 1 5.5,8", IconGeometry.Target);
+
+    [Fact]
+    public void CheckMarkPath() => Assert.Equal("M3,8.5 L6.5,12 L13,4.5", IconGeometry.CheckMark);
+
+    [Fact]
+    public void MidiGroupNotesPath() => Assert.Equal("M3.5,11.5 A2,1.6 0 1 1 7.5,11.5 A2,1.6 0 1 1 3.5,11.5 M7.5,11.5 L7.5,2.5 C9,4.5 12,4.5 12.5,7", IconGeometry.MidiGroupNotes);
+
+    [Fact]
+    public void MidiGroupVelocityPath() => Assert.Equal("M2,13.5 L14,13.5 M3.5,13.5 L3.5,11 M6.5,13.5 L6.5,8 M9.5,13.5 L9.5,5.5 M12.5,13.5 L12.5,3", IconGeometry.MidiGroupVelocity);
+
+    [Fact]
+    public void MidiGroupTimingPath() => Assert.Equal("M5,14 L11,14 L9.5,2 L6.5,2 Z M8,11 L11.5,4.5", IconGeometry.MidiGroupTiming);
+
+    [Fact]
+    public void MidiGroupDrumsPath() => Assert.Equal("M2.5,7 A5.5,2 0 1 1 13.5,7 A5.5,2 0 1 1 2.5,7 M2.5,7 L2.5,12 A5.5,2 0 0 0 13.5,12 L13.5,7 M3,1.5 L7,5.5 M13,1.5 L9,5.5", IconGeometry.MidiGroupDrums);
+
+    [Fact]
+    public void MidiGroupGeneratePath() => Assert.Equal("M8,1.5 L9.3,6.7 L14.5,8 L9.3,9.3 L8,14.5 L6.7,9.3 L1.5,8 L6.7,6.7 Z", IconGeometry.MidiGroupGenerate);
+
+    [Fact]
+    public void MidiGroupChannelsPath() => Assert.Equal("M4,2 L4,14 M8,2 L8,14 M12,2 L12,14 M2.5,10 L5.5,10 M6.5,5 L9.5,5 M10.5,8.5 L13.5,8.5", IconGeometry.MidiGroupChannels);
+
+    [Fact]
+    public void MidiGroupAudioPath() => Assert.Equal("M1.5,8 L3.5,8 L5,3 L7,13 L9,5 L10.5,10 L12,8 L14.5,8", IconGeometry.MidiGroupAudio);
+
+    [Fact]
+    public void MidiGroupUtilitiesPath() => Assert.Equal("M10.5,2 A3.5,3.5 0 0 0 7.2,6.7 L2.2,11.7 A1.4,1.4 0 0 0 4.3,13.8 L9.3,8.8 A3.5,3.5 0 0 0 14,5.5 L11.8,7.2 L9.5,6.5 L8.8,4.2 Z", IconGeometry.MidiGroupUtilities);
+
+    [Fact]
+    public void MidiTransposePath() => Assert.Equal("M5,13 L5,3 M2.5,5.5 L5,3 L7.5,5.5 M11,3 L11,13 M8.5,10.5 L11,13 L13.5,10.5", IconGeometry.MidiTranspose);
+
+    [Fact]
+    public void MidiNoteRangePath() => Assert.Equal("M3,3 L3,13 M13,3 L13,13 M3,8 L13,8 M5.5,5.5 L3,8 L5.5,10.5 M10.5,5.5 L13,8 L10.5,10.5", IconGeometry.MidiNoteRange);
+
+    [Fact]
+    public void MidiScaleSnapPath() => Assert.Equal("M2,13 L5,13 L5,10 L8,10 L8,7 L11,7 L11,4 L14,4 M9.5,12 A1.5,1.5 0 1 1 12.5,12 A1.5,1.5 0 1 1 9.5,12", IconGeometry.MidiScaleSnap);
+
+    [Fact]
+    public void MidiChordPath() => Assert.Equal("M4,12 A1.8,1.3 0 1 1 7.6,12 A1.8,1.3 0 1 1 4,12 M4,8.5 A1.8,1.3 0 1 1 7.6,8.5 A1.8,1.3 0 1 1 4,8.5 M4,5 A1.8,1.3 0 1 1 7.6,5 A1.8,1.3 0 1 1 4,5 M7.6,12 L7.6,2", IconGeometry.MidiChord);
+
+    [Fact]
+    public void MidiVelVariationPath() => Assert.Equal("M3,14 L3,10 M6,14 L6,7 M9,14 L9,9 M12,14 L12,6 M2,3.5 C4,1.5 6,5.5 8,3.5 C10,1.5 12,5.5 14,3.5", IconGeometry.MidiVelVariation);
+
+    [Fact]
+    public void MidiHumanizePath() => Assert.Equal("M6.2,5.3 A1.8,1.8 0 1 1 9.8,5.3 A1.8,1.8 0 1 1 6.2,5.3 M4,13.5 C4,10 6,8.8 8,8.8 C10,8.8 12,10 12,13.5", IconGeometry.MidiHumanize);
+
+    [Fact]
+    public void MidiDelayPath() => Assert.Equal("M2.5,8 A5.5,5.5 0 1 1 13.5,8 A5.5,5.5 0 1 1 2.5,8 M8,5 L8,8 L10.5,9.5", IconGeometry.MidiDelay);
+
+    [Fact]
+    public void MidiNoteHoldPath() => Assert.Equal("M2.5,6 L6.5,6 L6.5,10 L2.5,10 Z M6.5,8 L13.5,8 M13.5,5.5 L13.5,10.5", IconGeometry.MidiNoteHold);
+
+    [Fact]
+    public void MidiRepeaterPath() => Assert.Equal("M3,7 A4,4 0 0 1 12,5 M12,2.5 L12,5 L9.5,5 M13,9 A4,4 0 0 1 4,11 M4,13.5 L4,11 L6.5,11", IconGeometry.MidiRepeater);
+
+    [Fact]
+    public void MidiNoteMapPath() => Assert.Equal("M2.5,4.5 L6,4.5 M2.5,11.5 L6,11.5 M6,4.5 L10,11.5 M6,11.5 L10,4.5 M10,4.5 L13.5,4.5 M10,11.5 L13.5,11.5", IconGeometry.MidiNoteMap);
+
+    [Fact]
+    public void MidiChokePath() => Assert.Equal("M1.5,6 L14.5,6 M4,6 C5,3.5 11,3.5 12,6 M8,6 L8,14 M10,9.5 L14,13.5 M14,9.5 L10,13.5", IconGeometry.MidiChoke);
+
+    [Fact]
+    public void MidiChokeGroupPath() => Assert.Equal("M1.5,5 L7,5 M9,5 L14.5,5 M4.25,5 L4.25,13 M11.75,5 L11.75,13 M4.25,9 L11.75,9", IconGeometry.MidiChokeGroup);
+
+    [Fact]
+    public void MidiAudioDrumPath() => Assert.Equal("M1.5,8 L3,8 L4,4 L5.5,12 L6.5,8 L8,8 M9,6.5 A2.75,1.2 0 1 1 14.5,6.5 A2.75,1.2 0 1 1 9,6.5 M9,6.5 L9,11.5 M14.5,6.5 L14.5,11.5 M9,11.5 C10,12.5 13.5,12.5 14.5,11.5", IconGeometry.MidiAudioDrum);
+
+    [Fact]
+    public void MidiArpPath() => Assert.Equal("M2,13 L4.5,13 M5.5,10 L8,10 M9,7 L11.5,7 M12.5,4 L15,4", IconGeometry.MidiArp);
+
+    [Fact]
+    public void MidiStepSeqPath() => Assert.Equal("M2,4 L14,4 L14,12 L2,12 Z M5,4 L5,12 M8,4 L8,12 M11,4 L11,12 M2.8,9 L4.2,9 M8.8,6.5 L10.2,6.5", IconGeometry.MidiStepSeq);
+
+    [Fact]
+    public void MidiLfoPath() => Assert.Equal("M1.5,8 C3.5,2 5.5,2 8,8 C10.5,14 12.5,14 14.5,8", IconGeometry.MidiLfo);
+
+    [Fact]
+    public void MidiNoteRandomPath() => Assert.Equal("M2.5,2.5 L13.5,2.5 L13.5,13.5 L2.5,13.5 Z M5.5,5.5 L5.6,5.6 M10.5,10.5 L10.6,10.6 M8,8 L8.1,8.1", IconGeometry.MidiNoteRandom);
+
+    [Fact]
+    public void MidiModalRandomPath() => Assert.Equal("M2,7.5 L8.5,7.5 L8.5,14 L2,14 Z M4.3,9.8 L4.4,9.9 M6.2,11.7 L6.3,11.8 M10,11 L12,11 L12,8 L14,8 M10,5.5 L12,5.5 L12,2.5 L14,2.5", IconGeometry.MidiModalRandom);
+
+    [Fact]
+    public void MidiScaleVariationPath() => Assert.Equal("M2,4.5 L5,4.5 L11,11.5 L14,11.5 M2,11.5 L5,11.5 L11,4.5 L14,4.5 M12,2.5 L14,4.5 L12,6.5 M12,9.5 L14,11.5 L12,13.5", IconGeometry.MidiScaleVariation);
+
+    [Fact]
+    public void MidiChannelMapPath() => Assert.Equal("M2,3.5 L14,3.5 M2,6.5 L9,6.5 M11,6.5 L14,6.5 M2,9.5 L14,9.5 M2,12.5 L6,12.5 M9,12.5 L14,12.5", IconGeometry.MidiChannelMap);
+
+    [Fact]
+    public void MidiChannelRoutePath() => Assert.Equal("M2,8 L7,8 L12,3.5 M7,8 L12,12.5 M10,3.5 L12,3.5 L12,5.5 M10,12.5 L12,12.5 L12,10.5", IconGeometry.MidiChannelRoute);
+
+    [Fact]
+    public void MidiProgramBankPath() => Assert.Equal("M2,4.5 L6,4.5 L7.5,6 L14,6 L14,13 L2,13 Z M5,9.5 L11,9.5", IconGeometry.MidiProgramBank);
+
+    [Fact]
+    public void MidiCcSenderPath() => Assert.Equal("M2,8 A4,4 0 1 1 10,8 A4,4 0 1 1 2,8 M6,8 L6,4.5 M11,8 L14.5,8 M12.5,6 L14.5,8 L12.5,10", IconGeometry.MidiCcSender);
+
+    [Fact]
+    public void MidiCcMapperPath() => Assert.Equal("M1.5,8 A2.75,2.75 0 1 1 7,8 A2.75,2.75 0 1 1 1.5,8 M9,8 A2.75,2.75 0 1 1 14.5,8 A2.75,2.75 0 1 1 9,8 M4.25,8 L4.25,5.25 M11.75,8 L13.7,6.05", IconGeometry.MidiCcMapper);
+
+    [Fact]
+    public void MidiAudioDuckerPath() => Assert.Equal("M1.5,8 L3,8 L4,4 L5.5,12 L7,6 L8,8 M11.5,3 L11.5,12 M9.5,10 L11.5,12 L13.5,10", IconGeometry.MidiAudioDucker);
+
+    [Fact]
+    public void MidiLoopSamplerPath() => Assert.Equal("M2.5,4 L13.5,4 L13.5,12 L2.5,12 Z M4,8 L5,8 L6,5.5 L7.5,10.5 L9,6.5 L10,8 L12,8", IconGeometry.MidiLoopSampler);
+
+    [Fact]
+    public void MidiLooperPath() => Assert.Equal("M13,8 A5,5 0 1 1 11.5,4.5 M11.5,1.5 L11.5,4.5 L8.5,4.5", IconGeometry.MidiLooper);
+
+    [Fact]
+    public void MidiSanitizerPath() => Assert.Equal("M2,3 L14,3 L9.5,8.5 L9.5,13 L6.5,13 L6.5,8.5 Z", IconGeometry.MidiSanitizer);
+
+    [Fact]
+    public void MidiPanicPath() => Assert.Equal("M5.5,2 L10.5,2 L14,5.5 L14,10.5 L10.5,14 L5.5,14 L2,10.5 L2,5.5 Z M8,5 L8,9 M8,11.2 L8,11.3", IconGeometry.MidiPanic);
+
+    [Fact]
+    public void MidiLogPath() => Assert.Equal("M3.5,2.5 L12.5,2.5 L12.5,13.5 L3.5,13.5 Z M5.5,5.5 L10.5,5.5 M5.5,8 L10.5,8 M5.5,10.5 L10.5,10.5", IconGeometry.MidiLog);
 }

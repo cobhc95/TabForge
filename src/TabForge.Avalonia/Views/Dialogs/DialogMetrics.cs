@@ -415,6 +415,18 @@ internal static class DialogMetrics
         MidiItemPad = new(10, 3), MidiMapButtonsGap = new(140, 6, 0, 0), MidiMapSummaryGap = new(140, 8, 0, 0),
         MidiFrameBorder = new(1), MidiHighlightBorder = new(2);
 
+    /// <summary>The redesigned MIDI processing window: icon sizes, the framed parameter cards, the chain rows (drag handle, icon, power toggle),
+    /// the drop line of a drag, the dashed add slot, the icon buttons of the preset rows, and the gaps of the adaptive card rows
+    /// (MidiCardPanel puts two knobs side by side when both fit with the card's shared label column, one per line otherwise).</summary>
+    public const double MidiIconSize = 14, MidiHeaderIconSize = 18, MidiCardCorner = 6, MidiDragThreshold = 4, MidiDropLineHeight = 2,
+        MidiDashOn = 3, MidiDashOff = 2, MidiDashStroke = 1, MidiAddSlotMinHeight = 30, MidiCardColumnGap = 14, MidiFieldGap = 8, MidiStackGap = 2,
+        MidiPresetBoxMinWidth = 120, MidiPresetBoxWidth = 200, MidiHeaderGap = 8, MidiRowIconGap = 6, MidiPowerSize = 22;
+
+    /// <summary>The redesigned MIDI processing window's insets and gaps: card padding and spacing, the card heading, group headings, icon buttons, footer.</summary>
+    public static readonly Thickness MidiCardPad = new(10, 8), MidiCardGap = new(0, 0, 0, 8), MidiCardHeadGap = new(0, 0, 0, 6), MidiIconGap = new(0, 0, 6, 0),
+        MidiChainRowPad = new(2, 3), MidiFieldPad = new(0, 3), MidiGroupHeadPad = new(0, 4, 0, 2), MidiAddSlotGap = new(0, 6, 0, 0), MidiFooterGap = new(0, 8, 0, 0),
+        MidiIconButtonPad = new(5), MidiHeaderPad = new(0, 0, 0, 6), MidiPowerPad = new(3);
+
     /// <summary>The dropdown caption (COMPACT MODE / piano roll lane picker): shared font size, gap, chevron size and stroke.</summary>
     public const double DropdownCaptionFontSize = 12.65, DropdownCaptionGap = 4,
         DropdownCaptionChevronWidth = 10, DropdownCaptionChevronHeight = 6, DropdownCaptionChevronStroke = 1.4;

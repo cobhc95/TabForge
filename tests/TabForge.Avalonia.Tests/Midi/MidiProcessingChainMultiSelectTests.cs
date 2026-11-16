@@ -107,7 +107,7 @@ public class MidiProcessingChainMultiSelectTests
         made.Window.ClickChainRow(1);
         made.Window.ClickChainRow(2, shift: true);
         Assert.Equal(new[] { 1, 2 }, made.Window.SelectedChainIndices);
-        FxTestKit.PressButton(made.Window, "RemoveButton");
+        made.Window.RemoveChainSelected();
         Assert.Equal(new[] { "transpose", "extraUnknown" }, made.Slot.MidiProcessors.Select(p => p.Type));
         Assert.Single(made.Window.SelectedChainIndices);
         Assert.Single(made.Edits);
@@ -121,10 +121,10 @@ public class MidiProcessingChainMultiSelectTests
         made.Window.ClickChainRow(1);
         made.Window.ClickChainRow(3, ctrl: true);
         Assert.Equal(new[] { 1, 3 }, made.Window.SelectedChainIndices);
-        FxTestKit.PressButton(made.Window, "UpButton");
+        made.Window.MoveChain(-1);
         Assert.Equal(new[] { "legacyFilter", "transpose", "extraUnknown", "log" }, made.Slot.MidiProcessors.Select(p => p.Type));
         Assert.Equal(new[] { 0, 2 }, made.Window.SelectedChainIndices);
-        FxTestKit.PressButton(made.Window, "DownButton");
+        made.Window.MoveChain(1);
         Assert.Equal(new[] { "transpose", "legacyFilter", "log", "extraUnknown" }, made.Slot.MidiProcessors.Select(p => p.Type));
         Assert.Equal(new[] { 1, 3 }, made.Window.SelectedChainIndices);
         Assert.Equal(2, made.Edits.Count);
@@ -155,7 +155,7 @@ public class MidiProcessingChainMultiSelectTests
         var before = made.Slot.MidiProcessors.Select(p => p.Enabled).ToList();
         var row = list.ContainerFromIndex(1) as Control
             ?? throw new Xunit.Sdk.XunitException("Row 1 has no container.");
-        var check = row.GetLogicalDescendants().OfType<CheckBox>().Single(c => c.Name == "ProcessorTick");
+        var check = row.GetLogicalDescendants().OfType<global::Avalonia.Controls.Primitives.ToggleButton>().Single(c => c.Name == "ProcessorPower");
         check.IsChecked = !check.IsChecked;
         DialogTestKit.RunQueuedUiWork();
         var after = made.Slot.MidiProcessors.Select(p => p.Enabled).ToList();

@@ -67,15 +67,23 @@ public class MidiProcessingWindowTests
     public void ControlsMatchWpfWindowOrderAndTexts()
     {
         var window = Open().Window;
-        // The window's controls in tree order: the preset bar, the catalog, the list with its buttons, then the detail pane with the log panel.
+        // The window's controls in tree order: the chain preset bar (save and delete are icon buttons), the catalog, the chain with its add slot,
+        // then the detail pane with the log panel.
         var expected = new[]
         {
-            ("TextBlock", "Presets"), ("ComboBox", ""), ("Button", "Save preset…"), ("Button", "Delete"),
+            ("TextBlock", "Chain preset"), ("ComboBox", ""), ("Button", ""), ("Button", ""),
             ("TextBlock", "Add a processor"), ("TextBox", ""), ("Button", "Add ›"),
-            ("TextBlock", "In order (top runs first)"), ("Button", "▲"), ("Button", "▼"), ("Button", "Remove"),
+            ("TextBlock", "Chain · top runs first"), ("Button", ""),
             ("TextBlock", "MIDI log (this window watches while it is open)"), ("TextBox", ""), ("Button", "Clear log"),
         };
         Assert.Equal(expected, Layout(window).Take(expected.Length));
+        Assert.Equal("Save preset…", global::Avalonia.Automation.AutomationProperties.GetName(DialogTestKit.Named<Button>(window, "SavePresetButton")));
+        Assert.Equal("Delete", global::Avalonia.Automation.AutomationProperties.GetName(DialogTestKit.Named<Button>(window, "DeletePresetButton")));
+        Assert.Equal("Save preset…", global::Avalonia.Automation.AutomationProperties.GetName(DialogTestKit.Named<Button>(window, "SaveProcessorPresetButton")));
+        Assert.Equal("1 processor", MidiProcessingListPresenter.StatusText(1));
+        Assert.Equal("2 processors", DialogTestKit.Named<TextBlock>(window, "StatusLine").Text);
+        Assert.Equal("Close", DialogTestKit.Named<Button>(window, "CloseButton").Content);
+        Assert.Throws<InvalidOperationException>(() => DialogTestKit.Named<Button>(window, "UpButton"));
         Assert.Equal("MIDI processing: Sample synth", window.Title);
         Assert.Equal((1020d, 620d, 620d, 420d), (window.Width, window.Height, window.MinWidth, window.MinHeight));
         window.Close();
@@ -108,9 +116,10 @@ public class MidiProcessingWindowTests
     public void ListButtonsFollowThePresenterRules()
     {
         var window = Open(UnknownSampleSlot()).Window;
-        var up = DialogTestKit.Named<Button>(window, "UpButton");
-        var down = DialogTestKit.Named<Button>(window, "DownButton");
-        var remove = DialogTestKit.Named<Button>(window, "RemoveButton");
+        var items = window.ChainMenu.Items.OfType<MenuItem>().ToList();
+        var up = items.Single(i => i.Name == "MoveUpMenuItem");
+        var down = items.Single(i => i.Name == "MoveDownMenuItem");
+        var remove = items.Single(i => i.Name == "RemoveMenuItem");
 
         Assert.Equal((false, true, true), (up.IsEnabled, down.IsEnabled, remove.IsEnabled));
         Rows(window).SelectedIndex = 2;
@@ -125,10 +134,10 @@ public class MidiProcessingWindowTests
     {
         var made = Open(UnknownSampleSlot());
         Rows(made.Window).SelectedIndex = 1;
-        FxTestKit.PressButton(made.Window, "UpButton");
+        made.Window.MoveChain(-1);
         Assert.Equal(new[] { "legacyFilter", "transpose", "log" }, made.Slot.MidiProcessors.Select(p => p.Type));
         Assert.Equal(0, Rows(made.Window).SelectedIndex);
-        FxTestKit.PressButton(made.Window, "RemoveButton");
+        made.Window.RemoveChainSelected();
         Assert.Equal(new[] { "transpose", "log" }, made.Slot.MidiProcessors.Select(p => p.Type));
         Assert.Equal(2, made.Edits.Count);
         made.Window.Close();
@@ -163,9 +172,10 @@ public class MidiProcessingWindowTests
     {
         var window = Open().Window;
         var all = MidiProcessorCatalog.All.Count;
-        Assert.Equal(all, Catalog(window).ItemCount);
+        Assert.Equal(all, Catalog(window).Items.OfType<MidiProcessorCatalog.SearchHit>().Count());
+        Assert.Equal(MidiProcessorCatalog.Groups.Count, Catalog(window).Items.OfType<MidiProcessingWindow.CatalogHeader>().Count());
         DialogTestKit.Named<TextBox>(window, "SearchBox").Text = "velocity";
-        var hits = Catalog(window).Items.Cast<MidiProcessorCatalog.SearchHit>().ToList();
+        var hits = Catalog(window).Items.Cast<MidiProcessorCatalog.SearchHit>().ToList();   // a search lists matches from every group, no headings
         Assert.Equal(0, Catalog(window).SelectedIndex);
         Assert.Null(hits[0].Param);
         Assert.Contains(hits, h => h.Param is not null && h.Display.Contains('›'));
@@ -364,7 +374,7 @@ public class MidiProcessingWindowTests
         foreach (var text in new IBrush?[]
         {
             DialogTestKit.Named<TextBlock>(window, "TitleText").Foreground, DialogTestKit.Named<TextBlock>(window, "DescriptionText").Foreground,
-            DialogTestKit.Named<TextBlock>(window, "ParameterNote").Foreground, DialogTestKit.Named<Button>(window, "RemoveButton").Foreground,
+            DialogTestKit.Named<TextBlock>(window, "ParameterNote").Foreground, DialogTestKit.Named<Button>(window, "AddButton").Foreground,
         })
             Assert.True(DialogTestKit.Contrast(text, window.Background, "MIDI processing") >= 4.5);
         window.Close();
@@ -406,5 +416,75 @@ public class MidiProcessingWindowTests
         Assert.Single(opened);
         foreach (var window in opened) window.Close();
         main.Close();
+    }
+
+    [AvaloniaFact]
+    public void EveryProcessorBelongsToOneGroupAndHasItsOwnIcon()
+    {
+        var listed = MidiProcessorCatalog.Groups.SelectMany(g => g.Types).ToList();
+        Assert.Equal(listed.Count, listed.Distinct().Count());
+        Assert.Equal(MidiProcessorCatalog.All.Select(i => i.Type).OrderBy(t => t), listed.OrderBy(t => t));
+        foreach (var info in MidiProcessorCatalog.All)
+        {
+            Assert.Equal(MidiProcessorCatalog.GroupOf(info.Type), info.Group);
+            Assert.True(MidiIcons.HasOwnIcon(info.Type), info.Type + " has no icon");
+        }
+        Assert.Equal(MidiProcessorCatalog.All.Count, MidiProcessorCatalog.All.Select(i => MidiIcons.ForType(i.Type)).Distinct().Count());
+        Assert.Equal(MidiProcessorCatalog.Groups.Count, MidiProcessorCatalog.Groups.Select(g => MidiIcons.ForGroup(g.Key)).Distinct().Count());
+    }
+
+    [AvaloniaFact]
+    public void AGroupHeadingFoldsAndTheSearchShowsEveryGroup()
+    {
+        var window = Open().Window;
+        var drums = MidiProcessorCatalog.Groups.Single(g => g.Key == "drums");
+        window.ToggleCatalogGroup("drums");
+        Assert.DoesNotContain(window.CatalogHits, h => drums.Types.Contains(h.Info.Type));
+        Assert.Contains(Catalog(window).Items.OfType<MidiProcessingWindow.CatalogHeader>(), h => h.Group.Key == "drums" && h.Collapsed);
+        DialogTestKit.Named<TextBox>(window, "SearchBox").Text = "choke";
+        Assert.Contains(window.CatalogHits, h => h.Info.Type == "choke");   // a folded group still answers a search
+        DialogTestKit.Named<TextBox>(window, "SearchBox").Text = "";
+        window.ToggleCatalogGroup("drums");
+        Assert.Contains(window.CatalogHits, h => h.Info.Type == "choke");
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void DraggingReordersTheChainAsOneUndoStep()
+    {
+        var made = Open(UnknownSampleSlot());
+        made.Window.ClickChainRow(2);
+        made.Window.DropChainSelection(0);
+        Assert.Equal(new[] { "log", "transpose", "legacyFilter" }, made.Slot.MidiProcessors.Select(p => p.Type));
+        Assert.Equal(new[] { 0 }, made.Window.SelectedChainIndices);
+        made.Window.DropChainSelection(3);
+        Assert.Equal(new[] { "transpose", "legacyFilter", "log" }, made.Slot.MidiProcessors.Select(p => p.Type));
+        Assert.Equal(2, made.Edits.Count);
+        made.Window.Close();
+    }
+
+    [AvaloniaFact]
+    public void DroppingACatalogProcessorInsertsItWhereItLands()
+    {
+        var made = Open(UnknownSampleSlot());
+        var velocity = MidiProcessorCatalog.Find("velocity")!;
+        made.Window.DropCatalogHit(new MidiProcessorCatalog.SearchHit(velocity, null, velocity.Name), 0);
+        Assert.Equal(new[] { "velocity", "transpose", "legacyFilter", "log" }, made.Slot.MidiProcessors.Select(p => p.Type));
+        Assert.Equal("4 processors", DialogTestKit.Named<TextBlock>(made.Window, "StatusLine").Text);
+        FxTestKit.PressButton(made.Window, "AddSlotButton");
+        Assert.Equal(((MidiProcessorCatalog.SearchHit)Catalog(made.Window).SelectedItem!).Info.Type, made.Slot.MidiProcessors.Last().Type);   // the add slot adds the catalog selection at the end
+        made.Window.Close();
+    }
+
+    [AvaloniaFact]
+    public void AltArrowsMoveAndDeleteRemovesTheSelection()
+    {
+        var made = Open(UnknownSampleSlot());
+        made.Window.ClickChainRow(1);
+        Rows(made.Window).RaiseEvent(new global::Avalonia.Input.KeyEventArgs { RoutedEvent = global::Avalonia.Input.InputElement.KeyDownEvent, Key = global::Avalonia.Input.Key.Up, KeyModifiers = global::Avalonia.Input.KeyModifiers.Alt });
+        Assert.Equal(new[] { "legacyFilter", "transpose", "log" }, made.Slot.MidiProcessors.Select(p => p.Type));
+        Rows(made.Window).RaiseEvent(new global::Avalonia.Input.KeyEventArgs { RoutedEvent = global::Avalonia.Input.InputElement.KeyDownEvent, Key = global::Avalonia.Input.Key.Delete });
+        Assert.Equal(new[] { "transpose", "log" }, made.Slot.MidiProcessors.Select(p => p.Type));
+        made.Window.Close();
     }
 }

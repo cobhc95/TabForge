@@ -69,7 +69,7 @@ public static class MainWindowViewMenu
         // The menu rows are built after Register, so their checks take the panels' state when the window opens.
         window.Opened += (_, _) => SyncRowChecks(window, dock, score);
         // Every path that shows or hides a panel (its own close button, a layout, the piano roll) rebuilds the dock: the checks follow the real visibility.
-        dock.LayoutRebuilt += () => { SetRowChecks(window, GlobalCommandId, dock.IsPanelVisible(ArrangementPanelId)); SetRowChecks(window, InstrumentPanelCommandId, dock.IsPanelVisible(InstrumentPanelId)); };
+        dock.LayoutRebuilt += () => { SetRowChecks(window, GlobalCommandId, dock.IsPanelVisible(ArrangementPanelId)); SetRowChecks(window, InstrumentPanelCommandId, dock.IsPanelVisible(InstrumentPanelId)); SetRowChecks(window, SidePanelCommandId, SideShown(dock)); };
     }
 
     /// <summary>Sets the check of every show and hide row in the window from the panels and the score.</summary>
@@ -78,6 +78,7 @@ public static class MainWindowViewMenu
         SetRowChecks(window, GlobalCommandId, dock.IsPanelVisible(ArrangementPanelId));
         SetRowChecks(window, PlayingBarCommandId, score.Probe.Appearance.PlayingBarEnabled);
         SetRowChecks(window, InstrumentPanelCommandId, dock.IsPanelVisible(InstrumentPanelId));
+        SetRowChecks(window, SidePanelCommandId, SideShown(dock));
     }
 
     /// <summary>View > Arrangement overview: shows or hides the timeline panel and sets the check of its menu row.</summary>
@@ -133,6 +134,9 @@ public static class MainWindowViewMenu
         SetRowChecks(window, PlayingBarCommandId, score.Probe.Appearance.PlayingBarEnabled);
     }
 
+    // The side-panel button is lit while any side panel is shown (it follows the layout, not its own clicks).
+    private static bool SideShown(DockWorkspaceController dock) => DockPaneTable.SideIds.Any(dock.IsPanelVisible);
+
     /// <summary>Toolbar side-panel button: hides every shown side panel, or brings back exactly the ones that were shown.</summary>
     private static void ToggleSidePanel(DockWorkspaceController dock, MainWindowSettings? settings, Action<string>? status)
     {
@@ -140,7 +144,7 @@ public static class MainWindowViewMenu
         if (shown.Count > 0)
         {
             if (settings is not null) settings.Settings.WorkspaceBeforeSideHide = dock.SnapshotLayout();
-            foreach (var id in shown) dock.SetPanelVisible(id, false);
+            dock.Batch(() => { foreach (var id in shown) dock.SetPanelVisible(id, false); });   // one layout rebuild, not one per panel
             settings?.SaveSettings();
             status?.Invoke(SidePanelHiddenText);
         }

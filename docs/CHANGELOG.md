@@ -2,6 +2,18 @@
 
 TabForge is actively developed; please report anything odd on the Issues page.
 
+## 0.9.8
+
+### Changed
+
+- The MIDI processing window is redesigned. The 31 processors are grouped by what they do (Notes and pitch, Velocity and feel, Timing, Drums, Generate, Channels and controllers, Audio and loops, Utilities). Each group and processor has its own icon, groups fold away, and search finds processors across every group. The chain shows each step with a drag handle, its icon and a power switch. Steps reorder by dragging, Alt+Up/Down or the right-click menu, and Delete removes one; a dashed slot at the end adds a processor. The editor shows the processor's icon, name and presets on one line, then each section as its own card with knobs two per row when they fit. The chain preset bar sits at the top with save and delete buttons, and the footer counts the processors.
+- The MIDI processing window fits at every UI scale, density, font size and window size: labels wrap or move above their control instead of being cut off, and a Save preset button never drops below its box.
+
+### Fixed
+
+- The side-panel toolbar button was lit when the panel was hidden and unlit when it showed. It now follows the panel, however it was opened or closed.
+- Hiding or showing the side panels took one to two seconds, because the window layout was rebuilt once per panel. It is rebuilt once now.
+
 ## 0.9.7
 
 ### Added

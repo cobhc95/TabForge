@@ -17,6 +17,9 @@ public static class FixedKeys
     // Arrow keys (transpose by a semitone, by an octave with Shift).
     public const string Up = "Up", Down = "Down", ShiftUp = "Shift+Up", ShiftDown = "Shift+Down";
 
+    /// <summary>Move the selected rows of a list one place up or down (the MIDI processing chain).</summary>
+    public const string AltUp = "Alt+Up", AltDown = "Alt+Down";
+
     /// <summary>Search box of the guide window.</summary>
     public const string Find = "Ctrl+F";
 

@@ -96,4 +96,139 @@ public static class IconGeometry
 
     /// <summary>The piano roll's step input: a note and an arrow to the next step.</summary>
     public const string StepInput = "M2.5,6 L7,6 L7,9.5 L2.5,9.5 Z M9,7.75 L13.5,7.75 M11.5,5.5 L13.5,7.75 L11.5,10";
+
+    /// <summary>A chevron pointing down (an expanded heading).</summary>
+    public const string ChevronDown = "M 3.5,6 L 8,10.5 L 12.5,6";
+
+    /// <summary>The drag handle of a reorderable row: two columns of three dots.</summary>
+    public const string DragHandle = "M6,4 L6.1,4 M10,4 L10.1,4 M6,8 L6.1,8 M10,8 L10.1,8 M6,12 L6.1,12 M10,12 L10.1,12";
+
+    /// <summary>The power symbol of an on/off toggle.</summary>
+    public const string Power = "M8,2 L8,7.5 M4.6,4.2 A5,5 0 1 0 11.4,4.2";
+
+    /// <summary>A floppy disk (save a preset).</summary>
+    public const string SaveDisk = "M2.5,2.5 L11.5,2.5 L13.5,4.5 L13.5,13.5 L2.5,13.5 Z M5,2.5 L5,6 L10.5,6 L10.5,2.5 M5,13.5 L5,9.5 L11,9.5 L11,13.5";
+
+    /// <summary>A waste bin (delete a preset).</summary>
+    public const string Trash = "M2.5,4 L13.5,4 M6,4 L6,2.5 L10,2.5 L10,4 M4,4 L4.8,13.5 L11.2,13.5 L12,4 M6.8,6.5 L6.8,11 M9.2,6.5 L9.2,11";
+
+    /// <summary>A target (which notes a MIDI processor applies to).</summary>
+    public const string Target = "M2.5,8 A5.5,5.5 0 1 1 13.5,8 A5.5,5.5 0 1 1 2.5,8 M5.5,8 A2.5,2.5 0 1 1 10.5,8 A2.5,2.5 0 1 1 5.5,8";
+
+    /// <summary>A tick (a finishing step).</summary>
+    public const string CheckMark = "M3,8.5 L6.5,12 L13,4.5";
+
+    /// <summary>MIDI processor group Notes and pitch: an eighth note.</summary>
+    public const string MidiGroupNotes = "M3.5,11.5 A2,1.6 0 1 1 7.5,11.5 A2,1.6 0 1 1 3.5,11.5 M7.5,11.5 L7.5,2.5 C9,4.5 12,4.5 12.5,7";
+
+    /// <summary>MIDI processor group Velocity and feel: rising bars.</summary>
+    public const string MidiGroupVelocity = "M2,13.5 L14,13.5 M3.5,13.5 L3.5,11 M6.5,13.5 L6.5,8 M9.5,13.5 L9.5,5.5 M12.5,13.5 L12.5,3";
+
+    /// <summary>MIDI processor group Timing: a metronome.</summary>
+    public const string MidiGroupTiming = "M5,14 L11,14 L9.5,2 L6.5,2 Z M8,11 L11.5,4.5";
+
+    /// <summary>MIDI processor group Drums: a drum with two sticks.</summary>
+    public const string MidiGroupDrums = "M2.5,7 A5.5,2 0 1 1 13.5,7 A5.5,2 0 1 1 2.5,7 M2.5,7 L2.5,12 A5.5,2 0 0 0 13.5,12 L13.5,7 M3,1.5 L7,5.5 M13,1.5 L9,5.5";
+
+    /// <summary>MIDI processor group Generate: a four-point sparkle.</summary>
+    public const string MidiGroupGenerate = "M8,1.5 L9.3,6.7 L14.5,8 L9.3,9.3 L8,14.5 L6.7,9.3 L1.5,8 L6.7,6.7 Z";
+
+    /// <summary>MIDI processor group Channels and controllers: three faders.</summary>
+    public const string MidiGroupChannels = "M4,2 L4,14 M8,2 L8,14 M12,2 L12,14 M2.5,10 L5.5,10 M6.5,5 L9.5,5 M10.5,8.5 L13.5,8.5";
+
+    /// <summary>MIDI processor group Audio and loops: a waveform.</summary>
+    public const string MidiGroupAudio = "M1.5,8 L3.5,8 L5,3 L7,13 L9,5 L10.5,10 L12,8 L14.5,8";
+
+    /// <summary>MIDI processor group Utilities: a wrench.</summary>
+    public const string MidiGroupUtilities = "M10.5,2 A3.5,3.5 0 0 0 7.2,6.7 L2.2,11.7 A1.4,1.4 0 0 0 4.3,13.8 L9.3,8.8 A3.5,3.5 0 0 0 14,5.5 L11.8,7.2 L9.5,6.5 L8.8,4.2 Z";
+
+    /// <summary>MIDI processor Transpose: arrows up and down.</summary>
+    public const string MidiTranspose = "M5,13 L5,3 M2.5,5.5 L5,3 L7.5,5.5 M11,3 L11,13 M8.5,10.5 L11,13 L13.5,10.5";
+
+    /// <summary>MIDI processor Note range filter: a span between two bars.</summary>
+    public const string MidiNoteRange = "M3,3 L3,13 M13,3 L13,13 M3,8 L13,8 M5.5,5.5 L3,8 L5.5,10.5 M10.5,5.5 L13,8 L10.5,10.5";
+
+    /// <summary>MIDI processor Snap to scale: steps and a note landing on them.</summary>
+    public const string MidiScaleSnap = "M2,13 L5,13 L5,10 L8,10 L8,7 L11,7 L11,4 L14,4 M9.5,12 A1.5,1.5 0 1 1 12.5,12 A1.5,1.5 0 1 1 9.5,12";
+
+    /// <summary>MIDI processor Chord: three stacked note heads on a stem.</summary>
+    public const string MidiChord = "M4,12 A1.8,1.3 0 1 1 7.6,12 A1.8,1.3 0 1 1 4,12 M4,8.5 A1.8,1.3 0 1 1 7.6,8.5 A1.8,1.3 0 1 1 4,8.5 M4,5 A1.8,1.3 0 1 1 7.6,5 A1.8,1.3 0 1 1 4,5 M7.6,12 L7.6,2";
+
+    /// <summary>MIDI processor Velocity variation: uneven bars under a wave.</summary>
+    public const string MidiVelVariation = "M3,14 L3,10 M6,14 L6,7 M9,14 L9,9 M12,14 L12,6 M2,3.5 C4,1.5 6,5.5 8,3.5 C10,1.5 12,5.5 14,3.5";
+
+    /// <summary>MIDI processor Humanizer: a head and shoulders.</summary>
+    public const string MidiHumanize = "M6.2,5.3 A1.8,1.8 0 1 1 9.8,5.3 A1.8,1.8 0 1 1 6.2,5.3 M4,13.5 C4,10 6,8.8 8,8.8 C10,8.8 12,10 12,13.5";
+
+    /// <summary>MIDI processor MIDI delay: a clock.</summary>
+    public const string MidiDelay = "M2.5,8 A5.5,5.5 0 1 1 13.5,8 A5.5,5.5 0 1 1 2.5,8 M8,5 L8,8 L10.5,9.5";
+
+    /// <summary>MIDI processor Note hold: a note with a held line.</summary>
+    public const string MidiNoteHold = "M2.5,6 L6.5,6 L6.5,10 L2.5,10 Z M6.5,8 L13.5,8 M13.5,5.5 L13.5,10.5";
+
+    /// <summary>MIDI processor Note repeater: two turning arrows.</summary>
+    public const string MidiRepeater = "M3,7 A4,4 0 0 1 12,5 M12,2.5 L12,5 L9.5,5 M13,9 A4,4 0 0 1 4,11 M4,13.5 L4,11 L6.5,11";
+
+    /// <summary>MIDI processor Note map: crossing lines from notes to notes.</summary>
+    public const string MidiNoteMap = "M2.5,4.5 L6,4.5 M2.5,11.5 L6,11.5 M6,4.5 L10,11.5 M6,11.5 L10,4.5 M10,4.5 L13.5,4.5 M10,11.5 L13.5,11.5";
+
+    /// <summary>MIDI processor Choke: a cymbal with a cross.</summary>
+    public const string MidiChoke = "M1.5,6 L14.5,6 M4,6 C5,3.5 11,3.5 12,6 M8,6 L8,14 M10,9.5 L14,13.5 M14,9.5 L10,13.5";
+
+    /// <summary>MIDI processor Choke group: two linked cymbals.</summary>
+    public const string MidiChokeGroup = "M1.5,5 L7,5 M9,5 L14.5,5 M4.25,5 L4.25,13 M11.75,5 L11.75,13 M4.25,9 L11.75,9";
+
+    /// <summary>MIDI processor Audio to MIDI drum trigger: a wave into a drum.</summary>
+    public const string MidiAudioDrum = "M1.5,8 L3,8 L4,4 L5.5,12 L6.5,8 L8,8 M9,6.5 A2.75,1.2 0 1 1 14.5,6.5 A2.75,1.2 0 1 1 9,6.5 M9,6.5 L9,11.5 M14.5,6.5 L14.5,11.5 M9,11.5 C10,12.5 13.5,12.5 14.5,11.5";
+
+    /// <summary>MIDI processor Arpeggiator: notes climbing one after another.</summary>
+    public const string MidiArp = "M2,13 L4.5,13 M5.5,10 L8,10 M9,7 L11.5,7 M12.5,4 L15,4";
+
+    /// <summary>MIDI processor Step sequencer: a row of steps with two set.</summary>
+    public const string MidiStepSeq = "M2,4 L14,4 L14,12 L2,12 Z M5,4 L5,12 M8,4 L8,12 M11,4 L11,12 M2.8,9 L4.2,9 M8.8,6.5 L10.2,6.5";
+
+    /// <summary>MIDI processor LFO: one sine cycle.</summary>
+    public const string MidiLfo = "M1.5,8 C3.5,2 5.5,2 8,8 C10.5,14 12.5,14 14.5,8";
+
+    /// <summary>MIDI processor Note randomizer: a die.</summary>
+    public const string MidiNoteRandom = "M2.5,2.5 L13.5,2.5 L13.5,13.5 L2.5,13.5 Z M5.5,5.5 L5.6,5.6 M10.5,10.5 L10.6,10.6 M8,8 L8.1,8.1";
+
+    /// <summary>MIDI processor Modal randomizer: a die beside scale steps.</summary>
+    public const string MidiModalRandom = "M2,7.5 L8.5,7.5 L8.5,14 L2,14 Z M4.3,9.8 L4.4,9.9 M6.2,11.7 L6.3,11.8 M10,11 L12,11 L12,8 L14,8 M10,5.5 L12,5.5 L12,2.5 L14,2.5";
+
+    /// <summary>MIDI processor Scale / pattern randomizer: shuffle arrows.</summary>
+    public const string MidiScaleVariation = "M2,4.5 L5,4.5 L11,11.5 L14,11.5 M2,11.5 L5,11.5 L11,4.5 L14,4.5 M12,2.5 L14,4.5 L12,6.5 M12,9.5 L14,11.5 L12,13.5";
+
+    /// <summary>MIDI processor Channel filter / remap: lanes with gaps.</summary>
+    public const string MidiChannelMap = "M2,3.5 L14,3.5 M2,6.5 L9,6.5 M11,6.5 L14,6.5 M2,9.5 L14,9.5 M2,12.5 L6,12.5 M9,12.5 L14,12.5";
+
+    /// <summary>MIDI processor Channel router: a line forking into two.</summary>
+    public const string MidiChannelRoute = "M2,8 L7,8 L12,3.5 M7,8 L12,12.5 M10,3.5 L12,3.5 L12,5.5 M10,12.5 L12,12.5 L12,10.5";
+
+    /// <summary>MIDI processor Program / bank select: a folder.</summary>
+    public const string MidiProgramBank = "M2,4.5 L6,4.5 L7.5,6 L14,6 L14,13 L2,13 Z M5,9.5 L11,9.5";
+
+    /// <summary>MIDI processor CC sender: a knob with an arrow out.</summary>
+    public const string MidiCcSender = "M2,8 A4,4 0 1 1 10,8 A4,4 0 1 1 2,8 M6,8 L6,4.5 M11,8 L14.5,8 M12.5,6 L14.5,8 L12.5,10";
+
+    /// <summary>MIDI processor CC mapper: one knob to another.</summary>
+    public const string MidiCcMapper = "M1.5,8 A2.75,2.75 0 1 1 7,8 A2.75,2.75 0 1 1 1.5,8 M9,8 A2.75,2.75 0 1 1 14.5,8 A2.75,2.75 0 1 1 9,8 M4.25,8 L4.25,5.25 M11.75,8 L13.7,6.05";
+
+    /// <summary>MIDI processor MIDI EQ ducker: a wave and a down arrow.</summary>
+    public const string MidiAudioDucker = "M1.5,8 L3,8 L4,4 L5.5,12 L7,6 L8,8 M11.5,3 L11.5,12 M9.5,10 L11.5,12 L13.5,10";
+
+    /// <summary>MIDI processor Loop sampler: a wave in a box.</summary>
+    public const string MidiLoopSampler = "M2.5,4 L13.5,4 L13.5,12 L2.5,12 Z M4,8 L5,8 L6,5.5 L7.5,10.5 L9,6.5 L10,8 L12,8";
+
+    /// <summary>MIDI processor Synchronized looper: a circular arrow.</summary>
+    public const string MidiLooper = "M13,8 A5,5 0 1 1 11.5,4.5 M11.5,1.5 L11.5,4.5 L8.5,4.5";
+
+    /// <summary>MIDI processor Note sanitizer: a funnel.</summary>
+    public const string MidiSanitizer = "M2,3 L14,3 L9.5,8.5 L9.5,13 L6.5,13 L6.5,8.5 Z";
+
+    /// <summary>MIDI processor Panic: a stop sign with a mark.</summary>
+    public const string MidiPanic = "M5.5,2 L10.5,2 L14,5.5 L14,10.5 L10.5,14 L5.5,14 L2,10.5 L2,5.5 Z M8,5 L8,9 M8,11.2 L8,11.3";
+
+    /// <summary>MIDI processor MIDI log: a page of lines.</summary>
+    public const string MidiLog = "M3.5,2.5 L12.5,2.5 L12.5,13.5 L3.5,13.5 Z M5.5,5.5 L10.5,5.5 M5.5,8 L10.5,8 M5.5,10.5 L10.5,10.5";
 }

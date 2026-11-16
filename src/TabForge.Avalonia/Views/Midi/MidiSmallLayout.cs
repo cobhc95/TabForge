@@ -6,7 +6,7 @@ using TabForge.Avalonia.Views.Dialogs;
 namespace TabForge.Avalonia.Views.Midi;
 
 // Owns: the small-window rules of the MIDI processing window: the three-column grid with minimums and proportional stars
-//   (both lists shrink first, the editor last), the clipped panes and the ellipsized catalog text with its full-name tooltip.
+//   (both lists shrink first, the editor last), the clipped panes and the wrapping catalog text with its full-name tooltip.
 // Does not own: the window, the metrics, or the parameter editors.
 // Tests: MidiSmallLayoutTests (every processor at MinWidth, MinWidth+50 and 1000 DIPs).
 internal static class MidiSmallLayout
@@ -25,10 +25,10 @@ internal static class MidiSmallLayout
         return grid;
     }
 
-    /// <summary>One catalog row: ellipsized with the full name in a wrapped tooltip, never painting past its column.</summary>
+    /// <summary>One catalog row: wraps onto more lines in a narrow column (never trimmed), the full name also in a wrapped tooltip.</summary>
     public static TextBlock CatalogText(string display)
     {
-        var text = new TextBlock { Text = display, TextTrimming = TextTrimming.CharacterEllipsis, ClipToBounds = true };
+        var text = new TextBlock { Text = display, TextWrapping = TextWrapping.Wrap };
         MidiSharedRows.Tip(text, display);
         return text;
     }

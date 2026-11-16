@@ -74,6 +74,18 @@ internal static class MidiSharedRows
         return button;
     }
 
+    /// <summary>An icon button (save or delete a preset): the icon in the text colour, <paramref name="accessibleName"/> for screen readers and
+    /// tests, and the tooltip.</summary>
+    public static Button IconButton(string iconData, string name, string accessibleName, string tip)
+    {
+        var button = new Button { Content = MidiIcons.Icon(iconData, DialogMetrics.MidiIconSize), Name = name, VerticalAlignment = VerticalAlignment.Center };
+        DialogMetrics.WithPadding(button, DialogMetrics.MidiIconButtonPad);
+        button.WithMargin(DialogMetrics.MidiButtonGap);
+        global::Avalonia.Automation.AutomationProperties.SetName(button, accessibleName);
+        Tip(button, tip);
+        return button;
+    }
+
     /// <summary>One note chip (number plus name) with the accent edge; the caller removes the note on click.</summary>
     public static Border Chip(string text, int tag, string tip)
     {
@@ -114,9 +126,9 @@ internal static class MidiSharedRows
         var label = new TextBlock
         {
             Text = labelText,
-            MinWidth = DialogMetrics.MidiLabelMinWidth,
+            Width = DialogMetrics.MidiLabelWidth,
             VerticalAlignment = VerticalAlignment.Center,
-            TextTrimming = TextTrimming.CharacterEllipsis,
+            TextWrapping = TextWrapping.Wrap,   // one shared label column so every editor lines up; a long label takes a second line, never an ellipsis
         };
         return FinishParamRow(grid, label, "", tip, editor, viewer);
     }
@@ -128,12 +140,20 @@ internal static class MidiSharedRows
         label[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MutedBrush");
         Tip(label, tip);
         if (viewer is not null)
-            label.Bind(TextBlock.MaxWidthProperty, new Binding("Viewport.Width") { Source = viewer, Converter = new ReserveWidthConverter(), ConverterParameter = DialogMetrics.MidiLabelReserve });
+            label.Bind(TextBlock.WidthProperty, new Binding("Viewport.Width") { Source = viewer, Converter = new LabelWidthConverter(), ConverterParameter = DialogMetrics.MidiLabelReserve });
         Grid.SetColumn(label, 0);
         Grid.SetColumn(editor, 1);
         grid.Children.Add(label);
         grid.Children.Add(editor);
         return grid;
+    }
+
+    // The label column: its full width while the viewport leaves room for the editor, narrower (down to its minimum) in a small window.
+    private sealed class LabelWidthConverter : IValueConverter
+    {
+        public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) =>
+            value is double width && parameter is double reserve ? Math.Clamp(width - reserve, DialogMetrics.MidiLabelMinWidth, DialogMetrics.MidiLabelWidth) : DialogMetrics.MidiLabelWidth;
+        public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => throw new NotSupportedException();
     }
 
     private sealed class ReserveWidthConverter : IValueConverter

@@ -63,6 +63,26 @@ public static class MidiProcessingListPresenter
         return (order, selectedNew, order.IndexOf(focusOld));
     }
 
+    /// <summary>Drags a selection so it lands before the row that was at <paramref name="target"/> (count: after the last), as one block in its
+    /// old relative order. Returns the new order (old indexes by new position), the new selection and the new focus, or null when nothing moves.</summary>
+    public static (IReadOnlyList<int> Order, IReadOnlyList<int> Selected, int Focus)? DragTo(IReadOnlyList<int> selected, int focused, int target, int count)
+    {
+        if (selected.Count == 0 || count <= 0 || selected.Any(i => i < 0 || i >= count)) return null;
+        var set = selected.ToHashSet();
+        target = Math.Clamp(target, 0, count);
+        var block = selected.Distinct().OrderBy(i => i).ToList();
+        var rest = Enumerable.Range(0, count).Where(i => !set.Contains(i)).ToList();
+        var at = rest.Count(i => i < target);
+        var order = rest.Take(at).Concat(block).Concat(rest.Skip(at)).ToList();
+        if (order.SequenceEqual(Enumerable.Range(0, count))) return null;
+        var focusOld = set.Contains(focused) ? focused : block[0];
+        var selectedNew = Enumerable.Range(at, block.Count).ToList();
+        return (order, selectedNew, order.IndexOf(focusOld));
+    }
+
+    /// <summary>The window's status line: how many processors the chain has.</summary>
+    public static string StatusText(int count) => count == 1 ? "1 processor" : $"{count} processors";
+
     /// <summary>The row label of a processor: its catalog name, or its type marked as unknown.</summary>
     public static string RowLabel(string type, string? catalogName) => catalogName ?? $"{type} (unknown)";
 

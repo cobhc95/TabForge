@@ -216,7 +216,7 @@ public sealed partial class DockWorkspaceController : IDockPaneDragHost, IDispos
     public void ShowSidePanels()
     {
         if (DockWorkspaceRules.ShowSideColumn(State)) { Changed(); return; }
-        foreach (var id in DockPaneTable.SideIds) SetPanelVisible(id, true);
+        Batch(() => { foreach (var id in DockPaneTable.SideIds) SetPanelVisible(id, true); });   // one layout rebuild, not one per panel
     }
 
     /// <summary>Brings a panel into view without moving one that is already shown: a closed panel is put at its default place, and a panel behind another tab of its group becomes that group's shown tab.</summary>
