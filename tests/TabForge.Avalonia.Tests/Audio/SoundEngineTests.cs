@@ -296,11 +296,6 @@ public sealed class SoundEngineTests
         finally { fonts.Configure(""); }
     }
 
-    private sealed class FakeHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> answer) : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancel) => answer(request, cancel);
-    }
-
     private static HttpResponseMessage Ok(byte[] bytes) => new(HttpStatusCode.OK) { Content = new ByteArrayContent(bytes) };
 
     private static string Temp() => Path.Combine(Path.GetTempPath(), "tf-sf-" + Guid.NewGuid().ToString("N"), "bank.sf2");
@@ -313,7 +308,7 @@ public sealed class SoundEngineTests
         var seen = 0L;
         var progress = new Progress<(long, long)>(p => seen = Math.Max(seen, p.Item1));
         var target = Temp();
-        var downloader = new SoundFontDownloader(new FakeHandler((_, _) => Task.FromResult(Ok(bytes))), "https://fake.test/a.sf2", hash);
+        var downloader = new SoundFontDownloader(new StubHttpMessageHandler((_, _) => Task.FromResult(Ok(bytes))), "https://fake.test/a.sf2", hash);
         Assert.Null(await downloader.DownloadAsync(target, progress, CancellationToken.None));
         Assert.Equal(bytes, File.ReadAllBytes(target));
         Assert.False(File.Exists(target + ".part"));
@@ -325,7 +320,7 @@ public sealed class SoundEngineTests
     public async Task AHashMismatchLeavesNothingBehind()
     {
         var target = Temp();
-        var downloader = new SoundFontDownloader(new FakeHandler((_, _) => Task.FromResult(Ok(new byte[1000]))), "https://fake.test/a.sf2", SoundFontDownloader.Sha256);
+        var downloader = new SoundFontDownloader(new StubHttpMessageHandler((_, _) => Task.FromResult(Ok(new byte[1000]))), "https://fake.test/a.sf2", SoundFontDownloader.Sha256);
         var error = await downloader.DownloadAsync(target, null, CancellationToken.None);
         Assert.Contains("checksum", error);
         Assert.False(File.Exists(target));
@@ -336,10 +331,10 @@ public sealed class SoundEngineTests
     public async Task ATooLargeFileAndAPlainHttpAddressAreRefused()
     {
         var target = Temp();
-        var big = new SoundFontDownloader(new FakeHandler((_, _) => Task.FromResult(Ok(new byte[5000]))), "https://fake.test/a.sf2", "00", maxBytes: 1000);
+        var big = new SoundFontDownloader(new StubHttpMessageHandler((_, _) => Task.FromResult(Ok(new byte[5000]))), "https://fake.test/a.sf2", "00", maxBytes: 1000);
         Assert.Contains("larger", await big.DownloadAsync(target, null, CancellationToken.None));
         Assert.False(File.Exists(target));
-        var plain = new SoundFontDownloader(new FakeHandler((_, _) => throw new InvalidOperationException("must not be called")), "http://fake.test/a.sf2");
+        var plain = new SoundFontDownloader(new StubHttpMessageHandler((_, _) => throw new InvalidOperationException("must not be called")), "http://fake.test/a.sf2");
         Assert.Contains("HTTPS", await plain.DownloadAsync(target, null, CancellationToken.None));
     }
 
@@ -348,7 +343,7 @@ public sealed class SoundEngineTests
     {
         var target = Temp();
         using var cancel = new CancellationTokenSource();
-        var downloader = new SoundFontDownloader(new FakeHandler(async (_, token) => { cancel.Cancel(); await Task.Delay(Timeout.Infinite, token); return Ok(Array.Empty<byte>()); }), "https://fake.test/a.sf2");
+        var downloader = new SoundFontDownloader(new StubHttpMessageHandler(async (_, token) => { cancel.Cancel(); await Task.Delay(Timeout.Infinite, token); return Ok(Array.Empty<byte>()); }), "https://fake.test/a.sf2");
         Assert.Equal("Cancelled.", await downloader.DownloadAsync(target, null, cancel.Token));
         Assert.False(File.Exists(target));
     }

@@ -23,29 +23,6 @@ namespace TabForge.Avalonia.Tests;
 // Tests: this class.
 public sealed class RepeatPickerInputTests
 {
-    private static (SongDocument Song, TrackModel Track) RepeatSevenSong()
-    {
-        var song = new SongDocument(() => null) { Project = SongDocument.BlankProject() };
-        song.MarkClean();
-        song.Project.Tracks[0].Measures[1].RepeatStart = true;
-        song.Project.Tracks[0].Measures[2].RepeatEnd = true;
-        song.Project.Tracks[0].Measures[2].RepeatCount = 7;
-        var track = NewTrackFactory.CreateTrack(song.Project, TrackKind.Audio);
-        song.Project.Tracks.Add(track);
-        return (song, track);
-    }
-
-    private static (SongDocument Song, TrackModel Track) RepeatTwoSong()
-    {
-        var song = new SongDocument(() => null) { Project = SongDocument.BlankProject() };
-        song.MarkClean();
-        song.Project.Tracks[0].Measures[1].RepeatStart = true;
-        song.Project.Tracks[0].Measures[2].RepeatEnd = true;
-        var track = NewTrackFactory.CreateTrack(song.Project, TrackKind.Audio);
-        song.Project.Tracks.Add(track);
-        return (song, track);
-    }
-
     private static double OneBar(SongProject project) => AudioClipTimelineRules.SecondsAtBar(project, 1, 0);
 
     private static AudioClip AudioClipSpanning(double startSec, double lengthSec) => new()
@@ -88,7 +65,7 @@ public sealed class RepeatPickerInputTests
     [AvaloniaFact]
     public void ClickPill5SetsShown5WithoutSeekOrSelect()
     {
-        var (song, track) = RepeatSevenSong();
+        var (song, track) = RepeatPickerFixture.RepeatSevenSong();
         track.AudioClips.Add(AudioClipSpanning(0, 16 * OneBar(song.Project)));
         var (window, view, input) = OpenTimeline(song, zoom: 4.0);
         var region = Assert.Single(view.RepeatRegionsNow());
@@ -121,7 +98,7 @@ public sealed class RepeatPickerInputTests
     [AvaloniaFact]
     public void ClickChipOn7Of7WrapsTo1()
     {
-        var (song, track) = RepeatSevenSong();
+        var (song, track) = RepeatPickerFixture.RepeatSevenSong();
         track.AudioClips.Add(AudioClipSpanning(0, 16 * OneBar(song.Project)));
         var (window, view, input) = OpenTimeline(song);
         var region = Assert.Single(view.RepeatRegionsNow());
@@ -152,7 +129,7 @@ public sealed class RepeatPickerInputTests
     [AvaloniaFact]
     public void AltWheelUpTwiceFrom3Reaches5()
     {
-        var (song, track) = RepeatSevenSong();
+        var (song, track) = RepeatPickerFixture.RepeatSevenSong();
         track.AudioClips.Add(AudioClipSpanning(0, 16 * OneBar(song.Project)));
         var (window, arrangement) = OpenArrangement(song);
         var timeline = arrangement.Timeline;
@@ -173,7 +150,7 @@ public sealed class RepeatPickerInputTests
     [AvaloniaFact]
     public void AltWheelUpAt7StaysAt7()
     {
-        var (song, track) = RepeatSevenSong();
+        var (song, track) = RepeatPickerFixture.RepeatSevenSong();
         track.AudioClips.Add(AudioClipSpanning(0, 16 * OneBar(song.Project)));
         var (window, arrangement) = OpenArrangement(song);
         var timeline = arrangement.Timeline;
@@ -193,7 +170,7 @@ public sealed class RepeatPickerInputTests
     [AvaloniaFact]
     public void PlainWheelOverRegionKeepsZoomBehaviour()
     {
-        var (song, track) = RepeatSevenSong();
+        var (song, track) = RepeatPickerFixture.RepeatSevenSong();
         track.AudioClips.Add(AudioClipSpanning(0, 16 * OneBar(song.Project)));
         var (window, arrangement) = OpenArrangement(song);
         var timeline = arrangement.Timeline;
@@ -222,7 +199,7 @@ public sealed class RepeatPickerInputTests
     [AvaloniaFact]
     public void PressOnClipAudioBelowThePillsKeepsClipSelectAndSeeksTheClipStart()
     {
-        var (song, track) = RepeatSevenSong();
+        var (song, track) = RepeatPickerFixture.RepeatSevenSong();
         var clip = AudioClipSpanning(0, 16 * OneBar(song.Project));
         track.AudioClips.Add(clip);
         var (window, view, input) = OpenTimeline(song, zoom: 4.0);
@@ -249,7 +226,7 @@ public sealed class RepeatPickerInputTests
     [AvaloniaFact]
     public void TwoPassRegionHasNoPickerAndKeepsExistingBehaviour()
     {
-        var (song, track) = RepeatTwoSong();
+        var (song, track) = RepeatPickerFixture.RepeatTwoSong();
         var clip = AudioClipSpanning(0.5 * OneBar(song.Project), 5 * OneBar(song.Project));
         track.AudioClips.Add(clip);
         var (window, view, input) = OpenTimeline(song);
@@ -276,7 +253,7 @@ public sealed class RepeatPickerInputTests
     [AvaloniaFact]
     public void DotHoverOpensPopoverLeaveAndEscCloseIt()
     {
-        var (song, track) = RepeatSevenSong();
+        var (song, track) = RepeatPickerFixture.RepeatSevenSong();
         track.AudioClips.Add(AudioClipSpanning(0, 16 * OneBar(song.Project)));
         var (window, view, _) = OpenTimeline(song, zoom: 0.5);
         var region = Assert.Single(view.RepeatRegionsNow());

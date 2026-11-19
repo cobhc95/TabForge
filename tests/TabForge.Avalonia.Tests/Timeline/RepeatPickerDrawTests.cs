@@ -19,29 +19,6 @@ namespace TabForge.Avalonia.Tests;
 // Tests: this class.
 public sealed class RepeatPickerDrawTests
 {
-    private static (SongDocument Song, TrackModel Track) RepeatSevenSong()
-    {
-        var song = new SongDocument(() => null) { Project = SongDocument.BlankProject() };
-        song.MarkClean();
-        song.Project.Tracks[0].Measures[1].RepeatStart = true;
-        song.Project.Tracks[0].Measures[2].RepeatEnd = true;
-        song.Project.Tracks[0].Measures[2].RepeatCount = 7;
-        var track = NewTrackFactory.CreateTrack(song.Project, TrackKind.Audio);
-        song.Project.Tracks.Add(track);
-        return (song, track);
-    }
-
-    private static (SongDocument Song, TrackModel Track) RepeatTwoSong()
-    {
-        var song = new SongDocument(() => null) { Project = SongDocument.BlankProject() };
-        song.MarkClean();
-        song.Project.Tracks[0].Measures[1].RepeatStart = true;
-        song.Project.Tracks[0].Measures[2].RepeatEnd = true;
-        var track = NewTrackFactory.CreateTrack(song.Project, TrackKind.Audio);
-        song.Project.Tracks.Add(track);
-        return (song, track);
-    }
-
     private static double OneBar(SongProject project) => AudioClipTimelineRules.SecondsAtBar(project, 1, 0);
 
     private static AudioClip AudioClipSpanning(double startSec, double lengthSec) => new()
@@ -84,7 +61,7 @@ public sealed class RepeatPickerDrawTests
     [AvaloniaFact]
     public void SevenPassClipDrawsOnlyTheShownPassFullHeight()
     {
-        var (song, track) = RepeatSevenSong();
+        var (song, track) = RepeatPickerFixture.RepeatSevenSong();
         var oneBar = OneBar(song.Project);
         var clip = AudioClipSpanning(0, 16 * oneBar);
         track.AudioClips.Add(clip);
@@ -121,7 +98,7 @@ public sealed class RepeatPickerDrawTests
     [AvaloniaFact]
     public void ShownPassSwitchMovesTheDrawnSliceButTheHitAreaStaysTheWholeClip()
     {
-        var (song, track) = RepeatSevenSong();
+        var (song, track) = RepeatPickerFixture.RepeatSevenSong();
         var performed = SongExtent.Timing(song.Project).Performed;
         var (start3, length3) = RepeatPasses.PerformedRangeForPass(performed, 1, 2, 3);
         // Passes 3 and 4: a clip covering ONE pass is an ordinary box now (no picker, RepeatUnfoldTests), so this one covers two.
@@ -172,7 +149,7 @@ public sealed class RepeatPickerDrawTests
     [AvaloniaFact]
     public void HollowPassesFollowCoverageAndTheSelectedClip()
     {
-        var (song, track) = RepeatSevenSong();
+        var (song, track) = RepeatPickerFixture.RepeatSevenSong();
         var performed = SongExtent.Timing(song.Project).Performed;
         var (start1, _) = RepeatPasses.PerformedRangeForPass(performed, 1, 2, 1);
         var (start3, length3) = RepeatPasses.PerformedRangeForPass(performed, 1, 2, 3);
@@ -202,7 +179,7 @@ public sealed class RepeatPickerDrawTests
     [AvaloniaFact]
     public void PillsFormDrawsEveryPassAndThePassLabel()
     {
-        var (song, track) = RepeatSevenSong();
+        var (song, track) = RepeatPickerFixture.RepeatSevenSong();
         var oneBar = OneBar(song.Project);
         track.AudioClips.Add(AudioClipSpanning(0, 16 * oneBar));
         var view = new TimelineView(song.Project) { Snap = new SnapSettings { Enabled = false }, ZoomFactor = 4 };
@@ -219,7 +196,7 @@ public sealed class RepeatPickerDrawTests
     [AvaloniaFact]
     public void PopoverRendersAboveTheLaneOnlyWhenOpen()
     {
-        var (song, track) = RepeatSevenSong();
+        var (song, track) = RepeatPickerFixture.RepeatSevenSong();
         var oneBar = OneBar(song.Project);
         track.AudioClips.Add(AudioClipSpanning(0, 16 * oneBar));
         var view = new TimelineView(song.Project) { Snap = new SnapSettings { Enabled = false } };
@@ -241,7 +218,7 @@ public sealed class RepeatPickerDrawTests
     [AvaloniaFact]
     public void TwoPassRepeatsKeepTheirStackedLook()
     {
-        var (song, track) = RepeatTwoSong();
+        var (song, track) = RepeatPickerFixture.RepeatTwoSong();
         var oneBar = OneBar(song.Project);
         var clip = AudioClipSpanning(0.5 * oneBar, 5 * oneBar);
         track.AudioClips.Add(clip);

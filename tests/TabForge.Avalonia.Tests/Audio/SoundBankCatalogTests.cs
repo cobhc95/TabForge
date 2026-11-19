@@ -155,11 +155,6 @@ public sealed class SoundBankCatalogTests
         Assert.False(File.Exists(Path.Combine(windowsFolder, SoundBankCatalog.FluidR3.FileName)));
     }
 
-    private sealed class FakeHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> answer) : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancel) => answer(request, cancel);
-    }
-
     [Fact]
     public async Task AWrongSizeOrHashLeavesNoPartialFile()
     {
@@ -168,7 +163,7 @@ public sealed class SoundBankCatalogTests
         var right = Convert.ToHexString(SHA256.HashData(bytes));
         var wrongSize = new SoundBank("test", "Test", "A", "C", "https://fake.test/a.sf2", right, Bytes: 2000,
             "MIT", "https://fake.test", "bank.sf2", "TabForge.Resources.SoundBanks.fluidr3-gm.txt");
-        var sizeError = await new SoundFontDownloader(wrongSize, new FakeHandler((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(bytes) })))
+        var sizeError = await new SoundFontDownloader(wrongSize, new StubHttpMessageHandler((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(bytes) })))
             .DownloadAsync(target, null, CancellationToken.None);
         Assert.Contains("instead of the expected", sizeError);
         Assert.False(File.Exists(target));
@@ -176,7 +171,7 @@ public sealed class SoundBankCatalogTests
 
         var wrongHash = new SoundBank("test2", "Test", "A", "C", "https://fake.test/a.sf2", new string('0', 64), bytes.Length,
             "MIT", "https://fake.test", "bank.sf2", "TabForge.Resources.SoundBanks.fluidr3-gm.txt");
-        var hashError = await new SoundFontDownloader(wrongHash, new FakeHandler((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(bytes) })))
+        var hashError = await new SoundFontDownloader(wrongHash, new StubHttpMessageHandler((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(bytes) })))
             .DownloadAsync(target, null, CancellationToken.None);
         Assert.Contains("checksum", hashError);
         Assert.False(File.Exists(target));
