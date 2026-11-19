@@ -97,7 +97,7 @@ public sealed partial class AudioEngineClient
         lock (_sendGate)
         {
             if (!ReferenceEquals(pipe, _pipe)) return;
-            Interlocked.Exchange(ref _liveness, new Timer(_ => CheckLiveness(pipe, process), null, 1000, 1000))?.Dispose();
+            Interlocked.Exchange(ref _liveness, new Timer(_ => CheckLiveness(pipe, process), null, 2000, 2000))?.Dispose();
         }
     }
 
