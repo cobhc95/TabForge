@@ -61,7 +61,7 @@ public static partial class AvaloniaFormControlStyles
 
     // PreferencesWindow.xaml BaseActionButton, SecondaryActionButton and ResetActionButton: Panel3 fill, soft edge, the control corner.
     // The Preferences rail row radius: the navigation tile's 4 DIP.
-    private static readonly CornerRadius PrefsNavCornerRadius = new(4);
+    private static readonly CornerRadius PrefsNavCornerRadius = new(0);
     private static readonly Thickness PrefsActionPadding = new(14, 7, 14, 7);
     private const double PrefsActionMinWidth = 90, PrefsActionFontSize = 13;
     private const double PrefsResetMinWidth = 52, PrefsResetHeight = 26, PrefsResetFontSize = 11;
@@ -380,7 +380,7 @@ public static partial class AvaloniaFormControlStyles
         {
             Setters = { Bound(TemplatedControl.BackgroundProperty, "SelectedTintBrush") },
         },
-        // Preferences rail rows: stretched across the rail, drawn by PrefsNavRowTemplate (its own border, so the row's fill is the item's), rounded.
+        // Preferences rail rows: stretched across the rail, drawn by PrefsNavRowTemplate (its own border, so the row's fill is the item's), flat edges.
         new Style(x => x.OfType<ListBoxItem>().Class(PrefsNavRowClass))
         {
             Setters =
