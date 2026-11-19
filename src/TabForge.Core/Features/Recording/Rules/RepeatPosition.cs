@@ -47,7 +47,7 @@ public static class RepeatMap
     {
         if (performed is null || performed.Length == 0) return new RepeatPosition(0, 0, 1);
         var ms = Math.Max(0, seconds) * MillisecondsPerSecond;
-        var index = LastStartingAtOrBefore(performed, ms);
+        var index = PerformedBar.LastStartingAtOrBefore(performed, ms);
         if (index < 0) return new RepeatPosition(performed[0].Bar, 0, 1);
         if (ms >= performed[^1].EndMs) return new RepeatPosition(performed[^1].Bar, 1, PassCount(performed, performed[^1].Bar));
         var bar = performed[index];
@@ -69,18 +69,4 @@ public static class RepeatMap
         return count;
     }
 
-    /// <summary>The index of the last performed bar that starts at or before <paramref name="ms"/>; -1 when none does.</summary>
-    private static int LastStartingAtOrBefore(PerformedBar[] performed, double ms)
-    {
-        var low = 0;
-        var high = performed.Length - 1;
-        var found = -1;
-        while (low <= high)
-        {
-            var mid = (low + high) / 2;
-            if (performed[mid].StartMs <= ms) { found = mid; low = mid + 1; }
-            else high = mid - 1;
-        }
-        return found;
-    }
 }

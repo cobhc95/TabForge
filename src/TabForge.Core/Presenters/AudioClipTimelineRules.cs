@@ -20,7 +20,7 @@ public static class AudioClipTimelineRules
         var bars = BarCount(song);
         var performed = SongExtent.Timing(song).Performed;
         var ms = Math.Max(0, seconds) * MillisecondsPerSecond;
-        var index = LastStartingAtOrBefore(performed, ms);
+        var index = PerformedBar.LastStartingAtOrBefore(performed, ms);
         if (index < 0 || ms >= performed[^1].EndMs) return (bars, 0);
         var bar = performed[index];
         var length = bar.EndMs - bar.StartMs;
@@ -80,7 +80,7 @@ public static class AudioClipTimelineRules
         var performed = SongExtent.Timing(song).Performed;
         if (performed.Length == 0) return SecondsAtBar(song, bar, fraction);
         var clamped = Math.Clamp(fraction, 0, 1);
-        var index = Math.Max(0, LastStartingAtOrBefore(performed, Math.Max(0, referenceSec) * MillisecondsPerSecond));
+        var index = Math.Max(0, PerformedBar.LastStartingAtOrBefore(performed, Math.Max(0, referenceSec) * MillisecondsPerSecond));
         var (low, high) = (index, index);
         while (low > 0 && performed[low - 1].Bar + 1 == performed[low].Bar) low--;
         while (high < performed.Length - 1 && performed[high + 1].Bar == performed[high].Bar + 1) high++;
@@ -120,18 +120,4 @@ public static class AudioClipTimelineRules
     /// <summary>The number of bars the timeline draws: the longest track's.</summary>
     public static int BarCount(SongProject song) => song.Tracks.Count == 0 ? 0 : song.Tracks.Max(t => t.Measures.Count);
 
-    /// <summary>The index of the last performed bar that starts at or before <paramref name="ms"/>; -1 when none does.</summary>
-    private static int LastStartingAtOrBefore(PerformedBar[] performed, double ms)
-    {
-        var low = 0;
-        var high = performed.Length - 1;
-        var found = -1;
-        while (low <= high)
-        {
-            var mid = (low + high) / 2;
-            if (performed[mid].StartMs <= ms) { found = mid; low = mid + 1; }
-            else high = mid - 1;
-        }
-        return found;
-    }
 }

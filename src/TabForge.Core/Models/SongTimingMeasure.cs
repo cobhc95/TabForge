@@ -5,7 +5,23 @@ namespace TabForge.Models;
 
 /// <summary>A bar as the song performs it: its source bar index and its place on the performed clock, in song milliseconds (repeats and jumps applied).
 /// <paramref name="EndingMask"/> is the alternate-ending mask of the source bar (bit n = pass n+1, 0 = not an ending), as PlaybackOrder reads it.</summary>
-public readonly record struct PerformedBar(int Bar, double StartMs, double EndMs, int EndingMask = 0);
+public readonly record struct PerformedBar(int Bar, double StartMs, double EndMs, int EndingMask = 0)
+{
+    /// <summary>The index of the last performed bar that starts at or before <paramref name="ms"/>; -1 when none does.</summary>
+    internal static int LastStartingAtOrBefore(PerformedBar[] performed, double ms)
+    {
+        var low = 0;
+        var high = performed.Length - 1;
+        var found = -1;
+        while (low <= high)
+        {
+            var mid = (low + high) / 2;
+            if (performed[mid].StartMs <= ms) { found = mid; low = mid + 1; }
+            else high = mid - 1;
+        }
+        return found;
+    }
+}
 
 /// <summary>The measured timing of one song.</summary>
 /// <param name="EndSec">The end of the song as performed, in seconds.</param>
