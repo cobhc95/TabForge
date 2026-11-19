@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System;
-using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Shapes;

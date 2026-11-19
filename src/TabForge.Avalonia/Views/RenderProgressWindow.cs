@@ -1,7 +1,6 @@
 using System;
 using TabForge.Avalonia.Platform;
 using System.Threading;
-using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;

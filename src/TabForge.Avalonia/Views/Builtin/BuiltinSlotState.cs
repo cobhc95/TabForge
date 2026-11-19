@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using TabForge.Audio.Contracts;
 using TabForge.Audio.Contracts.Builtin;
 using TabForge.Avalonia.Views.Fx;

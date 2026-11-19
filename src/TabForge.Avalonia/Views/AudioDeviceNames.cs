@@ -2,7 +2,6 @@ using TabForge.Platform.Contracts;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Threading.Tasks;
 using TabForge.Playback;
 
 namespace TabForge.Avalonia.Views;

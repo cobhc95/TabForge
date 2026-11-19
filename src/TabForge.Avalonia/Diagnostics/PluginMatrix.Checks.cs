@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using TabForge.Audio.Contracts;
 using TabForge.AudioEngine;
 using TabForge.AudioEngine.Isolation;

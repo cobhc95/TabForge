@@ -9,7 +9,6 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
-using System.Threading.Tasks;
 using TabForge.Audio.Contracts;
 using TabForge.AudioEngine.Isolation;
 using TabForge.Platform;

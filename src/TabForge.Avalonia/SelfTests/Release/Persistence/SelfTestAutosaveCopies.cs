@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading.Tasks;
 using TabForge.Autosave;
 using TabForge.Documents;
 using TabForge.Models;

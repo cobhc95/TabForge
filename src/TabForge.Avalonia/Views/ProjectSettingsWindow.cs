@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using TabForge.Avalonia.Platform;
 using System.Linq;
 using Avalonia;

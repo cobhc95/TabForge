@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using TabForge.Avalonia.Platform;
 using TabForge.Models;
 using TabForge.Services;

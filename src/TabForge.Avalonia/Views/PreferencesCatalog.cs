@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
-using System.Threading.Tasks;
 using TabForge.Audio;
 using TabForge.Platform.Theme;
 using TabForge.Services;

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading.Tasks;
 using Avalonia;
 using TabForge.Avalonia.Diagnostics;
 using TabForge.Capture;

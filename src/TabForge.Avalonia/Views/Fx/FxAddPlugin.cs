@@ -1,5 +1,4 @@
 using System;
-using System.Threading.Tasks;
 using Avalonia.Controls;
 using TabForge.AudioEngine.Isolation;
 using TabForge.Models;

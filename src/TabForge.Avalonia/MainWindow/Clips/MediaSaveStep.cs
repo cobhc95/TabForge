@@ -2,7 +2,6 @@ using TabForge.Avalonia.Views;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading.Tasks;
 using TabForge.Documents;
 using TabForge.Services;
 

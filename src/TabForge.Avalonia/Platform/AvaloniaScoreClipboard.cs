@@ -1,6 +1,5 @@
 using System;
 using System.Text;
-using System.Threading.Tasks;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using TabForge.Services;

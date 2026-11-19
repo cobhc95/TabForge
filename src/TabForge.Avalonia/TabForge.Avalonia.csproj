@@ -67,4 +67,7 @@
       <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(ResolvedFileToPublish.Filename)' == 'Microsoft.DiaSymReader.Native.amd64'" />
     </ItemGroup>
   </Target>
+  <ItemGroup>
+    <Using Include="System.Threading.Tasks" />
+  </ItemGroup>
 </Project>

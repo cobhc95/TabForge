@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;

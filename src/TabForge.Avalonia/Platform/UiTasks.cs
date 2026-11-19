@@ -1,6 +1,5 @@
 using TabForge.Avalonia.Views;
 using System;
-using System.Threading.Tasks;
 using TabForge.Services;
 
 namespace TabForge.Avalonia.Platform;

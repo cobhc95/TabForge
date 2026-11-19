@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using TabForge.Autosave;
 using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Views;

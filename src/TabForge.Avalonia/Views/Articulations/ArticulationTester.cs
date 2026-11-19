@@ -1,5 +1,4 @@
 using System;
-using System.Threading.Tasks;
 using TabForge.Avalonia.Views.Fx;
 using TabForge.Models;
 using TabForge.Playback;

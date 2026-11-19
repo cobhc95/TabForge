@@ -8,7 +8,6 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
-using System.Threading.Tasks;
 using TabForge.Audio.Contracts;
 using TabForge.AudioEngine;
 using TabForge.AudioEngine.Isolation;
