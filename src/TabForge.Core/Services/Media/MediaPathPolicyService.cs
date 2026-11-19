@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Collections.Frozen;
-using System.IO;
 using TabForge.Audio;
 using TabForge.Platform;
 

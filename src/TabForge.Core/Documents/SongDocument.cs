@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using TabForge.Models;
 using TabForge.Presenters;
 using TabForge.Presets;

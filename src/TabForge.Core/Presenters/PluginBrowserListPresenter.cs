@@ -5,7 +5,6 @@
 //       (PluginTrust) or the settings store.
 // Tests: no dedicated test class.
 using System.Collections.Generic;
-using System.Linq;
 using TabForge.Platform;
 using TabForge.Plugins;
 

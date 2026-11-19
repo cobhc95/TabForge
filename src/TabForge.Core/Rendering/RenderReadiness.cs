@@ -1,4 +1,3 @@
-using System.IO;
 using TabForge.Audio.Contracts;
 
 namespace TabForge.Rendering;

@@ -4,7 +4,6 @@
 // Does not own: pointer capture, window moves and the live tear-off (src/TabForge.Avalonia/Shell/DocumentTabDragFlow.cs).
 // Tests: TabForge.Avalonia.Tests.TabDragRulesTests (fake rectangles).
 using System.Collections.Generic;
-using System.Linq;
 using TabForge.Platform;
 
 namespace TabForge.Shell;

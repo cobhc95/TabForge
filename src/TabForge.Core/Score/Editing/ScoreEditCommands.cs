@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Linq;
 using TabForge.Diagnostics;
 using TabForge.Models;
 using TabForge.Playback;

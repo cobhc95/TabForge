@@ -1,4 +1,3 @@
-using System.Linq;
 using TabForge.Commands;
 
 namespace TabForge.Services;

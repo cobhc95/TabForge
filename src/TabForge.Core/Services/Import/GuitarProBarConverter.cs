@@ -1,6 +1,4 @@
 using System.Globalization;
-using System.IO;
-using System.Linq;
 using TabForge.Models;
 using TabForge.Plugins;
 using static TabForge.Services.GuitarProBeatReader;

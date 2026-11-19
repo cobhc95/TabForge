@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using TabForge.Audio;
 using TabForge.Models;
 using TabForge.Ports;

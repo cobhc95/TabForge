@@ -1,4 +1,3 @@
-using System.IO;
 using TabForge.Audio;
 using TabForge.Features.TuxGuitar;
 using TabForge.Models;

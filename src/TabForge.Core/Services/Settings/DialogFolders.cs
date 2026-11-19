@@ -1,4 +1,3 @@
-using System.IO;
 using TabForge.Platform;
 using TabForge.Plugins;
 using static System.StringComparison;

@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using TabForge.Docking;
 
 namespace TabForge.Features.KeyboardMode;

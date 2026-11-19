@@ -1,4 +1,3 @@
-using System.IO;
 using TabForge.Models;
 using TabForge.Playback;
 using TabForge.Presets;

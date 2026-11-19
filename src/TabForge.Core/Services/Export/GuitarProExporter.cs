@@ -1,4 +1,3 @@
-using System.IO;
 using AlphaTab.Model;
 using TabForge.Models;
 

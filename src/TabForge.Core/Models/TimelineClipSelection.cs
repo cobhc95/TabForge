@@ -1,5 +1,4 @@
-﻿using System.Linq;
-
+﻿
 namespace TabForge.Models;
 
 // Owns: one selected audio clip of the arrangement timeline with its track, and finding it again by id after the song was replaced.

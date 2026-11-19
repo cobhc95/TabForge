@@ -1,4 +1,3 @@
-using System.Linq;
 using TabForge.Models;
 using TabForge.Views;
 using TabForge.Views.Score;

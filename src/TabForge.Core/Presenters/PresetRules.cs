@@ -1,4 +1,3 @@
-using System.IO;
 
 // Owns: the naming rules every preset kind shares: the check of a typed name, and the copy name ("name copy", "name copy 2").
 // Does not own: the files of the presets (PresetFolderStore, DrumMapStore) or the list that shows them (PresetManagePanel).

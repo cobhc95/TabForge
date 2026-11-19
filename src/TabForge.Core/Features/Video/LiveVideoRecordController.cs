@@ -1,4 +1,3 @@
-using System.IO;
 using Trace = TabForge.Services.Trace;
 
 namespace TabForge.Features.Video;

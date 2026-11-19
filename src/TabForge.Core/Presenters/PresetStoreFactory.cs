@@ -1,4 +1,3 @@
-using System.IO;
 using TabForge.Audio.Contracts;
 using TabForge.Playback;
 using TabForge.Plugins;
