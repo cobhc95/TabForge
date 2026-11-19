@@ -184,41 +184,55 @@ public sealed partial class FretboardSettingsWindow
         ed.ScaleHighlightColour = "Custom";
     }
 
+    private static string FormatLabel(string label)
+    {
+        if (string.IsNullOrWhiteSpace(label)) return label;
+        var lower = label.Trim().ToLowerInvariant();
+        return char.ToUpperInvariant(lower[0]) + lower[1..];
+    }
+
     private void Chips(global::Avalonia.Controls.Controls rows, string label, string prefix, IReadOnlyList<string> values, Func<string> get, Action<string> set, string? disabled = null)
     {
-        rows.Add(ScalePopupLayout.SectionLabel(label));
         var current = get();
-        var wrap = new WrapPanel();
-        foreach (var value in values)
+        var choices = values.Where(v => v != disabled || string.Equals(v, current, StringComparison.OrdinalIgnoreCase)).ToList();
+        var combo = new ComboBox
         {
-            var chip = ScalePopupLayout.Chip(prefix + value.Replace(" ", ""), value, string.Equals(value, current, StringComparison.OrdinalIgnoreCase));
-            AutomationProperties.SetName(chip, label.ToLowerInvariant() + ": " + value);
-            chip.IsEnabled = value != disabled;
-            chip.Click += (_, _) => { set(value); Changed(); };
-            wrap.Children.Add(chip);
-        }
-        rows.Add(wrap);
+            Name = prefix,
+            ItemsSource = choices,
+            SelectedItem = choices.FirstOrDefault(v => string.Equals(v, current, StringComparison.OrdinalIgnoreCase)) ?? choices.FirstOrDefault(),
+            MinWidth = 190,
+        };
+        AutomationProperties.SetName(combo, label.ToLowerInvariant());
+        combo.SelectionChanged += (_, _) =>
+        {
+            if (combo.SelectedItem is string picked && picked != disabled && !string.Equals(picked, get(), StringComparison.OrdinalIgnoreCase))
+            {
+                set(picked);
+                Changed();
+            }
+        };
+        rows.Add(SettingsWindowChrome.CreateSettingRow(FormatLabel(label), combo));
     }
 
     private void Switch(global::Avalonia.Controls.Controls rows, string name, string text, bool on, Action<bool> set)
     {
-        var box = new CheckBox { Name = name, Content = text, IsChecked = on }.WithMargin(0, 10, 0, 0);
+        var box = new CheckBox { Name = name, IsChecked = on };
         AutomationProperties.SetName(box, text);
         box.IsCheckedChanged += (_, _) => { set(box.IsChecked == true); Changed(rebuild: false); };
-        rows.Add(box);
+        rows.Add(SettingsWindowChrome.CreateSettingRow(text, box));
     }
 
     /// <summary>A whole-number setting on the track list's slider: the value shows on the thumb, a double-click returns it to its default, and the arrow keys step it.</summary>
     private void Slide(global::Avalonia.Controls.Controls rows, string label, string name, int min, int max, int step, Func<EditingSettings, int> get, Action<int> set, string unit = "")
     {
-        rows.Add(ScalePopupLayout.SectionLabel(unit.Length > 0 ? $"{label} ({unit})" : label));
+        var title = unit.Length > 0 ? $"{FormatLabel(label)} ({unit})" : FormatLabel(label);
         var slider = new MiniSlider(min, max, get(new EditingSettings()), global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.FretboardSliderWidth, global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.FretboardSliderHeight)
         {
-            Name = name, Step = step, Focusable = true, Value = get(_settings.Editing), HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Left,
+            Name = name, Step = step, Focusable = true, Value = get(_settings.Editing),
         };
         AutomationProperties.SetName(slider, label.ToLowerInvariant());
         slider.ValueChanged += value => { set(value); Changed(rebuild: false); };
-        rows.Add(slider);
+        rows.Add(SettingsWindowChrome.CreateSettingRow(title, slider));
     }
 
     /// <summary>Writes the defaults of one page back (the Look page back to the Rosewood preset) and saves.</summary>

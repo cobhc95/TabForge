@@ -111,4 +111,28 @@ internal static class SettingsWindowChrome
         scroll[!TemplatedControl.BackgroundProperty] = new DynamicResourceExtension("WindowBrush");
         return scroll;
     }
+
+    /// <summary>Two-column Preferences-style setting row: title (+ optional muted description) on the left, control right-aligned.</summary>
+    public static Grid CreateSettingRow(string title, Control control, string? description = null)
+    {
+        var textCol = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 16, 0) };
+        textCol.Children.Add(new TextBlock { Text = title, FontWeight = FontWeight.Medium, TextWrapping = TextWrapping.Wrap });
+        if (!string.IsNullOrWhiteSpace(description))
+        {
+            var desc = new TextBlock { Text = description, FontSize = 11.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) };
+            desc[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MutedTextBrush");
+            textCol.Children.Add(desc);
+        }
+        control.HorizontalAlignment = HorizontalAlignment.Right;
+        control.VerticalAlignment = VerticalAlignment.Center;
+        var row = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("*,Auto"),
+            Margin = new Thickness(0, 6, 0, 6),
+        };
+        row.Children.Add(textCol);
+        Grid.SetColumn(control, 1);
+        row.Children.Add(control);
+        return row;
+    }
 }
