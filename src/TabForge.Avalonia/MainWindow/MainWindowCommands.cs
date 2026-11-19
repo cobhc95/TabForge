@@ -14,7 +14,7 @@ namespace TabForge.Avalonia;
 //   An id with no handler here is shown disabled by the menu; the Avalonia window gains handlers as the features are ported.
 // Tests: TabForge.Avalonia.Tests.MainWindowMenuTests.
 /// <summary>Command id to handler. Built once per window; read on the UI thread only.</summary>
-public sealed class MainWindowCommands : TabForge.Avalonia.Views.IMenuCommandRunner
+public sealed class MainWindowCommands : IWindowCommandRegistration, IWindowCommandDispatch
 {
     private readonly Dictionary<string, Action> _handlers = new(StringComparer.Ordinal);
 

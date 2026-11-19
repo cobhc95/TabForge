@@ -20,7 +20,7 @@ public static class MainWindowPaletteTools
         ("effect:pickstroke_up", TechniqueNames.PickUp),
     };
 
-    public static void Register(MainWindowCommands commands, ScorePreviewView score)
+    public static void Register(IWindowCommandRegistration commands, ScorePreviewView score)
     {
         commands.Add(PaletteToolCatalog.CommandIdFor("edit:pointer")!, () => score.Edit(editor => { editor.ClearSelection(); return true; }));
         commands.Add(PaletteToolCatalog.CommandIdFor("edit:erase_note")!, () => score.Edit(editor => { editor.Effects.DeleteNote(); return true; }));

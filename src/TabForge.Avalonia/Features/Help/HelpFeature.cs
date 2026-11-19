@@ -30,7 +30,7 @@ public sealed class HelpFeature
     }
 
     /// <summary>Registers Help.Open; one line in the window's command setup.</summary>
-    public static void Register(MainWindowCommands commands, Window owner, MainWindowSettings? settings)
+    public static void Register(IWindowCommandRegistration commands, Window owner, MainWindowSettings? settings)
     {
         var feature = new HelpFeature(owner, settings?.Settings, () => settings?.SaveWindowPlacement());
         commands.Add(OpenId, () => feature.Open());

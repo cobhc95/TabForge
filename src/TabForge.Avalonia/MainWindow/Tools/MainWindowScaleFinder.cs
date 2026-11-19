@@ -25,7 +25,7 @@ public sealed class MainWindowScaleFinder
     internal Func<Control?>? Anchor { get; set; }
 
     /// <summary>Registers the Tools menu's Scale finder command.</summary>
-    public void Register(MainWindowCommands commands) => commands.Add("Tools.ScaleFinder", () => Open());
+    public void Register(IWindowCommandRegistration commands) => commands.Add("Tools.ScaleFinder", () => Open());
 
     /// <summary>Opens the popup above the Scales button (or the window).</summary>
     /// <returns>False when nothing opened (no reading yet, or a drum track).</returns>

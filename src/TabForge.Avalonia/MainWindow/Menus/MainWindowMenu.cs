@@ -117,7 +117,7 @@ public static class MainWindowMenu
     }
 
     /// <summary>Sets the check of every row under <paramref name="parent"/> that follows a live value (notation, score page, zoom), so a change made anywhere shows.</summary>
-    public static void RefreshChecks(MenuItem parent, MainWindowCommands commands)
+    public static void RefreshChecks(MenuItem parent, IWindowCommandState commands)
     {
         foreach (var item in parent.Items.OfType<MenuItem>())
         {
@@ -126,7 +126,7 @@ public static class MainWindowMenu
         }
     }
 
-    private static Control ToElement(MainMenuRow row, MainWindowCommands commands, HotkeySettings hotkeys)
+    private static Control ToElement(MainMenuRow row, IWindowCommandDispatch commands, HotkeySettings hotkeys)
     {
         if (row.IsSeparator) return new Separator();
         if (row.IsSubmenu)

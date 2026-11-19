@@ -19,7 +19,7 @@ public static class MainWindowChordFinder
     /// <param name="commands">The window's command table that receives the handler.</param>
     /// <param name="owner">The window the dialog opens over.</param>
     /// <param name="score">The score Insert name writes to; null keeps the finder's no-beat report (the Compose call leaves it unset).</param>
-    public static void Register(MainWindowCommands commands, Window owner, ScorePreviewView? score = null) =>
+    public static void Register(IWindowCommandRegistration commands, Window owner, ScorePreviewView? score = null) =>
         commands.Add(CommandIds.Tools.ChordFinder, () => new ChordFinderWindow(name => InsertChordName(score, name)).ShowDialog(owner));
 
     /// <summary>Attaches a chord name to the beat under the score cursor, as one undo step; false when there is no beat or no score.</summary>

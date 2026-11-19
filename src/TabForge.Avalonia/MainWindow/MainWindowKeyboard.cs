@@ -35,7 +35,7 @@ public sealed class MainWindowKeyboard
     private Dictionary<string, string> _rangeMap = new();
     private Dictionary<string, string> _trackRowMap = new();
     private Dictionary<string, string> _highlightMap = new();
-    private readonly MainWindowCommands _commands;
+    private readonly IWindowCommandDispatch _commands;
     private readonly Func<bool>? _stopRecording;
     private readonly Func<FocusTarget> _focus;
     private readonly EditRouting _routing;
@@ -44,7 +44,7 @@ public sealed class MainWindowKeyboard
     /// pauses); true when one ended. Null: no recording in this window.</param>
     /// <param name="focus">The focus target the last click set (the window's SelectionModel.Focus); null: nothing is focused, so the window table applies.</param>
     /// <param name="routing">The one edit routing table; null makes a private instance (it keeps no state).</param>
-    public MainWindowKeyboard(HotkeySettings bindings, MainWindowCommands commands, Func<bool>? stopRecording = null, Func<FocusTarget>? focus = null, EditRouting? routing = null)
+    public MainWindowKeyboard(HotkeySettings bindings, IWindowCommandDispatch commands, Func<bool>? stopRecording = null, Func<FocusTarget>? focus = null, EditRouting? routing = null)
     {
         _commands = commands;
         _stopRecording = stopRecording;

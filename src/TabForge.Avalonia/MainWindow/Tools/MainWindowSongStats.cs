@@ -15,6 +15,6 @@ public static class MainWindowSongStats
 
     /// <param name="songs">The tabs; the command reads the shown song.</param>
     /// <param name="owner">The window the dialog opens over.</param>
-    public static void Register(MainWindowCommands commands, MainWindowTabs songs, Window owner) =>
+    public static void Register(IWindowCommandRegistration commands, MainWindowTabs songs, Window owner) =>
         commands.Add("Tools.SongStats", () => _ = new SongStatsWindow(songs.Active.Project, songs.Active.Path).ShowDialog(owner));
 }

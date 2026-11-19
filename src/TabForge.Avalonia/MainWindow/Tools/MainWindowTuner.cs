@@ -23,7 +23,7 @@ public static class MainWindowTuner
     /// <param name="engine">The playback engine that detects the pitch (the one the sessions play through); null (no playback host) still registers the command, and the tuner opens in its engine-off state.</param>
     /// <param name="meter">The app's shared meter tick; null gives the window its own.</param>
     /// <param name="selectedTrack">The track the tuner lists the tunings of; read on each poll.</param>
-    public static void Register(MainWindowCommands commands, Window owner, AudioEngineClient? engine, Func<TrackModel?> selectedTrack, SharedMeterTick? meter = null)
+    public static void Register(IWindowCommandRegistration commands, Window owner, AudioEngineClient? engine, Func<TrackModel?> selectedTrack, SharedMeterTick? meter = null)
     {
         var tools = new Views.ToolWindows();
         commands.Add(CommandIds.Tools.Tuner, () => tools.OpenOrActivate("Tuner", null, () => new TunerWindow(selectedTrack, engine, meter), owner));

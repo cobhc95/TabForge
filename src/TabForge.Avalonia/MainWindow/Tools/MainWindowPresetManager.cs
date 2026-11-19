@@ -22,7 +22,7 @@ public static class MainWindowPresetManager
     /// <param name="owner">The window the manager opens over.</param>
     /// <param name="settings">The app settings (null before they load): the bend, tremolo and ornament presets live in them.</param>
     /// <param name="saveSettings">Writes the settings after a preset of those kinds changes.</param>
-    public static void Register(MainWindowCommands commands, Window owner, Func<AppSettings?> settings, Action saveSettings)
+    public static void Register(IWindowCommandRegistration commands, Window owner, Func<AppSettings?> settings, Action saveSettings)
     {
         var stores = new PresetStoreFactory(new EffectPresetSource(settings, saveSettings));
         PresetManager.Configure(() => stores);
