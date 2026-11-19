@@ -1,5 +1,3 @@
-using System.IO.Compression;
-using System.Xml;
 using System.Xml.Linq;
 using TabForge.Models;
 using TabForge.Platform.Theme;
@@ -13,9 +11,6 @@ namespace TabForge.Features.TuxGuitar;
 public static class TuxGuitarImporter
 {
     public const string Extension = ".tg";
-    private const string Invalid = "This score file is invalid, truncated, or unsupported.";
-    private const long MaxXmlBytes = 64L * 1024 * 1024;
-    private const int MaxZipEntries = 1024;
     private static readonly IReadOnlyList<int> DrumTunings = new[] { 49, 42, 48, 38, 43, 36 };
     private static readonly IReadOnlyList<int> PitchLadder = new[] { 96, 84, 72, 60, 48, 36, 24 };
 
@@ -34,74 +29,12 @@ public static class TuxGuitarImporter
         if (raw.LongLength > Services.InputLimits.MaxTforgeFileBytes)
             throw new InvalidDataException("The score file exceeds the supported size limit.");
         context.Check();
-        var xmlBytes = Unpack(raw, context);
-        context.Check();
-        XDocument doc;
-        try
-        {
-            var settings = new XmlReaderSettings
-            {
-                DtdProcessing = DtdProcessing.Prohibit,
-                XmlResolver = null,
-                MaxCharactersFromEntities = 0,
-                MaxCharactersInDocument = MaxXmlBytes,
-            };
-            using var reader = XmlReader.Create(new MemoryStream(xmlBytes, writable: false), settings);
-            doc = XDocument.Load(reader);
-        }
-        catch (Exception ex) when (ex is XmlException or InvalidOperationException or ArgumentException or IOException)
-        {
-            throw new InvalidDataException(Invalid, ex);
-        }
+        var doc = TuxGuitarContainer.Read(raw, context);
         context.Check();
         var project = Convert(doc, path, context);
         Services.ProjectValidator.Validate(project);
         project.IsDirty = false;
         return project;
-    }
-
-    private static byte[] Unpack(byte[] raw, Services.ImportContext context)
-    {
-        if (raw.Length < 4 || raw[0] != (byte)'P' || raw[1] != (byte)'K' || raw[2] != 3 || raw[3] != 4)
-            throw new InvalidDataException(Invalid);
-        try
-        {
-            var eocd = -1;
-            for (var i = raw.Length - 22; i >= Math.Max(0, raw.Length - 22 - 65_535); i--)
-            {
-                if (System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(raw.AsSpan(i, 4)) == 0x06054b50) { eocd = i; break; }
-            }
-            if (eocd < 0) throw new InvalidDataException(Invalid);
-            var entries = System.Buffers.Binary.BinaryPrimitives.ReadUInt16LittleEndian(raw.AsSpan(eocd + 10, 2));
-            if (entries > MaxZipEntries)
-                throw new InvalidDataException(Invalid);
-            using var zip = new ZipArchive(new MemoryStream(raw, writable: false), ZipArchiveMode.Read);
-            if (zip.Entries.Count > MaxZipEntries) throw new InvalidDataException(Invalid);
-            ZipArchiveEntry? content = null;
-            foreach (var entry in zip.Entries)
-            {
-                context.Check();
-                if (!Services.FilePathPolicy.IsSafeArchiveEntryName(entry.FullName)) continue;
-                if (entry.FullName.Equals("content.xml", StringComparison.OrdinalIgnoreCase)) content = entry;
-            }
-            if (content is null) throw new InvalidDataException(Invalid);
-            if (content.Length > MaxXmlBytes) throw new InvalidDataException(Invalid);
-            using var stream = content.Open();
-            using var output = new MemoryStream();
-            var chunk = new byte[64 * 1024];
-            int read;
-            while ((read = stream.Read(chunk, 0, chunk.Length)) > 0)
-            {
-                if (output.Length + read > MaxXmlBytes) throw new InvalidDataException(Invalid);
-                output.Write(chunk, 0, read);
-            }
-            return output.ToArray();
-        }
-        catch (InvalidDataException) { throw; }
-        catch (Exception ex) when (ex is IOException or NotSupportedException or ArgumentException or InvalidOperationException)
-        {
-            throw new InvalidDataException(Invalid, ex);
-        }
     }
 
     private sealed class ChannelInfo
@@ -135,8 +68,8 @@ public static class TuxGuitarImporter
 
     private static SongProject Convert(XDocument doc, string path, Services.ImportContext context)
     {
-        var root = doc.Root ?? throw new InvalidDataException(Invalid);
-        var song = root.Element("TGSong") ?? throw new InvalidDataException(Invalid);
+        var root = doc.Root ?? throw new InvalidDataException(TuxGuitarContainer.Invalid);
+        var song = root.Element("TGSong") ?? throw new InvalidDataException(TuxGuitarContainer.Invalid);
         var channels = ReadChannels(song);
         var headers = ReadHeaders(song);
         if (headers.Count == 0) headers.Add(new HeaderInfo());
