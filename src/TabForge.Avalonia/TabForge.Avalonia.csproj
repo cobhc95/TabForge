@@ -67,6 +67,8 @@
       <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(ResolvedFileToPublish.Filename)' == 'Microsoft.DiaSymReader.Native.amd64'" />
       <!-- Unused runtime debug/dump, standalone GC, and HTTP/3 binaries (~5.67 MB): not needed by the shipped app. -->
       <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="$([System.String]::Copy('%(ResolvedFileToPublish.Filename)').StartsWith('mscordaccore')) Or '%(ResolvedFileToPublish.Filename)' == 'mscordbi' Or '%(ResolvedFileToPublish.Filename)' == 'createdump' Or '%(ResolvedFileToPublish.Filename)' == 'clrgc' Or '%(ResolvedFileToPublish.Filename)' == 'clrgcexp' Or '%(ResolvedFileToPublish.Filename)' == 'msquic'" />
+      <!-- Non-Windows Avalonia backends (~2.52 MB) pulled by Avalonia.Desktop are never loaded on net10.0-windows. -->
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'$(TargetFramework)' == 'net10.0-windows' And ('%(ResolvedFileToPublish.Filename)' == 'Avalonia.X11' Or '%(ResolvedFileToPublish.Filename)' == 'Avalonia.Native' Or '%(ResolvedFileToPublish.Filename)' == 'Avalonia.FreeDesktop' Or '%(ResolvedFileToPublish.Filename)' == 'Tmds.DBus.Protocol')" />
     </ItemGroup>
   </Target>
   <ItemGroup>
