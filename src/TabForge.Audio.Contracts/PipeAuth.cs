@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.IO.Pipes;
 using System.Security.Cryptography;
-using System.Text;
 
 namespace TabForge.Audio.Contracts;
 

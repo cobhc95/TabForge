@@ -24,4 +24,7 @@
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
     <Compile Remove="NamedSharedMemory.NonWindows.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <Using Include="System.Text" />
+  </ItemGroup>
 </Project>
