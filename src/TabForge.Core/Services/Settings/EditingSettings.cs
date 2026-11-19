@@ -25,9 +25,9 @@ public sealed class EditingSettings
     public int KeyboardKeys { get; set; } = 88;
     /// <summary>Keyboard key colours: "Match the theme" (grey keys in dark, white in light), "Grey keys" or "White keys".</summary>
     public string KeyboardKeyColours { get; set; } = KeyboardKeyStyles.MatchTheme;
-    /// <summary>How scale notes are marked: "Dots" (default), "Rings", "Cell tint", "Note names" or "Degrees".</summary>
-    public string ScaleHighlightStyle { get; set; } = ScaleHighlightStyles.Dots;
-    /// <summary>Opacity of the scale marks in percent (10 to 100, default 60).</summary>
+    /// <summary>How scale notes are marked: "Cell tint" (default), "Dots", "Rings", "Note names" or "Degrees".</summary>
+    public string ScaleHighlightStyle { get; set; } = ScaleHighlightStyles.CellTint;
+    /// <summary>Opacity of the scale marks in percent (5 to 100, default 35).</summary>
     public int ScaleHighlightOpacity { get; set; } = ScaleHighlightStyles.DefaultOpacity;
     /// <summary>Draw the scale root a little stronger than the other scale notes.</summary>
     public bool ScaleEmphasiseRoot { get; set; } = true;
