@@ -1,9 +1,10 @@
+using TabForge.Avalonia.Views;
 using Avalonia.Controls;
 using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Transport;
 using TabForge.Documents;
 
-namespace TabForge.Avalonia.Views;
+namespace TabForge.Avalonia.Features.Band;
 
 /// <summary>
 /// The Band view in its own window: the Band panels over a song.

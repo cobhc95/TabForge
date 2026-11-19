@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Platform;
 using System;
 using Avalonia;
 using Avalonia.Controls;
@@ -13,7 +14,7 @@ using TabForge.Models;
 using TabForge.Presenters;
 using TabForge.Services;
 
-namespace TabForge.Avalonia.Platform;
+namespace TabForge.Avalonia.Features.Band;
 
 // Owns: one track's card in the Band view: a rounded border in the track colour (the selected card too) on the second panel shade,
 //   a header with a small track-colour tick, the track name and the fretboard toggle at the right (accent-filled while on), the track's

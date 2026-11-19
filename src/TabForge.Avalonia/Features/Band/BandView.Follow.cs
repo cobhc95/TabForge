@@ -1,7 +1,8 @@
+using TabForge.Avalonia.Platform;
 using System.Linq;
 using TabForge.Services;
 
-namespace TabForge.Avalonia.Platform;
+namespace TabForge.Avalonia.Features.Band;
 
 // Owns: the Band view's playhead follow per frame: sliding or gliding every shown card's window of systems to the followed bar. Split from BandView.cs.
 // Does not own: which bar is followed (BandPlayheadFollow), the window itself (BandTrackPanel) or the fit (BandCardFit).

@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Features.Band;
 using System.Linq;
 using Avalonia.Headless.XUnit;
 using TabForge.Avalonia.Views;

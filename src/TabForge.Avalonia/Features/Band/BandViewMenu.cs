@@ -1,9 +1,11 @@
+using TabForge.Avalonia.Platform.Controls;
+using TabForge.Avalonia.Platform;
 using System;
 using Avalonia.Controls;
 using TabForge.Commands;
 using TabForge.Services;
 
-namespace TabForge.Avalonia.Platform.Controls;
+namespace TabForge.Avalonia.Features.Band;
 
 /// <summary>The Band view's layout choices as the layout menu shows them.</summary>
 /// <param name="FretboardAbove">The fretboard sits above the tab (false: beside it).</param>

@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Platform;
 using System;
 using System.Collections.Generic;
 using TabForge.Avalonia.Views;
@@ -5,7 +6,7 @@ using TabForge.Menus;
 using TabForge.Models;
 using TabForge.Services;
 
-namespace TabForge.Avalonia.Platform;
+namespace TabForge.Avalonia.Features.Band;
 
 // Owns: the score right-click menu of a Band card: its state (read from the band settings, not the card's view) and what each row does. Show
 //   standard notation sets the band lane content (Tab / Both), the outline and the page layout rows set the band's own outline and layout, Zoom in

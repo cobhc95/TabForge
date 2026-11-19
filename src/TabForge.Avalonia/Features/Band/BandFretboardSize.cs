@@ -1,8 +1,9 @@
+using TabForge.Avalonia.Platform;
 using System;
 using TabForge.Presenters;
 using TabForge.Services;
 
-namespace TabForge.Avalonia.Platform;
+namespace TabForge.Avalonia.Features.Band;
 
 // Owns: the size a Band card's fretboard keeps: the user's chosen width (BandSettings.InstrumentWidth, saved with the settings, 0 = automatic), and the height-to-width
 //   rule that keeps the board's real proportions (the card is as wide as the board needs at the chosen height: its real width, the close-button reserve).

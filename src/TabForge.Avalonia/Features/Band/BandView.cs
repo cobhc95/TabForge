@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Platform;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +12,7 @@ using TabForge.Documents;
 using TabForge.Models;
 using TabForge.Services;
 
-namespace TabForge.Avalonia.Platform;
+namespace TabForge.Avalonia.Features.Band;
 
 // Owns: the Band view's content: one card per shown track (BandTrackPanel) in song order, stacked in one scroll viewer (the view's only
 //   vertical scroll bar); which tracks show (multi-select: a track's card is added or removed); each card's fretboard (on for the first shown

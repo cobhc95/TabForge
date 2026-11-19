@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Features.Band;
 using TabForge.Avalonia.Features.KeyboardMode;
 ﻿using System;
 using System.Collections.Generic;

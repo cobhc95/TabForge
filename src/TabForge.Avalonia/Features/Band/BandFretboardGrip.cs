@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Platform;
 using System;
 using Avalonia;
 using Avalonia.Controls;
@@ -5,7 +6,7 @@ using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 
-namespace TabForge.Avalonia.Platform;
+namespace TabForge.Avalonia.Features.Band;
 
 // Owns: the strip along the bottom edge of a Band card's fretboard, or of the card itself, that the user drags to resize it: it reports the height the pointer sets (measured from the
 //   top of the control it measures), and shows a faint line in the board edge colour while the pointer is over it or dragging; the card's own strip shades with the theme's hover shade and shows the resize cursor.

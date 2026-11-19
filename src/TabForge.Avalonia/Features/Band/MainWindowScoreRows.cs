@@ -8,7 +8,7 @@ using TabForge.Models;
 using TabForge.Views.Score;
 using TabForge.Services;
 
-namespace TabForge.Avalonia;
+namespace TabForge.Avalonia.Features.Band;
 
 // Owns: the handlers of the score's right-click rows on the shown score: Show standard notation, Show note length outline, Zoom in, Zoom out,
 //   Fit width, the page layout choices (page or continuous, vertical or horizontal) and Score settings... (the Settings window on the Score page).

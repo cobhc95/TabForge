@@ -1,8 +1,9 @@
+using TabForge.Avalonia.Platform;
 using System;
 using TabForge.Documents;
 using TabForge.Models;
 
-namespace TabForge.Avalonia.Platform;
+namespace TabForge.Avalonia.Features.Band;
 
 // Owns: the Band view's song following: the document listener (marks and replaced songs, so undo keeps the cards on the
 //   current song), the track-following reconcile, the song-changed refresh and the bar signature the shared widths key on.

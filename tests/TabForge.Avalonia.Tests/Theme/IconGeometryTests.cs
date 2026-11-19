@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Features.Band;
 using TabForge.Platform.Theme;
 using Xunit;
 

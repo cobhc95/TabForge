@@ -10,7 +10,7 @@ using TabForge.Services;
 using TabForge.Services.Features;
 using TabForge.Commands;
 
-namespace TabForge.Avalonia;
+namespace TabForge.Avalonia.Features.Band;
 
 // Owns: View > Band view (the View.BandView command): enters the Band layout (and the Band view's header mode: the track strip, the hidden menu
 //   row, the compact timeline), or puts back the exact panels it replaced (the Compose layout when the app started in Band), or closes the Band panel

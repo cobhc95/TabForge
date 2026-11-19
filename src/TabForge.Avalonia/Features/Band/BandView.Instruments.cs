@@ -1,7 +1,8 @@
+using TabForge.Avalonia.Platform;
 using System;
 using TabForge.Services;
 
-namespace TabForge.Avalonia.Platform;
+namespace TabForge.Avalonia.Features.Band;
 
 // Owns: the Band view's cards' fretboards: the score and fretboard menus, the instrument look and view, and the fretboard size, split from BandView.cs.
 // Does not own: the cards or the view's layout and follow (BandView).

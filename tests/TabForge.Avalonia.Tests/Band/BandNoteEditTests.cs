@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Features.Band;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
@@ -19,7 +20,7 @@ namespace TabForge.Avalonia.Tests;
 /// Owns: editing in a Band card without moving the tab: a click places the edit cursor and leaves the card's window where it was,
 /// and writing a note does not re-share the cards' bar widths (only a bar that came or went does).
 /// Does not own: the click rules (Core ScorePreviewEditor), the card's window maths (BandTrackPanel) or the score input (ScorePreviewInput).
-/// Tests: TabForge.Avalonia.Platform.ScorePreviewInput, TabForge.Avalonia.Platform.BandView, TabForge.Avalonia.Platform.BandTrackPanel.
+/// Tests: TabForge.Avalonia.Platform.ScorePreviewInput, TabForge.Avalonia.Features.Band.BandView, TabForge.Avalonia.Features.Band.BandTrackPanel.
 /// </summary>
 public class BandNoteEditTests
 {

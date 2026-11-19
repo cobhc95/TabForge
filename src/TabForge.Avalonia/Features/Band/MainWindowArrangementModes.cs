@@ -5,7 +5,7 @@ using Avalonia.Controls;
 using Avalonia.LogicalTree;
 using TabForge.Avalonia.Platform;
 
-namespace TabForge.Avalonia;
+namespace TabForge.Avalonia.Features.Band;
 
 // Owns: the handlers of the two View menu rows that change how each track lane draws in the arrangement: Show the notes in each track lane
 //   and Show one continuous line per track lane. Each flips its mode on the arrangement's timeline (the two modes are exclusive), then sets

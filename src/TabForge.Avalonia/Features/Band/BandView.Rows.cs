@@ -1,9 +1,10 @@
+using TabForge.Avalonia.Platform;
 using System;
 using System.Linq;
 using TabForge.Documents;
 using TabForge.Services;
 
-namespace TabForge.Avalonia.Platform;
+namespace TabForge.Avalonia.Features.Band;
 
 // Owns: the Band view's row counts per card: the live preview while a card's bottom edge is dragged, the one undo step that stores the count with the
 //   song (SongProject.BandPaneRows), and applying the stored counts after a fit, an undo or a track change. Split from BandView.cs.

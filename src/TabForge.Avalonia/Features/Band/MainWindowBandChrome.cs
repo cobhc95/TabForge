@@ -7,7 +7,7 @@ using TabForge.Avalonia.Views.Docking;
 using TabForge.Docking;
 using TabForge.Services;
 
-namespace TabForge.Avalonia;
+namespace TabForge.Avalonia.Features.Band;
 
 // Owns: the Band view's part of the header strip the Band view and compact mode share (its handlers: a capsule toggles that track's card, the
 //   caption opens the Band view's menu under it, a right-click opens it at the pointer, the close button leaves the Band view), and the Band view's

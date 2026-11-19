@@ -1,6 +1,7 @@
+using TabForge.Avalonia.Platform;
 using System;
 
-namespace TabForge.Avalonia.Platform;
+namespace TabForge.Avalonia.Features.Band;
 
 // Owns: the static system-window maths of a Band card (which rows of the staff a window of systems takes and the unused room above it), split from BandTrackPanel.cs.
 // Does not own: the card itself or where the window is applied (BandTrackPanel).

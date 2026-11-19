@@ -1,10 +1,11 @@
+using TabForge.Avalonia.Platform;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using TabForge.Services;
 using TabForge.Views.Score;
 
-namespace TabForge.Avalonia.Platform;
+namespace TabForge.Avalonia.Features.Band;
 
 // Owns: how the Band view's cards share the view's height: the automatic size of the fretboards (as small as the staff needs to reach a readable zoom, never
 //   below the board's smallest size), the staff zoom (the zoom at which every shown card fits, times the band lane zoom), how many

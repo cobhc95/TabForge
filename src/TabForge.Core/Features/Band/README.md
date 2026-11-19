@@ -1,4 +1,4 @@
-# Services/Band
+# Features/Band
 
 The Band view's rules and its Preferences rows. The view is in `TabForge.Avalonia`.
 

@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Features.Band;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
@@ -21,7 +22,7 @@ namespace TabForge.Avalonia.Tests;
 /// Owns: a Band card's fretboard button in real input (a click opens that card's board and nothing else's), the board of a card being its own
 /// track's instrument (a fretboard for a guitar, the drum map for a drum track), and the main-mode fretboard menu acting on the card's own track.
 /// Does not own: the card's drawing (BandTrackPanel), the menu's rows (FretboardContextMenuTests) or the kind rules (FretboardSettingsBinding).
-/// Tests: TabForge.Avalonia.Platform.BandTrackPanel, TabForge.Avalonia.Platform.BandView, TabForge.Avalonia.Platform.FretboardContextMenu.
+/// Tests: TabForge.Avalonia.Features.Band.BandTrackPanel, TabForge.Avalonia.Features.Band.BandView, TabForge.Avalonia.Platform.FretboardContextMenu.
 /// </summary>
 public class BandFretboardInteractionTests
 {

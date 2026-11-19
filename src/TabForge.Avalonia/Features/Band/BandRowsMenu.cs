@@ -1,9 +1,10 @@
+using TabForge.Avalonia.Platform;
 using System;
 using System.Linq;
 using Avalonia.Controls;
 using TabForge.Services;
 
-namespace TabForge.Avalonia.Platform;
+namespace TabForge.Avalonia.Features.Band;
 
 // Owns: the right-click menu of a Band pane's header: one row per row count (1 to BandRowRules.MaxRows), the pane's current count checked.
 // Does not own: what a count does (BandView stores it with the song) or the limits (BandRowRules).

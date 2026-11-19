@@ -1,9 +1,10 @@
+using TabForge.Avalonia.Platform;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using TabForge.Models;
 
-namespace TabForge.Avalonia.Platform;
+namespace TabForge.Avalonia.Features.Band;
 
 // Owns: one song's Band cards as the Band view keeps them while the song is open: the tracks whose cards show, in song order; which of those
 //   fretboards are on; the selected card; and the card panels, so each song's staffs and their playback binding stay with the song.

@@ -26,7 +26,7 @@ Retired ids `practice` and `playback` are still accepted from old saved layouts,
 | `viewtempo` | `MainWindow.cs`, `DockPaneTable.ViewTempoId` | `Views/ViewTempoBarView.cs` |
 | `instrument` | `MainWindow.cs`, `setup.Register("instrument", …)` | `Platform/InstrumentPanelStrip.cs` |
 | `timeline` | `MainWindowDocumentPanes.NewArrangement` | `Views/ArrangementView.cs` |
-| `band` | `MainWindowDocumentPanes.NewBand` | `Platform/BandView.cs` |
+| `band` | `MainWindowDocumentPanes.NewBand` | `Features/Band/BandView.cs` |
 | `learn` | `MainWindowDocumentPanes.NewKeyboardMode` | `Views/KeyboardModePane.cs` |
 | `editor` (not a pane) | `MainWindow.cs` `RegisterEditor` | `Platform/ScorePreviewView.cs` |
 

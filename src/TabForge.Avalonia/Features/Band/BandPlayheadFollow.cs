@@ -1,7 +1,8 @@
+using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Transport;
 using TabForge.Services;
 
-namespace TabForge.Avalonia.Platform;
+namespace TabForge.Avalonia.Features.Band;
 
 // Owns: which bar the Band view's cards follow while the song plays: the session's playing bar (the same position every card's playhead draws),
 //   unless the score's follow setting is off. Read from the session, not from a card, so the order the view and its cards hear a frame in does

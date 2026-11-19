@@ -1,9 +1,10 @@
+using TabForge.Avalonia.Platform;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
 using Avalonia.Media;
 
-namespace TabForge.Avalonia.Platform;
+namespace TabForge.Avalonia.Features.Band;
 
 // Owns: the drawing of a Band card's fretboard toggle, the same neck as the band row icon (an outline, a thick nut at the left, three frets,
 // hairline strings behind them and two inlay dots), with its geometry in the icon's own 24 x 20 box.

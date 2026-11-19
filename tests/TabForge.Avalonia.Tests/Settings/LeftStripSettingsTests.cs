@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Features.Band;
 using System.Linq;
 using System.Text.Json;
 using TabForge.Features.LeftStrip;

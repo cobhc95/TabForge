@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Features.Band;
 using System;
 using System.IO;
 using System.IO.Compression;
