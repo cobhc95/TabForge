@@ -14,7 +14,7 @@ namespace TabForge.AudioEngine.Editors;
 /// </summary>
 public sealed unsafe class EditorWindows : IPluginEditorHost
 {
-    private const int WS_CHILD = 0x40000000, WS_OVERLAPPED = 0, WS_CAPTION = 0xC00000, WS_SYSMENU = 0x80000, WS_MINIMIZEBOX = 0x20000, WS_CLIPCHILDREN = 0x2000000;
+    private const int WS_OVERLAPPED = 0, WS_CAPTION = 0xC00000, WS_SYSMENU = 0x80000, WS_MINIMIZEBOX = 0x20000, WS_CLIPCHILDREN = 0x2000000;
     private const int WM_CLOSE = 0x10, WM_DESTROY = 2, SW_SHOW = 5, CW_USEDEFAULT = unchecked((int)0x80000000);
     private const uint SWP_NOMOVE = 2, SWP_NOZORDER = 4;
     private const int WS_POPUP = unchecked((int)0x80000000), WS_EX_TOOLWINDOW = 0x80, WS_EX_DLGMODALFRAME = 1;

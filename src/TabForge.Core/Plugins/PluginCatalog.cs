@@ -22,7 +22,10 @@ public static class PluginCatalog
 
     /// <summary>The detected role ("Instrument" / "Effect") and vendor; probes the plug-in when not known yet.</summary>
     public static (string Role, string Vendor, string Name) Describe(string path, PluginSettings settings, PluginTrust trust, IPluginFileTrust files, int timeoutMs = DefaultProbeTimeoutMs)
-        => DescribeDetailed(path, settings, trust, files, timeoutMs).ToTriple();
+    {
+        var (role, vendor, name, _) = DescribeDetailed(path, settings, trust, files, timeoutMs);
+        return (role, vendor, name);
+    }
 
     /// <summary>The detected role/vendor plus a readable refusal when the probe could not read the plug-in (null on success or when no probe ran).</summary>
     public static (string Role, string Vendor, string Name, string? Refusal) DescribeDetailed(string path, PluginSettings settings, PluginTrust trust, IPluginFileTrust files, int timeoutMs = DefaultProbeTimeoutMs, string? format = null)

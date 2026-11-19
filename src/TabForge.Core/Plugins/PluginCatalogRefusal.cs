@@ -75,9 +75,3 @@ public static class ProbeRefusal
         return line.Length > 220 ? line[..220] + "…" : line;
     }
 }
-
-internal static class ProbeTupleExtensions
-{
-    public static (string Role, string Vendor, string Name) ToTriple(this (string Role, string Vendor, string Name, string? Refusal) detailed)
-        => (detailed.Role, detailed.Vendor, detailed.Name);
-}
