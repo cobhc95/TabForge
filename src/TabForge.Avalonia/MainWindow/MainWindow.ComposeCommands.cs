@@ -218,8 +218,9 @@ public sealed partial class MainWindow
         var liveVideo = MainWindowLiveVideo.Register(commands, this, songs, playback, settings, score, () => panes.Band, () => compose.InstrumentStrip, showStatus, topBar);
         compose.LiveVideo = liveVideo;
         Closed += (_, _) => liveVideo.Dispose();
-        var liveInput = MainWindowLiveInput.Register(commands, panes, playback, songs, this, settings, showStatus);
-        Closed += (_, _) => liveInput?.Dispose();
+        WindowFeatureModules.RegisterTransport(
+            new WindowTransportFeatureContext(commands, panes, playback, songs, this, settings, showStatus),
+            disposable => Closed += (_, _) => disposable.Dispose());
         MainWindowTrackOutputMenu.Register(commands, playback, songs, this, showStatus);
         MainWindowSpeedHotkeys.Register(commands, songs, playback, showStatus);
         MainWindowScoreRows.Register(commands, scorePreview, settings, this, () => MainWindowBandView.ActiveScoreMenu(dock, panes));

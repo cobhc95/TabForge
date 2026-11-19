@@ -30,6 +30,9 @@ public static class MainWindowLiveInput
     /// <summary>The command ids this class handles.</summary>
     public static readonly IReadOnlyList<string> Commands = new[] { CommandId };
 
+    internal static readonly WindowFeatureModule Module = new(
+        RegisterTransport: ctx => Register(ctx.Commands, ctx.Panes, ctx.Playback, ctx.Songs, ctx.Owner, ctx.Settings, ctx.ShowStatus));
+
     /// <summary>Registers the command and hooks every new arrangement's transport bar; the returned session is disposed when the window closes.</summary>
     public static IDisposable? Register(MainWindowCommands commands, MainWindowDocumentPanes panes, AvaloniaPlaybackSessions? playback, MainWindowTabs songs,
         Window owner, MainWindowSettings? settings, Action<string> showStatus)
