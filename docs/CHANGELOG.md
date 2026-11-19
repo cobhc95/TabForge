@@ -2,6 +2,13 @@
 
 TabForge is actively developed; please report anything odd on the Issues page.
 
+## 0.9.9
+
+### Changed
+
+- Smaller Windows installer and publish payload (stronger `lzma2/ultra64` installer compression, unused runtime debug/GC/HTTP3 files and non-Windows Avalonia backends excluded from Windows builds).
+- Internal architecture cleanup: consolidated internal source map, feature-owned Preferences and window modules, and lighter background engine liveness polling and post-open GC.
+
 ## 0.9.8
 
 ### Changed
