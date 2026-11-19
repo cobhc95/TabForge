@@ -149,38 +149,38 @@ public sealed partial class FretboardSettingsWindow : Window
         _apply.IsEnabled = _dirty;
     }
 
-    /// <summary>A rail row: the section's glyph, then its name.</summary>
-    private Grid NavRow(int section)
-    {
-        var glyph = new SettingsNavigationIconView(SectionGlyph(section)) { Width = ChromeMetrics.SettingsRailIconSize, Height = ChromeMetrics.SettingsRailIconSize, VerticalAlignment = VerticalAlignment.Center };
-        _navIcons[section] = glyph;
-        var label = new TextBlock { Text = SectionName(section), FontSize = ChromeMetrics.SettingsRailLabelFontSize, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap };
-        var row = new Grid { ColumnDefinitions = FretboardChromeMetrics.NavColumns };
-        row.Children.Add(glyph);
-        Grid.SetColumn(label, 2);
-        row.Children.Add(label);
-        return row;
-    }
-
     /// <summary>Marks the open section's glyph selected.</summary>
     private void SyncRailSelection()
     {
-        foreach (var (section, glyph) in _navIcons) glyph.IsSelected = section == _nav.SelectedIndex;
+        var current = SelectedSection;
+        foreach (var (section, glyph) in _navIcons) glyph.IsSelected = section == current;
     }
 
     /// <summary>Shows a section by index (used by the right-click menu rows that name one).</summary>
-    public void Select(int section) => _nav.SelectedIndex = Math.Clamp(section, 0, SectionCount - 1);
+    public void Select(int section)
+    {
+        var target = Math.Clamp(section, 0, SectionCount - 1);
+        _nav.SelectedItem = _nav.Items.OfType<ListBoxItem>().FirstOrDefault(i => i.Tag is int s && s == target);
+    }
 
-    internal int SelectedSection => _nav.SelectedIndex;
+    internal int SelectedSection => _nav.SelectedItem is ListBoxItem { Tag: int s } ? s : 0;
 
     internal Control Page => _page;
 
-    /// <summary>A pick was made: save and rebuild the page after the click ends so the chip that raised it is not removed mid-event.</summary>
+    /// <summary>A pick was made: save and rebuild the page after the click ends so the control that raised it is not removed mid-event.</summary>
     internal void Changed(bool rebuild = true)
     {
         _dirty = true;
         ShowStatus();
         _changed();
-        if (rebuild) Dispatcher.UIThread.Post(() => ShowSection(_nav.SelectedIndex));
+        if (rebuild)
+        {
+            var offset = _page.Offset;
+            Dispatcher.UIThread.Post(() =>
+            {
+                ShowSection(SelectedSection);
+                _page.Offset = offset;
+            });
+        }
     }
 }
