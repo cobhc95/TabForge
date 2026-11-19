@@ -11,6 +11,7 @@ using TabForge.Avalonia.Platform.Controls;
 using TabForge.Avalonia.Views;
 using TabForge.Features.LeftStrip;
 using TabForge.Platform.Theme;
+using TabForge.Commands;
 
 namespace TabForge.Avalonia.Features.LeftStrip;
 
@@ -54,7 +55,7 @@ public sealed class LeftStripFeature
         _settings = settings;
         _state = settings?.Settings.LeftStrip ?? new LeftStripSettings();
         _visible = _state.ShownAtStart;
-        _state.OfferOnce(MainWindowFocusTrack.CommandId, ToggleComposerId);   // a strip saved before Focus track existed gets its icon once, next to Composer
+        _state.OfferOnce(CommandIds.Transport.FocusTrack, ToggleComposerId);   // a strip saved before Focus track existed gets its icon once, next to Composer
         _composerOpen = _state.ComposerOpenAtStart;
         commands.Add(ToggleStripId, () => SetVisible(!_visible));
         commands.Add(ToggleComposerId, ToggleComposer);
@@ -142,7 +143,7 @@ public sealed class LeftStripFeature
             button.Content = _state.Labels ? Labelled(icon, item.Label, vertical) : icon;
             if (_state.Large || _state.Labels) button.Height = double.NaN;
             if (_state.Large) button.MinHeight = UiMetrics.QuickButtonHeight * LargeScale;
-            if (item.Id == MainWindowFocusTrack.CommandId) OpenFocusSettingsOnRightClick(button);
+            if (item.Id == CommandIds.Transport.FocusTrack) OpenFocusSettingsOnRightClick(button);
             ToolTip.SetServiceEnabled(button, _state.Tooltips);
             ConfigureTip(button, vertical);
             panel.Children.Add(button);
@@ -197,7 +198,7 @@ public sealed class LeftStripFeature
             if (e.InitialPressMouseButton != MouseButton.Right) return;
             e.Handled = true;
             if (new Rect(button.Bounds.Size).Contains(e.GetPosition(button)))
-                _commands.Run(MainWindowFocusTrack.SettingsId);
+                _commands.Run(CommandIds.Transport.FocusTrackSettings);
         }, RoutingStrategies.Tunnel);
         button.AddHandler(Control.ContextRequestedEvent, (_, e) => e.Handled = true, RoutingStrategies.Tunnel | RoutingStrategies.Bubble);
     }

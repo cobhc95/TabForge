@@ -8,6 +8,7 @@ using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Transport;
 using TabForge.Avalonia.Views.TransportPopups;
 using TabForge.Services;
+using TabForge.Commands;
 
 namespace TabForge.Avalonia;
 
@@ -22,19 +23,19 @@ namespace TabForge.Avalonia;
 public static class MainWindowTransportToggles
 {
     /// <summary>The command id of the Metronome row and the transport bar's metronome button.</summary>
-    public const string MetronomeId = "Transport.Metronome";
+    public const string MetronomeId = CommandIds.Transport.Metronome;
 
     /// <summary>The command id of the Count-in row and the transport bar's count-in button.</summary>
-    public const string CountInId = "Transport.CountIn";
+    public const string CountInId = CommandIds.Transport.CountIn;
 
     /// <summary>The command id the metronome button's right-click runs: the metronome settings popup.</summary>
-    public const string MetronomeSettingsId = "Transport.MetronomeSettings";
+    public const string MetronomeSettingsId = CommandIds.Transport.MetronomeSettings;
 
     /// <summary>The command id the count-in button's right-click runs: the count-in settings popup.</summary>
-    public const string CountInSettingsId = "Transport.CountInSettings";
+    public const string CountInSettingsId = CommandIds.Transport.CountInSettings;
 
     /// <summary>The command id the loop button's right-click runs: the loop settings popup.</summary>
-    public const string LoopSettingsId = "Transport.LoopSettings";
+    public const string LoopSettingsId = CommandIds.Transport.LoopSettings;
 
     private const string MetronomeOnText = "Metronome on";
     private const string MetronomeOffText = "Metronome off";

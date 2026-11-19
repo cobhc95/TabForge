@@ -63,7 +63,7 @@ public static class LeftStripItems
         new(CommandIds.Transport.PlayPause, "Play", "Playback", Play), new(CommandIds.Transport.Stop, "Stop", "Playback", Stop), new(CommandIds.Transport.Loop, "Loop", "Playback", Loop),
         new("Transport.Metronome", "Metronome", "Playback", Metronome), new("Transport.CountIn", "Count-in", "Playback", CountIn),
         new(CommandIds.Transport.Record, "Record", "Playback", Record), new(CommandIds.View.Mixer, "Mixer", "Playback", Mixer),
-        new(MainWindowFocusTrack.CommandId, "Focus track", "Playback", FocusTrack, IsToggle: true),new(CommandIds.Tools.Tuner, "Tuner", "Playback", Tuner),
+        new(CommandIds.Transport.FocusTrack, "Focus track", "Playback", FocusTrack, IsToggle: true),new(CommandIds.Tools.Tuner, "Tuner", "Playback", Tuner),
         new("Tool.composition:tempo", "Tempo", "Song", Tempo), new(CommandIds.Bar.TimeSignature, "Time signature", "Song", TimeSig),
         new(CommandIds.Bar.KeySignature, "Key signature", "Song", KeySig), new("Tools.Transpose", "Transpose", "Song", Transpose),
         new(CommandIds.Tools.GlobalTuning, "Tuning", "Song", Tuning), new("Insert.Lyrics", "Lyrics", "Song", Lyrics),
@@ -81,7 +81,7 @@ public static class LeftStripItems
     {
         CommandIds.File.New, CommandIds.File.Open, CommandIds.File.Save, CommandIds.File.SaveAs, CommandIds.File.Render, SeparatorId,
         CommandIds.Edit.Undo, CommandIds.Edit.Redo, SeparatorId,
-        LeftStripFeature.ToggleComposerId, MainWindowFocusTrack.CommandId, SeparatorId,
+        LeftStripFeature.ToggleComposerId, CommandIds.Transport.FocusTrack, SeparatorId,
         CommandIds.View.BandView, CommandIds.View.CompactMode, CommandIds.View.LearnMode,
     };
 

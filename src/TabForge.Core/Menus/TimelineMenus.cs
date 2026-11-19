@@ -212,6 +212,17 @@ public static class TimelineMenus
     public const string TakeId = "Clip.Take";
 
     /// <summary>The command id of the take-lane menu's "Clicking an empty lane shows" rows; the row's Arg is the stored value (EmptyLaneChoice), the Preferences row editing.emptylane.</summary>
+    public const string PasteClipId = "TimelineLane.PasteClip";
+    public const string NewMidiClipId = "TimelineLane.NewMidiClip";
+    public const string ImportId = "TimelineLane.Import";
+    public const string RecordHereId = "TimelineLane.RecordHere";
+    public const string OpenPianoRollId = "TimelineLane.OpenPianoRoll";
+    public const string RenameId = "TimelineLane.Rename";
+    public const string MoveUpId = "TimelineLane.MoveUp";
+    public const string MoveDownId = "TimelineLane.MoveDown";
+    public const string DeleteId = "TimelineLane.Delete";
+    public const string ReRecordPassId = "Clip.ReRecordPass";
+
     public const string EmptyLaneClickId = "TimelineLane.EmptyClick";
 
     /// <summary>Right-click on an audio / MIDI clip, or on an empty lane.</summary>

@@ -1,10 +1,10 @@
 namespace TabForge.Commands;
 
-// Owns: the names of the command ids that more than four files spell out (menu table, hotkey catalogue, left strip, transport bar, context menus, handlers). Every value is the id as the
+// Owns: the names of command ids shared by multiple consumers (menu table, hotkey catalogue, left strip, transport bar, context menus, handlers). Every value is the id as the
 //   settings and the hotkey bindings store it, so a constant is never renamed or re-valued.
 // Does not own: the other command ids (still string literals in the files that register or list them), what a command does (the MainWindow* handler classes) or the key bindings (HotkeyCatalog).
 // Tests: TestCommandIdsAreInTheCatalogue.
-/// <summary>The command ids used in five or more files, by area: <c>CommandIds.Transport.Loop</c> is "Transport.Loop".</summary>
+/// <summary>Shared command IDs by area: <c>CommandIds.Transport.Loop</c> is "Transport.Loop".</summary>
 public static class CommandIds
 {
     public static class App
@@ -125,6 +125,13 @@ public static class CommandIds
         public const string Tuner = "Tools.Tuner";
     }
 
+    public static class Timeline
+    {
+        public const string ZoomIn = "Timeline.ZoomIn";
+        public const string ZoomOut = "Timeline.ZoomOut";
+        public const string Snap = "Timeline.Snap";
+    }
+
     public static class Track
     {
         public const string Add = "Track.Add";
@@ -133,6 +140,13 @@ public static class CommandIds
     public static class Transport
     {
         public const string ClearLoopArea = "Transport.ClearLoopArea";
+        public const string Metronome = "Transport.Metronome";
+        public const string CountIn = "Transport.CountIn";
+        public const string MetronomeSettings = "Transport.MetronomeSettings";
+        public const string CountInSettings = "Transport.CountInSettings";
+        public const string LoopSettings = "Transport.LoopSettings";
+        public const string FocusTrack = "Transport.FocusTrack";
+        public const string FocusTrackSettings = "Transport.FocusTrackSettings";
         public const string Loop = "Transport.Loop";
         public const string PlayPause = "Transport.PlayPause";
         public const string Record = "Transport.Record";

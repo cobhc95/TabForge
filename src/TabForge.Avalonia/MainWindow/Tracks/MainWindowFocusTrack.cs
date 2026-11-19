@@ -4,6 +4,7 @@ using TabForge.Audio;
 using TabForge.Documents;
 using TabForge.Models;
 using TabForge.Services;
+using TabForge.Commands;
 
 namespace TabForge.Avalonia;
 
@@ -16,7 +17,7 @@ namespace TabForge.Avalonia;
 public sealed class MainWindowFocusTrack
 {
     /// <summary>The command id; the menu row, the strip icon and the tests use it.</summary>
-    public const string CommandId = "Transport.FocusTrack", SettingsId = "Transport.FocusTrackSettings";
+    public const string CommandId = CommandIds.Transport.FocusTrack, SettingsId = CommandIds.Transport.FocusTrackSettings;
 
     /// <summary>The command ids this class handles.</summary>
     public static readonly IReadOnlyList<string> Commands = new[] { CommandId, SettingsId };

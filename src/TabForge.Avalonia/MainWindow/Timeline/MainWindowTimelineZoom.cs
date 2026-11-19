@@ -1,5 +1,6 @@
 using TabForge.Avalonia.Views;
 using TabForge.Services;
+using TabForge.Commands;
 
 namespace TabForge.Avalonia;
 
@@ -9,11 +10,11 @@ namespace TabForge.Avalonia;
 // Tests: TabForge.Avalonia.Tests.TimelineZoomTests.
 public static class MainWindowTimelineZoom
 {
-    public const string ZoomInId = "Timeline.ZoomIn";
-    public const string ZoomOutId = "Timeline.ZoomOut";
+    public const string ZoomInId = CommandIds.Timeline.ZoomIn;
+    public const string ZoomOutId = CommandIds.Timeline.ZoomOut;
 
     /// <summary>The Timeline.Snap command id this class also handles.</summary>
-    public const string SnapId = "Timeline.Snap";
+    public const string SnapId = CommandIds.Timeline.Snap;
 
     /// <param name="settings">Holds the saved factor; null (no settings file) zooms from the default and saves nothing.</param>
     public static void Register(MainWindowCommands commands, MainWindowDocumentPanes panes, MainWindowSettings? settings)

@@ -8,6 +8,7 @@ using TabForge.Avalonia.Views;
 using TabForge.Documents;
 using TabForge.Models;
 using TabForge.Services;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia;
 
@@ -19,9 +20,9 @@ namespace TabForge.Avalonia;
 // Tests: TabForge.Avalonia.Tests.TakeLaneMenuTests, TabForge.Avalonia.Tests.MainWindowMenuTests.
 public static class MainWindowTakeLane
 {
-    public const string PasteId = "TimelineLane.PasteClip", NewMidiClipId = "TimelineLane.NewMidiClip", ImportId = "TimelineLane.Import",
-        RecordHereId = "TimelineLane.RecordHere", OpenPianoRollId = "TimelineLane.OpenPianoRoll", RenameId = "TimelineLane.Rename",
-        MoveUpId = "TimelineLane.MoveUp", MoveDownId = "TimelineLane.MoveDown", DeleteId = "TimelineLane.Delete";
+    public const string PasteId = TimelineMenus.PasteClipId, NewMidiClipId = TimelineMenus.NewMidiClipId, ImportId = TimelineMenus.ImportId,
+        RecordHereId = TimelineMenus.RecordHereId, OpenPianoRollId = TimelineMenus.OpenPianoRollId, RenameId = TimelineMenus.RenameId,
+        MoveUpId = TimelineMenus.MoveUpId, MoveDownId = TimelineMenus.MoveDownId, DeleteId = TimelineMenus.DeleteId;
 
     /// <summary>The command ids this class handles.</summary>
     public static readonly IReadOnlyList<string> Commands = new[] { PasteId, NewMidiClipId, ImportId, RecordHereId, OpenPianoRollId, RenameId, MoveUpId, MoveDownId, DeleteId };

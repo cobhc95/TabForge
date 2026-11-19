@@ -75,16 +75,16 @@ public sealed partial class TransportBarView : Border
         new(RecordItemName, "Record every armed track (the red button on a track row) while the song plays; press again to stop", CommandIds.Transport.Record, null, "PlaybarStop", "PlaybarStopBorder", false),
         new("Play or pause", "Play / pause", CommandIds.Transport.PlayPause, "play", "PlaybarPlay", "PlaybarPlayBorder", false),
         new("Next section", "Next section", NextSectionId, "next_section", "PlaybarNext", "PlaybarNextBorder", false),
-        new("Click and beat count-in", "Count-in · click to toggle, right-click for count-in settings", MainWindowTransportToggles.CountInId, "click_beat", "PlaybarSurface", "PlaybarBorder", true),
-        new("Metronome", "Metronome · click to toggle, right-click for metronome settings", MainWindowTransportToggles.MetronomeId, "metronome", "PlaybarSurface", "PlaybarBorder", true),
+        new("Click and beat count-in", "Count-in · click to toggle, right-click for count-in settings", CommandIds.Transport.CountIn, "click_beat", "PlaybarSurface", "PlaybarBorder", true),
+        new("Metronome", "Metronome · click to toggle, right-click for metronome settings", CommandIds.Transport.Metronome, "metronome", "PlaybarSurface", "PlaybarBorder", true),
         new("Loop enable", "Loop · click to toggle, right-click for loop settings", CommandIds.Transport.Loop, "loop", "PlaybarSurface", "PlaybarBorder", true),
     };
 
     /// <summary>The timeline zoom pair, top to bottom: zoom in, then zoom out.</summary>
     public static readonly IReadOnlyList<Item> ZoomItems = new Item[]
     {
-        new("Zoom in timeline", "Zoom in timeline", MainWindowTimelineZoom.ZoomInId, "zoom_plus", "PlaybarSurface", "PlaybarBorder", false),
-        new("Zoom out timeline", "Zoom out timeline", MainWindowTimelineZoom.ZoomOutId, "zoom_minus", "PlaybarSurface", "PlaybarBorder", false),
+        new("Zoom in timeline", "Zoom in timeline", CommandIds.Timeline.ZoomIn, "zoom_plus", "PlaybarSurface", "PlaybarBorder", false),
+        new("Zoom out timeline", "Zoom out timeline", CommandIds.Timeline.ZoomOut, "zoom_minus", "PlaybarSurface", "PlaybarBorder", false),
     };
 
     /// <summary>The mixer button after the tuning fork and the snap magnet.</summary>
@@ -115,12 +115,12 @@ public sealed partial class TransportBarView : Border
     {
         [RecordItemName] = CommandIds.Transport.Record,
         [LiveInputItem.Name] = LiveInputItem.CommandId!,
-        ["Zoom in timeline"] = MainWindowTimelineZoom.ZoomInId,
-        ["Zoom out timeline"] = MainWindowTimelineZoom.ZoomOutId,
+        ["Zoom in timeline"] = CommandIds.Timeline.ZoomIn,
+        ["Zoom out timeline"] = CommandIds.Timeline.ZoomOut,
         ["Mixer"] = MixerItem.CommandId!,
         ["Next section"] = NextSectionId,
-        ["Metronome"] = MainWindowTransportToggles.MetronomeId,
-        ["Click and beat count-in"] = MainWindowTransportToggles.CountInId,
+        ["Metronome"] = CommandIds.Transport.Metronome,
+        ["Click and beat count-in"] = CommandIds.Transport.CountIn,
         [LoopItemName] = CommandIds.Transport.Loop,   // the window's loop link: the score or timeline selection, the no-area scope and the status line
     };
 
@@ -234,9 +234,9 @@ public sealed partial class TransportBarView : Border
             // The metronome, count-in and loop buttons toggle on a left click and open their own settings popup above the button on a right click.
             var settingsId = button.Item.Name switch
             {
-                "Metronome" => MainWindowTransportToggles.MetronomeSettingsId,
-                "Click and beat count-in" => MainWindowTransportToggles.CountInSettingsId,
-                LoopItemName => MainWindowTransportToggles.LoopSettingsId,
+                "Metronome" => CommandIds.Transport.MetronomeSettings,
+                "Click and beat count-in" => CommandIds.Transport.CountInSettings,
+                LoopItemName => CommandIds.Transport.LoopSettings,
                 _ => null,
             };
             if (settingsId is null)

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using TabForge.Avalonia.Features.Recording.Presenter;
 using TabForge.Models;
 using TabForge.Documents;
+using TabForge.Menus;
 
 namespace TabForge.Avalonia;
 
@@ -13,7 +14,7 @@ namespace TabForge.Avalonia;
 public static class MainWindowReRecordPass
 {
     /// <summary>The clip-menu command id of "Re-record this pass".</summary>
-    public const string CommandId = "Clip.ReRecordPass";
+    public const string CommandId = TimelineMenus.ReRecordPassId;
 
     public static readonly IReadOnlyList<string> Commands = new[] { CommandId };
 
