@@ -38,6 +38,7 @@ public sealed class LeftStripFeature
     private readonly MainWindowCommands _commands;
     private readonly MainWindowSettings? _settings;
     private readonly LeftStripSettings _state;
+    private readonly ComposerDrumHooks? _composerHooks;
     private readonly List<ToggleButton> _composerToggles = new();
     private readonly List<ToggleButton> _viewToggles = new();
     private readonly List<ContentControl> _tipButtons = new();
@@ -49,10 +50,11 @@ public sealed class LeftStripFeature
     private Border? _composer;
 
     /// <summary>Registers the commands; call before the menu is built so its rows are enabled.</summary>
-    public LeftStripFeature(MainWindowCommands commands, MainWindowSettings? settings)
+    public LeftStripFeature(MainWindowCommands commands, MainWindowSettings? settings, ComposerDrumHooks? composerHooks = null)
     {
         _commands = commands;
         _settings = settings;
+        _composerHooks = composerHooks;
         _state = settings?.Settings.LeftStrip ?? new LeftStripSettings();
         _visible = _state.ShownAtStart;
         _state.OfferOnce(CommandIds.Transport.FocusTrack, ToggleComposerId);   // a strip saved before Focus track existed gets its icon once, next to Composer
@@ -76,9 +78,6 @@ public sealed class LeftStripFeature
     /// <summary>The saved state the customise window edits.</summary>
     internal LeftStripSettings State => _state;
 
-    /// <summary>The window's drum-sample hooks for the Composer panel (set before Attach); null leaves samples silent and undraggable.</summary>
-    public ComposerDrumHooks? ComposerHooks { get; set; }
-
     /// <summary>Builds the strip's parts and places the toggle icon in the menu row, or in the mode bar while the menu row is hidden.</summary>
     public void Attach(Control menuRow, CompactTrackStrip modeBar)
     {
@@ -87,7 +86,7 @@ public sealed class LeftStripFeature
         _vertical[!Border.BorderBrushProperty] = new DynamicResourceExtension("SoftBorder");
         _vertical.ContextMenu = StripMenu();
         _vertical.AttachedToVisualTree += (_, _) => { if (TopLevel.GetTopLevel(_vertical) is Window w) { w.Deactivated -= OnDeactivated; w.Deactivated += OnDeactivated; } };
-        _composer = ComposerPanel.Build(ComposerHooks, () => { if (_composerOpen) ToggleComposer(); });
+        _composer = ComposerPanel.Build(_composerHooks, () => { if (_composerOpen) ToggleComposer(); });
         DockPanel.SetDock(_vertical, Dock.Left);
         DockPanel.SetDock(_composer, Dock.Left);
         Left.Children.Add(_composer);

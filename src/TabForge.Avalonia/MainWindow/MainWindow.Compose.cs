@@ -135,8 +135,7 @@ public sealed partial class MainWindow
         ScaleReadout = state.StatusBar.Scale;
         Lifetime = new MainWindowLifetime(this, state.Keyboard, state.Songs, state.TempoBar, state.Dock, state.StatusBar, state.Panes.Selection, state.Songs, new ToolWindowKeyForwarding(this, state.Keyboard), new Shell.Win32.PluginEditorHotkeys(this, state.Keyboard))
         { FinishBeforeClose = state.LiveVideo.FinishBeforeClose, CommitBeforeClose = () => state.RecordingHooks?.StopRecording() };
-        var leftStrip = new Features.LeftStrip.LeftStripFeature(state.Commands, state.Settings);   // its commands before the menu is built
-        leftStrip.ComposerHooks = _composerDrumHooks;   // the Composer drum samples' audition and drag
+        var leftStrip = new Features.LeftStrip.LeftStripFeature(state.Commands, state.Settings, _composerDrumHooks);
         var menu = MainWindowMenu.Build(state.Commands, this, new DockViewMenus(state.Dock, state.Settings, this,
             state.StatusBar.ShowTransient,
             realLayout: () => state.LearnMode?.RealLayout, mode: state.FretboardMode),

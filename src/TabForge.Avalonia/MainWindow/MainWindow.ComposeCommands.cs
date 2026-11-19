@@ -131,7 +131,6 @@ public sealed partial class MainWindow
             compose.StatusBar.Activity);
         MainWindowMixer.Register(commands, songs, this, playback, settings, showStatus);
         MainWindowFocusTrack.Register(commands, this, songs, playback, settings);
-        scaleFinder.Anchor = () => compose.InstrumentStrip?.ScalesAnchor;
         scaleFinder.Register(commands);
         // The master scale panel's muted sections link to the other hosts: the fretboard's Scales button and the piano roll's scale arrow.
         var pianoRoll = compose.EditorPane.PianoRoll;

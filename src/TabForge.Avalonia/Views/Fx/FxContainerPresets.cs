@@ -41,13 +41,13 @@ public sealed class FxContainerPresets
     private readonly Dictionary<string, string> _displayToName = new(StringComparer.OrdinalIgnoreCase);   // a decorated row's text back to the preset's name
 
     /// <summary>True when a plug-in of a preset may be loaded here (PluginTrust). Tests replace it.</summary>
-    internal Func<PluginSlot, bool> Trusted { get; set; }
+    private readonly Func<PluginSlot, bool> _trusted;
 
     public FxContainerPresets(Window owner, StackPanel bar, Func<ChainContainer?> shown, Func<RigPreset> rig, Action<Action<List<ChainItem>>> edit,
         Action<IReadOnlyList<PluginSlot>> leaving, Func<PluginSlot, bool> trusted, Func<Task> collectStates, Func<FxChainDialogs> dialogs,
         PluginSettings? settings = null, Action? saveSettings = null)
     {
-        (_owner, _shown, _rig, _edit, _leaving, Trusted, _collectStates, _dialogs) = (owner, shown, rig, edit, leaving, trusted, collectStates, dialogs);
+        (_owner, _shown, _rig, _edit, _leaving, _trusted, _collectStates, _dialogs) = (owner, shown, rig, edit, leaving, trusted, collectStates, dialogs);
         _settings = settings ?? new PluginSettings();
         _saveSettings = saveSettings ?? (() => { });
         var label = new TextBlock { Text = "Preset", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0), [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MutedBrush") };
@@ -173,7 +173,7 @@ public sealed class FxContainerPresets
         void Prepare(List<ChainItem> items)
         {
             // A path is never loaded because a file names it: only a plug-in this app already trusts stays.
-            items.RemoveAll(i => { if (i.Plugin is not { } p || Trusted(p)) return false; skipped.Add($"{p.Name} ({(p.Path.Length > 0 ? Path.GetFileName(p.Path) : "no file")})"); return true; });
+            items.RemoveAll(i => { if (i.Plugin is not { } p || _trusted(p)) return false; skipped.Add($"{p.Name} ({(p.Path.Length > 0 ? Path.GetFileName(p.Path) : "no file")})"); return true; });
             foreach (var item in items)
             {
                 if (item.Plugin is { } p) { p.Id = Guid.NewGuid().ToString("N"); p.ChainContainers = null; }
