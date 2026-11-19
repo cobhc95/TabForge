@@ -6,8 +6,14 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ### Changed
 
-- Smaller Windows installer and publish payload (stronger `lzma2/ultra64` installer compression, unused runtime debug/GC/HTTP3 files and non-Windows Avalonia backends excluded from Windows builds).
-- Internal architecture cleanup: consolidated internal source map, feature-owned Preferences and window modules, and lighter background engine liveness polling and post-open GC.
+- Sidebar navigation tab highlights (Preferences, Fretboard Settings) now use flat square edges with the left accent bar instead of rounded corners.
+- Smaller Windows installer and publish payload (`lzma2/ultra64` installer compression; unused runtime debug/GC/HTTP3 files and non-Windows Avalonia backends excluded from Windows builds).
+- Lighter background resource usage (engine liveness ping backed off to 2 s; post-open GC switched to non-blocking optimized mode).
+- Internal architecture cleanup: consolidated internal source map, feature folders (Lyrics, Keyboard Mode, Band, Video, Live Input), feature-owned Preferences and window modules, and cleaner TuxGuitar/Focus Track Settings separation.
+
+### Fixed
+
+- Content-sized prompt windows are no longer stretched when UI scaling is active (`UiScaleRoot`).
 
 ## 0.9.8
 
