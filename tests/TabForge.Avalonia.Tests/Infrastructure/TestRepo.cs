@@ -29,6 +29,17 @@ internal static class TestRepo
         throw new InvalidOperationException("The checkout root (Source/TabForge.sln) was not found from TABFORGE_REPO, the test binaries or the working directory.");
     }
 
+    internal static string SampleFile(string relativePath)
+    {
+        var configured = Environment.GetEnvironmentVariable("TABFORGE_SAMPLES_DIR");
+        if (!string.IsNullOrWhiteSpace(configured))
+        {
+            var path = Path.Combine(configured, relativePath);
+            if (File.Exists(path)) return path;
+        }
+        return Path.Combine(CheckoutRoot(), "samples", relativePath);
+    }
+
     /// <summary>The demo song: the checkout's Samples/Ashen Meridian.gp when present, else its first .gp by name. A missing song gives the path
     /// "Samples/Ashen Meridian.gp" in the root, which does not exist, so the caller's existence check reports it.</summary>
     public static string DemoSong()

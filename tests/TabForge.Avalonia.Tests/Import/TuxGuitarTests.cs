@@ -26,41 +26,9 @@ public sealed class TuxGuitarTests : IDisposable
         try { Directory.Delete(_folder, recursive: true); } catch (IOException) { }
     }
 
-    private static string SamplePath()
-    {
-        foreach (var candidate in Candidates())
-            if (File.Exists(candidate)) return candidate;
-        throw new FileNotFoundException("The example TuxGuitar file was not found.");
-    }
+    private static string SamplePath() => TestRepo.SampleFile("Ashen Meridian.tg");
 
-    private static string NativeSamplePath()
-    {
-        foreach (var candidate in NativeCandidates())
-            if (File.Exists(candidate)) return candidate;
-        throw new FileNotFoundException("The example native-format file was not found.");
-    }
-
-    private static System.Collections.Generic.IEnumerable<string> Candidates()
-    {
-        yield return @"C:\Users\COBHC\Downloads\TabForge\samples\Ashen Meridian.tg";
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        for (var i = 0; i < 10 && dir is not null; i++, dir = dir.Parent)
-        {
-            yield return Path.Combine(dir.FullName, "samples", "Ashen Meridian.tg");
-            yield return Path.Combine(dir.FullName, "..", "..", "samples", "Ashen Meridian.tg");
-        }
-    }
-
-    private static System.Collections.Generic.IEnumerable<string> NativeCandidates()
-    {
-        yield return @"C:\Users\COBHC\Downloads\TabForge\samples\Ashen Meridian.gp";
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        for (var i = 0; i < 10 && dir is not null; i++, dir = dir.Parent)
-        {
-            yield return Path.Combine(dir.FullName, "samples", "Ashen Meridian.gp");
-            yield return Path.Combine(dir.FullName, "..", "..", "samples", "Ashen Meridian.gp");
-        }
-    }
+    private static string NativeSamplePath() => TestRepo.SampleFile("Ashen Meridian.gp");
 
     private static int CountNotes(TrackModel track)
     {

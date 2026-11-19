@@ -12,10 +12,9 @@ using Xunit.Abstractions;
 namespace TabForge.Avalonia.Tests;
 
 // Verifies articulation MIDI export + MIDI import round trip on one real technique-rich song.
-// Files: C:/tfrel-tmp/midi-verify. Read-only input under samples/.
 public sealed class MidiArticulationVerifyTests : IDisposable
 {
-    private static string OutDir => "C:/tfrel-tmp/midi-verify";
+    private readonly string _reportDir = Directory.CreateTempSubdirectory("tabforge-midi-verify-").FullName;
     private readonly ITestOutputHelper _out;
     private readonly string _scratch;
 
@@ -24,7 +23,7 @@ public sealed class MidiArticulationVerifyTests : IDisposable
         _out = output;
         _scratch = Path.Combine(Path.GetTempPath(), "tf-midi-verify-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_scratch);
-        Directory.CreateDirectory(OutDir);
+        _out.WriteLine($"MIDI verification reports: {_reportDir}");
         AlphaTabWarmUp.EnsureReady();
     }
 
@@ -35,10 +34,10 @@ public sealed class MidiArticulationVerifyTests : IDisposable
 
     internal static readonly string[] Candidates = new[]
     {
-        "C:/Users/COBHC/Downloads/TabForge/samples/metallica/metallica/enter_sandman_9.gp5",
-        "C:/Users/COBHC/Downloads/TabForge/samples/metallica/metallica/kirk_solos.gp5",
-        "C:/Users/COBHC/Downloads/TabForge/samples/metallica/metallica/master_of_puppets_9.gpx",
-        "C:/Users/COBHC/Downloads/TabForge/samples/children_of_bodom/all_for_nothing.gp5",
+        TestRepo.SampleFile("metallica/metallica/enter_sandman_9.gp5"),
+        TestRepo.SampleFile("metallica/metallica/kirk_solos.gp5"),
+        TestRepo.SampleFile("metallica/metallica/master_of_puppets_9.gpx"),
+        TestRepo.SampleFile("children_of_bodom/all_for_nothing.gp5"),
     };
 
     internal static string BestSong()
@@ -228,7 +227,7 @@ public sealed class MidiArticulationVerifyTests : IDisposable
         }
         var best = rows.Where(r => r.Distinct >= 0).OrderByDescending(r => r.Distinct).ThenByDescending(r => r.Notes).First();
         Log($"SELECTED {best.File}");
-        File.WriteAllText(Path.Combine(OutDir, "selection.txt"), best.File + "\n" + string.Join("\n", rows.Select(r => $"{r.File} tracks={r.Tracks} notes={r.Notes} distinct={r.Distinct} {r.All}")));
+        File.WriteAllText(Path.Combine(_reportDir, "selection.txt"), best.File + "\n" + string.Join("\n", rows.Select(r => $"{r.File} tracks={r.Tracks} notes={r.Notes} distinct={r.Distinct} {r.All}")));
         Assert.True(best.Distinct >= 4, "Need a technique-rich song, got: " + best.Top);
     }
 
@@ -236,7 +235,7 @@ public sealed class MidiArticulationVerifyTests : IDisposable
     public void MidiArticulationVerify_ExportA_ByteIdentical()
     {
         var song = GuitarProImporter.Import(PickSong());
-        var oldPath = Path.Combine(OutDir, "verify_a_default.mid");
+        var oldPath = Path.Combine(_reportDir, "verify_a_default.mid");
         var newPath = Path.Combine(_scratch, "verify_a_slice.mid");
         MidiExportService.Export(song, oldPath);
         ExportWhole(song, newPath, null);
@@ -258,7 +257,7 @@ public sealed class MidiArticulationVerifyTests : IDisposable
         Log("SOURCE_TECHNIQUES " + string.Join(",", counts.OrderByDescending(kv => kv.Value).Select(kv => $"{kv.Key}={kv.Value}")));
         Log("GM_FLAGS " + string.Join(",", song.Tracks.Select((t, i) => $"{i}:{t.Name}:MidiSound={t.MidiSound}:src={t.SoundSource}")));
         var options = BuiltInOptions(song);
-        var path = Path.Combine(OutDir, "verify_b_ample.mid");
+        var path = Path.Combine(_reportDir, "verify_b_ample.mid");
         ExportWhole(song, path, options);
         var midi = ParseMidi(File.ReadAllBytes(path));
         Log($"AMPLE mapped={options.Mapped} kept={options.Kept} skipped={options.Skipped} notes={midi.Notes.Count} bends={midi.Bends.Count}");
@@ -285,7 +284,7 @@ public sealed class MidiArticulationVerifyTests : IDisposable
         var song = GuitarProImporter.Import(PickSong());
         var counts = TechniqueCounts(song);
         var options = CustomOptions(song, skip: false);
-        var path = Path.Combine(OutDir, "verify_b_custom.mid");
+        var path = Path.Combine(_reportDir, "verify_b_custom.mid");
         ExportWhole(song, path, options);
         var midi = ParseMidi(File.ReadAllBytes(path));
         Log($"CUSTOM_GM mapped={options.Mapped} kept={options.Kept} skipped={options.Skipped} notes={midi.Notes.Count}");
@@ -297,15 +296,9 @@ public sealed class MidiArticulationVerifyTests : IDisposable
 
         // Same custom map on a plug-in copy (MidiSound=false) proves the keyswitch mechanics on the real material.
         var copy = GuitarProImporter.Import(PickSong());
-        foreach (var t in copy.Tracks)
-        {
-            if (t.IsAudio) continue;
-            t.MidiSound = false;
-            t.SoundSource = TabForge.Models.SoundSources.Plugins;
-            t.Rig.Plugins.Add(new TabForge.Plugins.PluginSlot { Name = "Guitar", Type = TabForge.Plugins.PluginSlotType.Instrument });
-        }
+        UsePluginTracks(copy);
         var options2 = CustomOptions(copy, skip: false);
-        var path2 = Path.Combine(OutDir, "verify_b_custom_plugin.mid");
+        var path2 = Path.Combine(_reportDir, "verify_b_custom_plugin.mid");
         ExportWhole(copy, path2, options2);
         var midi2 = ParseMidi(File.ReadAllBytes(path2));
         var ks2 = midi2.Notes.Where(n => n.Pitch is 20 or 21 or 22 or 23 or 24).ToList();
@@ -319,7 +312,9 @@ public sealed class MidiArticulationVerifyTests : IDisposable
         var precedes = ks2.Any(k => realStarts.Any(r => r >= k.Start && r - k.Start <= 100));
         Log($"CUSTOM_PLUGIN keyswitchPrecedesNote={precedes}");
         Assert.True(precedes, "keyswitch should be at/just before its note");
-        var plain = ParseMidi(File.ReadAllBytes(Path.Combine(OutDir, "verify_a_default.mid")));
+        var plainPath = Path.Combine(_reportDir, "verify_a_default.mid");
+        MidiExportService.Export(song, plainPath);
+        var plain = ParseMidi(File.ReadAllBytes(plainPath));
         Log($"LEN plainNotes={plain.Notes.Count} customPluginNotes={midi2.Notes.Count} (custom adds keyswitch attacks)");
         Assert.True(midi2.Notes.Count >= plain.Notes.Count, "custom map adds keyswitch notes so count should grow");
     }
@@ -328,17 +323,11 @@ public sealed class MidiArticulationVerifyTests : IDisposable
     public void MidiArticulationVerify_ExportB_KeepVsSkip()
     {
         var song = GuitarProImporter.Import(PickSong());
-        foreach (var t in song.Tracks)
-        {
-            if (t.IsAudio) continue;
-            t.MidiSound = false;
-            t.SoundSource = TabForge.Models.SoundSources.Plugins;
-            t.Rig.Plugins.Add(new TabForge.Plugins.PluginSlot { Name = "Guitar", Type = TabForge.Plugins.PluginSlotType.Instrument });
-        }
+        UsePluginTracks(song);
         var keep = CustomOptions(song, skip: false);
         var skip = CustomOptions(song, skip: true);
-        var keepPath = Path.Combine(OutDir, "verify_b_keep.mid");
-        var skipPath = Path.Combine(OutDir, "verify_b_skip.mid");
+        var keepPath = Path.Combine(_reportDir, "verify_b_keep.mid");
+        var skipPath = Path.Combine(_reportDir, "verify_b_skip.mid");
         ExportWhole(song, keepPath, keep);
         ExportWhole(song, skipPath, skip);
         var keepMidi = ParseMidi(File.ReadAllBytes(keepPath));
@@ -350,12 +339,23 @@ public sealed class MidiArticulationVerifyTests : IDisposable
         Assert.True(skipMidi.Bends.Count <= keepMidi.Bends.Count, "skip must not add wheel events");
     }
 
+    private static void UsePluginTracks(SongProject song)
+    {
+        foreach (var t in song.Tracks)
+        {
+            if (t.IsAudio) continue;
+            t.MidiSound = false;
+            t.SoundSource = TabForge.Models.SoundSources.Plugins;
+            t.Rig.Plugins.Add(new TabForge.Plugins.PluginSlot { Name = "Guitar", Type = TabForge.Plugins.PluginSlotType.Instrument });
+        }
+    }
+
     [Fact]
     public void MidiArticulationVerify_Import_AsPlayed()
     {
         var src = GuitarProImporter.Import(PickSong());
-        var midPath = Path.Combine(OutDir, "verify_a_default.mid");
-        if (!File.Exists(midPath)) ExportWhole(src, midPath, null);
+        var midPath = Path.Combine(_reportDir, "verify_a_default.mid");
+        ExportWhole(src, midPath, null);
         var back = GuitarProImporter.Import(midPath);
         var srcCells = src.Tracks.SelectMany(t => t.Measures).SelectMany(m => m.Cells.Concat(m.Voice2Cells ?? new List<TabCell>())).ToList();
         var backCells = back.Tracks.SelectMany(t => t.Measures).SelectMany(m => m.Cells.Concat(m.Voice2Cells ?? new List<TabCell>())).ToList();
@@ -389,8 +389,10 @@ public sealed class MidiArticulationVerifyTests : IDisposable
     public void MidiArticulationVerify_Import_WithMap_Keyswitches()
     {
         var src = GuitarProImporter.Import(PickSong());
-        var mapPath = Path.Combine(OutDir, "verify_b_custom_plugin.mid");
-        if (!File.Exists(mapPath)) ExportWhole(src, mapPath, CustomOptions(src, false));
+        var mapPath = Path.Combine(_reportDir, "verify_b_custom_plugin.mid");
+        var pluginSong = GuitarProImporter.Import(PickSong());
+        UsePluginTracks(pluginSong);
+        ExportWhole(pluginSong, mapPath, CustomOptions(pluginSong, skip: false));
         var back = GuitarProImporter.Import(mapPath);
         var midi = ParseMidi(File.ReadAllBytes(mapPath));
         var ksCount = midi.Notes.Count(n => n.Pitch is 20 or 21 or 22 or 23 or 24);
@@ -400,7 +402,8 @@ public sealed class MidiArticulationVerifyTests : IDisposable
         var backBends = back.Tracks.SelectMany(t => t.Measures).SelectMany(m => m.Cells).SelectMany(c => c.Notes).Count(n => n.Techniques.Contains(TechniqueNames.Bend));
         Log($"IMPORT_B keyswitchNotesInMidi={ksCount} lowNotesAfterImport={backLow} keyswitchMoved={context.KeyswitchNotesMoved} notice={context.KeyswitchNotice} bendMarksAfterImport={backBends} backTracks={back.Tracks.Count}");
         // Keyswitch notes are articulation switches, not music: the import leaves them out and reports how many.
-        var gmPath = Path.Combine(OutDir, "verify_b_custom.mid");
+        var gmPath = Path.Combine(_reportDir, "verify_b_custom.mid");
+        ExportWhole(src, gmPath, CustomOptions(src, skip: false));
         var gm = ParseMidi(File.ReadAllBytes(gmPath));
         var gmKs = gm.Notes.Count(n => n.Pitch is 20 or 21 or 22 or 23 or 24);
         Log($"IMPORT_B_GM keyswitchNotesInMidi={gmKs} (the export picked the map for the built-in track too)");

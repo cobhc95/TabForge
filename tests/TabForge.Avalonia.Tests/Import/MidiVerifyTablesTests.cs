@@ -10,39 +10,36 @@ using Xunit;
 
 namespace TabForge.Avalonia.Tests;
 
-// One-shot table exporter for the midi-verify resume job: writes
-// C:/tfrel-tmp/midi-verify/tables_export.md and tables_import.md via
-// File.WriteAllText (not stdout). Fixed song = already-chosen
-// master_of_puppets_9.gpx, fallback enter_sandman_9.gp5.
-public sealed class MidiVerifyTablesTests
+// Writes MIDI verification tables and their source exports for inspection.
+public sealed class MidiVerifyTablesTests(Xunit.Abstractions.ITestOutputHelper output)
 {
-    private static string OutDir => "C:/tfrel-tmp/midi-verify";
     private static readonly string Song =
-        "C:/Users/COBHC/Downloads/TabForge/samples/metallica/metallica/master_of_puppets_9.gpx";
+        TestRepo.SampleFile("metallica/metallica/master_of_puppets_9.gpx");
     private static readonly string Fallback =
-        "C:/Users/COBHC/Downloads/TabForge/samples/metallica/metallica/enter_sandman_9.gp5";
+        TestRepo.SampleFile("metallica/metallica/enter_sandman_9.gp5");
 
     [Fact]
     public void MidiVerify_WriteTables()
     {
-        Directory.CreateDirectory(OutDir);
+        var reportDir = Directory.CreateTempSubdirectory("tabforge-midi-tables-").FullName;
+        output.WriteLine($"MIDI verification tables: {reportDir}");
         AlphaTabWarmUp.EnsureReady();
         var songPath = File.Exists(Song) ? Song : Fallback;
         var src = GuitarProImporter.Import(songPath);
         var counts = MidiArticulationVerifyTests.TechniqueCounts(src);
         var srcNotes = src.Tracks.Sum(t => t.Measures.Sum(m => m.Cells.Sum(c => c.Notes.Count)));
 
-        var aPath = Path.Combine(OutDir, "verify_a_default.mid");
+        var aPath = Path.Combine(reportDir, "verify_a_default.mid");
         MidiExportService.Export(src, aPath);
         var a = MidiArticulationVerifyTests.ParseMidi(File.ReadAllBytes(aPath));
 
         var ampleOpts = MidiArticulationVerifyTests.BuiltInOptions(src);
-        var amplePath = Path.Combine(OutDir, "verify_b_ample.mid");
+        var amplePath = Path.Combine(reportDir, "verify_b_ample.mid");
         MidiArticulationVerifyTests.ExportWhole(src, amplePath, ampleOpts);
         var ample = MidiArticulationVerifyTests.ParseMidi(File.ReadAllBytes(amplePath));
 
         var customOpts = MidiArticulationVerifyTests.CustomOptions(src, skip: false);
-        var customPath = Path.Combine(OutDir, "verify_b_custom.mid");
+        var customPath = Path.Combine(reportDir, "verify_b_custom.mid");
         MidiArticulationVerifyTests.ExportWhole(src, customPath, customOpts);
         var custom = MidiArticulationVerifyTests.ParseMidi(File.ReadAllBytes(customPath));
 
@@ -54,14 +51,14 @@ public sealed class MidiVerifyTablesTests
             t.SoundSource = SoundSources.Plugins;
         }
         var plugOpts = MidiArticulationVerifyTests.CustomOptions(copy, skip: false);
-        var plugPath = Path.Combine(OutDir, "verify_b_custom_plugin.mid");
+        var plugPath = Path.Combine(reportDir, "verify_b_custom_plugin.mid");
         MidiArticulationVerifyTests.ExportWhole(copy, plugPath, plugOpts);
         var plug = MidiArticulationVerifyTests.ParseMidi(File.ReadAllBytes(plugPath));
 
         var keepOpts = MidiArticulationVerifyTests.CustomOptions(src, skip: false);
         var skipOpts = MidiArticulationVerifyTests.CustomOptions(src, skip: true);
-        var keepPath = Path.Combine(OutDir, "verify_b_keep.mid");
-        var skipPath = Path.Combine(OutDir, "verify_b_skip.mid");
+        var keepPath = Path.Combine(reportDir, "verify_b_keep.mid");
+        var skipPath = Path.Combine(reportDir, "verify_b_skip.mid");
         MidiArticulationVerifyTests.ExportWhole(src, keepPath, keepOpts);
         MidiArticulationVerifyTests.ExportWhole(src, skipPath, skipOpts);
         var keep = MidiArticulationVerifyTests.ParseMidi(File.ReadAllBytes(keepPath));
@@ -103,7 +100,7 @@ public sealed class MidiVerifyTablesTests
             var kc = ksPitchFor.TryGetValue(kv.Key, out var p2) ? ksPlug.Count(n => n.Pitch == p2).ToString() : "-";
             exp.Add($"| {kv.Key} | {kv.Value} | {kp} | {kc} | {(ksAmple.Count > 0 ? "some" : "none")} |");
         }
-        File.WriteAllText(Path.Combine(OutDir, "tables_export.md"), string.Join("\n", exp) + "\n");
+        File.WriteAllText(Path.Combine(reportDir, "tables_export.md"), string.Join("\n", exp) + "\n");
 
         var backA = GuitarProImporter.Import(aPath);
         var backB = GuitarProImporter.Import(plugPath);
@@ -134,9 +131,9 @@ public sealed class MidiVerifyTablesTests
             $"| techniques back | - | {string.Join(",", backATech.Select(kv => $"{kv.Key}={kv.Value}"))} | {string.Join(",", backBTech.Select(kv => $"{kv.Key}={kv.Value}"))} |",
             $"| bends/CC/keyswitch fate | bends={a.Bends.Count} cc={a.Ccs.Count} in file | bends->quantised pitches, CC dropped, no technique marks | keyswitches->{lowB} low notes (pitches 20-24), bends->{bendB} marks |",
         };
-        File.WriteAllText(Path.Combine(OutDir, "tables_import.md"), string.Join("\n", imp) + "\n");
+        File.WriteAllText(Path.Combine(reportDir, "tables_import.md"), string.Join("\n", imp) + "\n");
 
-        Assert.True(File.Exists(Path.Combine(OutDir, "tables_export.md")));
-        Assert.True(File.Exists(Path.Combine(OutDir, "tables_import.md")));
+        Assert.True(File.Exists(Path.Combine(reportDir, "tables_export.md")));
+        Assert.True(File.Exists(Path.Combine(reportDir, "tables_import.md")));
     }
 }
