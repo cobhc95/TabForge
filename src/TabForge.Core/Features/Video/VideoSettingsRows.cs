@@ -2,7 +2,7 @@ using TabForge.Features.Video;
 
 namespace TabForge.Services;
 
-// Owns: the Video recording rows of the settings catalogue (General page); VideoFeatureSettings (Services/Features/FeatureSettingsRows.cs) hands them to the catalogue.
+// Owns: the Video recording rows of the settings catalogue (General page); VideoFeatureSettings hands them to the catalogue.
 // Does not own: page layout (SettingsCatalog.Layout) or the stored values (AppSettings.Video).
 // Tests: LiveVideoRecordTests.
 public static partial class SettingsCatalog

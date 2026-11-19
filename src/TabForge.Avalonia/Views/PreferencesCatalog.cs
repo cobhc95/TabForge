@@ -1,3 +1,7 @@
+using TabForge.Features.Band;
+using TabForge.Features.KeyboardMode;
+using TabForge.Features.LiveInput;
+using TabForge.Features.Video;
 using System;
 using System.Collections.Generic;
 using System.Linq;

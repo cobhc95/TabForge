@@ -1,3 +1,7 @@
+using TabForge.Features.Band;
+using TabForge.Features.KeyboardMode;
+using TabForge.Features.LiveInput;
+using TabForge.Features.Video;
 using System;
 using System.Linq;
 using TabForge.Avalonia.Views;
@@ -10,7 +14,7 @@ namespace TabForge.Avalonia.Tests;
 /// <summary>
 /// The Avalonia Preferences catalogue carries the feature rows (Band, Video, Keyboard mode, Live input) by name and count.
 /// Owns: the check that the feature sources reach the preview's catalogue.
-/// Does not own: the rows themselves (FeatureSettingsRows.cs in Core) or the controls (PreferencesWindow).
+/// Does not own: the rows themselves (each Core feature's settings source) or the controls (PreferencesWindow).
 /// Tests: this class.
 /// </summary>
 public class PreferencesFeatureRowsTests

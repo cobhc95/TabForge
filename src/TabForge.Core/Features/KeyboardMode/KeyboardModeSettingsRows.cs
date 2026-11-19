@@ -2,7 +2,7 @@ using TabForge.Features.KeyboardMode;
 
 namespace TabForge.Services;
 
-// Owns: the Keyboard mode rows of the settings catalogue (Fretboard page); KeyboardModeFeatureSettings (Services/Features/FeatureSettingsRows.cs) hands them to the catalogue.
+// Owns: the Keyboard mode rows of the settings catalogue (Fretboard page); KeyboardModeFeatureSettings hands them to the catalogue.
 // Does not own: page layout (SettingsCatalog.Layout) or the stored values (AppSettings.Learn).
 // Tests: no dedicated test class.
 public static partial class SettingsCatalog

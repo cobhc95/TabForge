@@ -2,7 +2,7 @@ using TabForge.Features.LiveInput;
 
 namespace TabForge.Services;
 
-// Owns: the live input row of the settings catalogue (Audio & Plug-ins page); LiveInputFeatureSettings (Services/Features/FeatureSettingsRows.cs) hands it to the catalogue.
+// Owns: the live input row of the settings catalogue (Audio & Plug-ins page); LiveInputFeatureSettings hands it to the catalogue.
 // Does not own: page layout (SettingsCatalog.Layout) or the stored values (PluginSettings.LiveInput).
 // Tests: LiveInputStripTests.
 public static partial class SettingsCatalog

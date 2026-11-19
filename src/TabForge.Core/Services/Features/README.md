@@ -6,7 +6,6 @@ Plain data the features (Band, Video, Keyboard mode, Live input) add to the cent
 | File | Owns |
 | --- | --- |
 | `FeatureHotkeyIds.cs` | the ids of the hotkey rows the feature modules add to the catalogue (the rows are in HotkeyCatalog.Features.cs), and the ids of the FX chain window's commands. |
-| `FeatureSettingsRows.cs` | the Preferences groups, rows and settings bounds of the four features that add settings rows (Band, Video, Keyboard mode, Live input), as plain data for the catalogues. The feature modules and TabForge both derive from these classes, so both read the same groups, rows and bounds. |
 | `FeatureSettingsSources.cs` | the plain data a feature adds to the settings catalogue (IFeatureSettingsSource), the app-side   calls those catalogues make (CatalogPlatform), and the one composition of both (CatalogComposition). |
 
 Tests: see the `// Tests:` line at the top of each file.

@@ -28,7 +28,7 @@ Live video recording and offline video export: the pixel sources (Desktop Duplic
 | `VideoExportFlow.cs` | the order of the steps, the frame clock, the audio hand-off, the staging files, the hardware-stall fallback and the "video export" log lines. |
 | `VideoExportProgress.cs` | video export progress reports (audio share plus frame counts and ETA text). |
 | `VideoFrameSlots.cs` | the constant-frame-rate slot maths of a live recording and the "capture cannot keep up" decision. Pure: the clock is passed in. |
-| `VideoSettingsRows.cs` | the Video recording rows of the settings catalogue (General page); VideoFeatureSettings (Services/Features/FeatureSettingsRows.cs) hands them to the catalogue. |
+| `VideoSettingsRows.cs` | the Video recording rows of the settings catalogue (General page); VideoFeatureSettings hands them to the catalogue. |
 | `VideoViewSpec.cs` | the choices only. |
 
 Tests: see the `// Tests:` line at the top of each file.
