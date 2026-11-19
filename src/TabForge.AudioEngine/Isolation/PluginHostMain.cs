@@ -1,6 +1,4 @@
-using System.Diagnostics;
 using System.IO.Pipes;
-using TabForge.Audio.Contracts;
 using TabForge.AudioEngine.Editors;
 using TabForge.AudioEngine.Plugins;
 

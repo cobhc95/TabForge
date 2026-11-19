@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using TabForge.AudioEngine.Plugins;
 using TabForge.AudioEngine.Plugins.Clap;

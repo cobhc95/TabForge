@@ -1,4 +1,3 @@
-using TabForge.Audio.Contracts;
 using TabForge.AudioEngine.Editors;
 using TabForge.AudioEngine.Mixing;
 using TabForge.AudioEngine.Plugins;

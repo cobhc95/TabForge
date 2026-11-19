@@ -1,6 +1,5 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using TabForge.Audio.Contracts;
 using TabForge.AudioEngine.Audio;
 
 namespace TabForge.AudioEngine.Output;

@@ -1,5 +1,3 @@
-using System.Diagnostics;
-using TabForge.Audio.Contracts;
 using TabForge.AudioEngine.Mixing;
 using TabForge.AudioEngine.Output;
 using TabForge.AudioEngine.Plugins;

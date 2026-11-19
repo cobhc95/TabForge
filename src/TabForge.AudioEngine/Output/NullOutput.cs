@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using NAudio.Wave;
 
 namespace TabForge.AudioEngine.Output;

@@ -1,7 +1,6 @@
 using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
-using TabForge.Audio.Contracts;
 using TabForge.AudioEngine.Plugins;
 
 namespace TabForge.AudioEngine.Isolation;

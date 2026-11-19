@@ -1,5 +1,4 @@
 using NAudio.Wave;
-using TabForge.Audio.Contracts;
 using TabForge.AudioEngine.Audio;
 
 namespace TabForge.AudioEngine.Output;

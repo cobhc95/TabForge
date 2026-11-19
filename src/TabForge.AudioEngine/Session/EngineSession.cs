@@ -1,6 +1,4 @@
-using System.Diagnostics;
 using NAudio.Wave;
-using TabForge.Audio.Contracts;
 using TabForge.AudioEngine.Editors;
 using TabForge.Core.Midi;
 using TabForge.AudioEngine.Mixing;

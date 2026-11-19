@@ -1,7 +1,6 @@
 using System.Buffers;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
-using TabForge.Audio.Contracts;
 
 namespace TabForge.AudioEngine.Mixing;
 
