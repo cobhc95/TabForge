@@ -19,7 +19,6 @@ namespace TabForge.Avalonia.Tests;
 /// properties window mutates the song early (extra undo step), window Cancel leaves the
 /// song touched, typed boxes are lost across a picker Cancel, and the discard question
 /// omits tint, drum selection and instrument.
-/// Each test fails on the old code and passes once draft/commit lands.
 /// </summary>
 public sealed class TrackPropertiesDraftReproTests
 {

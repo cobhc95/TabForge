@@ -18,7 +18,6 @@ namespace TabForge.Avalonia.Tests;
 /// Owns: the "Add track" strip as the arrangement's own row under the track list and the timeline: its height, its visibility from the View setting
 /// and compact mode, and the track it adds.
 /// Does not own: the strip's drawing (AddTrackStrip), the full-width layout and the rows' alignment (TrackListOwnerLayoutTests) or the Add track question (PromptWindow).
-/// Tests: TabForge.Avalonia.Tests.AddTrackStripTests.
 /// </summary>
 public class AddTrackStripTests
 {

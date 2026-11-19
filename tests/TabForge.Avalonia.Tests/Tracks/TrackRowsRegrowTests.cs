@@ -19,7 +19,6 @@ namespace TabForge.Avalonia.Tests;
 /// Owns: after the timeline pane in the real main window shrinks to its minimum and grows back, the track list column and the timeline are
 /// both as tall as the pane's rows and a rendered frame draws every track row in both, with the row scroll offset in range.
 /// Does not own: the splitter clamp (DockSplitPanel), the row geometry (TimelineView), the cell drawing (TrackHeaderColumn.PaintCells).
-/// Tests: TabForge.Avalonia.Tests.TrackRowsRegrowTests.
 /// </summary>
 [Collection(TimingCollection.Name)]   // renders a frame and counts the rows it drew: run alone so the headless renderer is not contended by another test's window
 public class TrackRowsRegrowTests

@@ -23,7 +23,6 @@ namespace TabForge.Avalonia.Tests;
 /// <summary>
 /// Owns: arming a track in the real main window with a cramped timeline pane shows the armed sub-row (the pane grows just enough).
 /// Does not own: the fit maths (DockSizeRules), the fit itself (MainWindowTrackListFit), the armed row's drawing (ArmedRowPainter).
-/// Tests: TabForge.Avalonia.Tests.TrackArmGrowTests.
 /// </summary>
 public class TrackArmGrowTests
 {

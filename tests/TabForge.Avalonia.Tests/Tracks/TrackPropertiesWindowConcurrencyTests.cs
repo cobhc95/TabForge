@@ -18,7 +18,6 @@ namespace TabForge.Avalonia.Tests;
 /// Owns: the races around the Track properties tuning dialog: a removal warning answered after a later preset or retune, OK while a
 /// confirmation or the instrument picker is still open, an instrument picker cancelled over an edited tuning draft, and the note data Undo restores.
 /// Does not own: the tuning rules (TrackTuningDraftTests) or the ordinary window checks (TrackPropertiesWindowTests).
-/// Tests: this class.
 /// </summary>
 public sealed class TrackPropertiesWindowConcurrencyTests
 {

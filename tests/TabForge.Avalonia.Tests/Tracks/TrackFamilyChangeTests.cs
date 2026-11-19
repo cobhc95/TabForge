@@ -16,7 +16,6 @@ namespace TabForge.Avalonia.Tests;
 /// Owns: changing a track to the other family (a guitar to a drum kit) through the Track properties Change instrument button: the picker's Select
 /// converts the track live with no step (kind drums, strings on the drum lines, notes kept on those lines); the window's OK commits it as one undo step and Undo brings the guitar back.
 /// Does not own: the family rules (TrackSetup), the picker run (InstrumentPickerRunTests) or the picker window (InstrumentPickerWindow).
-/// Tests: TabForge.Avalonia.Tests.TrackFamilyChangeTests.
 /// </summary>
 public sealed class TrackFamilyChangeTests
 {

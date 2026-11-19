@@ -21,7 +21,6 @@ namespace TabForge.Avalonia.Tests;
 /// track row on a fresh and on a saved launch, the track rows end exactly at the Add track strip, the strip spans the full pane width below both
 /// the track list and the timeline, and an overflowing row list shows its scroll bar inside the window with the last row reachable.
 /// Does not own: the fit maths (DockSizeRules), the rows' scroll rules (TrackListScrollTests) or the strip's drawing (AddTrackStrip).
-/// Tests: TabForge.Avalonia.Tests.TrackListOwnerLayoutTests.
 /// </summary>
 public class TrackListOwnerLayoutTests
 {

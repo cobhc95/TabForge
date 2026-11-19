@@ -20,7 +20,6 @@ namespace TabForge.Avalonia.Tests;
 /// contrast) and of the preset rename and copy rules that the preset manager shares.
 /// Does not own: the windows or the presenters; expected texts come from GroupRulesPresenter and PresetRules. Each test that closes a window
 /// with pending edits answers its question first, so no test waits on a dialog; neither window asks a discard question.
-/// Tests: this class.
 /// </summary>
 public class GroupRulesAndColourPickerTests
 {

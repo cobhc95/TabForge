@@ -18,7 +18,6 @@ namespace TabForge.Avalonia.Tests;
 /// The armed strip sits directly under that main line, at the same offset from the top of the row in every track state (armed empty MIDI, MIDI with a take,
 /// audio with a 54 high lane band), in Compact and Comfortable, and never overlaps it.
 /// Does not own: the controls and drawing of the strip (ArmedRowTests, ArmedInputPillTests), the cell geometry (TrackRowCells).
-/// Tests: this class.
 /// </summary>
 public class TrackHeaderTopAlignTests
 {

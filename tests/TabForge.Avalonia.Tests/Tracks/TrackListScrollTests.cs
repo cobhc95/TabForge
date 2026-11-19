@@ -20,7 +20,6 @@ namespace TabForge.Avalonia.Tests;
 /// Owns: the track rows' vertical scroll inside the arrangement: rows scroll under the fixed chrome while the header and the lanes move together,
 /// the wheel and the scroll bar drive the offset, the Add track strip stays inside the pane, and the timeline pane's minimum height.
 /// Does not own: the pane's content cap (ArrangementNaturalHeightTests), the hover and selection (TrackRowSelectionTests).
-/// Tests: TabForge.Avalonia.Tests.TrackListScrollTests.
 /// </summary>
 public class TrackListScrollTests
 {

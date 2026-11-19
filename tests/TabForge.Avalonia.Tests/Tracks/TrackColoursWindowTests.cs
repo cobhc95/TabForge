@@ -17,7 +17,6 @@ namespace TabForge.Avalonia.Tests;
 /// Owns: the headless checks of the Colour tracks window: structure and WPF texts, the row names, the range tick, colouring the ticked
 /// rows with one undo capture, the renders in both themes and the contrast of its texts.
 /// Does not own: the window or the presenter; the palette and the tick rules are read from TrackColoursPresenter.
-/// Tests: this class.
 /// </summary>
 public class TrackColoursWindowTests
 {

@@ -22,7 +22,6 @@ namespace TabForge.Avalonia.Tests;
 /// Owns: the timeline pane in the default main window keeps every track row laid out: after the splitter shrinks the pane to about 1.5 rows and
 /// grows it back to its cap, and after a status notice row appears under the window.
 /// Does not own: the splitter clamp (DockSplitPanel), the cap rule (ArrangementView.NaturalHeight), the fit (MainWindowTrackListFit) or the rows (TimelineView).
-/// Tests: TabForge.Avalonia.Tests.TrackListSplitterShrinkTests.
 /// </summary>
 public class TrackListSplitterShrinkTests
 {

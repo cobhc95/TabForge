@@ -11,7 +11,6 @@ namespace TabForge.Avalonia.Tests;
 /// <summary>
 /// Owns: the engine following the track list: deleting or adding a track, and Undo of either, bring the engine in line at once (a deleted track
 /// stops sounding), and a full engine tells the user instead of failing the sync.
-/// Tests: this class.
 /// </summary>
 public sealed class TrackStructureTests
 {

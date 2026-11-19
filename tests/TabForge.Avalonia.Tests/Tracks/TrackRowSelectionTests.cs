@@ -23,7 +23,6 @@ namespace TabForge.Avalonia.Tests;
 /// Owns: the track list's hover (the row and the cell under the pointer, over the cells and the lanes alike), the selection (a press and release
 /// on a row selects its track; the selected row draws its tint and bold name), and the cell hover state (the lighter overlay drawn over the body).
 /// Does not own: the scroll (TrackListScrollTests), the cell geometry (TrackRowControlsTests).
-/// Tests: TabForge.Avalonia.Tests.TrackRowSelectionTests.
 /// </summary>
 public class TrackRowSelectionTests
 {

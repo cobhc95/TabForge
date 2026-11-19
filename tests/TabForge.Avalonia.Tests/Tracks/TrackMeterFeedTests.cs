@@ -26,7 +26,6 @@ namespace TabForge.Avalonia.Tests;
 /// Owns: the proof that the engine's per-track levels reach the track rows' meters while a song plays, also after the rows show another song.
 ///     The engine is the real client on a shared block; the meters tick on the app's shared tick, as in the window.
 /// Does not own: the drawn bars (TrackMeterHorizontalTests), the engine's own levels (EngineTrackMeterTests), the real window (TrackMeterAppWindowTests).
-/// Tests: this class.
 /// </summary>
 public class TrackMeterFeedTests
 {

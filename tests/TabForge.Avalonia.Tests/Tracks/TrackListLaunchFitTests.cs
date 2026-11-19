@@ -20,7 +20,6 @@ namespace TabForge.Avalonia.Tests;
 /// Owns: the track list fit in the real main window at the owner's size (2000 x 1100, the ten-track demo with the Master row): on a launch with a saved
 /// workspace layout that gives the timeline a small share, and after a song switch, every track row and the Master row are visible.
 /// Does not own: the fit maths (DockSizeRules), the fit controller (MainWindowTrackListFit), the splitter drag (DockSplitPanel).
-/// Tests: TabForge.Avalonia.Tests.TrackListLaunchFitTests.
 /// </summary>
 public class TrackListLaunchFitTests
 {

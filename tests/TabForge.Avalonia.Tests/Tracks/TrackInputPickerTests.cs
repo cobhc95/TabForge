@@ -18,7 +18,6 @@ namespace TabForge.Avalonia.Tests;
 /// Owns: the track input choice: one audio input or None and one MIDI input (None, All, or a device), as the menu shows it, as the button words it,
 /// what recording takes from each of the four combinations, and how older selections are read.
 /// Does not own: the sub-row layout (ArmedRowTests), the MIDI clip building (MidiTakeCaptureTests).
-/// Tests: this class.
 /// </summary>
 public class TrackInputPickerTests
 {

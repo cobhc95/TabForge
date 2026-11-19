@@ -28,7 +28,6 @@ namespace TabForge.Avalonia.Tests;
 /// Owns: the headless checks of the track properties window (structure, presenter texts, the name rule, the string tools, OK validation,
 /// the discard question, dark and light PNGs, contrast).
 /// Does not own: the window, TrackPropertiesPresenter or the palette. The track is the demo song's first track, as the preview opens it.
-/// Tests: this class.
 /// </summary>
 public class TrackPropertiesWindowTests
 {
