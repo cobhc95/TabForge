@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using TabForge.Audio;
 using TabForge.Avalonia.Playback;
-using TabForge.LiveInput;
+using TabForge.Features.LiveInput;
 using TabForge.Models;
 using TabForge.Playback;
 using TabForge.Platform;

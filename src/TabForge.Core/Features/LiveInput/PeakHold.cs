@@ -1,4 +1,4 @@
-namespace TabForge.LiveInput;
+namespace TabForge.Features.LiveInput;
 
 // Owns: the peak-hold mark of a meter: the highest recent peak, kept for a moment, then following the level down.
 // Does not own: the peaks (the engine), the clock (the caller passes the time) or the drawing.

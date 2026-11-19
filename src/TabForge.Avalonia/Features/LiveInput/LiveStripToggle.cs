@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Views.Fx;
 using System;
 using Avalonia;
 using Avalonia.Controls;
@@ -8,7 +9,7 @@ using TabForge.Avalonia.Platform;
 using TabForge.Platform;
 using TabForge.Platform.Theme;
 
-namespace TabForge.Avalonia.Views.Fx;
+namespace TabForge.Avalonia.Features.LiveInput;
 
 // Owns: one drawn toggle of the live input strip: the M and S buttons (drawn by the track list toggle painter, so the same boxes, red mute and yellow solo)
 //   and the small lit "Tuner" switch (the accent fill while on).

@@ -1,4 +1,4 @@
-using TabForge.LiveInput;
+using TabForge.Features.LiveInput;
 
 namespace TabForge.Services;
 

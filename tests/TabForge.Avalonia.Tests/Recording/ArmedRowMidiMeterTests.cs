@@ -4,7 +4,7 @@ using Avalonia.Headless.XUnit;
 using TabForge.Audio;
 using TabForge.Avalonia.Views;
 using TabForge.Documents;
-using TabForge.LiveInput;
+using TabForge.Features.LiveInput;
 using TabForge.Models;
 using TabForge.Presets;
 using TabForge.Services;

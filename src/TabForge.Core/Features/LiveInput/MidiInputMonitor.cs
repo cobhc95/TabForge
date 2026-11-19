@@ -2,7 +2,7 @@ using TabForge.Audio;
 using TabForge.Models;
 using TabForge.Platform;
 
-namespace TabForge.LiveInput;
+namespace TabForge.Features.LiveInput;
 
 /// <summary>The choices of the "Monitor MIDI input" setting.</summary>
 public static class MidiMonitorModes

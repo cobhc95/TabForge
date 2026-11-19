@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Platform;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
@@ -5,7 +6,7 @@ using Avalonia.Styling;
 using TabForge.Platform;
 using TabForge.Presenters;
 
-namespace TabForge.Avalonia.Platform;
+namespace TabForge.Avalonia.Features.LiveInput;
 
 /// <summary>
 /// The tuner's cents needle: a -50..+50 scale with a bar at the cents value, coloured by <see cref="TunerPresenter.ToneForCents"/>.

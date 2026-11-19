@@ -1,9 +1,10 @@
+using TabForge.Avalonia.Features.LiveInput;
 using System;
 using Avalonia.Controls;
 using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Transport;
 using TabForge.Documents;
-using TabForge.LiveInput;
+using TabForge.Features.LiveInput;
 using TabForge.Models;
 using TabForge.Platform.Theme;
 

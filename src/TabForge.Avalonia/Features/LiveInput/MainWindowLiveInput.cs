@@ -6,14 +6,14 @@ using TabForge.Audio;
 using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Transport;
 using TabForge.Avalonia.Views;
-using TabForge.LiveInput;
+using TabForge.Features.LiveInput;
 using TabForge.Models;
 using TabForge.Platform;
 using TabForge.Plugins;
 using TabForge.Presenters;
 using TabForge.Services;
 
-namespace TabForge.Avalonia;
+namespace TabForge.Avalonia.Features.LiveInput;
 
 // Owns: one window's live input in the Avalonia app: the Transport.LiveInput command (the transport Live input button and its hotkey),
 //   the button's right-click menu (open the chain, auto-open, audio input rows, MIDI rows, audio device settings), the lit state of every
@@ -136,7 +136,7 @@ public static class MainWindowLiveInput
                 // The live chain belongs to no song: each change saves the chain and brings the engine in line at once.
                 var chain = new Views.Fx.StandaloneFxChainHost(Settings, _settings.Settings.Hotkeys, _windows.Trust, new Views.Fx.AudioEngineFxAdapter(Engine), new[] { session.Track },
                     changed: _ => { session.SaveChain(); _sync(); }, saveSettings: SaveSettings, openSettings: owner => MainWindowSettings.ShowPreferencesPage(_settings, owner, SettingsCatalog.AudioVst), saveQuietly: SaveLevelQuietly)
-                { AppWideChainTitle = FxChainPresenter.WindowTitle(FxChainName), AppWideChainNote = Views.Fx.LiveInputHint.Build(session), LiveStrip = new Views.Fx.LiveInputStrip(session, Engine) };
+                { AppWideChainTitle = FxChainPresenter.WindowTitle(FxChainName), AppWideChainNote = LiveInputHint.Build(session), LiveStrip = new LiveInputStrip(session, Engine) };
                 var window = new FxChainWindow(chain, session.Track);
                 window.Closed += (_, _) => { closed(); UiThread.Post(() => { session.SetSolo(false); session.SaveChain(); _sync(); }, UiPriority.Background); };
                 return window;

@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Views.Fx;
 using System;
 using TabForge.Avalonia.Platform;
 using System.Linq;
@@ -7,10 +8,10 @@ using Avalonia.Layout;
 using Avalonia.Controls.Templates;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
-using TabForge.LiveInput;
+using TabForge.Features.LiveInput;
 using TabForge.Platform.Theme;
 
-namespace TabForge.Avalonia.Views.Fx;
+namespace TabForge.Avalonia.Features.LiveInput;
 
 // Owns: the tuner part of the live input strip: the reading group (note name, cents scale with its needle, cents text; fixed-width cells, so text never re-wraps the strip) and
 //   the controls group (the lit Tuner switch and the window dropdown).

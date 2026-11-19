@@ -1,15 +1,16 @@
+using TabForge.Avalonia.Views.Fx;
 using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Styling;
 using TabForge.Avalonia.Platform;
-using TabForge.LiveInput;
+using TabForge.Features.LiveInput;
 using TabForge.Platform;
 using TabForge.Platform.Theme;
 using TabForge.Presenters;
 
-namespace TabForge.Avalonia.Views.Fx;
+namespace TabForge.Avalonia.Features.LiveInput;
 
 // Owns: the cents scale of the live input strip: a rail with ticks at -50/-25/0/+25/+50, the labels -50 and +50 and the needle at the cents value, green within
 //   the in-tune band of the strip rules, else the warning colour.

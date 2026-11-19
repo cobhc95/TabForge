@@ -3,7 +3,7 @@ using TabForge.Models;
 using TabForge.Platform;
 using TabForge.Services;
 
-namespace TabForge.LiveInput;
+namespace TabForge.Features.LiveInput;
 
 /// <summary>What one window gives live input: its settings, the shared engine, the sync, the status line and its two prompts.</summary>
 public interface ILiveInputSessionHost

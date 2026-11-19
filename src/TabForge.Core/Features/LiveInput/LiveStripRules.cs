@@ -1,7 +1,7 @@
 using System.Globalization;
 using TabForge.Audio;
 
-namespace TabForge.LiveInput;
+namespace TabForge.Features.LiveInput;
 
 // Owns: the live input strip's fixed numbers and pure maths: knob ranges, the tuner's reference and window choices, the meters' dB scale and texts,
 //   and the MIDI activity blink (its fade from a note-on).

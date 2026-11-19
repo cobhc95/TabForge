@@ -1,7 +1,8 @@
+using TabForge.Avalonia.Features.LiveInput;
 using System;
 using TabForge.Audio;
 using TabForge.Avalonia.Playback;
-using TabForge.LiveInput;
+using TabForge.Features.LiveInput;
 using TabForge.Platform;
 using TabForge.Services;
 using Xunit;

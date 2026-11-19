@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Features.LiveInput;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,7 +8,7 @@ using TabForge.Avalonia.Playback;
 using TabForge.Avalonia.Views;
 using TabForge.Avalonia.Views.Fx;
 using TabForge.Capture;
-using TabForge.LiveInput;
+using TabForge.Features.LiveInput;
 using TabForge.Models;
 using TabForge.Platform;
 using TabForge.Plugins;

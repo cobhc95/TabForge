@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using TabForge.Audio;
 using TabForge.Features.Recording.Rules;
-using TabForge.LiveInput;
+using TabForge.Features.LiveInput;
 using TabForge.Models;
 using Xunit;
 

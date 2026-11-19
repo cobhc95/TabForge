@@ -32,7 +32,7 @@ public sealed class PluginSettings
     /// <summary>App-wide monitoring effects chain (speaker / room calibration), used by every song that keeps "Use for all projects" ticked. Live output only: never rendered or exported.</summary>
     public TabForge.Models.BusChain MonitorFx { get; set; } = new();
     /// <summary>Live input (hear an input through the app-wide live FX chain): its chain, input and options. See LiveInput/README.md.</summary>
-    public TabForge.LiveInput.LiveInputSettings LiveInput { get; set; } = new();
+    public TabForge.Features.LiveInput.LiveInputSettings LiveInput { get; set; } = new();
     /// <summary>Tick a track's GM sound automatically when no VST instrument plays it (chain off, instrument bypassed / removed), untick when one does; manual unticks are respected.</summary>
     public bool AutoGmSound { get; set; } = true;
     /// <summary>Output latency of the Windows MIDI synth (ms); plug-in tracks are delayed by the difference so both stay in time.</summary>
@@ -48,8 +48,8 @@ public sealed class PluginSettings
     public bool MergeMidiTakes { get; set; }
     /// <summary>Snap recorded MIDI note starts to the current snap grid when the take lands (off keeps the raw timing).</summary>
     public bool QuantizeMidiInput { get; set; }
-    /// <summary>Which tracks play the MIDI keyboard through their own instrument: one of <see cref="TabForge.LiveInput.MidiMonitorModes"/> (armed tracks + the selected track by default).</summary>
-    public string MonitorMidiInput { get; set; } = TabForge.LiveInput.MidiMonitorModes.ArmedAndSelected;
+    /// <summary>Which tracks play the MIDI keyboard through their own instrument: one of <see cref="TabForge.Features.LiveInput.MidiMonitorModes"/> (armed tracks + the selected track by default).</summary>
+    public string MonitorMidiInput { get; set; } = TabForge.Features.LiveInput.MidiMonitorModes.ArmedAndSelected;
     /// <summary>ASIO: use the driver's inputs (recording and monitoring).</summary>
     public bool AsioInputsEnabled { get; set; } = true;
     /// <summary>ASIO: first input channel (0-based).</summary>

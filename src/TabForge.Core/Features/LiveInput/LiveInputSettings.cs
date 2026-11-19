@@ -1,7 +1,7 @@
 using TabForge.Models;
 using TabForge.Plugins;
 
-namespace TabForge.LiveInput;
+namespace TabForge.Features.LiveInput;
 
 // Owns: what the live input feature keeps in the app settings: the last live FX chain, the input, its options, its level, gain and mute, and the tuner's reference and window.
 // Does not own: loading and saving (AppSettingsStore), the running chain (LiveInputArm), the settings bounds (LiveInputFeatureSettings).

@@ -7,7 +7,7 @@ using TabForge.Avalonia.Views;
 using TabForge.Models;
 using TabForge.Commands;
 
-namespace TabForge.Avalonia;
+namespace TabForge.Avalonia.Features.LiveInput;
 
 // Owns: the Tools.Tuner command (the Tools menu's Tuner row): opens the live tuner over the window, one window at a time.
 // Does not own: the menu row (MainMenuTable in Core), the commands table (MainWindowCommands), the tuner and its reading rules (TunerWindow, TunerPresenter).

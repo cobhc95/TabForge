@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Features.LiveInput;
 using System;
 using System.Linq;
 using System.Text.Json;
@@ -5,7 +6,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using TabForge.Avalonia.Views.Fx;
-using TabForge.LiveInput;
+using TabForge.Features.LiveInput;
 using Xunit;
 
 namespace TabForge.Avalonia.Tests;

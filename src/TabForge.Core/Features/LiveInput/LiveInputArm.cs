@@ -1,7 +1,7 @@
 using TabForge.Models;
 using TabForge.Services;
 
-namespace TabForge.LiveInput;
+namespace TabForge.Features.LiveInput;
 
 // Owns: the one live input of the program: its stand-in track (the session's live FX chain), whether it is on, and what the
 //   engine sync needs to know about that track (wanted, its level, that it is no song's track).

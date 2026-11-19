@@ -4,7 +4,7 @@ using TabForge.Audio.Contracts;
 using TabForge.Models;
 using TabForge.Platform;
 
-namespace TabForge.LiveInput;
+namespace TabForge.Features.LiveInput;
 
 // Owns: the MIDI keyboard of live input: one client of the shared MIDI input while live input is on with a MIDI choice, each
 //   channel message sent to the stand-in's engine slot (the live chain's instrument plug-in), the reset that lets held notes go,

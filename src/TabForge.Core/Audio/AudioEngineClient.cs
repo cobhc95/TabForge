@@ -29,7 +29,7 @@ public sealed partial class AudioEngineClient : IDisposable
     /// <summary>How tracks sound (route, auto GM) for this engine: the settings applier writes it, every routing decision reads it. One per client, never a static.</summary>
     public TabForge.Models.MixerOptions Mixer { get; } = new();
     /// <summary>The program's one live input (every window and tab shares this client). See LiveInput/README.md.</summary>
-    public TabForge.LiveInput.LiveInputArm LiveInput { get; } = new();
+    public TabForge.Features.LiveInput.LiveInputArm LiveInput { get; } = new();
     /// <summary>The metronome and count-in clicks' own engine slot (no song track). See ClickDestination.cs.</summary>
     public ClickDestination Click { get; } = new();
 
@@ -37,7 +37,7 @@ public sealed partial class AudioEngineClient : IDisposable
     public MidiInputHub MidiInput { get; } = new(new MidiInputCapture());
 
     /// <summary>The window's MIDI input monitor (a keyboard heard through the armed or selected track); live input's stand-in yields to its armed tracks. Null before a window makes one.</summary>
-    public TabForge.LiveInput.MidiInputMonitor? MidiMonitor { get; set; }
+    public TabForge.Features.LiveInput.MidiInputMonitor? MidiMonitor { get; set; }
 
     /// <summary>True while live input's stand-in listens to a MIDI keyboard (the selected track's monitoring then stays silent).</summary>
     public bool LiveInputMidiOn => LiveInput.Midi?.IsOn == true;

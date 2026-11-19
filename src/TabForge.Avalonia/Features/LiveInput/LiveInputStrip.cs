@@ -1,11 +1,12 @@
+using TabForge.Avalonia.Views.Fx;
 using System;
 using Avalonia.Controls;
 using TabForge.Audio;
 using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Transport;
-using TabForge.LiveInput;
+using TabForge.Features.LiveInput;
 
-namespace TabForge.Avalonia.Views.Fx;
+namespace TabForge.Avalonia.Features.LiveInput;
 
 // Owns: the slim line under the menu row of the live input FX window: the caption with the meters, the tuner and the levels (Gain, Vol, Pan, M, S) as whole groups in a
 //   wrapping panel (one rounded row of one control height when wide; groups drop to the next row, never overlapping, when narrow); it wires them to the live input session and the engine, and runs the frame loop (one callback per screen refresh) that moves the

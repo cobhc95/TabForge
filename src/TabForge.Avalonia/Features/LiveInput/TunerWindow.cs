@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Views;
 using TabForge.Platform.Theme;
 using System;
 using System.Collections.Generic;
@@ -13,7 +14,7 @@ using TabForge.Models;
 using TabForge.Platform;
 using TabForge.Presenters;
 
-namespace TabForge.Avalonia.Views;
+namespace TabForge.Avalonia.Features.LiveInput;
 
 /// <summary>
 /// Tuner (Tools > Tuner…): the nearest note, its Hz and cents text, a cents needle, and the track's string tunings with the string closest

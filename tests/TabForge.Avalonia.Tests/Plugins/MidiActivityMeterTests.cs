@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using Avalonia.Headless.XUnit;
 using TabForge.Avalonia.Views;
-using TabForge.LiveInput;
+using TabForge.Features.LiveInput;
 using Xunit;
 
 namespace TabForge.Avalonia.Tests;

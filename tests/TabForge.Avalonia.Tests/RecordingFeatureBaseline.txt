@@ -10,7 +10,6 @@ Source/src/TabForge.Avalonia/Features/Recording/Presenter/RecordingPresenter.cs|
 Source/src/TabForge.Avalonia/Features/Recording/Presenter/RecordingPresenter.cs|TabForge.Avalonia.Views
 Source/src/TabForge.Avalonia/Features/Recording/Presenter/RecordingPresenter.cs|TabForge.Commands
 Source/src/TabForge.Avalonia/Features/Recording/Presenter/RecordingPresenter.cs|TabForge.Documents
-Source/src/TabForge.Avalonia/Features/Recording/Presenter/RecordingPresenter.cs|TabForge.LiveInput
 Source/src/TabForge.Avalonia/Features/Recording/Presenter/RecordingPresenter.cs|TabForge.Playback
 Source/src/TabForge.Avalonia/Features/Recording/Presenter/RecordingPresenter.cs|TabForge.Presenters
 Source/src/TabForge.Avalonia/Features/Recording/Presenter/RecordingPresenter.cs|TabForge.Services

@@ -1,13 +1,14 @@
+using TabForge.Avalonia.Views.Fx;
 using System;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using TabForge.Avalonia.Platform;
-using TabForge.LiveInput;
+using TabForge.Features.LiveInput;
 using TabForge.Platform.Theme;
 using TabForge.Presenters;
 
-namespace TabForge.Avalonia.Views.Fx;
+namespace TabForge.Avalonia.Features.LiveInput;
 
 // Owns: the levels part of the live input strip: the Gain, Vol and Pan mini sliders (the track list slider painter; a double-click returns each to its declared default)
 //   and the M and S buttons (the track list toggle painter).

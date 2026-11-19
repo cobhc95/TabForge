@@ -1,10 +1,11 @@
+using TabForge.Avalonia.Views.Fx;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Markup.Xaml.MarkupExtensions;
-using TabForge.LiveInput;
+using TabForge.Features.LiveInput;
 
-namespace TabForge.Avalonia.Views.Fx;
+namespace TabForge.Avalonia.Features.LiveInput;
 
 // Owns: the line the live FX chain window shows where a track's options would be: "Live input is off" with a Turn on button, hidden while live input is on.
 // Does not own: turning live input on (LiveInputSession), where the line sits (FxChainWindow asks its host for it).

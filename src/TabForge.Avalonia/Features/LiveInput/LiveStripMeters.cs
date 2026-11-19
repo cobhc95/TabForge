@@ -1,14 +1,15 @@
+using TabForge.Avalonia.Views.Fx;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Styling;
 using TabForge.Avalonia.Platform;
-using TabForge.LiveInput;
+using TabForge.Features.LiveInput;
 using TabForge.Platform;
 using TabForge.Platform.Theme;
 
-namespace TabForge.Avalonia.Views.Fx;
+namespace TabForge.Avalonia.Features.LiveInput;
 
 // Owns: the Input and Output meters of the live input strip: two thin bars stacked in one drawn control (no text), the peak hold of the input, and the dB tooltip.
 //   A track with no audio input shows its MIDI activity in the Input bar instead (the MidiActivity colour, full on a note-on and fading out), only while there is some.

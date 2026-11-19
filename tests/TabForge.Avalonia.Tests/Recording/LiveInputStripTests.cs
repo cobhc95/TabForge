@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Features.LiveInput;
 using System;
 using System.IO;
 using System.Linq;
@@ -10,7 +11,7 @@ using TabForge.AudioEngine.Audio;
 using TabForge.Avalonia.Playback;
 using TabForge.Avalonia.Views;
 using TabForge.Avalonia.Views.Fx;
-using TabForge.LiveInput;
+using TabForge.Features.LiveInput;
 using TabForge.Platform;
 using TabForge.Presenters;
 using TabForge.Services;

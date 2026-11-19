@@ -72,7 +72,7 @@ Source/src/TabForge.Core/Features/KeyboardMode/KeyboardHands.cs|1
 Source/src/TabForge.Core/Features/KeyboardMode/KeyboardModeSettings.cs|2
 Source/src/TabForge.Core/Features/KeyboardMode/KeyboardNoteSource.cs|1
 Source/src/TabForge.Core/Features/KeyboardMode/KeyboardStripGeometry.cs|1
-Source/src/TabForge.Core/LiveInput/LiveInputSettings.cs|1
+Source/src/TabForge.Core/Features/LiveInput/LiveInputSettings.cs|1
 Source/src/TabForge.Core/Midi/Processors/GeneratorProcessors.cs|1
 Source/src/TabForge.Core/Midi/Processors/ScaleProcessors.cs|1
 Source/src/TabForge.Core/Models/AudioInputs.cs|2

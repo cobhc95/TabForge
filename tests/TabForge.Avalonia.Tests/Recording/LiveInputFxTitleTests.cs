@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Features.LiveInput;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
@@ -70,7 +71,7 @@ public class LiveInputFxTitleTests
     [AvaloniaFact]
     public void TheHintFollowsTheLiveInputAndTurnsItOn()
     {
-        var hint = LiveInputHint.Build(new TabForge.LiveInput.LiveInputSession(new HintHost()));
+        var hint = LiveInputHint.Build(new TabForge.Features.LiveInput.LiveInputSession(new HintHost()));
         var host = new Window { Content = hint };
         host.Show();
         Assert.True(hint.IsVisible);   // live input is off
@@ -79,7 +80,7 @@ public class LiveInputFxTitleTests
         host.Close();
     }
 
-    private sealed class HintHost : TabForge.LiveInput.ILiveInputSessionHost
+    private sealed class HintHost : TabForge.Features.LiveInput.ILiveInputSessionHost
     {
         public PluginSettings Settings { get; } = new();
         public TabForge.Audio.AudioEngineClient Engine { get; } = new(new TabForge.Plugins.PluginTrust());
