@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Features.KeyboardMode;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using TabForge.Avalonia.Platform;

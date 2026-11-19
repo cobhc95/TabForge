@@ -1,4 +1,4 @@
-namespace TabForge.KeyboardMode.Hands;
+namespace TabForge.Features.KeyboardMode.Hands;
 
 // Owns: the hand-assignment value types: the hand, a note as the assigner sees it, and the tuning constants of the cost model with their fitted defaults.
 // Does not own: the assignment itself (HandAssigner) or where the notes come from (KeyboardNoteSource).

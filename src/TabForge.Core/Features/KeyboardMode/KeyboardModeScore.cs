@@ -1,4 +1,4 @@
-namespace TabForge.KeyboardMode;
+namespace TabForge.Features.KeyboardMode;
 
 // Owns: the running totals of a Keyboard mode run: hits, perfects, misses, extras, streak and accuracy, read from a judge in onset order.
 // Does not own: judging (KeyboardModeJudge) or any display.

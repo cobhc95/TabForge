@@ -1,6 +1,6 @@
 using System.Linq;
 using TabForge.Docking;
-using TabForge.KeyboardMode;
+using TabForge.Features.KeyboardMode;
 using TabForge.Platform;
 using Xunit;
 

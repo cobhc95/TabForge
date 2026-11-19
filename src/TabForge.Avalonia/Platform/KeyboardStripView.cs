@@ -4,7 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Styling;
-using TabForge.KeyboardMode;
+using TabForge.Features.KeyboardMode;
 using TabForge.Platform;
 using TabForge.Presenters;
 

@@ -1,4 +1,4 @@
-using TabForge.KeyboardMode;
+using TabForge.Features.KeyboardMode;
 
 namespace TabForge.Services;
 

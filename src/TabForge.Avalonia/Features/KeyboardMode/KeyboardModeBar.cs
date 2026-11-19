@@ -8,9 +8,11 @@ using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
 using TabForge.Avalonia.Platform;
-using TabForge.KeyboardMode;
+using TabForge.Features.KeyboardMode;
 
-namespace TabForge.Avalonia.Views;
+using TabForge.Avalonia.Views;
+
+namespace TabForge.Avalonia.Features.KeyboardMode;
 
 /// <summary>
 /// The Keyboard mode control bar of the pop-out: track, play / stop, speed, wait for me, skip, loop, hands, look-ahead - / +, note names, fingers and the MIDI input with its connected dot, in a wrap panel

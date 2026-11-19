@@ -1,6 +1,6 @@
 # Keyboard mode: which hand plays each note
 
-`Source/src/TabForge.Core/KeyboardMode/Hands` decides, for any part shown as keyboard notes (piano, guitar, bass, strings; sounding pitches with start and length), which notes the left hand plays and which the right, with no per-song settings. Entry point: `HandAssigner.Assign(IReadOnlyList<HandNote>)` (or with `HandAssignerOptions`), result index-aligned with the input, input in any order.
+`Source/src/TabForge.Core/Features/KeyboardMode/Hands` decides, for any part shown as keyboard notes (piano, guitar, bass, strings; sounding pitches with start and length), which notes the left hand plays and which the right, with no per-song settings. Entry point: `HandAssigner.Assign(IReadOnlyList<HandNote>)` (or with `HandAssignerOptions`), result index-aligned with the input, input in any order.
 
 ## Model
 

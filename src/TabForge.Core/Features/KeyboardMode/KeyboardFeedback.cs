@@ -1,4 +1,4 @@
-namespace TabForge.KeyboardMode;
+namespace TabForge.Features.KeyboardMode;
 
 /// <summary>Whether a key the player holds belongs to a note of the song (or the chord the song waits for), is an extra, or is held while nothing is judged (stopped).</summary>
 public enum KeyHold : byte { None, Correct, Extra, Held }

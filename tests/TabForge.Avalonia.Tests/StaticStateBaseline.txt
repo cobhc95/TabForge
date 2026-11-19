@@ -49,7 +49,7 @@ Source/src/TabForge.Avalonia/SelfTests/SelfTestTiming.cs|2
 Source/src/TabForge.Avalonia/Settings/ThemeSettingsBinding.cs|1
 Source/src/TabForge.Avalonia/Shell/WindowChromeFactory.cs|1
 Source/src/TabForge.Avalonia/Transport/AvaloniaEngineEvents.cs|1
-Source/src/TabForge.Avalonia/Views/KeyboardModeBar.cs|1
+Source/src/TabForge.Avalonia/Features/KeyboardMode/KeyboardModeBar.cs|1
 Source/src/TabForge.Avalonia/Views/MixTableWindow.cs|1
 Source/src/TabForge.Avalonia/Views/MixerColumnLayout.cs|3
 Source/src/TabForge.Avalonia/Views/MixerWindow.cs|1
@@ -68,10 +68,10 @@ Source/src/TabForge.Core/Docking/DockLayoutCatalog.cs|2
 Source/src/TabForge.Core/Docking/DockLayoutTree.cs|1
 Source/src/TabForge.Core/Docking/DockPaneTable.cs|1
 Source/src/TabForge.Core/Documents/BarCodec.cs|1
-Source/src/TabForge.Core/KeyboardMode/KeyboardHands.cs|1
-Source/src/TabForge.Core/KeyboardMode/KeyboardModeSettings.cs|2
-Source/src/TabForge.Core/KeyboardMode/KeyboardNoteSource.cs|1
-Source/src/TabForge.Core/KeyboardMode/KeyboardStripGeometry.cs|1
+Source/src/TabForge.Core/Features/KeyboardMode/KeyboardHands.cs|1
+Source/src/TabForge.Core/Features/KeyboardMode/KeyboardModeSettings.cs|2
+Source/src/TabForge.Core/Features/KeyboardMode/KeyboardNoteSource.cs|1
+Source/src/TabForge.Core/Features/KeyboardMode/KeyboardStripGeometry.cs|1
 Source/src/TabForge.Core/LiveInput/LiveInputSettings.cs|1
 Source/src/TabForge.Core/Midi/Processors/GeneratorProcessors.cs|1
 Source/src/TabForge.Core/Midi/Processors/ScaleProcessors.cs|1

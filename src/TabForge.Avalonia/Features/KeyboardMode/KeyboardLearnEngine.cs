@@ -8,12 +8,14 @@ using TabForge.Audio;
 using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Transport;
 using TabForge.Documents;
-using TabForge.KeyboardMode;
+using TabForge.Features.KeyboardMode;
 using TabForge.Models;
 using TabForge.Playback;
 using TabForge.Services;
 
-namespace TabForge.Avalonia.Views;
+using TabForge.Avalonia.Views;
+
+namespace TabForge.Avalonia.Features.KeyboardMode;
 
 // Owns: one window's Keyboard mode run (the Learn engine): the judge, score and feedback of the shown song's keyboard track, the wait gate that
 // pauses the song at each chord until its notes are pressed, the MIDI listener queue (the MIDI listener

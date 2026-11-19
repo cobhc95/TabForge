@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using TabForge.KeyboardMode;
+using TabForge.Features.KeyboardMode;
 using TabForge.Platform;
 using TabForge.Platform.Theme;
 using TabForge.Presenters;

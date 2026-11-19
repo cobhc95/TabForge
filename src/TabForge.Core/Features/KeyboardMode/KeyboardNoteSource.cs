@@ -3,7 +3,7 @@ using TabForge.Playback;
 using TabForge.Presenters;
 using TabForge.Visualization;
 
-namespace TabForge.KeyboardMode;
+namespace TabForge.Features.KeyboardMode;
 
 // Owns: one keyboard track of a compiled timeline as Keyboard mode notes (with each note's hand from KeyboardHands and the finger written in the score): one lane per key of a range window (the song's lowest to highest key, widened to whole octaves, at most the 88 keys),
 //   and the same notes as expected presses for the judge, with a loop unrolled the way the guitar view does.

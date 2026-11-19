@@ -7,11 +7,13 @@ using Avalonia.Input;
 using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Transport;
 using TabForge.Documents;
-using TabForge.KeyboardMode;
+using TabForge.Features.KeyboardMode;
 using TabForge.Models;
 using TabForge.Presenters;
 
-namespace TabForge.Avalonia.Views;
+using TabForge.Avalonia.Views;
+
+namespace TabForge.Avalonia.Features.KeyboardMode;
 
 // Owns: the Keyboard mode pop-out: the keyboard view in its own window, with a full screen button. F11 toggles full screen and Esc leaves it.
 //   With a Learn engine the bar drives the shared engine (the pane and the pop-out stay in sync: wait, hands, speed, loop, track, MIDI, look-ahead);

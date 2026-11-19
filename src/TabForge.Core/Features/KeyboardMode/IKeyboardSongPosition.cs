@@ -1,4 +1,4 @@
-namespace TabForge.KeyboardMode;
+namespace TabForge.Features.KeyboardMode;
 
 // Owns: the one value the keyboard view reads from playback: the song time, in milliseconds, at the playing position.
 // Does not own: the playback clock or the compiled timeline (the playback session), the notes, the drawing.

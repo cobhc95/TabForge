@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Features.KeyboardMode;
 using System.Linq;
 using Avalonia.Automation;
 using Avalonia.Controls;

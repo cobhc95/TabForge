@@ -1,4 +1,4 @@
-namespace TabForge.KeyboardMode;
+namespace TabForge.Features.KeyboardMode;
 
 // Owns: judging played key events against expected notes: matching a press to the nearest unresolved note of the same key within the good window, misses once a window has passed,
 //   extras (presses that match nothing), sustain (key held for the note length) and chord groups. Pure: no clock, no device, no UI; same input gives the same result.

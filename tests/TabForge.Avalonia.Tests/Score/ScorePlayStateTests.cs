@@ -77,7 +77,7 @@ public class ScorePlayStateTests
         var band = new BandView(document);
         band.BindPlayback(session);
         var strip = new KeyboardStripView();
-        using var binding = new TabForge.Avalonia.Views.KeyboardSessionBinding(strip, session, () => document.Project, () => 0);
+        using var binding = new TabForge.Avalonia.Features.KeyboardMode.KeyboardSessionBinding(strip, session, () => document.Project, () => 0);
         var window = Hosted(new StackPanel { Children = { band, strip } });
         session.PlayOrPause();
         session.PumpFrame();

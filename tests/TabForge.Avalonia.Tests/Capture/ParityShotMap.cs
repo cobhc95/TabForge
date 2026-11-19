@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Features.KeyboardMode;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,7 +14,7 @@ using TabForge.Avalonia.Views;
 using TabForge.Avalonia.Views.Presets;
 using TabForge.Documents;
 using TabForge.Playback;
-using TabForge.KeyboardMode;
+using TabForge.Features.KeyboardMode;
 using TabForge.Models;
 using TabForge.Plugins;
 using TabForge.Presenters;

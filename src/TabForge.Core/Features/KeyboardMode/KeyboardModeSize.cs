@@ -1,4 +1,4 @@
-namespace TabForge.KeyboardMode;
+namespace TabForge.Features.KeyboardMode;
 
 // Owns: the three sizes Keyboard mode can take (Normal, Large, Full), as the settings and the layout code name them.
 // Does not own: the saved size text (KeyboardModeSettings) or the dock arrangement built for a size (KeyboardModeLayoutSwap).

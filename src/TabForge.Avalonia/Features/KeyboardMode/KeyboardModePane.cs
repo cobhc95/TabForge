@@ -9,7 +9,9 @@ using TabForge.Avalonia.Transport;
 using TabForge.Documents;
 using TabForge.Models;
 
-namespace TabForge.Avalonia.Views;
+using TabForge.Avalonia.Views;
+
+namespace TabForge.Avalonia.Features.KeyboardMode;
 
 // Owns: the docked Keyboard mode: a header row ("Keyboard view", Pop out, close), the control bar and the falling-notes strip, in the dock's "learn" pane.
 //   With a Learn engine the bar drives the engine and the strip shows its run (judge, score, wait-gating, loop), staying in sync with the pop-out's bar;

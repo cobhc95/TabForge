@@ -1,4 +1,4 @@
-namespace TabForge.KeyboardMode;
+namespace TabForge.Features.KeyboardMode;
 
 // Owns: the plain data of the Keyboard mode judge: tolerance windows, an expected note, a played event and the result of one expected note. Times are song seconds.
 // Does not own: the matching rules (KeyboardModeJudge), the totals (KeyboardModeScore) or where the notes and events come from.

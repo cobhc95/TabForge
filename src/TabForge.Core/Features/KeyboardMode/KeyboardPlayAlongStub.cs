@@ -1,7 +1,7 @@
 using TabForge.Models;
 using TabForge.Playback;
 
-namespace TabForge.KeyboardMode;
+namespace TabForge.Features.KeyboardMode;
 
 // Owns: the fixed made-up play-along state of the Keyboard mode captures: a two-hand riff written over four bars of one track (in memory), the note source of that track, and a judge, score and
 //   feedback as if the song had been played a little off the beat up to a moment of a bar (one note missed, the last note's grade flashing, the notes sounding now held right, one extra key held).

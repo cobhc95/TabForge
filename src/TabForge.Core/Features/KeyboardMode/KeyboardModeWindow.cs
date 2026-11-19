@@ -1,4 +1,4 @@
-namespace TabForge.KeyboardMode;
+namespace TabForge.Features.KeyboardMode;
 
 // Owns: which notes lie in a stretch of time, with a loop unrolled so the notes after the loop end are the loop's first notes again.
 // Does not own: the notes (IKeyboardModeNoteSource), the playing position (KeyboardModeClock) or drawing.

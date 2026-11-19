@@ -1,4 +1,4 @@
-namespace TabForge.KeyboardMode;
+namespace TabForge.Features.KeyboardMode;
 
 // Owns: which keys light because their note is due: from just before a note's onset until its end (at least a short while), per hand, for the notes of a placed page; a hidden hand's notes light nothing.
 // Does not own: the notes page (KeyboardModeWindow.Collect), the held keys (KeyboardFeedback) or drawing.

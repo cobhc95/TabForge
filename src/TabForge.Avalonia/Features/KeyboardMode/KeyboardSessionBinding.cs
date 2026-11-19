@@ -2,10 +2,12 @@ using System;
 using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Transport;
 using TabForge.Documents;
-using TabForge.KeyboardMode;
+using TabForge.Features.KeyboardMode;
 using TabForge.Models;
 
-namespace TabForge.Avalonia.Views;
+using TabForge.Avalonia.Views;
+
+namespace TabForge.Avalonia.Features.KeyboardMode;
 
 // Owns: driving one keyboard strip from the active playback session: the song position (SessionKeyboardSongPosition), the notes of the chosen track
 //   once the song plays, the progress, and a repaint on every live frame. With a Learn engine, the strip also gets the run (judge, score, feedback,

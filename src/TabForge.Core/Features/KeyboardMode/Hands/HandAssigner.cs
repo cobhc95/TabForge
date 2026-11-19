@@ -1,4 +1,4 @@
-namespace TabForge.KeyboardMode.Hands;
+namespace TabForge.Features.KeyboardMode.Hands;
 
 // Owns: deciding which hand plays each note of a part (any instrument, as sounding pitches): a Viterbi pass over the chords in time order, where each chord's state is
 //   its split point (the lowest k notes left, the rest right, so a chord never crosses), each state carries both hands' context along its best path, and a cost model

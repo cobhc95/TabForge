@@ -8,12 +8,14 @@ using TabForge.Audio;
 using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Transport;
 using TabForge.Documents;
-using TabForge.KeyboardMode;
+using TabForge.Features.KeyboardMode;
 using TabForge.Models;
 using TabForge.Playback;
 using TabForge.Services;
 
-namespace TabForge.Avalonia.Views;
+using TabForge.Avalonia.Views;
+
+namespace TabForge.Avalonia.Features.KeyboardMode;
 
 // Owns: the MIDI listener, the run calibration, the wait gate and the practice silence of the Learn engine (partial of KeyboardLearnEngine).
 // Tests: TabForge.Avalonia.Tests.KeyboardLearnEngineTests.

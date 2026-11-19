@@ -4,11 +4,11 @@ using Avalonia.Controls;
 using TabForge.Avalonia.Views;
 using TabForge.Avalonia.Views.Docking;
 using TabForge.Docking;
-using TabForge.KeyboardMode;
+using TabForge.Features.KeyboardMode;
 using TabForge.Services;
 using TabForge.Commands;
 
-namespace TabForge.Avalonia;
+namespace TabForge.Avalonia.Features.KeyboardMode;
 
 // Owns: View > Keyboard mode (the View.LearnMode command): enters the Keyboard mode layout (the arrangement KeyboardModeLayoutSwap builds for the
 //   saved size, with the learn pane shown), or puts back the arrangement it replaced; the check of its row; the "on" notice; the pane's X

@@ -1,10 +1,11 @@
+using TabForge.Avalonia.Features.KeyboardMode;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Styling;
 using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Views;
-using TabForge.KeyboardMode;
+using TabForge.Features.KeyboardMode;
 using TabForge.Platform;
 using TabForge.Platform.Theme;
 using TabForge.Presenters;

@@ -81,7 +81,7 @@ public sealed class AppSettings
     /// <summary>The track rows' level meters: the same choices, the apply-to-all flag and the pre- or post-fader tap.</summary>
     public TabForge.Audio.Metering.TrackMeterSettings TrackMeter { get; set; } = new();
     /// <summary>Keyboard mode (experimental): look-ahead and note size.</summary>
-    public KeyboardMode.KeyboardModeSettings Learn { get; set; } = new();
+    public TabForge.Features.KeyboardMode.KeyboardModeSettings Learn { get; set; } = new();
     /// <summary>The left icon strip and its Composer panel.</summary>
     public TabForge.Features.LeftStrip.LeftStripSettings LeftStrip { get; set; } = new();
     /// <summary>Dock tree, selected tabs, closed panels, and floating-window bounds.</summary>

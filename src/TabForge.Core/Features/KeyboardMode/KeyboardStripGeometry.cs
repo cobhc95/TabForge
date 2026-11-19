@@ -1,7 +1,7 @@
 using TabForge.Platform;
 using TabForge.Presenters;
 
-namespace TabForge.KeyboardMode;
+namespace TabForge.Features.KeyboardMode;
 
 // Owns: the numbers of the keyboard falling-notes strip as pure maths: the key window (the notes' range in whole octaves, at least three, widened by octaves inside the 88 until the keys keep
 //   real piano proportions within the height cap), the x and width of every key (white keys evenly spaced, black keys 58 % wide and 63 % long, off the seams as on a piano), the strip's height,

@@ -1,4 +1,4 @@
-namespace TabForge.KeyboardMode;
+namespace TabForge.Features.KeyboardMode;
 
 /// <summary>Which hand's notes the player practises: both, one with the other faded, or one with the other hidden.</summary>
 public enum KeyboardHandsFilter { Both, Left, Right, LeftOnly, RightOnly }

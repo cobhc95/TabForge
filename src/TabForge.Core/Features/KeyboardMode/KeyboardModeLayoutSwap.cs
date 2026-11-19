@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using TabForge.Docking;
 
-namespace TabForge.KeyboardMode;
+namespace TabForge.Features.KeyboardMode;
 
 // Owns: the Keyboard mode dock arrangement as pure data: the layout for a size built from the layout in use;
 //   the pane id "learn" is never kept in a saved layout (WorkspaceNormalizer removes it).

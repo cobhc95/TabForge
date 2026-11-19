@@ -1,4 +1,4 @@
-namespace TabForge.KeyboardMode;
+namespace TabForge.Features.KeyboardMode;
 
 // Owns: the plain data of the note stream: one note (lane, MIDI key, time, length, hand, finger) and the source contract the falling-notes view reads.
 // Does not own: how a source is built from a score (KeyboardNoteSource), which notes are in view (KeyboardModeWindow) or any drawing.

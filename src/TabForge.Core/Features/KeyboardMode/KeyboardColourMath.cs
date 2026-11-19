@@ -1,7 +1,7 @@
 using TabForge.Platform;
 using TabForge.Platform.Theme;
 
-namespace TabForge.KeyboardMode;
+namespace TabForge.Features.KeyboardMode;
 
 // Owns: the choice of ink (light or dark) that reads better on a keyboard key's ground.
 // Does not own: the colour arithmetic (ThemeColours.Blend, ThemeColours.Contrast), which colours are used (the palette keys) or drawing.

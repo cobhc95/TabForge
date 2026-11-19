@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace TabForge.KeyboardMode;
+namespace TabForge.Features.KeyboardMode;
 
 // Owns: the saved Keyboard mode values (timing tolerance, look-ahead, size, MIDI input, wait, hands filter, note names, finger numbers) and their bounds.
 // Does not own: the Preferences rows (KeyboardModeSettingsRows), the control bar (KeyboardModeControlBar), the pane or the module that merges them.
