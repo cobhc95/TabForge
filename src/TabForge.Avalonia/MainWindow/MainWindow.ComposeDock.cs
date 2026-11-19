@@ -11,7 +11,6 @@ using Avalonia.VisualTree;
 using TabForge.Platform.Theme;
 using TabForge.Audio;
 using TabForge.Avalonia.Features.Recording.Presenter;
-using TabForge.Avalonia.Features.Lyrics;
 using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Shell;
 using TabForge.Avalonia.Views;
@@ -323,7 +322,7 @@ public sealed partial class MainWindow
         setup.RegisterShared("rhythm", rhythm);
         setup.RegisterShared("layout", layout);
         setup.RegisterShared(DockPaneTable.ViewTempoId, viewTempo);
-        LyricsPaneFlow.Register(setup, songs, playback);
+        WindowFeatureModules.RegisterPanes(setup, songs, playback, subscriptions);
         setup.RegisterPlaceholdersForTheRest();
         d.FretboardMenu = fretboardMenu;
         d.Fretboard = fretboard;

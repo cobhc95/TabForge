@@ -61,7 +61,7 @@ public sealed partial class MainWindow
         // `public static readonly IReadOnlyList<string> Commands`; the menu test discovers that field by reflection.
         TabForge.Avalonia.Platform.Controls.HotkeyTip.SetSource(this, () => settings?.Settings.Hotkeys ?? new TabForge.Services.HotkeySettings());
         MainWindowHelpMenu.Register(commands, this);
-        TabForge.Avalonia.Features.Help.HelpFeature.Register(commands, this, settings);
+        WindowFeatureModules.RegisterCommands(commands, this, settings);
         MainWindowCommandPalette.Register(commands, this, () => settings?.Settings.Hotkeys ?? new TabForge.Services.HotkeySettings());
         MainWindowUpdateCheck.Register(commands, this, settings, showStatus);
         MainWindowTrackListRows.Register(commands, songs, panes, settings, this, showStatus, () => trackListFit?.Fit());

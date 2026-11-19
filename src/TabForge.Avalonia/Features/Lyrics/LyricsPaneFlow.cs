@@ -1,5 +1,7 @@
+using System;
 using TabForge.Avalonia.Transport;
 using TabForge.Avalonia.Views.Docking;
+using TabForge.Documents;
 
 namespace TabForge.Avalonia.Features.Lyrics;
 
@@ -8,13 +10,15 @@ namespace TabForge.Avalonia.Features.Lyrics;
 // Tests: TabForge.Avalonia.Tests.LyricsSongPaneTests.
 public static class LyricsPaneFlow
 {
-    /// <summary>Registers the Lyrics pane as a shared control and follows the active tab from now on.</summary>
-    public static LyricsSongPane Register(DockPaneSetup setup, MainWindowTabs songs, AvaloniaPlaybackSessions? playback)
+    internal static WindowFeatureModule Module { get; } = new(RegisterPanes: Register);
+
+    private static void Register(DockPaneSetup setup, Func<SongDocument> active,
+        Func<AvaloniaPlaybackSession?> playback, Action<Action> observeActive)
     {
-        var pane = new LyricsSongPane(() => playback?.For(songs.Active));
-        songs.ActiveChanged += () => pane.Show(songs.Active);
-        pane.Show(songs.Active);
+        var pane = new LyricsSongPane(playback);
+        void Reload() => pane.Show(active());
+        observeActive(Reload);
+        Reload();
         setup.RegisterShared("lyrics", pane);
-        return pane;
     }
 }

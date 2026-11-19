@@ -13,6 +13,8 @@ public sealed class HelpFeature
 {
     public const string OpenId = "Help.Open";
 
+    internal static WindowFeatureModule Module { get; } = new(RegisterCommands: Register);
+
     /// <summary>The commands the Help registers (the menu tests discover this list).</summary>
     public static readonly IReadOnlyList<string> Commands = new[] { OpenId };
 
