@@ -8,7 +8,7 @@ using Xunit;
 namespace TabForge.Avalonia.Tests;
 
 // Owns: the repo-map truth guard: every backticked type/test/file named by the
-//   docs map (Source/docs/*.md, AREA-MAP.md) and by // headers of src/**/*.cs
+//   source map and guides (Source/docs) and by // headers of src/**/*.cs
 //   exists in the tree.
 // Does not own: style, budgets or behaviour (architecture self-tests own those).
 // Tests: DocTruthTests (this file).
@@ -383,17 +383,6 @@ public sealed class DocTruthTests
                 foreach (Match m in Backticked.Matches(line)) CheckSpan(m.Groups[1].Value, Path.GetFileName(md), docs);
             }
         }
-        var areaMap = Path.Combine(source, "src", "TabForge.Avalonia", "AREA-MAP.md");
-        if (File.Exists(areaMap))
-        {
-            docsScanned++;
-            foreach (var line in File.ReadLines(areaMap))
-            {
-                if (line.Contains("removed in Batch 2") || line.Contains("former full-suite")) continue;
-                if (line.Contains("→") || line.Contains("->")) continue;
-                foreach (Match m in Backticked.Matches(line)) CheckSpan(m.Groups[1].Value, "AREA-MAP.md", Path.GetDirectoryName(areaMap)!);
-            }
-        }
         var headersScanned = headerSpans.Count > 0 ? Directory.GetFiles(Path.Combine(source, "src"), "*.cs", SearchOption.AllDirectories).Length : 0;
         foreach (var (span, where, baseDir) in headerSpans) CheckSpan(span, where, baseDir);
 
@@ -433,9 +422,9 @@ public sealed class DocTruthTests
         var index = File.ReadAllText(Path.Combine(repo, "Source", "docs", "INDEX.md"));
         Assert.Contains($"{rows} main-window command ids", index, StringComparison.Ordinal);
         Assert.DoesNotContain("task-48", index, StringComparison.Ordinal);
-        Assert.Contains("SelfTests/README.md", index, StringComparison.Ordinal);
-        Assert.True(File.Exists(Path.Combine(repo, "Source", "src", "TabForge.Avalonia", "SelfTests", "README.md")),
-            "INDEX.md names src/TabForge.Avalonia/SelfTests/README.md, which must exist");
+        Assert.Contains("architecture/ARCHITECTURE.md#built-in-self-tests", index, StringComparison.Ordinal);
+        var architecture = File.ReadAllText(Path.Combine(repo, "Source", "docs", "architecture", "ARCHITECTURE.md"));
+        Assert.Contains("## Built-in self-tests", architecture, StringComparison.Ordinal);
 
         Assert.False(Directory.Exists(Path.Combine(repo, "Source", "src", "TabForge.Avalonia", "Assets", "Icons", "Transport", "TabForge_Stop_Button_Assets")),
             "unshipped TabForge_Stop_Button_Assets must stay deleted (flat csproj glob and top-level-only preload never read it)");

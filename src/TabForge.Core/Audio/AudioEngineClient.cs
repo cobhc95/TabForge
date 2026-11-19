@@ -27,7 +27,7 @@ public sealed partial class AudioEngineClient : IDisposable
 {
     /// <summary>How tracks sound (route, auto GM) for this engine: the settings applier writes it, every routing decision reads it. One per client, never a static.</summary>
     public TabForge.Models.MixerOptions Mixer { get; } = new();
-    /// <summary>The program's one live input (every window and tab shares this client). See LiveInput/README.md.</summary>
+    /// <summary>The program's one live input (every window and tab shares this client).</summary>
     public TabForge.Features.LiveInput.LiveInputArm LiveInput { get; } = new();
     /// <summary>The metronome and count-in clicks' own engine slot (no song track). See ClickDestination.cs.</summary>
     public ClickDestination Click { get; } = new();

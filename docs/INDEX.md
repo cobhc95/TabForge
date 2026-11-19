@@ -1,12 +1,11 @@
 # TabForge docs map
 
-Read in this order: README → ARCHITECTURE → AREA-MAP → COMMANDS.
+Start with the README and the source map.
 
 | Doc | What lives there |
 |---|---|
-| [ARCHITECTURE](architecture/ARCHITECTURE.md) | System layout and seams |
-| [AREA-MAP](../src/TabForge.Avalonia/AREA-MAP.md) | Which files own each area, and the test class for it |
-| [COMMANDS](guides/COMMANDS.md) | 333 main-window command ids and where they are registered (generated) |
+| [Architecture and source map](architecture/ARCHITECTURE.md) | Layers, folder owners, registrations and shared controls |
+| [COMMANDS](guides/COMMANDS.md) | 337 main-window command ids and where they are registered (generated) |
 | [TOOLS_AND_HOTKEYS](guides/TOOLS_AND_HOTKEYS.md) | Palette tools, hotkeys, bindings |
 | [TESTING](guides/TESTING.md) | The two test suites and how to run them |
 | [RELEASING](guides/RELEASING.md) | One-command release and release conventions |
@@ -20,4 +19,4 @@ Read in this order: README → ARCHITECTURE → AREA-MAP → COMMANDS.
 | [CHANGELOG](CHANGELOG.md) | Release history |
 | [SECURITY](SECURITY.md), [THIRD_PARTY](THIRD_PARTY.md) | Security policy, third-party licences |
 | media/, tutorial/ | Pictures used by the docs, the in-app tutorial chapters |
-| [SelfTests](../src/TabForge.Avalonia/SelfTests/README.md) | The built-in self-test |
+| [Built-in self-tests](architecture/ARCHITECTURE.md#built-in-self-tests) | Test entry points and registration |

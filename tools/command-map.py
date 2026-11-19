@@ -23,7 +23,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 APP = ROOT / "Source" / "src" / "TabForge.Avalonia"
 OUTPUT = ROOT / "Source" / "docs" / "guides" / "COMMANDS.md"
-SOURCES = sorted((APP / "MainWindow").rglob("MainWindow*.cs"), key=lambda path: path.name)
+SOURCES = sorted(
+    path
+    for folder in ("MainWindow", "Features")
+    for path in (APP / folder).rglob("MainWindow*.cs")
+)
 
 COMMANDS_FIELD = re.compile(
     r"public static readonly (?:string\[\]|IReadOnlyList<string>|IReadOnlyCollection<string>)"
@@ -35,16 +39,27 @@ LITERAL = re.compile(r"\"([^\"]+)\"")
 IDENT = re.compile(r"\b([A-Z][A-Za-z0-9_]*)(?:\.([A-Z][A-Za-z0-9_]*))?\b")
 TYPE_DECL = re.compile(r"\b(?:class|record|struct|enum)\s+([A-Z][A-Za-z0-9_]*)")
 INLINE_ADD = re.compile(
-    r"\bcommands\.(?:Add|AddWhen)\(\s*(?:\"([^\"]+)\"|([A-Za-z_][A-Za-z0-9_]*)(?:\.([A-Za-z_][A-Za-z0-9_]*))?)"
+    r"\bcommands\.(?:Add|AddWhen)\(\s*(?:\"([^\"]+)\"|([A-Za-z_][A-Za-z0-9_]*)(?:\.([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)?))?)"
 )
 
 
-def const_pairs(text):
+def const_pairs(text, types=None):
     """The `const string` / `static readonly string` name -> value pairs declared in a file."""
     pairs = {}
     for decl in re.finditer(r"(?:const|static readonly) string ([^;]+);", text):
         for name, value in STRING_PAIR.findall(decl.group(1)):
             pairs.setdefault(name, value)
+        if types is None:
+            continue
+        for name, reference in re.findall(r"(\w+)\s*=\s*([A-Z]\w*(?:\.[A-Z]\w*)+)\s*(?=,|$)", decl.group(1)):
+            parts = reference.split(".")
+            if len(parts) == 3 and parts[0] == "CommandIds":
+                # The command catalogue guard enforces area/member identity.
+                pairs.setdefault(name, ".".join(parts[1:]))
+            elif len(parts) == 2 and parts[0] in types:
+                value = const_pairs(types[parts[0]]).get(parts[1])
+                if value is not None:
+                    pairs.setdefault(name, value)
     return pairs
 
 
@@ -73,7 +88,7 @@ def inline_rows(types):
     rows = []
     for path in sorted(APP.rglob("*.cs")):
         text = path.read_text(encoding="utf-8", errors="replace")
-        own = const_pairs(text)
+        own = const_pairs(text, types)
         name = path.relative_to(APP).as_posix()
         for match in INLINE_ADD.finditer(text):
             # A prefix used in a concatenation builds its ids at run time; it is not an id of its own.
@@ -86,7 +101,9 @@ def inline_rows(types):
                 if type_name in own:
                     rows.append((own[type_name], name))
             else:
-                value = const_pairs(types[type_name]).get(member) if type_name in types else None
+                value = member if type_name == "CommandIds" and "." in member else (
+                    const_pairs(types[type_name], types).get(member) if type_name in types else None
+                )
                 if value is not None:
                     rows.append((value, name))
     return rows
@@ -117,8 +134,9 @@ def ids_of(text, block, types, where):
     """The command ids a Commands initializer names, resolving literals, consts and `Type.Member`."""
     if "Presets.Select" in block:
         return zoom_preset_ids(text)
+    block = re.sub(r'\bCommandIds\.([A-Z]\w*\.[A-Z]\w*)', r'"\1"', block)
     ids = LITERAL.findall(block)
-    own = const_pairs(text)
+    own = const_pairs(text, types)
     # The identifiers are read from the initializer with its string literals removed, so a quoted id such as
     # "Bar.First" is not mistaken for a Type.Member reference.
     for match in IDENT.finditer(LITERAL.sub("", block)):
@@ -130,7 +148,7 @@ def ids_of(text, block, types, where):
                 ids.append(own[type_name])
             continue
         if type_name in types:
-            value = const_pairs(types[type_name]).get(member)
+            value = const_pairs(types[type_name], types).get(member)
             if value is None:
                 # A string[] helper (FeatureHotkeyIds.BandViewRowIds()): its body names the consts.
                 expanded = method_ids(types[type_name], member)
@@ -161,7 +179,7 @@ def main():
         except SystemExit as error:
             unresolved_files.append(str(error))
             continue
-        rows.extend((command_id, path.name) for command_id in ids)
+        rows.extend((command_id, path.relative_to(APP).as_posix()) for command_id in ids)
 
     # Inline `commands.Add` / `commands.AddWhen` registrations fill the ids no `Commands` array lists.
     seen = {command_id for command_id, _ in rows}
@@ -190,7 +208,7 @@ def main():
         "```",
         "",
         f"**{len(rows)} command ids** in {files} files (all distinct). Generated from the `Commands` arrays of"
-        " `Source/src/TabForge.Avalonia/MainWindow/**/MainWindow*.cs` and from the inline `commands.Add` / `commands.AddWhen` registrations whose id"
+        " `MainWindow*.cs` files in the window and feature folders and from the inline `commands.Add` / `commands.AddWhen` registrations whose id"
         " is a literal or a constant. Not listed: the command table's own handler map (`File.Exit`, `View.ResetPanels`), ids built"
         " at run time from a prefix (`ContextMenuRows.ScoreLayoutIdPrefix` rows), and ids passed through a loop variable already"
         " covered by a `Commands` array.",

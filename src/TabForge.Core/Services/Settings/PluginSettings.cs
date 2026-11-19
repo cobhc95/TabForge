@@ -31,7 +31,7 @@ public sealed class PluginSettings
     public bool PlayAllSetAutomatically { get; set; }
     /// <summary>App-wide monitoring effects chain (speaker / room calibration), used by every song that keeps "Use for all projects" ticked. Live output only: never rendered or exported.</summary>
     public TabForge.Models.BusChain MonitorFx { get; set; } = new();
-    /// <summary>Live input (hear an input through the app-wide live FX chain): its chain, input and options. See LiveInput/README.md.</summary>
+    /// <summary>Live input (hear an input through the app-wide live FX chain): its chain, input and options.</summary>
     public TabForge.Features.LiveInput.LiveInputSettings LiveInput { get; set; } = new();
     /// <summary>Tick a track's GM sound automatically when no VST instrument plays it (chain off, instrument bypassed / removed), untick when one does; manual unticks are respected.</summary>
     public bool AutoGmSound { get; set; } = true;

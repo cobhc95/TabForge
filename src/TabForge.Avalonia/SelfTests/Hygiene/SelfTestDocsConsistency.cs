@@ -148,7 +148,6 @@ public static partial class SelfTest
                 var isLink = reference.StartsWith("link:", StringComparison.Ordinal);
                 var r = reference[(isLink ? 5 : 5)..];
                 if (DocReferenceExternalNames.Contains(r, StringComparer.OrdinalIgnoreCase)) continue;
-                if (r == "Tabs/" && doc == "Source/src/TabForge.Avalonia/SelfTests/README.md") continue;   // named only to forbid it: the local-only Tabs folder is never a reference
                 var rel = r.Replace('\\', '/');
                 string? resolved = null;
                 if (isLink)
