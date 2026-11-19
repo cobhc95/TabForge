@@ -9,9 +9,9 @@ using Avalonia.Media;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using TabForge.Avalonia.Transport;
 using TabForge.Documents;
-using TabForge.Lyrics;
+using TabForge.Features.Lyrics;
 
-namespace TabForge.Avalonia.Lyrics;
+namespace TabForge.Avalonia.Features.Lyrics;
 
 // Owns: the Lyrics dock pane: one row per bar of the shown song (bar number, section name, a TextBox of the bar's syllables). Enter commits
 //       the bar and moves to the next one, leaving the box commits it, and the row of the bar under the playhead takes the AccentSoft fill.

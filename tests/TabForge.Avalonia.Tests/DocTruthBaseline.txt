@@ -23,7 +23,6 @@ ARCHITECTURE.md: `WarmIdle`
 ARCHITECTURE.md: `net10.0-windows`
 ARCHITECTURE.md: `net10.0`
 AREA-MAP.md: `Autosave/`
-AREA-MAP.md: `Lyrics/`
 AREA-MAP.md: `Playback/`
 AREA-MAP.md: `Transport/`
 CAPTURE_SCRIPT.md: `EffectBend`

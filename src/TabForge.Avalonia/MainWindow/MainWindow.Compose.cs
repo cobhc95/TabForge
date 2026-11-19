@@ -11,7 +11,7 @@ using Avalonia.VisualTree;
 using TabForge.Platform.Theme;
 using TabForge.Audio;
 using TabForge.Avalonia.Features.Recording.Presenter;
-using TabForge.Avalonia.Lyrics;
+using TabForge.Avalonia.Features.Lyrics;
 using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Shell;
 using TabForge.Avalonia.Views;

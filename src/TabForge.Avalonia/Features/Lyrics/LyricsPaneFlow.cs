@@ -1,7 +1,7 @@
 using TabForge.Avalonia.Transport;
 using TabForge.Avalonia.Views.Docking;
 
-namespace TabForge.Avalonia.Lyrics;
+namespace TabForge.Avalonia.Features.Lyrics;
 
 // Owns: placing the Lyrics pane in the dock and keeping it on the active tab's song.
 // Does not own: the lyrics text and its edit (LyricsSongPane), the per-bar editor (LyricsByBarWindow), the tab strip (MainWindowTabs), the playback sessions.

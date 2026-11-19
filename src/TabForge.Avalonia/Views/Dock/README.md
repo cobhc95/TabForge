@@ -22,7 +22,7 @@ Retired ids `practice` and `playback` are still accepted from old saved layouts,
 |---|---|---|
 | `tools`, `structure`, `rhythm`, `layout` | `MainWindow.cs` `RegisterShared` | `Views/ToolsPaneView.cs` (one tab per Tools pane page) |
 | `sections` | `MainWindow.cs` `SectionLinks.NewPanel` | `Views/SectionLinks.cs` (`SectionsPanelView`) |
-| `lyrics` | `Lyrics/LyricsPaneFlow.Register` | `Lyrics/LyricsSongPane.cs` |
+| `lyrics` | `Features/Lyrics/LyricsPaneFlow.Register` | `Features/Lyrics/LyricsSongPane.cs` |
 | `viewtempo` | `MainWindow.cs`, `DockPaneTable.ViewTempoId` | `Views/ViewTempoBarView.cs` |
 | `instrument` | `MainWindow.cs`, `setup.Register("instrument", …)` | `Platform/InstrumentPanelStrip.cs` |
 | `timeline` | `MainWindowDocumentPanes.NewArrangement` | `Views/ArrangementView.cs` |

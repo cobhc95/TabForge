@@ -2,7 +2,7 @@ using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.VisualTree;
-using TabForge.Avalonia.Lyrics;
+using TabForge.Avalonia.Features.Lyrics;
 using TabForge.Documents;
 using TabForge.Models;
 using Xunit;

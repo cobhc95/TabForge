@@ -8,7 +8,7 @@ using TabForge.Avalonia.Features.Recording.Presenter;
 using TabForge.Avalonia;
 using TabForge.Avalonia.Views;
 using TabForge.Documents;
-using TabForge.Lyrics;
+using TabForge.Features.Lyrics;
 using TabForge.Models;
 using TabForge.Presets;
 using TabForge.Services;

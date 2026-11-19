@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using TabForge.Avalonia.Lyrics;
+using TabForge.Avalonia.Features.Lyrics;
 using TabForge.Avalonia.Views.Docking;
 using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Views;

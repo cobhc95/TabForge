@@ -381,7 +381,7 @@ public sealed class InsertMenuTests : IDisposable
         Item(main, "Insert.Lyrics").RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
         Dispatcher.UIThread.RunJobs();
         Assert.True(main.DockWorkspace.IsPanelVisible("lyrics"));
-        var pane = main.GetLogicalDescendants().OfType<TabForge.Avalonia.Lyrics.LyricsSongPane>().Single();
+        var pane = main.GetLogicalDescendants().OfType<TabForge.Avalonia.Features.Lyrics.LyricsSongPane>().Single();
         Assert.True(pane.IsEffectivelyVisible);
         main.Close();
     }

@@ -2,7 +2,7 @@ using Avalonia.Controls;
 using TabForge.Avalonia.Transport;
 using TabForge.Documents;
 
-namespace TabForge.Avalonia.Lyrics;
+namespace TabForge.Avalonia.Features.Lyrics;
 
 // Owns: the window that shows the per-bar syllable editor (LyricsPaneView) of one song, opened from the Lyrics pane's "Edit by bar" button.
 // Does not own: the syllables (LyricsController), the song-level lyrics (LyricsSongPane), the playback (the session it is given).

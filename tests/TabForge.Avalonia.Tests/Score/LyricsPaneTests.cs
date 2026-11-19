@@ -1,6 +1,6 @@
-using TabForge.Avalonia.Lyrics;
+using TabForge.Avalonia.Features.Lyrics;
 using TabForge.Documents;
-using TabForge.Lyrics;
+using TabForge.Features.Lyrics;
 using TabForge.Presets;
 using Avalonia.Headless.XUnit;
 using Xunit;

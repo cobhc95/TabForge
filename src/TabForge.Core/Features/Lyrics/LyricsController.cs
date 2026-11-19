@@ -1,7 +1,7 @@
 using TabForge.Documents;
 using TabForge.Models;
 
-namespace TabForge.Lyrics;
+namespace TabForge.Features.Lyrics;
 
 /// <summary>One bar of the lyric panel: its zero-based index, its section name and its syllables as one line of text.</summary>
 public readonly record struct LyricBarRow(int BarIndex, string SectionName, string Text);
