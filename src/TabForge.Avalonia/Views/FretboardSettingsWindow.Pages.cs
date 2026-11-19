@@ -31,21 +31,17 @@ public sealed partial class FretboardSettingsWindow
     private void ShowSection(int section)
     {
         var panel = new StackPanel { Spacing = FretboardChromeMetrics.PageCardGap }.WithMargin(18, 14, 18, 14);
-        var titleStack = new StackPanel();
+        var titleStack = new StackPanel { Spacing = 2 };
         titleStack.Children.Add(new TextBlock { Text = SectionName(Math.Clamp(section, 0, SectionCount - 1)), FontSize = FretboardChromeMetrics.PageTitleSize, FontWeight = global::Avalonia.Media.FontWeight.SemiBold });
-        var sub = new TextBlock { Text = SectionSubtitle(section), FontSize = 12, Margin = new global::Avalonia.Thickness(0, 2, 0, 0) };
-        sub[!TextBlock.ForegroundProperty] = new global::Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("MutedTextBrush");
-        titleStack.Children.Add(sub);
+        titleStack.Children.Add(ToolWindowParts.Small(SectionSubtitle(section)));
         var reset = new Button { Name = "FretboardResetSection", Content = "Reset section", VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center };
-        reset.Classes.Add("PrefsActionButton");
+        reset.Classes.Add("PrefsActionReset");
         reset.Click += (_, _) => ResetSection(SelectedSection);
         DockPanel.SetDock(reset, Dock.Right);
-        var headerBorder = new Border { Child = new DockPanel { Children = { reset, titleStack } }, Padding = new global::Avalonia.Thickness(0, 0, 0, 10), BorderThickness = new global::Avalonia.Thickness(0, 0, 0, 1) };
-        headerBorder[!Border.BorderBrushProperty] = new global::Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("BorderSoftBrush");
-        panel.Children.Add(headerBorder);
+        panel.Children.Add(new DockPanel { Children = { reset, titleStack } });
         global::Avalonia.Controls.Controls Card(string name)
         {
-            var rows = new StackPanel();
+            var rows = new StackPanel { Spacing = 12 };
             panel.Children.Add(PreferencesSpecialPages.Card(name, rows));
             return rows.Children;
         }
@@ -117,24 +113,24 @@ public sealed partial class FretboardSettingsWindow
         _noteColourButtons.Clear();
         foreach (var role in FretNoteColours.Roles)
         {
-            rows.Add(ScalePopupLayout.SectionLabel(FretNoteColours.Name(role).ToUpperInvariant()));
             var light = ActualThemeVariant == global::Avalonia.Styling.ThemeVariant.Light;
             var button = new ColourButton(FretNoteColours.DefaultHex(role, light), _settings.Appearance.RecentColours)
             {
-                Name = "FretboardNoteColour" + FretNoteColours.Name(role), Width = global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.ColourSettingWidth,
-                HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Left,
+                Name = "FretboardNoteColour" + FretNoteColours.Name(role),
+                Width = global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.ColourSettingWidth,
+                Classes = { AvaloniaFormControlStyles.PrefsFieldClass },
             };
             AutomationProperties.SetName(button, FretNoteColours.Name(role) + " note colour");
             button.Show(FretNoteColours.Shown(role, FretNoteColours.Get(ed, role), light));
             button.Previewed += hex => { FretNoteColours.Set(ed, role, hex); Changed(rebuild: false); };   // every popup click shows on the board at once
             button.Picked += hex => { FretNoteColours.Set(ed, role, hex); Changed(rebuild: false); };
             _noteColourButtons[role] = button;
-            rows.Add(button);
+            rows.Add(SettingsWindowChrome.CreateSettingRow(FretNoteColours.Name(role), button, $"Colour for {FretNoteColours.Name(role).ToLowerInvariant()} notes on the fretboard."));
         }
-        var reset = new Button { Name = "FretboardResetNoteColours", Content = "Reset colours" }.WithMargin(0, 12, 0, 0);
+        var reset = new Button { Name = "FretboardResetNoteColours", Content = "Reset colours" };
         reset.Click += (_, _) => { foreach (var role in FretNoteColours.Roles) FretNoteColours.Set(ed, role, ""); Changed(); };
         rows.Add(reset);
-        Chips(rows, "DOT STYLE", "FretboardDotStyle", FretNoteColours.DotStyles, () => FretNoteColours.NormalizeStyle(ed.FretDotStyle), v => ed.FretDotStyle = v);
+        Chips(rows, "Dot style", "FretboardDotStyle", FretNoteColours.DotStyles, () => FretNoteColours.NormalizeStyle(ed.FretDotStyle), v => ed.FretDotStyle = v, description: "Solid fill or outline ring for note dots.");
     }
 
     /// <summary>The note colour buttons show the stored colours again (a colour picked from the fretboard's legend while this window is open).</summary>
@@ -148,20 +144,20 @@ public sealed partial class FretboardSettingsWindow
     private void ScaleColours(global::Avalonia.Controls.Controls rows)
     {
         var ed = _settings.Editing;
-        Chips(rows, "COLOUR", "ScaleColour", ScaleHighlightStyles.Colours, () => ed.ScaleHighlightColour, v => SetScaleColour(ed, v));
-        rows.Add(ScalePopupLayout.SectionLabel("CUSTOM COLOUR"));
+        Chips(rows, "Colour", "ScaleColour", ScaleHighlightStyles.Colours, () => ed.ScaleHighlightColour, v => SetScaleColour(ed, v), description: "Accent or named colour for scale markers.");
         var light = ActualThemeVariant == global::Avalonia.Styling.ThemeVariant.Light;
         var button = new ColourButton(ScaleColourDefault(ed, light), _settings.Appearance.RecentColours)
         {
-            Name = "ScaleCustomColour", Width = global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.ColourSettingWidth,
-            HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Left,
+            Name = "ScaleCustomColour",
+            Width = global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.ColourSettingWidth,
+            Classes = { AvaloniaFormControlStyles.PrefsFieldClass },
         };
         AutomationProperties.SetName(button, "Scale highlight custom colour");
         button.Show(ShownScaleCustom(ed, light));
         button.Previewed += hex => { StoreScaleCustom(ed, hex); Changed(rebuild: false); };   // every popup click shows on the board at once
         button.Picked += hex => { StoreScaleCustom(ed, hex); Changed(rebuild: false); };
         _scaleCustomColourButton = button;
-        rows.Add(button);
+        rows.Add(SettingsWindowChrome.CreateSettingRow("Custom colour", button, "Custom colour used when Colour is set to Custom."));
     }
 
     /// <summary>The custom colour button shows the stored colour again (a colour picked in the Scales popup while this window is open).</summary>
@@ -206,13 +202,8 @@ public sealed partial class FretboardSettingsWindow
     {
         var current = get();
         var choices = values.Where(v => v != disabled || string.Equals(v, current, StringComparison.OrdinalIgnoreCase)).ToList();
-        var combo = new ComboBox
-        {
-            Name = prefix,
-            ItemsSource = choices,
-            SelectedItem = choices.FirstOrDefault(v => string.Equals(v, current, StringComparison.OrdinalIgnoreCase)) ?? choices.FirstOrDefault(),
-            MinWidth = 190,
-        };
+        var selected = choices.FirstOrDefault(v => string.Equals(v, current, StringComparison.OrdinalIgnoreCase)) ?? choices.FirstOrDefault();
+        var combo = SettingsWindowChrome.CreateChoiceBox(prefix, choices, selected);
         AutomationProperties.SetName(combo, label.ToLowerInvariant());
         combo.SelectionChanged += (_, _) =>
         {
@@ -222,7 +213,7 @@ public sealed partial class FretboardSettingsWindow
                 Changed();
             }
         };
-        rows.Add(SettingsWindowChrome.CreateSettingRow(FormatLabel(label), combo, description, showDivider: !last));
+        rows.Add(SettingsWindowChrome.CreateSettingRow(FormatLabel(label), combo, description));
     }
 
     private void Switch(global::Avalonia.Controls.Controls rows, string name, string text, bool on, Action<bool> set, string? description = null, bool last = false)
@@ -230,7 +221,7 @@ public sealed partial class FretboardSettingsWindow
         var box = new CheckBox { Name = name, IsChecked = on };
         AutomationProperties.SetName(box, text);
         box.IsCheckedChanged += (_, _) => { set(box.IsChecked == true); Changed(rebuild: false); };
-        rows.Add(SettingsWindowChrome.CreateSettingRow(text, box, description, showDivider: !last));
+        rows.Add(SettingsWindowChrome.CreateSettingRow(text, box, description));
     }
 
     /// <summary>A whole-number setting on the track list's slider: the value shows on the thumb, a double-click returns it to its default, and the arrow keys step it.</summary>
@@ -243,7 +234,7 @@ public sealed partial class FretboardSettingsWindow
         };
         AutomationProperties.SetName(slider, label.ToLowerInvariant());
         slider.ValueChanged += value => { set(value); Changed(rebuild: false); };
-        rows.Add(SettingsWindowChrome.CreateSettingRow(title, slider, description, showDivider: !last));
+        rows.Add(SettingsWindowChrome.CreateSettingRow(title, slider, description));
     }
 
     /// <summary>Writes the defaults of one page back (the Look page back to the Rosewood preset) and saves.</summary>

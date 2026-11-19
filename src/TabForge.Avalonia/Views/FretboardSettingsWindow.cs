@@ -72,6 +72,7 @@ public sealed partial class FretboardSettingsWindow : Window
         MaxHeight = 700;
         MinWidth = 640;
         MinHeight = 320;
+        FontSize = DialogMetrics.FontSize;
         var body = new Grid { ColumnDefinitions = new ColumnDefinitions($"{ChromeMetrics.SettingsRailWidth},*") };
         _nav.Items.Add(SettingsWindowChrome.CreateBandHeader("APPEARANCE"));
         for (var section = 0; section < SectionCount; section++)

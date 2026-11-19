@@ -127,29 +127,29 @@ internal static class SettingsWindowChrome
         return header;
     }
 
-    /// <summary>Two-column Preferences-style setting row: title (+ optional muted description) on the left, control right-aligned.</summary>
-    public static Border CreateSettingRow(string title, Control control, string? description = null, bool showDivider = true)
+    /// <summary>Preferences-style pull-down ComboBox (same PrefsFieldClass and 200px minimum width as TabForge Settings).</summary>
+    public static ComboBox CreateChoiceBox(string name, System.Collections.IEnumerable items, object? selected) => new()
     {
-        var textCol = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 16, 0) };
-        textCol.Children.Add(new TextBlock { Text = title, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap });
+        Name = name,
+        ItemsSource = items,
+        SelectedItem = selected,
+        MinWidth = 200,
+        Classes = { AvaloniaFormControlStyles.PrefsFieldClass },
+    };
+
+    /// <summary>Two-column Preferences-style setting row matching PreferencesWindow.RowPanel identically: title + ToolWindowParts.Small description on the left, control right-aligned in column 2.</summary>
+    public static Grid CreateSettingRow(string title, Control control, string? description = null)
+    {
+        var textCol = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
+        textCol.Children.Add(new TextBlock { Text = title, TextWrapping = TextWrapping.Wrap });
         if (!string.IsNullOrWhiteSpace(description))
-        {
-            var desc = new TextBlock { Text = description, FontSize = 11.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) };
-            desc[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MutedTextBrush");
-            textCol.Children.Add(desc);
-        }
-        control.HorizontalAlignment = HorizontalAlignment.Right;
+            textCol.Children.Add(ToolWindowParts.Small(description));
         control.VerticalAlignment = VerticalAlignment.Center;
-        var row = new Grid
-        {
-            ColumnDefinitions = new ColumnDefinitions("*,Auto"),
-            Margin = new Thickness(0, 8, 0, 8),
-        };
+        var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,16,Auto") };
         row.Children.Add(textCol);
-        Grid.SetColumn(control, 1);
+        Grid.SetColumn(control, 2);
         row.Children.Add(control);
-        var wrap = new Border { Child = row, BorderThickness = showDivider ? new Thickness(0, 0, 0, 1) : default };
-        if (showDivider) wrap[!Border.BorderBrushProperty] = new DynamicResourceExtension("BorderSoftBrush");
-        return wrap;
+        TooltipPlacement.SetTip(control, !string.IsNullOrWhiteSpace(description) ? description : title);
+        return row;
     }
 }

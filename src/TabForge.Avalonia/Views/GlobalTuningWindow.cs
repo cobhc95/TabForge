@@ -33,7 +33,7 @@ public sealed class GlobalTuningWindow : Window
     private const double ShiftLabelGap = 8;
 
     private readonly GlobalTuningPresenter _presenter;
-    private readonly ComboBox _presetBox = new() { Name = "PresetBox", HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Center };
+    private readonly ComboBox _presetBox = new() { Name = "PresetBox", HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Center, Classes = { AvaloniaFormControlStyles.PrefsFieldClass } };
     private readonly TextBox _shiftBox = new();
     private readonly TextBlock[] _noteLabels = new TextBlock[StringCount];
     private readonly TextBlock[] _offsetLabels = new TextBlock[StringCount];
