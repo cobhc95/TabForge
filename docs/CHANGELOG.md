@@ -4,9 +4,15 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ## 0.9.9
 
+### Added
+
+- Added the note colour legend to Keyboard mode.
+
 ### Changed
 
 - Sidebar navigation tab highlights (Preferences, Fretboard Settings) now use flat square edges with the left accent bar instead of rounded corners.
+- Fretboard Settings now shares TabForge Settings' layout chrome, `PrefsFieldClass` pull-down menus, colour buttons, and two-column setting rows.
+- Global tuning (all instruments) now matches Track properties' tuning card layout with clarified tooltips.
 - Smaller Windows installer and publish payload (`lzma2/ultra64` installer compression; unused runtime debug/GC/HTTP3 files and non-Windows Avalonia backends excluded from Windows builds).
 - Lighter background resource usage (engine liveness ping backed off to 2 s; post-open GC switched to non-blocking optimized mode).
 - Internal architecture cleanup: consolidated internal source map, feature folders (Lyrics, Keyboard Mode, Band, Video, Live Input), feature-owned Preferences and window modules, and cleaner TuxGuitar/Focus Track Settings separation.
