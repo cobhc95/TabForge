@@ -49,8 +49,8 @@ public sealed partial class FretboardSettingsWindow : Window
 
     private readonly AppSettings _settings;
     private readonly Action _changed;
-    private readonly ScrollViewer _page = new() { HorizontalScrollBarVisibility = global::Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled };
-    private readonly ListBox _nav = new() { Width = ChromeMetrics.SettingsRailWidth, BorderThickness = default };
+    private readonly ScrollViewer _page = SettingsWindowChrome.CreateCardsScroll();
+    private readonly ListBox _nav = SettingsWindowChrome.CreateNavigationRail();
     private readonly Dictionary<int, SettingsNavigationIconView> _navIcons = new();
     private readonly TextBlock _status = new() { VerticalAlignment = VerticalAlignment.Center };
     private readonly Button _apply = new() { Name = "FretboardSettingsApply", Content = SettingsCatalog.Special(SettingsCatalog.ActionApply).Label, IsEnabled = false };
@@ -74,9 +74,16 @@ public sealed partial class FretboardSettingsWindow : Window
         MinHeight = 320;
         var body = new Grid { ColumnDefinitions = new ColumnDefinitions($"{ChromeMetrics.SettingsRailWidth},*") };
         foreach (var section in Enumerable.Range(0, SectionCount))
-            _nav.Items.Add(new ListBoxItem { Content = NavRow(section), Tag = section, MinHeight = ChromeMetrics.SettingsRailRowHeight, Classes = { AvaloniaFormControlStyles.PrefsNavRowClass } });
-        _nav.Background = null;
-        body.Children.Add(_nav);
+        {
+            _nav.Items.Add(SettingsWindowChrome.CreateNavigationItem(SectionGlyph(section), SectionName(section), section, out var glyph));
+            _navIcons[section] = glyph;
+        }
+        var titleBlock = SettingsWindowChrome.CreateTitleBlock("Fretboard Settings", "Fretboard & neck");
+        var sidebar = new DockPanel();
+        DockPanel.SetDock(titleBlock, Dock.Top);
+        sidebar.Children.Add(titleBlock);
+        sidebar.Children.Add(_nav);
+        body.Children.Add(sidebar);
         Grid.SetColumn(_page, 1);
         body.Children.Add(_page);
         var root = new DockPanel();
@@ -112,13 +119,7 @@ public sealed partial class FretboardSettingsWindow : Window
         ok.Click += (_, _) => { Apply(); Close(); };
         ShowStatus();
         var right = ToolWindowParts.Row(_status.WithMargin(0, 0, FretboardChromeMetrics.FooterGap, 0), cancel, _apply, ok);
-        DockPanel.SetDock(left, Dock.Left);
-        DockPanel.SetDock(right, Dock.Right);
-        var footer = new DockPanel { LastChildFill = false, Children = { left, right } }.WithMargin(12, 8, 12, 8);
-        var band = new Border { Child = footer, BorderThickness = FretboardChromeMetrics.FooterBandBorder };
-        band[!Border.BackgroundProperty] = new global::Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("WindowBrush");
-        band[!Border.BorderBrushProperty] = new global::Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("BorderSoftBrush");
-        return band;
+        return SettingsWindowChrome.CreateFooterBand(left, right);
     }
 
     /// <summary>Keeps the picks: Cancel now returns to here.</summary>

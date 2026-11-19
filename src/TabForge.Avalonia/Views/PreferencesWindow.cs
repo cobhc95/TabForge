@@ -155,7 +155,11 @@ public sealed partial class PreferencesWindow : Window, IPreferencesChangesHost
         {
             if (band.Length > 0)
                 _rail.Items.Add(BandHeader(band));
-            foreach (var page in pages) _rail.Items.Add(new ListBoxItem { Content = NavigationRow(page), Tag = page, MinHeight = ChromeMetrics.SettingsRailRowHeight, Classes = { AvaloniaFormControlStyles.PrefsNavRowClass } });
+            foreach (var page in pages)
+            {
+                _rail.Items.Add(SettingsWindowChrome.CreateNavigationItem(page, page, page, out var glyph));
+                _navigationIcons[page] = glyph;
+            }
         }
         AutomationProperties.SetName(_rail, "Settings pages");
         _rail.Background = null;
