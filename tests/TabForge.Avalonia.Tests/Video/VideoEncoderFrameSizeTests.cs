@@ -1,6 +1,6 @@
 using System;
 using System.IO;
-using TabForge.Services.Video;
+using TabForge.Features.Video;
 using Xunit;
 
 namespace TabForge.Avalonia.Tests;

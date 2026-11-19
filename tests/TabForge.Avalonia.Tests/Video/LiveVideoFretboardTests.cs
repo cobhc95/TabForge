@@ -3,11 +3,11 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using TabForge.Avalonia.Platform;
-using TabForge.Avalonia.Video;
+using TabForge.Avalonia.Features.Video;
 using TabForge.Playback;
 using TabForge.Presenters;
 using TabForge.Presets;
-using TabForge.Services.Video;
+using TabForge.Features.Video;
 using Xunit;
 
 namespace TabForge.Avalonia.Tests;

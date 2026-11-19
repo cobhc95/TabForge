@@ -149,8 +149,8 @@ Source/src/TabForge.Core/Services/Settings/SettingsColor.cs|1
 Source/src/TabForge.Core/Services/Settings/TimelineSettings.cs|9
 Source/src/TabForge.Core/Services/Timeline/TimelineActivityRules.cs|1
 Source/src/TabForge.Core/Services/Tracks/TrackSetup.Convert.cs|1
-Source/src/TabForge.Core/Services/Video/LiveVideoSettings.cs|3
-Source/src/TabForge.Core/Services/Video/VideoEncoderOptions.cs|1
+Source/src/TabForge.Core/Features/Video/LiveVideoSettings.cs|3
+Source/src/TabForge.Core/Features/Video/VideoEncoderOptions.cs|1
 Source/src/TabForge.Core/Views/EffectEditors/OrnamentEdits.cs|3
 # Reason: fretboard pictures are read-only pixels shared by every panel, so one copy serves them all.
 Source/src/TabForge.Avalonia/Platform/FretboardAssets.cs|1

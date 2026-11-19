@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Features.Video;
 using System.Collections.Generic;
 using System.Linq;
 using System;
@@ -9,7 +10,7 @@ using TabForge.Models;
 using TabForge.Platform;
 using TabForge.Rendering;
 using TabForge.Services;
-using TabForge.Services.Video;
+using TabForge.Features.Video;
 using TabForge.Commands;
 
 namespace TabForge.Avalonia;

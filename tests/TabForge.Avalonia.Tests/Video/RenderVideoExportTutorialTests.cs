@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Features.Video;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -12,7 +13,7 @@ using TabForge.Presenters;
 using TabForge.Presets;
 using TabForge.Rendering;
 using TabForge.Services;
-using TabForge.Services.Video;
+using TabForge.Features.Video;
 using Xunit;
 using static TabForge.Avalonia.Tests.DialogTestKit;
 

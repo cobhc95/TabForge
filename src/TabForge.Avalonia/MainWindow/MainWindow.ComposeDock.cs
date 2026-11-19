@@ -17,7 +17,7 @@ using TabForge.Avalonia.Shell;
 using TabForge.Avalonia.Views;
 using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Avalonia.Views.Docking;
-using TabForge.Avalonia.Video;
+using TabForge.Avalonia.Features.Video;
 using TabForge.Docking;
 using TabForge.Documents;
 using TabForge.Presenters;

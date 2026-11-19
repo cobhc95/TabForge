@@ -1,6 +1,6 @@
 using TabForge.Features.KeyboardMode;
 using TabForge.LiveInput;
-using TabForge.Services.Video;
+using TabForge.Features.Video;
 
 namespace TabForge.Services.Features;
 

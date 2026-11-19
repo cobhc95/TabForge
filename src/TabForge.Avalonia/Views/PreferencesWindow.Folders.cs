@@ -30,7 +30,7 @@ public sealed partial class PreferencesWindow
         AutomationProperties.SetName(field, row.Title);
         browse.Click += async (_, _) =>
         {
-            var start = TabForge.Services.Video.LiveVideoChoices.FolderOf(new TabForge.Services.Video.LiveVideoSettings { Folder = field.Text ?? "" });
+            var start = TabForge.Features.Video.LiveVideoChoices.FolderOf(new TabForge.Features.Video.LiveVideoSettings { Folder = field.Text ?? "" });
             if ((await PickFolders(row.Title, start, multiple: false))?.FirstOrDefault() is not { } chosen) return;
             field.Text = chosen;
             Changed(row, chosen);

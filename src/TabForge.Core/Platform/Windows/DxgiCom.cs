@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace TabForge.Services.Video;
+namespace TabForge.Features.Video;
 
 
 // Owns: the raw COM plumbing for Desktop Duplication: virtual-table calls on DXGI and Direct3D 11 interfaces, interface ids, the two native entry points.

@@ -1,4 +1,4 @@
-using TabForge.Services.Video;
+using TabForge.Features.Video;
 using Xunit;
 
 namespace TabForge.Avalonia.Tests;

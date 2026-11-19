@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Features.Video;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -13,7 +14,7 @@ using Avalonia.LogicalTree;
 using TabForge.Platform;
 using TabForge.Presenters;
 using TabForge.Presets;
-using TabForge.Services.Video;
+using TabForge.Features.Video;
 using TabForge.Avalonia.Views;
 using Xunit;
 using Fake = TabForge.Avalonia.Tests.VideoExportFinishTests.FakeEncoder;

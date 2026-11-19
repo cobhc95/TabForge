@@ -6,7 +6,7 @@ using System.Linq;
 using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Views;
 using TabForge.Avalonia.Views.Dialogs;
-using TabForge.Avalonia.Video;
+using TabForge.Avalonia.Features.Video;
 using TabForge.Presenters;
 using TabForge.Services;
 using TabForge.Commands;

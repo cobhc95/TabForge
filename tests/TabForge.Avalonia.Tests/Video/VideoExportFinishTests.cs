@@ -9,7 +9,7 @@ using TabForge.Avalonia.Platform;
 using TabForge.Models;
 using TabForge.Rendering;
 using TabForge.Services;
-using TabForge.Services.Video;
+using TabForge.Features.Video;
 using Xunit;
 
 namespace TabForge.Avalonia.Tests;
@@ -139,9 +139,9 @@ public sealed class VideoExportFinishTests
     /// <summary>Whether the machine's hardware H264 encoder actually encodes (a bare registration check is not enough: some drivers encode nothing).</summary>
     private static bool HardwareUsable(int w, int h, int fps)
     {
-        if (!Services.Video.Mf.HardwareH264Available()) return false;
+        if (!TabForge.Features.Video.Mf.HardwareH264Available()) return false;
         var probe = Path.Combine(Path.GetTempPath(), "tf-hwprobe-" + Guid.NewGuid().ToString("N") + ".mp4");
-        return Services.Video.VideoEncoderFactory.WithHardwareProbe(new Services.Video.VideoEncoderOptions(Services.Video.VideoEncoderChoices.Auto), probe, w, h, fps).HardwareProbe == Services.Video.VideoEncoderOptions.ProbePass;
+        return TabForge.Features.Video.VideoEncoderFactory.WithHardwareProbe(new TabForge.Features.Video.VideoEncoderOptions(TabForge.Features.Video.VideoEncoderChoices.Auto), probe, w, h, fps).HardwareProbe == TabForge.Features.Video.VideoEncoderOptions.ProbePass;
     }
 
     [Fact]

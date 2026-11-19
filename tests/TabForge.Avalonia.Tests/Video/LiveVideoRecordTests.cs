@@ -13,11 +13,11 @@ using Avalonia.LogicalTree;
 using Avalonia.Media;
 using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Shell;
-using TabForge.Avalonia.Video;
+using TabForge.Avalonia.Features.Video;
 using TabForge.Avalonia.Views;
 using TabForge.Platform;
 using TabForge.Services.Features;
-using TabForge.Services.Video;
+using TabForge.Features.Video;
 using Xunit;
 
 namespace TabForge.Avalonia.Tests;

@@ -20,7 +20,7 @@ public static class SettingsMigration
         settings.Editing ??= new EditingSettings();
         settings.Follow ??= new FollowSettings();
         settings.Timeline ??= new TimelineSettings();
-        settings.LiveVideo ??= new Video.LiveVideoSettings();
+        settings.LiveVideo ??= new TabForge.Features.Video.LiveVideoSettings();
         settings.MasterMeter ??= new TabForge.Audio.Metering.MasterMeterSettings();
         settings.TrackMeter ??= new TabForge.Audio.Metering.TrackMeterSettings();
         settings.Learn ??= new TabForge.Features.KeyboardMode.KeyboardModeSettings();

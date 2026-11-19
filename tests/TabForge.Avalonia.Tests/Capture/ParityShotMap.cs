@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Features.Video;
 using TabForge.Avalonia.Features.KeyboardMode;
 using System;
 using System.Collections.Generic;
@@ -21,7 +22,7 @@ using TabForge.Presenters;
 using TabForge.Presets;
 using TabForge.Rendering;
 using TabForge.Services;
-using TabForge.Services.Video;
+using TabForge.Features.Video;
 using TabForge.Views.EffectEditors;
 
 namespace TabForge.Avalonia.Tests;

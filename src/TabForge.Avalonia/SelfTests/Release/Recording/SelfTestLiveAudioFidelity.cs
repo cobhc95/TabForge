@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using TabForge.Audio.Contracts;
-using TabForge.Services.Video;
+using TabForge.Features.Video;
 using EH = TabForge.AudioEngine.EngineHost.Headless;
 
 namespace TabForge;

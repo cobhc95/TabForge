@@ -9,10 +9,10 @@ using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
 using TabForge.Avalonia.Platform;
-using TabForge.Avalonia.Video;
+using TabForge.Avalonia.Features.Video;
 using TabForge.AudioEngine.Mixing;
 using TabForge.Platform;
-using TabForge.Services.Video;
+using TabForge.Features.Video;
 using Xunit;
 using Xunit.Abstractions;
 

@@ -20,8 +20,8 @@
     <!-- Nullable, warnings-as-errors, analysis, locked restore and Version: see Directory.Build.props. -->
   </PropertyGroup>
   <ItemGroup Condition="'$(TargetFramework)'=='net10.0'">
-    <Compile Remove="Services\Video\VideoEncoder.cs;Services\Video\VideoEncoder.Writer.cs;Services\Video\VideoEncoder.Finalize.cs;Platform\Windows\*.cs" />
-    <Compile Remove="Services\Video\DxgiRegionGrabber.cs;Services\Video\DesktopRegionGrabber.cs" />
+    <Compile Remove="Features\Video\VideoEncoder.cs;Features\Video\VideoEncoder.Writer.cs;Features\Video\VideoEncoder.Finalize.cs;Platform\Windows\*.cs" />
+    <Compile Remove="Features\Video\DxgiRegionGrabber.cs;Features\Video\DesktopRegionGrabber.cs" />
     <Compile Remove="Audio\WindowsPathOffset.cs" />
   </ItemGroup>
   <ItemGroup>

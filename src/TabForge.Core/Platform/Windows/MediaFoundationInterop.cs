@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace TabForge.Services.Video;
+namespace TabForge.Features.Video;
 
 // Owns: the hand-written Windows Media Foundation COM declarations the video encoder (and the self-test read-back) needs.
 // Does not own: any encoding logic (VideoEncoder) or settings.

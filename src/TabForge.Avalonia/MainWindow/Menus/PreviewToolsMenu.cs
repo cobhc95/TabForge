@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Features.Video;
 using TabForge.Avalonia.Features.Band;
 using TabForge.Avalonia.Features.KeyboardMode;
 ﻿using System;
@@ -18,7 +19,7 @@ using TabForge.Presenters;
 using TabForge.Presets;
 using TabForge.Rendering;
 using TabForge.Services;
-using TabForge.Services.Video;
+using TabForge.Features.Video;
 
 namespace TabForge.Avalonia;
 
