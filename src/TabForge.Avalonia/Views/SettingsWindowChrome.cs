@@ -112,11 +112,26 @@ internal static class SettingsWindowChrome
         return scroll;
     }
 
+    public static ListBoxItem CreateBandHeader(string band)
+    {
+        var header = new ListBoxItem
+        {
+            Content = band,
+            IsEnabled = false,
+            FontSize = ChromeMetrics.SettingsRailCaptionFontSize,
+            FontWeight = FontWeight.Bold,
+            Margin = default,
+            Padding = new Thickness(ChromeMetrics.SettingsRailCaptionIndent, ChromeMetrics.SettingsRailCaptionTop, 0, ChromeMetrics.SettingsRailCaptionBottom),
+        };
+        header[!TemplatedControl.ForegroundProperty] = new DynamicResourceExtension("MutedTextBrush");
+        return header;
+    }
+
     /// <summary>Two-column Preferences-style setting row: title (+ optional muted description) on the left, control right-aligned.</summary>
-    public static Grid CreateSettingRow(string title, Control control, string? description = null)
+    public static Border CreateSettingRow(string title, Control control, string? description = null, bool showDivider = true)
     {
         var textCol = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 16, 0) };
-        textCol.Children.Add(new TextBlock { Text = title, FontWeight = FontWeight.Medium, TextWrapping = TextWrapping.Wrap });
+        textCol.Children.Add(new TextBlock { Text = title, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap });
         if (!string.IsNullOrWhiteSpace(description))
         {
             var desc = new TextBlock { Text = description, FontSize = 11.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) };
@@ -128,11 +143,13 @@ internal static class SettingsWindowChrome
         var row = new Grid
         {
             ColumnDefinitions = new ColumnDefinitions("*,Auto"),
-            Margin = new Thickness(0, 6, 0, 6),
+            Margin = new Thickness(0, 8, 0, 8),
         };
         row.Children.Add(textCol);
         Grid.SetColumn(control, 1);
         row.Children.Add(control);
-        return row;
+        var wrap = new Border { Child = row, BorderThickness = showDivider ? new Thickness(0, 0, 0, 1) : default };
+        if (showDivider) wrap[!Border.BorderBrushProperty] = new DynamicResourceExtension("BorderSoftBrush");
+        return wrap;
     }
 }

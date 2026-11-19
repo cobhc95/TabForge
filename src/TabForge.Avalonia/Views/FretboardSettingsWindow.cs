@@ -73,8 +73,10 @@ public sealed partial class FretboardSettingsWindow : Window
         MinWidth = 640;
         MinHeight = 320;
         var body = new Grid { ColumnDefinitions = new ColumnDefinitions($"{ChromeMetrics.SettingsRailWidth},*") };
-        foreach (var section in Enumerable.Range(0, SectionCount))
+        _nav.Items.Add(SettingsWindowChrome.CreateBandHeader("APPEARANCE"));
+        for (var section = 0; section < SectionCount; section++)
         {
+            if (section == 2) _nav.Items.Add(SettingsWindowChrome.CreateBandHeader("BOARD"));
             _nav.Items.Add(SettingsWindowChrome.CreateNavigationItem(SectionGlyph(section), SectionName(section), section, out var glyph));
             _navIcons[section] = glyph;
         }
@@ -92,8 +94,8 @@ public sealed partial class FretboardSettingsWindow : Window
         root.Children.Add(footer);
         root.Children.Add(body);
         Content = root;
-        _nav.SelectionChanged += (_, _) => { SyncRailSelection(); ShowSection(SelectedSection); };
-        _nav.SelectedIndex = 0;
+        _nav.SelectionChanged += (_, _) => { if (_nav.SelectedItem is ListBoxItem { Tag: int s }) { SyncRailSelection(); ShowSection(s); } };
+        _nav.SelectedItem = _nav.Items.OfType<ListBoxItem>().FirstOrDefault(i => i.Tag is int s && s == 0);
         Closing += (_, _) => Revert();
     }
 

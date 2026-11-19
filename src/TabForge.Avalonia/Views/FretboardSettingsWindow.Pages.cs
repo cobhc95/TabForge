@@ -19,15 +19,30 @@ namespace TabForge.Avalonia.Views;
 // Tests: TabForge.Avalonia.Tests.FretboardSettingsWindowTests.
 public sealed partial class FretboardSettingsWindow
 {
+    private static string SectionSubtitle(int section) => section switch
+    {
+        0 => "Wood grain, binding, inlays and overall board preset",
+        1 => "Look-ahead trail, note dot labels, size and colours",
+        2 => "Fret range, string spacing, orientation and dock position",
+        3 => "String material, vibration feedback and capo finish",
+        _ => "How scale notes are drawn over the fretboard",
+    };
+
     private void ShowSection(int section)
     {
-        var panel = new StackPanel { Spacing = FretboardChromeMetrics.PageCardGap }.WithMargin(16, 12, 16, 12);
-        var title = new TextBlock { Text = SectionName(Math.Clamp(section, 0, SectionCount - 1)), FontSize = FretboardChromeMetrics.PageTitleSize, FontWeight = global::Avalonia.Media.FontWeight.SemiBold, VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center };
-        var reset = new Button { Name = "FretboardResetSection", Content = "Reset section" };
-        reset.Classes.Add("PrefsActionReset");
-        reset.Click += (_, _) => ResetSection(_nav.SelectedIndex);
+        var panel = new StackPanel { Spacing = FretboardChromeMetrics.PageCardGap }.WithMargin(18, 14, 18, 14);
+        var titleStack = new StackPanel();
+        titleStack.Children.Add(new TextBlock { Text = SectionName(Math.Clamp(section, 0, SectionCount - 1)), FontSize = FretboardChromeMetrics.PageTitleSize, FontWeight = global::Avalonia.Media.FontWeight.SemiBold });
+        var sub = new TextBlock { Text = SectionSubtitle(section), FontSize = 12, Margin = new global::Avalonia.Thickness(0, 2, 0, 0) };
+        sub[!TextBlock.ForegroundProperty] = new global::Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("MutedTextBrush");
+        titleStack.Children.Add(sub);
+        var reset = new Button { Name = "FretboardResetSection", Content = "Reset section", VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center };
+        reset.Classes.Add("PrefsActionButton");
+        reset.Click += (_, _) => ResetSection(SelectedSection);
         DockPanel.SetDock(reset, Dock.Right);
-        panel.Children.Add(new DockPanel { Children = { reset, title } });
+        var headerBorder = new Border { Child = new DockPanel { Children = { reset, titleStack } }, Padding = new global::Avalonia.Thickness(0, 0, 0, 10), BorderThickness = new global::Avalonia.Thickness(0, 0, 0, 1) };
+        headerBorder[!Border.BorderBrushProperty] = new global::Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("BorderSoftBrush");
+        panel.Children.Add(headerBorder);
         global::Avalonia.Controls.Controls Card(string name)
         {
             var rows = new StackPanel();
@@ -39,61 +54,57 @@ public sealed partial class FretboardSettingsWindow
         switch (section)
         {
             case 0:
-                var preset = Card("Preset");
-                Chips(preset, "LOOK", "FretboardLook", FretboardStyles.PresetNames, () => FretboardStyles.PresetOf(FretboardStyles.LookOf(ed)), v => FretboardStyles.Apply(ed, FretboardStyles.OfPreset(v)), disabled: FretboardStyles.Custom);
                 var wood = Card("Wood and binding");
-                Chips(wood, "WOOD", "FretboardWood", FretboardStyles.Woods, () => ed.FretboardWood, v => ed.FretboardWood = v);
-                Chips(wood, "BINDING", "FretboardBinding", FretboardStyles.Bindings, () => ed.FretboardBinding, v => ed.FretboardBinding = v);
+                Chips(wood, "Look preset", "FretboardLook", FretboardStyles.PresetNames, () => FretboardStyles.PresetOf(FretboardStyles.LookOf(ed)), v => FretboardStyles.Apply(ed, FretboardStyles.OfPreset(v)), disabled: FretboardStyles.Custom, description: "Apply a complete wood, binding and inlay combination at once.");
+                Chips(wood, "Fingerboard wood", "FretboardWood", FretboardStyles.Woods, () => ed.FretboardWood, v => ed.FretboardWood = v, description: "Surface texture used for the neck.");
+                Chips(wood, "Binding", "FretboardBinding", FretboardStyles.Bindings, () => ed.FretboardBinding, v => ed.FretboardBinding = v, description: "Edge trim along the top and bottom of the neck.", last: true);
                 var inlays = Card("Inlays");
-                Chips(inlays, "INLAY SHAPE", "FretboardInlayShape", FretboardStyles.InlayShapes, () => ed.FretboardInlayShape, v => ed.FretboardInlayShape = v);
-                Chips(inlays, "INLAY MATERIAL", "FretboardInlayMaterial", FretboardStyles.InlayMaterials, () => ed.FretboardInlayMaterial, v => ed.FretboardInlayMaterial = v);
-                Chips(inlays, "POSITION INLAY BRIGHTNESS", "FretboardMarkerBrightness", FretMarkerLevels.All, () => ed.FretMarkerBrightness, v => ed.FretMarkerBrightness = v);
-                inlays.Add(new TextBlock { Text = "Position inlays mark frets 3, 5, 7, 9, 12…; playing-note brightness is under Notes and markers.", TextWrapping = global::Avalonia.Media.TextWrapping.Wrap });
-                Slide(Card("Board"), "FRETBOARD BRIGHTNESS", "FretboardBrightness", FretboardStyles.MinBrightness, FretboardStyles.MaxBrightness, FretboardStyles.BrightnessStep, e => e.FretboardBrightness, v => ed.FretboardBrightness = v, "%");
+                Chips(inlays, "Inlay shape", "FretboardInlayShape", FretboardStyles.InlayShapes, () => ed.FretboardInlayShape, v => ed.FretboardInlayShape = v, description: "Marker style on fret positions 3, 5, 7, 9, 12…");
+                Chips(inlays, "Inlay material", "FretboardInlayMaterial", FretboardStyles.InlayMaterials, () => ed.FretboardInlayMaterial, v => ed.FretboardInlayMaterial = v, description: "Surface finish for position markers.");
+                Chips(inlays, "Position inlay brightness", "FretboardMarkerBrightness", FretMarkerLevels.All, () => ed.FretMarkerBrightness, v => ed.FretMarkerBrightness = v, description: "How strongly fret inlays stand out against the wood.", last: true);
+                Slide(Card("Board"), "Fretboard brightness", "FretboardBrightness", FretboardStyles.MinBrightness, FretboardStyles.MaxBrightness, FretboardStyles.BrightnessStep, e => e.FretboardBrightness, v => ed.FretboardBrightness = v, "%", description: "Overall brightness of the neck surface.", last: true);
                 break;
             case 1:
                 var ahead = Card("Look-ahead");
-                Switch(ahead, "FretboardPreviewNext", "Show look-ahead notes", ed.PreviewNotesEnabled, v => ed.PreviewNotesEnabled = v);
-                Slide(ahead, "NEXT NOTES SHOWN AHEAD", "FretboardHorizon", 1, 10, 1, e => e.PreviewHorizon, v => ed.PreviewHorizon = v);
-                Switch(ahead, "FretboardPreviewPrevious", "Show previous notes (a faint trail)", ed.PreviewPreviousNotesEnabled, v => ed.PreviewPreviousNotesEnabled = v);
+                Switch(ahead, "FretboardPreviewNext", "Show look-ahead notes", ed.PreviewNotesEnabled, v => ed.PreviewNotesEnabled = v, description: "Preview upcoming notes on the fretboard before they sound.");
+                Slide(ahead, "Next notes shown ahead", "FretboardHorizon", 1, 10, 1, e => e.PreviewHorizon, v => ed.PreviewHorizon = v, description: "How many upcoming notes to preview.");
+                Switch(ahead, "FretboardPreviewPrevious", "Show previous notes (a faint trail)", ed.PreviewPreviousNotesEnabled, v => ed.PreviewPreviousNotesEnabled = v, description: "Leave a faint trail for notes that just finished.", last: true);
                 var dots = Card("Note dots");
-                Chips(dots, "NOTE DOT LABEL", "FretboardDotSays", new[] { "Fret number", "Note name" }, () => ed.ShowNoteNames ? "Note name" : "Fret number", v => ed.ShowNoteNames = v == "Note name");
-                dots.Add(new TextBlock { Text = "Labels cursor, playback and pointer-preview notes; the fret ruler and scale labels stay unchanged.", TextWrapping = global::Avalonia.Media.TextWrapping.Wrap });
-                Slide(dots, "NOTE BRIGHTNESS", "FretboardNoteBrightness", FretboardStyles.MinBrightness, FretboardStyles.MaxBrightness, FretboardStyles.BrightnessStep, e => e.FretboardNoteBrightness, v => ed.FretboardNoteBrightness = v, "%");
-                Slide(dots, "DOT AND NUMBER SIZE", "FretboardMarkerSize", SettingRanges.FretMarkerSizePercentMin, SettingRanges.FretMarkerSizePercentMax, 10, e => e.FretMarkerSizePercent, v => ed.FretMarkerSizePercent = v, "%");
-                Chips(dots, "NUMBER SIZE", "FretboardNumberSize", FretNumberSizes.All, () => ed.FretNumberSize, v => ed.FretNumberSize = v);
+                Chips(dots, "Note dot label", "FretboardDotSays", new[] { "Fret number", "Note name" }, () => ed.ShowNoteNames ? "Note name" : "Fret number", v => ed.ShowNoteNames = v == "Note name", description: "Labels cursor, playback and pointer-preview notes.");
+                Slide(dots, "Note brightness", "FretboardNoteBrightness", FretboardStyles.MinBrightness, FretboardStyles.MaxBrightness, FretboardStyles.BrightnessStep, e => e.FretboardNoteBrightness, v => ed.FretboardNoteBrightness = v, "%", description: "Brightness of playing and cursor note dots.");
+                Slide(dots, "Dot and number size", "FretboardMarkerSize", SettingRanges.FretMarkerSizePercentMin, SettingRanges.FretMarkerSizePercentMax, 10, e => e.FretMarkerSizePercent, v => ed.FretMarkerSizePercent = v, "%", description: "Overall scale of note dots on the fretboard.");
+                Chips(dots, "Number size", "FretboardNumberSize", FretNumberSizes.All, () => ed.FretNumberSize, v => ed.FretNumberSize = v, description: "Text size inside each note dot.", last: true);
                 NoteColoursCard(Card("Note colours"));
                 break;
             case 2:
                 var board = Card("Board");
-                Chips(board, "FRETS SHOWN", "FretboardFrets", new[] { "12", "24" }, () => ed.FretboardFrets.ToString(), v => ed.FretboardFrets = int.Parse(v));
-                Chips(board, "STRING SPACING", "FretboardSpacing", FretStringSpacings.All, () => ed.FretStringSpacing, v => ed.FretStringSpacing = v);
-                Switch(board, "FretboardLeftHanded", "Left-handed", ed.LeftHanded, v => ed.LeftHanded = v);
+                Chips(board, "Frets shown", "FretboardFrets", new[] { "12", "24" }, () => ed.FretboardFrets.ToString(), v => ed.FretboardFrets = int.Parse(v), description: "Number of frets visible across the neck.");
+                Chips(board, "String spacing", "FretboardSpacing", FretStringSpacings.All, () => ed.FretStringSpacing, v => ed.FretStringSpacing = v, description: "Vertical distance between strings.");
+                Switch(board, "FretboardLeftHanded", "Left-handed", ed.LeftHanded, v => ed.LeftHanded = v, description: "Flip the neck horizontally for left-handed players.", last: true);
                 var place = Card("Placement");
-                Chips(place, "BOARD POSITION", "FretboardPosition", new[] { "Left", "Centre", "Right" }, () => ap.FretboardPosition, v => ap.FretboardPosition = v);
-                Chips(place, "DOCK", "FretboardDock", new[] { "Top", "Bottom" }, () => ap.FretboardAtBottom ? "Bottom" : "Top", v => ap.FretboardAtBottom = v == "Bottom");
-                Switch(place, "FretboardLockSize", "Lock fretboard size", ap.LockInstrumentSize, v => ap.LockInstrumentSize = v);
+                Chips(place, "Board position", "FretboardPosition", new[] { "Left", "Centre", "Right" }, () => ap.FretboardPosition, v => ap.FretboardPosition = v, description: "Horizontal alignment when the panel is wider than the neck.");
+                Chips(place, "Dock", "FretboardDock", new[] { "Top", "Bottom" }, () => ap.FretboardAtBottom ? "Bottom" : "Top", v => ap.FretboardAtBottom = v == "Bottom", description: "Pin the fretboard above or below the score.");
+                Switch(place, "FretboardLockSize", "Lock fretboard size", ap.LockInstrumentSize, v => ap.LockInstrumentSize = v, description: "Prevent automatic resizing of the fretboard panel.", last: true);
                 break;
             case 3:
                 var strings = Card("Strings");
-                Chips(strings, "STRING FINISH", "FretboardStringLook", FretboardStyles.StringLooks, () => ed.FretboardStringLook, v => ed.FretboardStringLook = v);
-                Chips(strings, "STRING VIBRATION", "FretboardVibration", FretboardStyles.VibrationLevels, () => ed.FretboardVibration, v => ed.FretboardVibration = v);
-                Chips(strings, "VIBRATION SPEED", "FretboardVibrationSpeed", FretboardStyles.VibrationSpeeds, () => ed.FretboardVibrationSpeed, v => ed.FretboardVibrationSpeed = v);
-                Switch(strings, "FretboardStringNumbers", "Show string numbers", ed.FretboardStringNumbers, v => ed.FretboardStringNumbers = v);
-                Chips(Card("Capo"), "CAPO FINISH", "FretboardCapoLook", FretboardStyles.CapoLooks, () => ed.FretboardCapoLook, v => ed.FretboardCapoLook = v);
+                Chips(strings, "String finish", "FretboardStringLook", FretboardStyles.StringLooks, () => ed.FretboardStringLook, v => ed.FretboardStringLook = v, description: "Visual metal finish of the strings.");
+                Chips(strings, "String vibration", "FretboardVibration", FretboardStyles.VibrationLevels, () => ed.FretboardVibration, v => ed.FretboardVibration = v, description: "Intensity of string vibration during playback.");
+                Chips(strings, "Vibration speed", "FretboardVibrationSpeed", FretboardStyles.VibrationSpeeds, () => ed.FretboardVibrationSpeed, v => ed.FretboardVibrationSpeed = v, description: "Animation speed of vibrating strings.");
+                Switch(strings, "FretboardStringNumbers", "Show string numbers", ed.FretboardStringNumbers, v => ed.FretboardStringNumbers = v, description: "Display string numbers beside the nut.", last: true);
+                Chips(Card("Capo"), "Capo finish", "FretboardCapoLook", FretboardStyles.CapoLooks, () => ed.FretboardCapoLook, v => ed.FretboardCapoLook = v, description: "Appearance of the capo bar when active.", last: true);
                 break;
             default:
                 var highlight = Card("Highlight");
-                Chips(highlight, "STYLE", "ScaleStyle", ScaleHighlightStyles.All, () => ScaleHighlightStyles.Normalize(ed.ScaleHighlightStyle), v => ed.ScaleHighlightStyle = v);
+                Chips(highlight, "Style", "ScaleStyle", ScaleHighlightStyles.All, () => ScaleHighlightStyles.Normalize(ed.ScaleHighlightStyle), v => ed.ScaleHighlightStyle = v, description: "Marker shape used for scale tones.");
                 ScaleColours(highlight);
-                Slide(highlight, "HIGHLIGHT OPACITY", "ScaleHighlightOpacity", ScaleHighlightStyles.MinOpacity, ScaleHighlightStyles.MaxOpacity, ScaleHighlightStyles.OpacityStep, e => e.ScaleHighlightOpacity, v => ed.ScaleHighlightOpacity = v, "%");
-                Switch(highlight, "ScaleEmphasiseRoot", "Emphasise the root", ed.ScaleEmphasiseRoot, v => ed.ScaleEmphasiseRoot = v);
-                Switch(highlight, "ScaleDimOutside", "Dim notes outside the scale", ed.ScaleDimOutside, v => ed.ScaleDimOutside = v);
-                Switch(highlight, "ScaleOnlyInView", "Only on the frets in view", ed.ScaleOnlyInView, v => ed.ScaleOnlyInView = v);
-                var clear = new Button { Name = "ScaleClearHighlight", Content = "Clear highlight" }.WithMargin(0, 12, 0, 0);
+                Slide(highlight, "Highlight opacity", "ScaleHighlightOpacity", ScaleHighlightStyles.MinOpacity, ScaleHighlightStyles.MaxOpacity, ScaleHighlightStyles.OpacityStep, e => e.ScaleHighlightOpacity, v => ed.ScaleHighlightOpacity = v, "%", description: "Transparency of scale highlight markers.");
+                Switch(highlight, "ScaleEmphasiseRoot", "Emphasise the root", ed.ScaleEmphasiseRoot, v => ed.ScaleEmphasiseRoot = v, description: "Give the root note a distinct marker.");
+                Switch(highlight, "ScaleDimOutside", "Dim notes outside the scale", ed.ScaleDimOutside, v => ed.ScaleDimOutside = v, description: "Subtly fade frets that are not in the active scale.");
+                Switch(highlight, "ScaleOnlyInView", "Only on the frets in view", ed.ScaleOnlyInView, v => ed.ScaleOnlyInView = v, description: "Restrict scale markers to the currently visible fret range.", last: true);
+                var clear = new Button { Name = "ScaleClearHighlight", Content = "Clear highlight" }.WithMargin(0, 10, 0, 0);
                 clear.Click += (_, _) => { ed.SetScaleShown(false); Changed(); };
                 highlight.Add(clear);
-                highlight.Add(new TextBlock { Text = "The scale itself is chosen with the Scales button on the fretboard; its colours can also be chosen here.", FontSize = FretboardChromeMetrics.PreviewLabelSize }.WithMargin(0, 10, 0, 0));
                 break;
         }
         _page.Content = panel;
@@ -191,7 +202,7 @@ public sealed partial class FretboardSettingsWindow
         return char.ToUpperInvariant(lower[0]) + lower[1..];
     }
 
-    private void Chips(global::Avalonia.Controls.Controls rows, string label, string prefix, IReadOnlyList<string> values, Func<string> get, Action<string> set, string? disabled = null)
+    private void Chips(global::Avalonia.Controls.Controls rows, string label, string prefix, IReadOnlyList<string> values, Func<string> get, Action<string> set, string? disabled = null, string? description = null, bool last = false)
     {
         var current = get();
         var choices = values.Where(v => v != disabled || string.Equals(v, current, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -211,19 +222,19 @@ public sealed partial class FretboardSettingsWindow
                 Changed();
             }
         };
-        rows.Add(SettingsWindowChrome.CreateSettingRow(FormatLabel(label), combo));
+        rows.Add(SettingsWindowChrome.CreateSettingRow(FormatLabel(label), combo, description, showDivider: !last));
     }
 
-    private void Switch(global::Avalonia.Controls.Controls rows, string name, string text, bool on, Action<bool> set)
+    private void Switch(global::Avalonia.Controls.Controls rows, string name, string text, bool on, Action<bool> set, string? description = null, bool last = false)
     {
         var box = new CheckBox { Name = name, IsChecked = on };
         AutomationProperties.SetName(box, text);
         box.IsCheckedChanged += (_, _) => { set(box.IsChecked == true); Changed(rebuild: false); };
-        rows.Add(SettingsWindowChrome.CreateSettingRow(text, box));
+        rows.Add(SettingsWindowChrome.CreateSettingRow(text, box, description, showDivider: !last));
     }
 
     /// <summary>A whole-number setting on the track list's slider: the value shows on the thumb, a double-click returns it to its default, and the arrow keys step it.</summary>
-    private void Slide(global::Avalonia.Controls.Controls rows, string label, string name, int min, int max, int step, Func<EditingSettings, int> get, Action<int> set, string unit = "")
+    private void Slide(global::Avalonia.Controls.Controls rows, string label, string name, int min, int max, int step, Func<EditingSettings, int> get, Action<int> set, string unit = "", string? description = null, bool last = false)
     {
         var title = unit.Length > 0 ? $"{FormatLabel(label)} ({unit})" : FormatLabel(label);
         var slider = new MiniSlider(min, max, get(new EditingSettings()), global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.FretboardSliderWidth, global::TabForge.Avalonia.Views.Dialogs.DialogMetrics.FretboardSliderHeight)
@@ -232,7 +243,7 @@ public sealed partial class FretboardSettingsWindow
         };
         AutomationProperties.SetName(slider, label.ToLowerInvariant());
         slider.ValueChanged += value => { set(value); Changed(rebuild: false); };
-        rows.Add(SettingsWindowChrome.CreateSettingRow(title, slider));
+        rows.Add(SettingsWindowChrome.CreateSettingRow(title, slider, description, showDivider: !last));
     }
 
     /// <summary>Writes the defaults of one page back (the Look page back to the Rosewood preset) and saves.</summary>

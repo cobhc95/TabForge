@@ -71,11 +71,11 @@ public sealed class GlobalTuningWindow : Window
         _presetBox.SelectionChanged += (_, _) => { if (!_syncing && _presenter.ApplyPreset(_presetBox.SelectedIndex)) Refresh(); };
         ToolTip.SetTip(_presetBox, "Apply a preset tuning to every pitched tab track in the song");
 
-        var allDown = StepButton("AllDownButton", "↓ All −1", () => _presenter.NudgeAll(-1));
-        allDown.HorizontalAlignment = HorizontalAlignment.Stretch;
+        var allDown = new Button { Name = "AllDownButton", Content = "↓ All −1", HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center, Padding = new Thickness(6, 4) };
+        allDown.Click += (_, _) => { _presenter.NudgeAll(-1); Refresh(); };
         ToolTip.SetTip(allDown, "Lower every string on every pitched track by 1 semitone");
-        var allUp = StepButton("AllUpButton", "↑ All +1", () => _presenter.NudgeAll(1));
-        allUp.HorizontalAlignment = HorizontalAlignment.Stretch;
+        var allUp = new Button { Name = "AllUpButton", Content = "↑ All +1", HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center, Padding = new Thickness(6, 4) };
+        allUp.Click += (_, _) => { _presenter.NudgeAll(1); Refresh(); };
         ToolTip.SetTip(allUp, "Raise every string on every pitched track by 1 semitone");
         var nudgeGrid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,6,*") };
         nudgeGrid.Children.Add(allDown);
