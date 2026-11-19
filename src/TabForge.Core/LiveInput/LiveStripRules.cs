@@ -1,4 +1,5 @@
 using System.Globalization;
+using TabForge.Audio;
 
 namespace TabForge.LiveInput;
 
@@ -18,7 +19,7 @@ public static class LiveStripRules
     /// <summary>The strip tuner's needle and cents text are green within this many cents of the note, else warning.</summary>
     public const double InTuneCents = 3;
     /// <summary>Meter scale: the bottom is silence ("-inf"), the top is full scale (0 dB). The level text reads up to <see cref="TextCeilingDb"/>, so a clipping level shows.</summary>
-    public const double MeterFloorDb = -60, MeterCeilingDb = 0, TextCeilingDb = 6;
+    public const double MeterFloorDb = InputMeterScale.MeterFloorDb, MeterCeilingDb = InputMeterScale.MeterCeilingDb, TextCeilingDb = 6;
 
     /// <summary>A level from <see cref="WarmDb"/> up draws warm, from <see cref="ClipDb"/> up it draws as clipping.</summary>
     public const double WarmDb = -12, ClipDb = -1;
@@ -59,11 +60,9 @@ public static class LiveStripRules
 
     public static int ClampGainDb(int db) => Math.Clamp(db, MinGainDb, MaxGainDb);
 
-    /// <summary>A linear peak in dB; <see cref="MeterFloorDb"/> for silence (and for NaN).</summary>
-    public static double PeakToDb(double peak) => peak > 0 ? Math.Max(MeterFloorDb, 20 * Math.Log10(peak)) : MeterFloorDb;
+    public static double PeakToDb(double peak) => InputMeterScale.PeakToDb(peak);
 
-    /// <summary>Where a dB value sits on the meter, 0 (floor) to 1 (ceiling).</summary>
-    public static double MeterFraction(double db) => Math.Clamp((db - MeterFloorDb) / (MeterCeilingDb - MeterFloorDb), 0, 1);
+    public static double MeterFraction(double db) => InputMeterScale.MeterFraction(db);
 
     /// <summary>How a meter fills at a level: normal, warm near the top, clipping at full scale.</summary>
     public static MeterTone ToneForDb(double db) => db >= ClipDb ? MeterTone.Clip : db >= WarmDb ? MeterTone.Warm : MeterTone.Normal;

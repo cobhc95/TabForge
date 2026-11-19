@@ -9,7 +9,6 @@ using TabForge.Avalonia.Transport;
 using TabForge.Avalonia.Views;
 using TabForge.Documents;
 using TabForge.Features.Recording.Rules;
-using TabForge.LiveInput;
 using TabForge.Models;
 using TabForge.Playback;
 using TabForge.Presenters;
@@ -50,7 +49,7 @@ internal sealed partial class RecordingPresenter(MainWindowCommands commands, Ma
         new RecordingPresenter(commands, panes, playback, songs, showStatus, plugins, MeterFraction, snap, rollLive, recordingChanged).Register();
 
     /// <summary>A linear input peak (0..1) as the armed row meter's fraction (0..1): the live strip's dB curve, one source of truth for both meters.</summary>
-    private static double MeterFraction(double peak) => LiveStripRules.MeterFraction(LiveStripRules.PeakToDb(peak));
+    private static double MeterFraction(double peak) => InputMeterScale.MeterFraction(InputMeterScale.PeakToDb(peak));
 
     /// <returns>The window's recording state; disposing it (the window closed) ends a recording in progress and detaches the hooks.</returns>
     internal RecordingSession Register()
