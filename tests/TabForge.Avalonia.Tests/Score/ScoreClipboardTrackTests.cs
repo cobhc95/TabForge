@@ -1,5 +1,4 @@
 using System.Linq;
-using System.Threading.Tasks;
 using Avalonia.Headless.XUnit;
 using TabForge.Avalonia.Platform;
 using TabForge.Services;

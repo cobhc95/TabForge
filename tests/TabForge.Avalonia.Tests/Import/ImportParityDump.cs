@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using System.Threading.Tasks;
 using TabForge.Models;
 using TabForge.Playback;
 using TabForge.Services;

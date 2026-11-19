@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Threading.Tasks;
 using TabForge.Avalonia.Views.Dialogs;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;

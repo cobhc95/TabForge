@@ -5,7 +5,6 @@ using System.IO.Pipes;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using TabForge.Audio.Contracts;
 using TabForge.Audio.Contracts.Builtin;
 using TabForge.AudioEngine;

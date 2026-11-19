@@ -64,4 +64,7 @@
     <!-- Test-only: the TFVST32_TEST_HOOKS copy of the helper (stall tests only). The shipped tfvst32.exe comes from the audio engine project. -->
     <None Include="..\..\native\tfvst32\test-bin\tfvst32-testhooks.exe" Condition="Exists('..\..\native\tfvst32\test-bin\tfvst32-testhooks.exe')" Link="tfvst32-testhooks.exe" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <ItemGroup>
+    <Using Include="System.Threading.Tasks" />
+  </ItemGroup>
 </Project>

@@ -1,7 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
-using System.Threading.Tasks;
 using TabForge.Documents;
 using TabForge.Services;
 using TabForge.Presenters;

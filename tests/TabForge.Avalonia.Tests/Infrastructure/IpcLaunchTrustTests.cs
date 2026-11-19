@@ -3,7 +3,6 @@ using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.IO.Pipes;
 using System.Linq;
-using System.Threading.Tasks;
 using TabForge.Audio;
 using TabForge.Audio.Contracts;
 using TabForge.Services;

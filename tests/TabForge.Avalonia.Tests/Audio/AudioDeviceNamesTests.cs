@@ -2,7 +2,6 @@ using TabForge.Platform.Contracts;
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using System.Threading.Tasks;
 using TabForge.Avalonia.Views;
 using TabForge.Playback;
 using TabForge.Services;

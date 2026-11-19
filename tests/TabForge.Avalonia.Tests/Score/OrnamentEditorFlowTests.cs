@@ -2,7 +2,6 @@ using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
-using System.Threading.Tasks;
 using Avalonia.Headless.XUnit;
 using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Views;

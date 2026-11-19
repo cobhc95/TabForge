@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Avalonia.Headless.XUnit;
 using TabForge.Avalonia.Capture;
 using TabForge.Capture;

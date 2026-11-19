@@ -5,7 +5,6 @@ using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Threading;
-using System.Threading.Tasks;
 using TabForge.Services;
 using Xunit;
 

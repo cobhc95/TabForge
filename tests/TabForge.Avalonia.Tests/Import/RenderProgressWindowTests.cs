@@ -1,5 +1,4 @@
 using System.Threading;
-using System.Threading.Tasks;
 using Avalonia.Headless.XUnit;
 using TabForge.Avalonia.Views;
 using Xunit;

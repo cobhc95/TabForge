@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Threading.Tasks;
 using TabForge.Audio;
 using TabForge.Documents;
 using TabForge.Models;

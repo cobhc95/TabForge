@@ -2,7 +2,6 @@ using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using System.Linq;
-using System.Threading.Tasks;
 using TabForge.Avalonia.Views;
 using TabForge.Documents;
 using TabForge.Services;

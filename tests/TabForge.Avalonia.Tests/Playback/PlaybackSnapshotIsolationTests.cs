@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Diagnostics;
-using System.Threading.Tasks;
 using TabForge.Documents;
 using TabForge.Playback;
 using TabForge.Presets;

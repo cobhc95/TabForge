@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Avalonia.Headless.XUnit;
 using TabForge.Avalonia.Views.Fx;
 using TabForge.Plugins;

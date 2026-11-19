@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using TabForge.Audio.Contracts.Builtin;
 using TabForge.AudioEngine.Builtin;
 using TabForge.AudioEngine.Builtin.IrLoader;
