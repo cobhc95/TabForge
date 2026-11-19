@@ -17,7 +17,7 @@ internal sealed class NotePreviewSound
     private readonly Func<AvaloniaPlaybackSessions?> _playback;
     private readonly Func<AudioSettings> _audio;
     private readonly Action<string> _report;
-    private readonly Func<TabForge.Audio.RoutedMidiOutput?>? _instrumentRouting;
+    private readonly Func<TabForge.Playback.IPlaybackMidiRouting?>? _instrumentRouting;
     private readonly TrackInstrumentPreview _instrument = new();
 
     /// <param name="editor">The score editor whose entered notes are auditioned.</param>
@@ -26,7 +26,7 @@ internal sealed class NotePreviewSound
     /// <param name="report">Shows a failed audition as a notice.</param>
     /// <param name="instrumentRouting">The shown song's engine routes, so a track with an instrument plug-in sounds through it; null: always the built-in synth.</param>
     public NotePreviewSound(ScorePreviewEditor editor, Func<AvaloniaPlaybackSessions?> playback, Func<AudioSettings> audio, Action<string> report,
-        Func<TabForge.Audio.RoutedMidiOutput?>? instrumentRouting = null)
+        Func<TabForge.Playback.IPlaybackMidiRouting?>? instrumentRouting = null)
     {
         _instrumentRouting = instrumentRouting;
         _playback = playback;

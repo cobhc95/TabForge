@@ -83,7 +83,7 @@ public sealed class AvaloniaPlaybackSession : IDisposable
     public Action<bool, double, double>? ReportEnginePosition { get; set; }
 
     /// <summary>The routed MIDI output the engine plays through (the document's MIDI routes are set on it); null when the engine has none.</summary>
-    public TabForge.Audio.RoutedMidiOutput? Routing => _engine.Routing;
+    public IPlaybackMidiRouting? Routing => _engine.Routing;
 
     /// <summary>Applies mute and solo to the running playback at once, without a restart.</summary>
     public void ApplyMuteSolo(SongProject project, bool liveSolo = false)

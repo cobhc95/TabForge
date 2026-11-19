@@ -45,7 +45,7 @@ public interface IPlaybackEngine : IDisposable
     void UpdateOptions(SongProject project, Action<PlaybackOptions> mutate) { }
 
     /// <summary>The MIDI output the engine plays through, when it routes channels to the audio engine; null for an engine without one.</summary>
-    TabForge.Audio.RoutedMidiOutput? Routing => null;
+    IPlaybackMidiRouting? Routing => null;
 
     /// <summary>Applies mute and solo to the running playback without a restart; an engine without live mute and solo ignores the change.</summary>
     void SetMuteSolo(SongProject project, bool liveSolo = false) { }

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using TabForge.Audio;
+using TabForge.Playback;
 
 namespace TabForge.Avalonia.Platform;
 
@@ -16,7 +16,7 @@ internal sealed class TrackInstrumentPreview
     private long _serial;
 
     /// <summary>Sounds the note on the routed output and schedules its off; false (nothing sent) when the channel has no plug-in instrument, so the caller uses the built-in synth.</summary>
-    public bool TryPlay(RoutedMidiOutput? routing, int channel, int note, int lengthMs)
+    public bool TryPlay(IPlaybackMidiRouting? routing, int channel, int note, int lengthMs)
     {
         if (routing is null) return false;
         var ch = channel & 0x0F;
@@ -29,7 +29,7 @@ internal sealed class TrackInstrumentPreview
         return true;
     }
 
-    private async Task ReleaseAsync(RoutedMidiOutput routing, (int Channel, int Note) key, long token, int lengthMs)
+    private async Task ReleaseAsync(IPlaybackMidiRouting routing, (int Channel, int Note) key, long token, int lengthMs)
     {
         try { await Task.Delay(Math.Clamp(lengthMs, 60, 8000)); }
         finally

@@ -16,7 +16,7 @@ namespace TabForge.Audio;
 /// With no plug-in tracks and "Play the whole song through the audio engine" switched off, this is a straight
 /// pass-through: no delay, no thread, no engine. That setting is on by default, so normally the engine is in use.
 /// </summary>
-public sealed partial class RoutedMidiOutput : IMidiOutput
+public sealed partial class RoutedMidiOutput : IMidiOutput, IPlaybackMidiRouting
 {
     private readonly IMidiOutput _inner;
     private readonly AudioEngineClient _engine;

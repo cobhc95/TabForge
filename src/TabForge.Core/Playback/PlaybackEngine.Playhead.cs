@@ -63,7 +63,7 @@ public sealed partial class PlaybackEngine
                 if (_startSettling) _audibleHold.Hold(timeline, anchorMs, seekId, _loopsDone, held);
                 return PlayheadMapper.MapInto(frame, timeline, held, CurrentBar, CurrentCell);
             }
-            var latency = _output is Audio.RoutedMidiOutput routed ? routed.AudibleLatencyMs : 0;
+            var latency = Routing?.AudibleLatencyMs ?? 0;
             ms = AudibleStreamMs(_anchorMs + _clock.Elapsed.TotalMilliseconds * _clockRate, latency, _clockRate);
         }
         // Never run ahead of what the scheduler has reached (a stalled scheduler) nor back before the start.

@@ -170,7 +170,7 @@ public sealed partial class PlaybackEngine : IDisposable
     }
 
     /// <summary>The routed MIDI output this engine plays through; null when its output is not routed.</summary>
-    public Audio.RoutedMidiOutput? Routing => _output as Audio.RoutedMidiOutput;
+    public IPlaybackMidiRouting? Routing => _output as IPlaybackMidiRouting;
 
     private bool _liveSolo;
 

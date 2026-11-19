@@ -48,7 +48,7 @@ public sealed class AvaloniaEngineRouting
     /// <summary>Brings the engine in line with the document; the routes change only when a MIDI output is given.</summary>
     /// <param name="owner">The document that owns the engine now.</param>
     /// <param name="skippedPlugins">The owning document's plug-ins skipped for now ("Disable it" after a very slow load); null: none.</param>
-    public static void Apply(SongProject project, RoutedMidiOutput? routing, AudioEngineClient engine, PluginSettings settings, int masterPercent, object owner,
+    public static void Apply(SongProject project, IPlaybackMidiRouting? routing, AudioEngineClient engine, PluginSettings settings, int masterPercent, object owner,
         ICollection<string>? skippedPlugins = null, PracticeFocus? focus = null)
     {
         ApplyMixerOptions(settings, engine.Mixer);
