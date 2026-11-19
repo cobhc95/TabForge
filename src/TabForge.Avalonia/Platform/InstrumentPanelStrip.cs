@@ -293,7 +293,7 @@ public sealed class InstrumentPanelStrip : Grid
 
     /// <summary>The keyboard's pane height cap at this width. Before the strip has a width (not yet arranged) the tallest keys apply.</summary>
     private double KeyboardMaxHeight() =>
-        KeyboardPaneSizeRules.MaxPaneHeight(Bounds.Width > 0 ? Bounds.Width : double.PositiveInfinity, Panel.WhiteKeyCount);
+        KeyboardPaneSizeRules.MaxPaneHeight(Bounds.Width > 0 ? Math.Max(0, Bounds.Width - Panel.KeysSideReserve) : double.PositiveInfinity, Panel.WhiteKeyCount);
 
     /// <summary>The fretboard's pane height cap: the gap cap's height, or the height this width alone allows when that is lower. Before the
     /// strip has a width (not yet arranged) only the gap cap applies.</summary>
@@ -360,7 +360,7 @@ public sealed class InstrumentPanelStrip : Grid
         Canvas.SetTop(_scales, CornerScalesTop);
     }
 
-    /// <summary>Beside Scales in the legend; hidden on the keyboard and the drum map, which have no board to customise.</summary>
+    /// <summary>Beside Scales in the legend (fretboard and keyboard); hidden on the drum map, which has no legend.</summary>
     private void PlaceCustomizeButton()
     {
         var tiles = Panel.ActionTileBounds();
@@ -368,7 +368,7 @@ public sealed class InstrumentPanelStrip : Grid
         if (tiles is { } both) Place(_customize, both.Customize, both.Unit);
     }
 
-    // The legend's minimise / restore button: beside the title while open, a round button while minimised; hidden on the keyboard and drums.
+    // The legend's minimise / restore button: beside the title while open, a round button while minimised; hidden on the drum map.
     private void PlaceLegendToggle()
     {
         var bounds = Panel.LegendToggleBounds();

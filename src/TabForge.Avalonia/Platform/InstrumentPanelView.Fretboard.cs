@@ -320,17 +320,28 @@ public sealed partial class InstrumentPanelView
     private const double LegendRowInset = 8;
 
     /// <summary>The neck's whole visible extent (wood and binding), which the legend matches in height.</summary>
-    internal UiRect LegendBoard() => FretboardArtist.Frame(FretboardLayout(), FretInput.Bass, _look.Style);
+    internal UiRect LegendBoard() => _kind == InstrumentPanelKind.Keyboard ? KeysArea() : FretboardArtist.Frame(FretboardLayout(), FretInput.Bass, _look.Style);
+
+    /// <summary>True when the panel shows the legend card: the fretboard and the keyboard share one legend (the same card, tiles, settings and buttons).</summary>
+    internal bool HasLegend => _kind is InstrumentPanelKind.Fretboard or InstrumentPanelKind.Keyboard;
+
+    /// <summary>The scale from the legend's units to panel pixels: the fretboard's drawing scale; the keyboard is drawn 1:1.</summary>
+    private double LegendScale() => _kind == InstrumentPanelKind.Keyboard ? 1 : FretboardScale();
+
+    /// <summary>The width the keyboard sets aside beside its keys for the legend: the open card, or the round restore button when minimised.</summary>
+    internal double KeysSideReserve => CloseButtonReserve + KeyboardLegendColumn;
+
+    private double KeyboardLegendColumn => _look.LegendMinimised ? MinimisedLegendReserve : LegendCardWidth + LegendGap - LegendCardPad;
 
     /// <summary>The legend tile for <paramref name="role"/> in the row of colour tiles, in panel coordinates: null on the keyboard and
     /// drums, and for next and upcoming while the legend does not list them (look-ahead off).</summary>
     public UiRect? LegendRowBounds(FretNoteRole role)
     {
-        if (_kind != InstrumentPanelKind.Fretboard || _look.LegendMinimised) return null;
+        if (!HasLegend || _look.LegendMinimised) return null;
         var row = role == FretNoteRole.Now ? 0 : _look.PreviewHorizon < 0 ? -1 : role == FretNoteRole.Next ? 1 : 2;
         if (row < 0) return null;
         var board = LegendBoard();
-        var s = FretboardScale();
+        var s = LegendScale();
         var box = LegendFrame(board);
         var (x, w) = LegendTileSpan(box.Left, row, _look.PreviewHorizon < 0 ? 1 : 3, box.Unit);
         return new UiRect(x * s, box.TilesTop(LegendCardPad, LegendTitleHeight) * s, w * s, box.TileH * s);
@@ -340,9 +351,9 @@ public sealed partial class InstrumentPanelView
     /// in real pixels (the drawing scale times the legend's own unit), which sizes their icon and text. Null for the keyboard and drums.</summary>
     public (UiRect Scales, UiRect Customize, double Unit)? ActionTileBounds()
     {
-        if (_kind != InstrumentPanelKind.Fretboard || _look.LegendMinimised) return null;
+        if (!HasLegend || _look.LegendMinimised) return null;
         var board = LegendBoard();
-        var s = FretboardScale();
+        var s = LegendScale();
         var box = LegendFrame(board);
         var y = LegendActionsTop(box) * s;
         UiRect Tile(int index) { var (x, w) = LegendTileSpan(box.Left, index, 2, box.Unit); return new UiRect(x * s, y, w * s, box.TileH * s); }
@@ -350,7 +361,7 @@ public sealed partial class InstrumentPanelView
     }
 
     /// <summary>True while the fretboard's legend is minimised to its round button.</summary>
-    internal bool LegendMinimised => _kind == InstrumentPanelKind.Fretboard && _look.LegendMinimised;
+    internal bool LegendMinimised => HasLegend && _look.LegendMinimised;
 
     // The minimised legend's round button, in board units at the legend's unit; the minimise button in the title row.
     private const double LegendRestoreSize = 30, LegendMinimiseSize = 18;
@@ -361,9 +372,9 @@ public sealed partial class InstrumentPanelView
     /// </summary>
     public (UiRect Rect, bool Minimised, double Unit)? LegendToggleBounds()
     {
-        if (_kind != InstrumentPanelKind.Fretboard) return null;
+        if (!HasLegend) return null;
         var board = LegendBoard();
-        var s = FretboardScale();
+        var s = LegendScale();
         var box = LegendFrame(board);
         var (u, left, top) = (box.Unit, box.Left, box.Top);
         if (_look.LegendMinimised)

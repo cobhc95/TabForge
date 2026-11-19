@@ -229,8 +229,9 @@ public sealed partial class InstrumentPanelView : Control
     internal UiRect KeysArea()
     {
         var (lowest, highest) = KeyRange();
-        var width = Math.Min(Bounds.Width, KeyboardGeometryRules.WhiteKeysIn(lowest, highest) * KeyboardPaneSizeRules.MaxWhiteKeyWidth);
-        return new UiRect((Bounds.Width - width) / 2, KeyboardPaneSizeRules.KeyInset, width, Math.Max(0, Bounds.Height - 2 * KeyboardPaneSizeRules.KeyInset));
+        var available = Math.Max(0, Bounds.Width - CloseButtonReserve - KeyboardLegendColumn);   // the legend card sits to the right of the keys, as on the fretboard
+        var width = Math.Min(available, KeyboardGeometryRules.WhiteKeysIn(lowest, highest) * KeyboardPaneSizeRules.MaxWhiteKeyWidth);
+        return new UiRect((available - width) / 2, KeyboardPaneSizeRules.KeyInset, width, Math.Max(0, Bounds.Height - 2 * KeyboardPaneSizeRules.KeyInset));
     }
 
     private (int Lowest, int Highest) KeyRange()

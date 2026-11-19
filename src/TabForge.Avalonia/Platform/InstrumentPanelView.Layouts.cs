@@ -53,6 +53,7 @@ public sealed partial class InstrumentPanelView
             d.Rect(litBlack ?? ScaleKeyFill(midi, ink, ink("KeyboardBlackKey")), new UiStroke(ink("InstrumentBackground"), 1), r.X, r.Y, r.Width, r.Height);
             if (litBlack is null && KeyShade(midi, ink) is { } shade) d.Rect(shade.WithOpacity(HoverShade.OverlayOpacity), null, r.X, r.Y, r.Width, r.Height);
         }
+        DrawLegend(d, ink, area);   // the same legend card as the fretboard's, beside the keys
     }
 
     /// <summary>A key's label: C keys carry their octave; with the note names setting every key carries its name, when the key is wide enough.</summary>

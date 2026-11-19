@@ -29,7 +29,7 @@ public sealed class ColourButton : Button
     private const string BorderPartName = "Bd";
     private readonly Border _swatch;
     private readonly TextBlock _name = new() { VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
-    private IBrush Rest() => this.TryFindResource("Panel2Brush", ActualThemeVariant, out var found) && found is IBrush brush ? brush : AvaloniaPalette.TransparentBrush;
+    private IBrush Rest() => this.TryFindResource("Panel3Brush", ActualThemeVariant, out var found) && found is IBrush brush ? brush : AvaloniaPalette.TransparentBrush;
 
     /// <param name="defaultHex">The colour the popup's Default button answers; the name "Default" when the value equals it.</param>
     /// <param name="recent">The recent colour list the popup shares with the other pickers.</param>
@@ -56,8 +56,8 @@ public sealed class ColourButton : Button
         HorizontalContentAlignment = HorizontalAlignment.Stretch;
         VerticalAlignment = VerticalAlignment.Center;
         BorderThickness = DialogMetrics.SwatchOutline;
-        this[!BorderBrushProperty] = new DynamicResourceExtension("BorderSoftBrush");
-        this[!BackgroundProperty] = new DynamicResourceExtension("Panel2Brush");
+        this[!BorderBrushProperty] = new DynamicResourceExtension("BorderBrush");
+        this[!BackgroundProperty] = new DynamicResourceExtension("Panel3Brush");
         this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
         ToolTip.SetTip(this, "Open the colour picker.");
         // The one-border template paints the control's own fill, so the hover and press shades below show (the Fluent template's pointer-over fill would cover them).
@@ -92,7 +92,7 @@ public sealed class ColourButton : Button
         if (!_focusRing) return;
         _focusRing = false;
         BorderThickness = DialogMetrics.SwatchOutline;
-        this[!BorderBrushProperty] = new DynamicResourceExtension("BorderSoftBrush");
+        this[!BorderBrushProperty] = new DynamicResourceExtension("BorderBrush");
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
