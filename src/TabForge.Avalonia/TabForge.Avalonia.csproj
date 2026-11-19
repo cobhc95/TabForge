@@ -65,6 +65,8 @@
       </ResolvedFileToPublish>
       <!-- The native Windows-PDB reader (2.3 MB) serves only debuggers reading full PDBs; this build's portable PDBs never need it at run time. -->
       <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(ResolvedFileToPublish.Filename)' == 'Microsoft.DiaSymReader.Native.amd64'" />
+      <!-- Unused runtime debug/dump, standalone GC, and HTTP/3 binaries (~5.67 MB): not needed by the shipped app. -->
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="$([System.String]::Copy('%(ResolvedFileToPublish.Filename)').StartsWith('mscordaccore')) Or '%(ResolvedFileToPublish.Filename)' == 'mscordbi' Or '%(ResolvedFileToPublish.Filename)' == 'createdump' Or '%(ResolvedFileToPublish.Filename)' == 'clrgc' Or '%(ResolvedFileToPublish.Filename)' == 'clrgcexp' Or '%(ResolvedFileToPublish.Filename)' == 'msquic'" />
     </ItemGroup>
   </Target>
   <ItemGroup>
