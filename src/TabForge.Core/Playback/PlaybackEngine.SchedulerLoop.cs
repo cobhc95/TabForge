@@ -347,10 +347,13 @@ public sealed partial class PlaybackEngine
     private LoopStep StepRecordCountIn(ref SchedulerState s, int generation)
     {
         if (_paused || Interlocked.Exchange(ref _recordCountInPending, 0) == 0 || generation != Volatile.Read(ref _generation)) return LoopStep.Proceed;
-        PlayLoopCountIn(s.Timeline, s.Ms, generation);
-        if (!TrySetSchedulerAnchor(generation, s.Ms)) return LoopStep.Continue;
-        s.Index = FirstIndexAtOrAfter(s.Events, s.Ms);
-        s.LastDispatchMs = s.Ms;
+        // Count in where dispatch stopped, not at the clock: a resume's rearm waits on the pause's device reset while the clock runs, and
+        // counting in there skipped the notes in between (the first note after the count-in was silent).
+        var at = Math.Min(s.Ms, s.LastDispatchMs);
+        PlayLoopCountIn(s.Timeline, at, generation);
+        if (!TrySetSchedulerAnchor(generation, at)) return LoopStep.Continue;
+        s.Ms = at;   // s.Index already points at the first unsent event
+        s.LastDispatchMs = at;
         return LoopStep.Proceed;
     }
 

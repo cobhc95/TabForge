@@ -2,6 +2,12 @@
 
 TabForge is actively developed; please report anything odd on the Issues page.
 
+## 0.9.10
+
+### Fixed
+
+- With count-in on, pressing Play on a paused song or moving the playhead no longer silences the first note. The count-in started a little past where the music stopped and skipped the notes in between. It now starts exactly there.
+
 ## 0.9.9
 
 ### Added
