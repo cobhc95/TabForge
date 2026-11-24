@@ -73,6 +73,43 @@ internal sealed partial class ScoreRenderer
         DrawFadePassages(d, fadePassages, track, systemLayout, staffTop, tabTop, ink, showTab);
     }
 
+    /// <summary>The playing-bar band and the lit notation of only <paramref name="measures"/> (the playback highlight): the system frame, lines, barlines and crossing passages redraw, so ties and markings that cross a highlighted bar stay. Zero measures draws nothing. Returns the drawn measure count.</summary>
+    internal int DrawLitMeasures(IDrawContext d, TrackModel track, ScoreSystemPosition systemLayout, IReadOnlyCollection<int> measures, UiColor ink, UiColor faint, UiColor line, UiColor accent, UiColor cursorColor, UiColor playColor, UiColor errorColor,
+        IReadOnlyList<PalmMutePassage> palmMutePassages, IReadOnlyList<FadePassage> fadePassages)
+    {
+        if (measures.Count == 0) return 0;
+        var system = systemLayout.Index;
+        _errorColor = errorColor;
+        var staffTop = _host.StaffTop(system);
+        var tabTop = _host.TabTop(system);
+        var strings = Math.Max(1, track.StringTunings.Count);
+        var showStaff = _host.Notation != NotationMode.TabOnly;
+        var showTab = _host.Notation != NotationMode.StaffOnly;
+        var thin = StaffNotationDrawing.StaffLineStroke(line);
+        var thick = new UiStroke(ink, 1.4);
+        var systemRight = systemLayout.X + systemLayout.Width;
+
+        DrawSystemLinesAndClef(d, track, systemLayout, staffTop, tabTop, strings, showStaff, showTab, thin, ink, faint);
+        DrawBarlines(d, track, systemLayout, staffTop, tabTop, strings, showStaff, showTab, thick, errorColor);
+        DrawFinalBarline(d, track, systemLayout, systemRight, staffTop, tabTop, strings, showStaff, showTab, ink, thick);
+
+        var voltas = new List<VoltaSpan>();
+        _textSpill.Clear();
+        var drawn = 0;
+        foreach (var measurePosition in systemLayout.Measures)
+        {
+            if (!_host.InHorizontalBand(measurePosition)) continue;
+            if (!measures.Contains(measurePosition.MeasureIndex)) continue;
+            DrawSystemMeasure(d, track, systemLayout, measurePosition, staffTop, tabTop, strings, showStaff, showTab, ink, faint, line, accent, playColor, voltas);
+            drawn++;
+        }
+        DrawVoltaBrackets(d, voltas, ink);
+
+        if (showTab || showStaff) DrawPalmMutePassages(d, palmMutePassages, track, systemLayout, tabTop, ink, showTab ? null : staffTop + 4 * _host.StaffGap);
+        DrawFadePassages(d, fadePassages, track, systemLayout, staffTop, tabTop, ink, showTab);
+        return drawn;
+    }
+
     /// <summary>The staff and string lines across the system, the clef, and the T-A-B letters (or the drum line names) in front of the TAB.</summary>
     private void DrawSystemLinesAndClef(IDrawContext d, TrackModel track, ScoreSystemPosition systemLayout, double staffTop, double tabTop, int strings, bool showStaff, bool showTab, UiStroke thin, UiColor ink, UiColor faint)
     {

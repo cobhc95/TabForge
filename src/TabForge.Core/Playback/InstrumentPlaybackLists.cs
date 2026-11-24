@@ -98,6 +98,20 @@ public static class InstrumentPlaybackLists
         }
     }
 
+    /// <summary>The song time at which <paramref name="target"/> (filled for <paramref name="nowMs"/>) next changes membership: the next onset, the next sounding end, or the next recent-hold expiry. The caller may reuse the snapshot while moving forward before it (with the onset tolerance), while vibration and fade still follow the clock. Positive infinity when nothing changes again.</summary>
+    public static double NextChangeMs(InstrumentPlaybackSnapshot target, NoteEvent[] notes, double nowMs, double holdMs = DefaultHoldMs)
+    {
+        var lo = NoteTimeline.FirstIndexAfter(notes, nowMs);
+        var next = lo < notes.Length ? notes[lo].OnsetMs : double.PositiveInfinity;
+        foreach (var note in target.Now) next = Math.Min(next, note.EndMs);
+        foreach (var note in target.Recent)
+        {
+            var expiry = note.EndMs + holdMs;
+            if (expiry > nowMs) next = Math.Min(next, expiry);
+        }
+        return next;
+    }
+
     private static void FillMovements(InstrumentPlaybackSnapshot target, NoteEvent[] notes, int lo, int previewHorizon)
     {
         // Next is the whole first onset group; Upcoming then fills up to previewHorizon notes in total (counted in notes, not movements).

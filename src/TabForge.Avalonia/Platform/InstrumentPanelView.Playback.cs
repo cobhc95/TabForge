@@ -27,10 +27,26 @@ public sealed partial class InstrumentPanelView
     /// <summary>Whether the fade repaints at <paramref name="nowMs"/>: at least <see cref="FadeRepaintIntervalMs"/> of song time from the last repaint, either way (a seek moves it back).</summary>
     internal static bool FadeRepaintDue(double lastRepaintMs, double nowMs) => Math.Abs(nowMs - lastRepaintMs) >= FadeRepaintIntervalMs;
 
+    // Membership cache: the note lists change only at an onset, a sounding end, or a recent expiry. Reused while moving forward before that boundary; vibration and fade still follow the clock. Reset on seek back, loop wrap, track, look or stream change (a new array reference).
+    private NoteEvent[]? _cachedNotes;
+    private double _cachedFillMs = double.NaN;
+    private double _nextChangeMs = double.PositiveInfinity;
+    private int _cachedHorizon;
+    private bool _cachedIncludeRecent;
+    private int _membershipFillCount;
+
+    private void InvalidateMembershipCache()
+    {
+        _cachedNotes = null;
+        _cachedFillMs = double.NaN;
+        _nextChangeMs = double.PositiveInfinity;
+    }
+
     public void ShowPlayback(NoteEvent[]? notes, double nowMs, bool animateStrings = false)
     {
         if (notes is null)
         {
+            InvalidateMembershipCache();
             if (!_playbackShown) return;
             _playbackShown = false;
             _playing.Clear();
@@ -39,10 +55,31 @@ public sealed partial class InstrumentPanelView
             InvalidateVisual();
             return;
         }
+        var horizon = _kind == InstrumentPanelKind.Drums ? -1 : _look.PreviewHorizon;
+        var includeRecent = _look.PreviewPrevious;
+        var cacheHit = _playbackShown && ReferenceEquals(notes, _cachedNotes) && horizon == _cachedHorizon && includeRecent == _cachedIncludeRecent
+            && nowMs >= _cachedFillMs && nowMs + InstrumentPlaybackLists.OnsetToleranceMs < _nextChangeMs;
+        if (cacheHit)
+        {
+            // Membership is unchanged: only the clock-driven vibration and recent fade move.
+            var reuseAnimate = animateStrings && IsEffectivelyVisible && _kind == InstrumentPanelKind.Fretboard
+                && _look.VibrationPeak > 0 && _playing.Now.Count > 0;
+            var reuseVibration = reuseAnimate || _vibratePhaseMs >= 0;
+            _vibratePhaseMs = reuseAnimate ? 0 : -1;
+            _playbackNowMs = nowMs;
+            if (_playing.Recent.Count > 0 && FadeRepaintDue(_lastFadeRepaintMs, nowMs))
+            {
+                _lastFadeRepaintMs = nowMs;
+                reuseVibration = true;
+            }
+            if (reuseVibration) InvalidateVisual();
+            return;
+        }
         // Sounding notes only when the look has no look-ahead (the drum map always, melodic views when preview notes are off):
         // a negative horizon skips the Next/Upcoming lists (and their work) entirely.
-        InstrumentPlaybackLists.Fill(_scratch, notes, nowMs, _kind == InstrumentPanelKind.Drums ? -1 : _look.PreviewHorizon,
-            includeRecent: _look.PreviewPrevious);
+        InstrumentPlaybackLists.Fill(_scratch, notes, nowMs, horizon,
+            includeRecent: includeRecent);
+        _membershipFillCount++;
         var animate = animateStrings && IsEffectivelyVisible && _kind == InstrumentPanelKind.Fretboard
             && _look.VibrationPeak > 0 && _scratch.Now.Count > 0;
         var vibrationChanged = animate || _vibratePhaseMs >= 0;
@@ -50,6 +87,11 @@ public sealed partial class InstrumentPanelView
         _playbackNowMs = nowMs;
         if (_playbackShown && _scratch.SameNotesAs(_playing))
         {
+            _cachedNotes = notes;
+            _cachedFillMs = nowMs;
+            _cachedHorizon = horizon;
+            _cachedIncludeRecent = includeRecent;
+            _nextChangeMs = InstrumentPlaybackLists.NextChangeMs(_playing, notes, nowMs);
             // The recent notes fade with the playback time: they repaint while any is shown, at most 30 times a second.
             if (_playing.Recent.Count > 0 && FadeRepaintDue(_lastFadeRepaintMs, nowMs))
             {
@@ -63,6 +105,11 @@ public sealed partial class InstrumentPanelView
         _movement = MovementOf(_playing);
         _playbackShown = true;
         _lastFadeRepaintMs = nowMs;
+        _cachedNotes = notes;
+        _cachedFillMs = nowMs;
+        _cachedHorizon = horizon;
+        _cachedIncludeRecent = includeRecent;
+        _nextChangeMs = InstrumentPlaybackLists.NextChangeMs(_playing, notes, nowMs);
         InvalidateVisual();
     }
 

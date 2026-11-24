@@ -71,14 +71,20 @@ internal sealed class PlaybackSeekRebuild
     internal SongSnapshot TakeSnapshot(SongProject project)
     {
         // Owner (UI) thread only: the runtime flags the copy carries (engine-side plug-in state, manual GM-off) are read here once, and MixStamp keys the cache on them.
+        var stamp = TabForge.Services.Trace.IsOn(TabForge.Services.Trace.Playback) ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
         var revision = project.ContentRevision;
         var mix = PlaybackScheduleReuse.MixStamp(project);
-        if (_lastSnapshot is { } last && _lastRevision == revision && _lastMix == mix && _lastSong is { } song && song.TryGetTarget(out var same) && ReferenceEquals(same, project)) return last;
+        if (_lastSnapshot is { } last && _lastRevision == revision && _lastMix == mix && _lastSong is { } song && song.TryGetTarget(out var same) && ReferenceEquals(same, project))
+        {
+            if (stamp != 0) TabForge.Services.Trace.Write(TabForge.Services.Trace.Playback, $"snapshot reused (revision {revision}) in {(System.Diagnostics.Stopwatch.GetTimestamp() - stamp) * 1000.0 / System.Diagnostics.Stopwatch.Frequency:F2} ms");
+            return last;
+        }
         var snapshot = SongSnapshot.Take(project, _snapshotEncoder);
         _lastSong = new WeakReference<SongProject>(project);
         _lastRevision = revision;
         _lastMix = mix;
         _lastSnapshot = snapshot;
+        if (stamp != 0) TabForge.Services.Trace.Write(TabForge.Services.Trace.Playback, $"snapshot encoded (revision {revision}) in {(System.Diagnostics.Stopwatch.GetTimestamp() - stamp) * 1000.0 / System.Diagnostics.Stopwatch.Frequency:F2} ms");
         return snapshot;
     }
 
@@ -139,11 +145,13 @@ internal sealed class PlaybackSeekRebuild
 
     private void Compile(Request request)
     {
+        var stamp = TabForge.Services.Trace.IsOn(TabForge.Services.Trace.Playback) ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
         try
         {
             IScoreQuery score = request.Snapshot;
             var timeline = score.Compile(request.Options, out var loopCompileStart, request.Cancellation.Token);
             var startMs = score.LoopEntryMs(timeline, request.Options, loopCompileStart, timeline.PlayFromMs);
+            if (stamp != 0) TabForge.Services.Trace.Write(TabForge.Services.Trace.Playback, $"seek compile {timeline.Events.Count} events / {timeline.Notes.Count} notes in {(System.Diagnostics.Stopwatch.GetTimestamp() - stamp) * 1000.0 / System.Diagnostics.Stopwatch.Frequency:F2} ms");
             Publish(request, timeline, startMs, null, PlaybackScheduleReuse.Capture(request.Project, request.Snapshot, request.Options, timeline));
         }
         catch (OperationCanceledException) when (request.Cancellation.IsCancellationRequested)

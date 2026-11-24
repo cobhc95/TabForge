@@ -8,15 +8,19 @@ using TabForge.Services;
 
 namespace TabForge.Avalonia.Platform;
 
-// Owns: the fretboard's still part (wood, binding, inlays, wires) kept as one bitmap at device pixels, so a ringing string redraws its strings and
-//   notes over it instead of the whole neck on every screen refresh. Rebuilt only when the size, scale, look, frets or theme change.
+// Owns: the fretboard's still part (wood, binding, inlays, wires, fret numbers and string labels) kept as one bitmap at device pixels, so a ringing
+//   string redraws its strings and notes over it instead of the whole neck on every screen refresh. Rebuilt only when the size, scale, look, frets,
+//   tuning, theme or DPI change.
 // Does not own: the drawing itself (FretboardArtist), the live parts on top (InstrumentPanelView.Fretboard.cs).
 //   Recording contexts (tests) and the video path (clips skipped) always draw live.
 // Tests: TabForge.Avalonia.Tests.InstrumentPanelViewTests.
 // Threads: UI thread only.
 public sealed partial class InstrumentPanelView
 {
-    private readonly record struct BoardKey(Size Bounds, double Pixels, double Scale, FretboardGeometryRules.Layout Layout, FretboardStyles.Look Style, double MarkerBrightness, bool Bass, bool Light, int Palette);
+    private readonly record struct BoardKey(Size Bounds, double Pixels, double Scale, FretboardGeometryRules.Layout Layout, FretboardStyles.Look Style, double MarkerBrightness, bool Bass, bool Light, int Palette, double FretNumberScale, bool StringNumbers, bool ShowNoteNames, int TuningHash);
+
+    /// <summary>How many times the still board bitmap was built; a vibration frame never rebuilds it (a test/dev counter).</summary>
+    internal int BoardBuildCount { get; private set; }
 
     private BoardKey? _boardKey;
     private RenderTargetBitmap? _boardBitmap;
@@ -30,8 +34,11 @@ public sealed partial class InstrumentPanelView
         var scale = FretboardScale();
         if (Bounds.Width <= 0 || Bounds.Height <= 0 || scale <= 0) return false;
         // The capo is drawn live and does not touch the still board, so dragging one never rebuilds it.
+        var tuningHash = 0;
+        foreach (var pitch in Tuning) unchecked { tuningHash = tuningHash * 31 + pitch; }
+        unchecked { tuningHash = tuningHash * 31 + Tuning.Count; }
         var key = new BoardKey(Bounds.Size, pixels, scale, layout with { CapoByString = 0 }, _look.Style, _look.MarkerBrightness, FretInput.Bass,
-            ActualThemeVariant == global::Avalonia.Styling.ThemeVariant.Light, AvaloniaPalette.PublishVersion);
+            ActualThemeVariant == global::Avalonia.Styling.ThemeVariant.Light, AvaloniaPalette.PublishVersion, _look.FretNumberScale, _look.StringNumbers, _look.ShowNoteNames, tuningHash);
         if (_boardKey != key || _boardImage is null)
         {
             ReleaseBoardBitmap();
@@ -60,10 +67,12 @@ public sealed partial class InstrumentPanelView
             FretboardArtist.DrawBackdrop(scene);
             FretboardArtist.DrawInlays(scene);
             FretboardArtist.DrawWires(scene);
+            DrawStaticLabels(draw, ink, layout);
             draw.Pop();
         }
         _boardBitmap = bitmap;
         _boardImage = new AvaloniaImage(bitmap);
+        BoardBuildCount++;
     }
 
     /// <summary>The still board's bitmap as the given display scale makes it (tests: headless windows are always at 1).</summary>

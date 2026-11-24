@@ -76,38 +76,56 @@ internal sealed class ScoreGeometryProbe : IScoreLayoutHost, IScoreRenderHost, I
         finally { _pageOnly = false; }
     }
 
-    /// <summary>The systems holding the playing bar or a lit note, each redrawn over its own row with the notes lit: all a note change repaints, so the rest of the page stays retained.</summary>
+    /// <summary>The bars holding the playing bar or a lit note, redrawn over their rows with the notes lit: all a note change repaints, so the rest of the page stays retained. No full-system redraw is used for highlighting alone; each affected system redraws only its lit measures (frame, lines and crossing passages still redraw, so ties and markings that cross a lit bar stay).</summary>
     internal void DrawLitSystems(IDrawContext d)
     {
         if (!Play.Active || _track.IsAudio) return;
         var layout = _layout.GetLayout(_track);
-        _litSystems.Clear();
-        NoteLitSystem(layout, Play.Measure);
-        foreach (var note in Play.Sounding) NoteLitSystem(layout, note.bar);
-        foreach (var note in Play.Struck) NoteLitSystem(layout, note.bar);
-        if (_litSystems.Count == 0) return;
+        _litBars.Clear();
+        AddLitBar(layout, Play.Measure);
+        foreach (var note in Play.Sounding) AddLitBar(layout, note.bar);
+        foreach (var note in Play.Struck) AddLitBar(layout, note.bar);
+        if (_litBars.Count == 0) return;
         var ink = Appearance.InkColor;
         var faint = TabForge.Platform.Theme.Palette.Get("ScoreFaintInk", light: Light);
         ScoreText.NormalInk = ink;
         var facts = _layout.EnsureScoreFacts(_track, _project);
         var pageWidth = ContentSize().Width;
-        foreach (var index in _litSystems)
+        _litBySystem.Clear();
+        foreach (var bar in _litBars)
+        {
+            var system = layout.Measure(bar).SystemIndex;
+            if (!_litBySystem.TryGetValue(system, out var list)) _litBySystem[system] = list = new List<int>();
+            list.Add(bar);
+        }
+        foreach (var (index, bars) in _litBySystem)
         {
             var top = SystemRowTop(index);
             d.PushClip(0, top, pageWidth, SystemHeight);
-            d.Rect(Appearance.PaperColor, null, 0, top, pageWidth, SystemHeight);
-            _renderer.DrawSystem(d, _track, layout.Systems[index], ink, faint, Appearance.StaffLineColor, Appearance.AccentColor, Appearance.CursorColor,
+            foreach (var bar in bars)
+            {
+                var position = layout.Measure(bar);
+                d.Rect(Appearance.PaperColor, null, position.X, top, position.Width, SystemHeight);
+            }
+            LitMeasureDrawCount += _renderer.DrawLitMeasures(d, _track, layout.Systems[index], bars, ink, faint, Appearance.StaffLineColor, Appearance.AccentColor, Appearance.CursorColor,
                 Appearance.PlaybackColor, Appearance.ErrorColor, facts.PalmMutePassages, facts.FadePassages);
+            LitSystemDrawCount++;
             d.Pop();
         }
     }
 
-    private void NoteLitSystem(ScorePageLayout layout, int bar)
+    private void AddLitBar(ScorePageLayout layout, int bar)
     {
-        if (bar >= 0 && bar < _track.Measures.Count) _litSystems.Add(layout.Measure(bar).SystemIndex);
+        if (bar >= 0 && bar < _track.Measures.Count) _litBars.Add(bar);
     }
 
-    private readonly SortedSet<int> _litSystems = new();
+    /// <summary>How many lit layers (affected systems) drew; a highlight for one playing bar is one, never the whole page.</summary>
+    internal int LitSystemDrawCount { get; private set; }
+    /// <summary>How many lit measures drew; a fixed-viewport note change is at most the playing bar plus sounding/struck bars, not every bar of the system.</summary>
+    internal int LitMeasureDrawCount { get; private set; }
+
+    private readonly SortedSet<int> _litBars = new();
+    private readonly Dictionary<int, List<int>> _litBySystem = new();
     private static readonly HashSet<(int bar, int cell, int s)> NoLitNotes = new();
     private bool _pageOnly;   // while the retained page draws: no lit notes and no band, the cursor stays hidden as in any playback
 

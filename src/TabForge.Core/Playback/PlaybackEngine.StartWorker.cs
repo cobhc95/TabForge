@@ -71,10 +71,12 @@ public sealed partial class PlaybackEngine
         var compileOptions = opts.Clone();   // the pending options may change on the owner thread while this compiles
         _ = Task.Run(() =>
         {
+            var stamp = TabForge.Services.Trace.IsOn(TabForge.Services.Trace.Playback) ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
             try
             {
                 pending.Timeline = snapshot.Compile(compileOptions, out var loopCompileStart);
                 pending.LoopCompileStart = loopCompileStart;
+                if (stamp != 0 && pending.Timeline is { } compiled) TabForge.Services.Trace.Write(TabForge.Services.Trace.Playback, $"start compile {compiled.Events.Count} events / {compiled.Notes.Count} notes in {(System.Diagnostics.Stopwatch.GetTimestamp() - stamp) * 1000.0 / System.Diagnostics.Stopwatch.Frequency:F2} ms");
             }
             catch (Exception ex)
             {

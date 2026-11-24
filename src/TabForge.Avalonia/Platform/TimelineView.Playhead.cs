@@ -38,17 +38,23 @@ public sealed partial class TimelineView
 
     /// <summary>
     /// Moves the playhead to <paramref name="bar"/> and <paramref name="fraction"/> with a transform, even for a fractional-pixel move.
-    /// The timeline body repaints only when the bar changes.
+    /// The timeline body repaints only when a body visual would change: the active section (brackets/glow), the bar-marker cell, or the hidden bar number.
     /// </summary>
     public void SetPlayhead(int bar, double fraction, int pass = 1)
     {
-        // The brackets, the section glow and the bar-style marker live in the body and depend on the played bar, so the body draws again when the bar changes (never per frame).
-        var barChanged = bar != PlayheadBar;
+        var oldBar = PlayheadBar;
+        var barChanged = bar != oldBar;
         var passChanged = Math.Max(1, pass) != PlayheadPass;
+        var oldActive = oldBar >= 0 ? ActiveSectionIndex(oldBar) : -1;
+        var newActive = bar >= 0 ? ActiveSectionIndex(bar) : -1;
         PlayheadBar = bar;
         PlayheadFraction = fraction;
         PlayheadPass = Math.Max(1, pass);
-        if (barChanged) InvalidateVisual();
+        var bodyNeedsRedraw = (ShowSectionBrackets && oldActive != newActive)
+            || (PlayheadStyles.ShowsBarMarker(_playheadStyle) && barChanged)
+            || (_showBarNumbers && !_compact && barChanged)
+            || ((oldBar < 0) != (bar < 0) && (ShowSectionBrackets || PlayheadStyles.ShowsBarMarker(_playheadStyle)));
+        if (bodyNeedsRedraw) InvalidateVisual();
         if (passChanged) PlayheadLayer.Redraw();
         PlayheadLayer.Place();
     }

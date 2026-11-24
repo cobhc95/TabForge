@@ -9,6 +9,9 @@ TabForge is actively developed; please report anything odd on the Issues page.
 - A fretboard preview now rests when playback stops or pauses. The note preview stays visible and the window stops redrawing it on every refresh.
 - The timeline reuses its bar timing during playback, and bar timing calculations skip allocating MIDI events they would immediately discard.
 - Fretboard textures can be reclaimed after switching looks. Tracks without effects skip effects scratch buffers, and MIDI logging allocates its buffer when opened.
+- During playback the fretboard keeps its still board, fret and string labels in a retained bitmap and reuses its note snapshot until the next onset, release or preview change, so a vibrating string no longer rebuilds the whole board each frame.
+- Score highlighting now redraws only the bars that hold the playing bar or a lit note (frame, lines and crossing marks stay), and the timeline body only repaints when its section, bar marker or bar number would change.
+- Playback start timing (snapshot, compile and first sound) can be read from the playback trace; a TabCell memory probe counts empty collections for the RAM audit before any model rewrite.
 - Save and Ctrl+S now write a reopened modern Guitar Pro `.gp` file in place. Save As still opens the file picker.
 - Windows Setup now uses TabForge's normal close flow during upgrades so you can save edits before it replaces the installed files.
 

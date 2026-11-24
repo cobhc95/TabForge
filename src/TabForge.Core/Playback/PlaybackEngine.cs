@@ -128,6 +128,7 @@ public sealed partial class PlaybackEngine : IDisposable
 
     public void Start(SongProject project, PlaybackOptions options, Action<PlaybackPosition> onPosition, Action onFinished, bool startPaused = false)
     {
+        var stamp = TabForge.Services.Trace.IsOn(TabForge.Services.Trace.Playback) ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
         Stop();
         var generation = ++_generation;
         options = options.Clone();
@@ -137,6 +138,7 @@ public sealed partial class PlaybackEngine : IDisposable
         // A loop compiles from its start and begins at the requested bar inside it (see PlaybackSeekRebuild.CompilerOptionsFor).
         var snapshot = _seekRebuild.TakeSnapshot(project);   // cached by content revision (every song edit, mixer included, bumps it); the timeline compiles from it and is published with it
         var timeline = snapshot.Compile(options, out var loopCompileStart);
+        if (stamp != 0) TabForge.Services.Trace.Write(TabForge.Services.Trace.Playback, $"start sync compile {timeline.Events.Count} events / {timeline.Notes.Count} notes in {(System.Diagnostics.Stopwatch.GetTimestamp() - stamp) * 1000.0 / System.Diagnostics.Stopwatch.Frequency:F2} ms (snapshot+compile)");
         StartCompiled(project, options, timeline, snapshot, loopCompileStart, generation, onPosition, onFinished, startPaused);
     }
 

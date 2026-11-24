@@ -53,32 +53,17 @@ public sealed partial class InstrumentPanelView
     private void DrawFretboard(IDrawContext d, Func<string, UiColor> ink)
     {
         var layout = FretboardLayout();
-        var board = layout.Board;
         var scene = new FretboardScene(d, ink, layout, _look.Style, FretInput.Bass, _assets, _inlays, _look.MarkerBrightness);
-        if (!DrawCachedBoard(d, ink, layout))
+        var cached = DrawCachedBoard(d, ink, layout);
+        if (!cached)
         {
             FretboardArtist.DrawBackdrop(scene);
             FretboardArtist.DrawInlays(scene);
             FretboardArtist.DrawWires(scene);
-        }
-        // Fret numbers under the wood: fret 1 and every even fret (every fret when the range is short).
-        var woodBottom = FretboardArtist.Wood(layout, scene.Bass).Bottom;
-        for (var fret = layout.FirstFret; fret <= layout.LastFret; fret++)
-        {
-            var number = d.Text(FretLabel(fret), Font, FretboardSizeRules.FretNumberFontSize(layout.StringGap) * _look.FretNumberScale, ink("FretLabel"), d.PixelsPerDip);
-            var cell = Math.Abs(FretboardGeometryRules.WireX(layout, fret) - FretboardGeometryRules.WireX(layout, fret - 1));
-            // A number shows when it fits its fret cell; the crowded high frets keep the even ones (and fret 1) as before.
-            if (cell < number.Width + FretLabelClearance && (fret % 2 != 0 || cell < number.Width * 0.8) && fret != layout.FirstFret) continue;
-            d.DrawText(number, FretboardGeometryRules.FretX(layout, fret) - number.Width / 2, woodBottom + FretNumberTop);
+            DrawStaticLabels(d, ink, layout);
         }
         // Sounding strings vibrate for their note's duration (frame-driven phase; labels stay put), as far and as fast as the settings allow.
         FretboardArtist.DrawStrings(scene, _wobble ??= StringWobble);
-        if (_look.StringNumbers)
-            for (var s = 0; s < layout.Strings; s++)
-            {
-                var label = d.Text(StringLabel(s), Font, StringLabelFontSize, ink("FretLabel"), d.PixelsPerDip);
-                d.DrawText(label, board.X - StringLabelInset - label.Width - 8, FretboardGeometryRules.StringY(layout, s) - StringLabelLift);
-            }
         DrawBehindCapo(d, ink, layout, FretboardArtist.Wood(layout, scene.Bass));
         DrawCapo(d, ink, layout);
         FretboardArtist.DrawBrightness(scene, _look.BoardBrightness);
@@ -100,6 +85,28 @@ public sealed partial class InstrumentPanelView
         }
         DrawHoverGhost(d, ink, layout, radius);
         DrawLandingPreview(d, ink);
+    }
+
+    /// <summary>The still labels under and beside the wood: fret numbers and string numbers. Retained in the board bitmap when the bitmap is used; drawn live otherwise.</summary>
+    private void DrawStaticLabels(IDrawContext d, Func<string, UiColor> ink, FretboardGeometryRules.Layout layout)
+    {
+        // Fret numbers under the wood: fret 1 and every even fret (every fret when the range is short).
+        var woodBottom = FretboardArtist.Wood(layout, FretInput.Bass).Bottom;
+        for (var fret = layout.FirstFret; fret <= layout.LastFret; fret++)
+        {
+            var number = d.Text(FretLabel(fret), Font, FretboardSizeRules.FretNumberFontSize(layout.StringGap) * _look.FretNumberScale, ink("FretLabel"), d.PixelsPerDip);
+            var cell = Math.Abs(FretboardGeometryRules.WireX(layout, fret) - FretboardGeometryRules.WireX(layout, fret - 1));
+            // A number shows when it fits its fret cell; the crowded high frets keep the even ones (and fret 1) as before.
+            if (cell < number.Width + FretLabelClearance && (fret % 2 != 0 || cell < number.Width * 0.8) && fret != layout.FirstFret) continue;
+            d.DrawText(number, FretboardGeometryRules.FretX(layout, fret) - number.Width / 2, woodBottom + FretNumberTop);
+        }
+        if (!_look.StringNumbers) return;
+        var board = layout.Board;
+        for (var s = 0; s < layout.Strings; s++)
+        {
+            var label = d.Text(StringLabel(s), Font, StringLabelFontSize, ink("FretLabel"), d.PixelsPerDip);
+            d.DrawText(label, board.X - StringLabelInset - label.Width - 8, FretboardGeometryRules.StringY(layout, s) - StringLabelLift);
+        }
     }
 
     /// <summary>Dims the neck behind each string's capo: nothing can be played there, and written frets start at the capo.</summary>
