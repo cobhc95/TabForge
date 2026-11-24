@@ -71,7 +71,7 @@ public sealed class InstrumentPanelStrip : Grid
     private double _notesMs = double.NaN;
     private int _notesBar = -1;
     private int _notesCell;
-    private bool _notesPaused;
+    private bool _notesMoving;
 
     /// <param name="close">What the X button does (the window hides the pane); null leaves the button doing nothing.</param>
     /// <param name="activePlayback">The playback session of the shown tab; the strip follows it while attached and after <see cref="RebindPlayback"/>. Null: no playback.</param>
@@ -230,14 +230,15 @@ public sealed class InstrumentPanelStrip : Grid
             var slots = Math.Max(1, scoreBar.Slots);
             nowMs = scoreBar.MsAtFraction(Math.Clamp((double)cell / slots, 0, 1));
         }
-        if (_notesShown && _notesTrack == index && _notesMs == nowMs && _notesBar == bar && _notesCell == cell && _notesPaused == session.IsPaused) return;
+        var moving = session.IsPlaying && !session.IsPaused && !transport.StartPending && !session.InCountIn;
+        if (_notesShown && _notesTrack == index && _notesMs == nowMs && _notesBar == bar && _notesCell == cell && _notesMoving == moving) return;
         _notesShown = true;
         _notesTrack = index;
         _notesMs = nowMs;
         _notesBar = bar;
         _notesCell = cell;
-        _notesPaused = session.IsPaused;
-        Panel.ShowPlayback(timeline.NotesFor(index), nowMs);
+        _notesMoving = moving;
+        Panel.ShowPlayback(timeline.NotesFor(index), nowMs, moving);
     }
 
     /// <summary>Forgets the last shown playhead state, so the next ShowPlaybackNotes fills even at the same clock (edits, a rebound session, detach).</summary>

@@ -246,8 +246,22 @@ public sealed partial class TimelineView
     /// <summary>The repeat region whose pass popover floats above its lane (all its pills), or null when it is closed.
     /// S3 opens and closes it; S2 only draws it.</summary>
     public RepeatRegion? PickerPopoverRegion { get; set; }
+    private SongTimingMeasure? _renderTiming;
+    private int _renderTimingRevision;
+
+    internal SongTimingMeasure RenderTiming()
+    {
+        var revision = Song.ContentRevision;
+        if (_renderTiming is null || _renderTimingRevision != revision)
+        {
+            _renderTiming = SongExtent.Timing(Song);
+            _renderTimingRevision = revision;
+        }
+        return _renderTiming;
+    }
+
     /// <summary>The repeat regions of the song now, in bar order (derived from the performed bar order).</summary>
-    public IReadOnlyList<RepeatRegion> RepeatRegionsNow() => Folds.MapOf(SongExtent.Timing(Song).Performed).Regions;
+    public IReadOnlyList<RepeatRegion> RepeatRegionsNow() => Folds.MapOf(RenderTiming().Performed).Regions;
     public double RowTop(int row) => RulerHeight + SectionHeight + ArrangementRowPresenter.RowTop(_rows, row) - _rowScrollOffset;
 
     /// <summary>

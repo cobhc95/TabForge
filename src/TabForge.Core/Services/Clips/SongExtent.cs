@@ -29,7 +29,7 @@ public static class SongExtent
         var cache = project.SongExtentMeasures;
         if (cache.TryGet(project, out var measured) && measured is not null) return measured;
 
-        var timeline = MidiTimelineBuilder.Build(project, new PlaybackOptions { RepeatExpansion = true, RespectMuteSolo = false, SkipClips = true });
+        var timeline = MidiTimelineBuilder.BuildBarTiming(project);
         var endSec = timeline.Bars.Count == 0 ? 0 : timeline.Bars[^1].EndMs / 1000;
         var tempo = timeline.Bars.Count == 0 ? project.Tempo : timeline.Bars[^1].Tempo;
         if (tempo <= 0) tempo = project.Tempo > 0 ? project.Tempo : 120;

@@ -112,7 +112,7 @@ internal static class TimelineRepeatPicker
     {
         var hollow = new HashSet<int>();
         if (region.PassCount < 1) return hollow;
-        var performed = SongExtent.Timing(view.Song).Performed;
+        var performed = view.RenderTiming().Performed;
         var selected = view.SelectedClip?.Clip;
         IReadOnlyList<AudioClip> source = selected is not null && track.AudioClips.Contains(selected)
             ? new[] { selected }

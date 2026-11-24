@@ -51,6 +51,8 @@ public sealed class DocumentController
             context.AddNoticesTo(notices);
         }
         else project = importGuitarPro(path, notices);
+        // A warned import may have recovered only part of the source. Keep that source separate from the saved copy.
+        var sessionPath = notices.Count == 0 && path.EndsWith(".gp", StringComparison.OrdinalIgnoreCase) ? path : null;
         // The song's own title wins (also for a TabForge-embedded project); the file name only fills an empty one.
         if (string.IsNullOrWhiteSpace(project.Title)) project.Title = Path.GetFileNameWithoutExtension(path);
         // A clean .gp saved with its TabForge audio data beside it ("song.tfaudio"): bring the mixer and FX back.
@@ -60,7 +62,7 @@ public sealed class DocumentController
             notices.Add($"{Path.GetFileName(AudioDataFile.PathFor(path))} was not applied: {Path.GetFileName(path)} holds its own TabForge project, and the .tfaudio is from an earlier save");
         else if (path.EndsWith(".gp", StringComparison.OrdinalIgnoreCase)) AudioDataFile.TryApply(project, path, notices);
         if (CoverClips(project) is { } extended) notices.Add(extended);
-        return new OpenedScore(project, null, true, notices.Count == 0 ? null : string.Join("; ", notices), path);   // no native save path yet: relative media resolves against the imported file's folder
+        return new OpenedScore(project, sessionPath, true, notices.Count == 0 ? null : string.Join("; ", notices), path);
     }
 
     private static string? Join(string? a, string? b) => a is null ? b : b is null ? a : a + "; " + b;

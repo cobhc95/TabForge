@@ -22,6 +22,9 @@ public static class MidiTimelineBuilder
     internal static ScoreTimeline Build(SongProject project, PlaybackOptions opt, CancellationToken cancel) =>
         new ScoreToMidiCompiler(project, opt, null, cancel).Build();
 
+    internal static ScoreTimeline BuildBarTiming(SongProject project, double speed = 1) =>
+        new ScoreToMidiCompiler(project, new PlaybackOptions { Speed = speed, RepeatExpansion = true }).Build(barsOnly: true);
+
     /// <summary>Bar indices (source bars) in performance order, repeats/endings expanded.</summary>
     public static List<int> BuildPlaybackOrder(SongProject project, PlaybackOptions opt) =>
         PlaybackOrder.Build(project, opt);

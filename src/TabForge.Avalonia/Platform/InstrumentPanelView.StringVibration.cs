@@ -6,19 +6,13 @@ using TabForge.Presenters;
 
 namespace TabForge.Avalonia.Platform;
 
-// Owns: the fretboard's sounding-string vibration: a monitor-refresh frame loop (TopLevel.RequestAnimationFrame)
-// while a fretboard shows sounding notes, driving the strings' sideways offsets for the notes' duration.
-// The looks come from Core FretboardStringRing: a soft blur over the note's length and a very slight movement;
-// frames invalidate only (no per-frame allocation, no text changes: labels stay put).
-// Does not own: the curves (Core FretboardStringRing), the playing lists (InstrumentPanelView.Playback.cs) or the drawing.
+// Owns: the finite frame loop for auditioned notes and the vibration drawn at the current playback time.
 // Tests: TabForge.Avalonia.Tests.InstrumentPanelViewTests.
 // Threads: UI thread only.
 public sealed partial class InstrumentPanelView
 {
-    /// <summary>Milliseconds since the vibration epoch (the last list change) at the latest frame; negative when no frame ran yet.</summary>
+    // Negative while the fretboard is showing a stationary preview.
     private double _vibratePhaseMs = -1;
-    private TimeSpan _vibrateEpoch;
-    private bool _vibrateEpochSet;
     private bool _frameQueued;
     private Action<TimeSpan>? _onFrame;
     private readonly (long Started, int Fret)[] _previewRings = new (long, int)[12];
@@ -48,43 +42,19 @@ public sealed partial class InstrumentPanelView
         return false;
     }
 
-    private bool HasVibration => IsEffectivelyVisible && _kind == InstrumentPanelKind.Fretboard && _look.VibrationPeak > 0
-        && ((_playbackShown && _playing.Now.Count > 0) || HasPreviewVibration());
-
-    /// <summary>Restarts the vibration epoch after the playing lists changed and asks for frames while sounding notes show.</summary>
-    private void NoteListsChanged()
-    {
-        _vibrateEpochSet = false;
-        _vibratePhaseMs = -1;
-        KickVibration();
-    }
-
-    /// <summary>Asks for the next display frame while a fretboard shows sounding notes; at most one request is ever queued.</summary>
     private void KickVibration()
     {
-        if (_frameQueued || !HasVibration) return;
-        if (TopLevel.GetTopLevel(this) is null) return;
+        if (_frameQueued || !IsEffectivelyVisible || _kind != InstrumentPanelKind.Fretboard || _look.VibrationPeak <= 0
+            || !HasPreviewVibration() || TopLevel.GetTopLevel(this) is not { } top) return;
         _frameQueued = true;
-        TopLevel.GetTopLevel(this)?.RequestAnimationFrame(_onFrame ??= OnVibrateFrame);
+        top.RequestAnimationFrame(_onFrame ??= OnVibrateFrame);
     }
 
-    private void OnVibrateFrame(TimeSpan time)
+    private void OnVibrateFrame(TimeSpan _)
     {
         _frameQueued = false;
-        if (!HasVibration)
-        {
-            _vibrateEpochSet = false;
-            _vibratePhaseMs = -1;
-            return;
-        }
-        if (!_vibrateEpochSet) { _vibrateEpoch = time; _vibrateEpochSet = true; }
-        _vibratePhaseMs = (time - _vibrateEpoch).TotalMilliseconds;
-        InvalidateVisual();
-        if (TopLevel.GetTopLevel(this) is { } top && !_frameQueued)
-        {
-            _frameQueued = true;
-            top.RequestAnimationFrame(_onFrame ??= OnVibrateFrame);
-        }
+        if (IsEffectivelyVisible) InvalidateVisual();   // clear the last blur even when the preview has just ended
+        KickVibration();
     }
 
     /// <summary>The string's very slight sideways offset for a sounding note, over the note's

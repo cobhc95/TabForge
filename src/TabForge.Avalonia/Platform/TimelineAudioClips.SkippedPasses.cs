@@ -25,7 +25,7 @@ internal static partial class TimelineAudioClips
     internal static IReadOnlyList<Rect> SkippedPassRects(TimelineView view, IReadOnlyList<RepeatSlice> slices, double laneTop)
     {
         var rects = new List<Rect>();
-        var performed = SongExtent.Timing(view.Song).Performed;
+        var performed = view.RenderTiming().Performed;
         foreach (var (bar, ending) in view.Folds.MapOf(performed).Endings)
         {
             if (ending.PassCount > TimelineRepeatPicker.StackedMaxPasses || bar < 0 || bar >= view.BarCount) continue;

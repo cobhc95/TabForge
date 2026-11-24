@@ -61,7 +61,7 @@ public sealed class DocumentSaveFlow
     /// <summary>Completes when no save or export is running (see <see cref="DocumentController.WhenIdle"/>).</summary>
     public Task WhenIdle() => _controller.WhenIdle();
 
-    /// <summary>Only .tforge and .gp can be written in place; a song opened from .gp3 / .gp4 / .gp5 / .gpx asks where to save.</summary>
+    /// <summary>Whether the document has a path in a writable format.</summary>
     public static bool CanSaveInPlace(string? path) =>
         !string.IsNullOrWhiteSpace(path) && (path.EndsWith(".tforge", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".gp", StringComparison.OrdinalIgnoreCase) || path.EndsWith(Features.TuxGuitar.TuxGuitarImporter.Extension, StringComparison.OrdinalIgnoreCase));
 

@@ -315,7 +315,8 @@ public sealed partial class TimelineView : Control
     {
         var songChanged = !ReferenceEquals(_song, song);
         _song = song;
-        if (songChanged) RepeatShown.Reset();
+        _renderTiming = null;
+        if (songChanged) { RepeatShown.Reset(); Folds.Clear(); }
         else RepeatShown.Prune(RepeatRegionsNow());
         // The cursor is kept by track id: a replaced song (undo) holds new TrackModel objects, so it is looked up again.
         if (LaneCursor is { } kept)

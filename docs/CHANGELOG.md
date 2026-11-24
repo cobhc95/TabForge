@@ -2,6 +2,15 @@
 
 TabForge is actively developed; please report anything odd on the Issues page.
 
+## 0.9.11
+
+### Fixed
+
+- A fretboard preview now rests when playback stops or pauses. The note preview stays visible and the window stops redrawing it on every refresh.
+- The timeline reuses its bar timing during playback, and bar timing calculations skip allocating MIDI events they would immediately discard.
+- Fretboard textures can be reclaimed after switching looks. Tracks without effects skip effects scratch buffers, and MIDI logging allocates its buffer when opened.
+- Save and Ctrl+S now write a reopened modern Guitar Pro `.gp` file in place. Save As still opens the file picker.
+
 ## 0.9.10
 
 ### Fixed

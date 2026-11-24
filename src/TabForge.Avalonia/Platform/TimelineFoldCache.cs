@@ -24,6 +24,13 @@ internal sealed class TimelineFoldCache
     private RepeatStructure? _map;
     private UiStroke _hatch;
 
+    public void Clear()
+    {
+        _mapOf = null;
+        _map = null;
+        _folds.Clear();
+    }
+
     /// <summary>The repeat map of <paramref name="performed"/>, built once per performed order.</summary>
     public RepeatStructure MapOf(PerformedBar[] performed)
     {

@@ -20,7 +20,6 @@ namespace TabForge.Avalonia.Platform;
 public sealed partial class InstrumentPanelView
 {
     /// <summary>Shows the notes playback lights at a song time, replacing the score cursor's notes while it shows them. Null clears them.</summary>
-    /// <remarks>Repaints only when the lists change (a note starts, ends or leaves the hold), not on every frame.</remarks>
     // A released note fades with the song time. Its repaint waits this much song time after the last one, so the fade repaints 30 times a second.
     private const double FadeRepaintIntervalMs = 1000.0 / 30;
     private double _lastFadeRepaintMs = double.NegativeInfinity;
@@ -28,7 +27,7 @@ public sealed partial class InstrumentPanelView
     /// <summary>Whether the fade repaints at <paramref name="nowMs"/>: at least <see cref="FadeRepaintIntervalMs"/> of song time from the last repaint, either way (a seek moves it back).</summary>
     internal static bool FadeRepaintDue(double lastRepaintMs, double nowMs) => Math.Abs(nowMs - lastRepaintMs) >= FadeRepaintIntervalMs;
 
-    public void ShowPlayback(NoteEvent[]? notes, double nowMs)
+    public void ShowPlayback(NoteEvent[]? notes, double nowMs, bool animateStrings = false)
     {
         if (notes is null)
         {
@@ -36,7 +35,7 @@ public sealed partial class InstrumentPanelView
             _playbackShown = false;
             _playing.Clear();
             _movement = new();
-            NoteListsChanged();
+            _vibratePhaseMs = -1;
             InvalidateVisual();
             return;
         }
@@ -44,6 +43,10 @@ public sealed partial class InstrumentPanelView
         // a negative horizon skips the Next/Upcoming lists (and their work) entirely.
         InstrumentPlaybackLists.Fill(_scratch, notes, nowMs, _kind == InstrumentPanelKind.Drums ? -1 : _look.PreviewHorizon,
             includeRecent: _look.PreviewPrevious);
+        var animate = animateStrings && IsEffectivelyVisible && _kind == InstrumentPanelKind.Fretboard
+            && _look.VibrationPeak > 0 && _scratch.Now.Count > 0;
+        var vibrationChanged = animate || _vibratePhaseMs >= 0;
+        _vibratePhaseMs = animate ? 0 : -1;
         _playbackNowMs = nowMs;
         if (_playbackShown && _scratch.SameNotesAs(_playing))
         {
@@ -51,15 +54,15 @@ public sealed partial class InstrumentPanelView
             if (_playing.Recent.Count > 0 && FadeRepaintDue(_lastFadeRepaintMs, nowMs))
             {
                 _lastFadeRepaintMs = nowMs;
-                InvalidateVisual();
+                vibrationChanged = true;
             }
+            if (vibrationChanged) InvalidateVisual();
             return;
         }
         (_playing, _scratch) = (_scratch, _playing);
         _movement = MovementOf(_playing);
         _playbackShown = true;
         _lastFadeRepaintMs = nowMs;
-        NoteListsChanged();
         InvalidateVisual();
     }
 

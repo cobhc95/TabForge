@@ -103,7 +103,7 @@ public sealed partial class InstrumentPanelView : Control
     public InstrumentPanelKind Kind
     {
         get => _kind;
-        set { if (_kind == value) return; _kind = value; InvalidateMeasure(); InvalidateVisual(); }
+        set { if (_kind == value) return; _kind = value; ReleaseBoardBitmap(); InvalidateMeasure(); InvalidateVisual(); }
     }
 
     /// <summary>True while the look previews the next notes; false shows sounding (now) and recent notes only, like the drum map.</summary>

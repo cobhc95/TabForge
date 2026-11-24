@@ -16,7 +16,7 @@ public sealed partial class TrackChain : IDisposable
 
     private void AddInstrument(int route, int frame, byte status, byte data1, byte data2)
     {
-        if (status < 0xF0 && (route & (1 << (status & 0x0F))) == 0) return;   // channel filter (system messages always pass)
+        if (_instEvents.Length == 0 || (status < 0xF0 && (route & (1 << (status & 0x0F))) == 0)) return;
         if (_instCount < _instEvents.Length) _instEvents[_instCount++] = new BlockMidi { Frame = frame, Status = status, Data1 = data1, Data2 = data2 };
         else Interlocked.Increment(ref MidiDropped);
     }
@@ -79,18 +79,19 @@ public sealed partial class TrackChain : IDisposable
     {
         var wanted = e.Bypass || e.Misbehaved ? null : e.Processors;
         if (wanted is null && e.ProcActive is null) return false;
-        _procOut.Clear();
+        var output = _procOut!;
+        output.Clear();
         if (!ReferenceEquals(wanted, e.ProcActive))
         {
-            if (wanted is null) e.ProcActive!.ReleaseAll(_procOut); else wanted.TakeOver(e.ProcActive, _procOut);
+            if (wanted is null) e.ProcActive!.ReleaseAll(output); else wanted.TakeOver(e.ProcActive, output);
             e.ProcActive = wanted;
         }
         var input = new ReadOnlySpan<BlockMidi>(_cur, 0, _curCount);
-        if (e.ProcActive is not null) e.ProcActive.Process(input, _procOut, frames, transport, MidiLog, _a[0], _a[1]);
-        else foreach (var m in input) _procOut.Add(m);
-        if (_procOut.Unsorted) _procOut.Sort();
-        _curCount = Math.Min(_procOut.Count, _cur.Length);
-        _procOut.Span[.._curCount].CopyTo(_cur);
+        if (e.ProcActive is not null) e.ProcActive.Process(input, output, frames, transport, MidiLog, _a[0], _a[1]);
+        else foreach (var m in input) output.Add(m);
+        if (output.Unsorted) output.Sort();
+        _curCount = Math.Min(output.Count, _cur.Length);
+        output.Span[.._curCount].CopyTo(_cur);
         return true;
     }
 

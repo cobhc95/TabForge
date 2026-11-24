@@ -237,7 +237,8 @@ public sealed partial class BandTrackPanel : Border
             Instrument.ShowPlayback(null, 0);
             return;
         }
-        Instrument.ShowPlayback(timeline.NotesFor(TrackIndex), session.Transport.PlayheadMs);
+        Instrument.ShowPlayback(timeline.NotesFor(TrackIndex), session.Transport.PlayheadMs,
+            !session.IsPaused && !session.Transport.StartPending && !session.InCountIn);
     }
 
     /// <summary>Re-lights the fretboard with the staff cursor's notes (an edit under it calls this); while playback shows, the playing notes win.</summary>

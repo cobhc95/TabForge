@@ -551,8 +551,23 @@ public class InstrumentPanelViewTests
         Assert.Contains(draw.Clips, clip => clip.Y >= wood.Y - 0.001 && clip.Y + clip.Height <= wood.Bottom + 0.001 && clip.Height < wood.Height);
     }
 
-    /// <summary>Sounding strings vibrate for their note's duration only: the sounding string's line moves with the
-    /// frame phase while the others and every text stay put (no per-frame allocation, no text changes).</summary>
+    [AvaloniaFact]
+    public void HoldingAPlaybackPreviewStopsVibrationWithoutClearingItsNotes()
+    {
+        var view = new InstrumentPanelView();
+        view.Show(DemoSongFactory.Create().Tracks[0], System.Array.Empty<InstrumentLitNotes.Lit>());
+        var notes = new[] { new NoteEvent { OnsetMs = 1000, DurationMs = 800, StringIndex = 1, Fret = 3, Midi = 67 } };
+        view.ShowPlayback(notes, 1200, animateStrings: true);
+        Assert.True(view.StringWobble(1).Blur > 0);
+
+        view.ShowPlayback(notes, 1200);
+
+        Assert.Contains(67, view.LitMidis());
+        Assert.Equal(0, view.StringWobble(1).Offset);
+        Assert.Equal(0, view.StringWobble(1).Blur);
+    }
+
+    /// <summary>The sounding string moves for the note's duration while the other strings and labels stay put.</summary>
     [AvaloniaFact]
     public void SoundingStringsVibrateForTheirDurationOnly()
     {

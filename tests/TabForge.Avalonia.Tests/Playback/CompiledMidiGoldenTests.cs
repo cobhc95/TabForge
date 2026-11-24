@@ -109,6 +109,27 @@ public sealed class CompiledMidiGoldenTests
         return Hash(MidiTimelineBuilder.Build(song, options));
     }
 
+    [Fact]
+    public void BarTimingMatchesTheFullCompileWithRepeatsTempoChangesAndFermatas()
+    {
+        var song = MixSong();
+        var measures = song.Tracks[0].Measures;
+        measures[0].RepeatStart = true;
+        measures[6].RepeatEnd = true;
+        measures[6].RepeatCount = 3;
+        measures[0].Cells[0].Fermata = true;
+
+        var full = MidiTimelineBuilder.Build(song, new PlaybackOptions { Speed = 0.75, RespectMuteSolo = false, SkipClips = true });
+        var timing = MidiTimelineBuilder.BuildBarTiming(song, 0.75);
+
+        Assert.Empty(timing.Events);
+        Assert.Empty(timing.Notes);
+        Assert.Equal(full.TotalMs, timing.TotalMs);
+        Assert.Equal(full.Bars.Select(b => b with { Fermatas = null }), timing.Bars.Select(b => b with { Fermatas = null }));
+        for (var i = 0; i < full.Bars.Count; i++)
+            Assert.Equal(full.Bars[i].Fermatas ?? Array.Empty<FermataSpan>(), timing.Bars[i].Fermatas ?? Array.Empty<FermataSpan>());
+    }
+
     private static string ExportBytes(SongProject song)
     {
         var path = Path.Combine(Path.GetTempPath(), "tf-midi-golden-" + Guid.NewGuid().ToString("N") + ".mid");

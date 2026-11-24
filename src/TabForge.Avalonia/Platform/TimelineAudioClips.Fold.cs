@@ -31,7 +31,7 @@ internal static partial class TimelineAudioClips
     /// A repeat the clip covers in only one pass is a non-part slice (one full-height box, tagged "pass k" from pass 2; see <see cref="RepeatFold.FoldedSlices"/>):
     /// the one fold decision of drawing, hit test and drag preview (the preview folds at the candidate start, so it looks as the drop will). Such a slice keeps the slice geometry (its end is measured just inside the pass).</summary>
     internal static IReadOnlyList<RepeatSlice>? FoldOf(TimelineView view, AudioClip clip) =>
-        view.Folds.FoldOf(SongExtent.Timing(view.Song).Performed, clip);   // a clip being dragged is folded at its candidate start, as it will be once dropped (cached per move step)
+        view.Folds.FoldOf(view.RenderTiming().Performed, clip);
 
     /// <summary>Draws the "pass k" tag at the left of an unfolded one-pass box (pass 2 and later); nothing for pass 1.</summary>
     private static void DrawPassTag(IDrawContext d, RepeatSlice slice, Rect rect, UiColor nameInk)

@@ -108,7 +108,7 @@ public sealed partial class TrackChain : IDisposable
     private readonly int _slot;
     private readonly int _instrumentIndex;
     // MIDI stream flowing down the chain: current stage input and the next stage's input (swapped per stage).
-    private BlockMidi[] _cur = new BlockMidi[2048], _nxt = new BlockMidi[2048];
+    private BlockMidi[] _cur, _nxt;
     private int _curCount;
     private readonly IPluginInstance? _midiSynth;
     private readonly Effect[] _effects;
@@ -216,11 +216,16 @@ public sealed partial class TrackChain : IDisposable
         _midiSynth = midiSynth;
         _effects = effects.ToArray();
         _a = new[] { new float[maxBlock], new float[maxBlock] };
-        _b = new[] { new float[maxBlock], new float[maxBlock] };
-        _silence = new[] { new float[maxBlock], new float[maxBlock] };
+        var hasEffects = _effects.Length > 0;
+        _b = hasEffects ? new[] { new float[maxBlock], new float[maxBlock] } : Array.Empty<float[]>();
+        _silence = hasEffects || midiSynth is not null ? new[] { new float[maxBlock], new float[maxBlock] } : Array.Empty<float[]>();
         _inL = new float[maxBlock];
         _inR = new float[maxBlock];
-        _wired = new[] { new float[maxBlock], new float[maxBlock] };   // Never allocated lazily on the audio thread
+        _wired = hasEffects ? new[] { new float[maxBlock], new float[maxBlock] } : Array.Empty<float[]>();
+        _instEvents = hasEffects ? new BlockMidi[1024] : Array.Empty<BlockMidi>();
+        _cur = hasEffects ? new BlockMidi[2048] : Array.Empty<BlockMidi>();
+        _nxt = hasEffects ? new BlockMidi[2048] : Array.Empty<BlockMidi>();
+        _procOut = hasEffects ? new MidiBuffer(2048) : null;
         PostL = new float[maxBlock];
         PostR = new float[maxBlock];
         Plugins = _effects.Select(e => e.Plugin).ToList();
@@ -232,11 +237,11 @@ public sealed partial class TrackChain : IDisposable
     // Instrument MIDI input routing, one packed int: (source + 2) << 16 | channel mask. Source -1 = this track's own
     // MIDI (default), -2 = none, >= 0 = another track's slot. Written by the engine thread, read by the audio thread.
     private volatile int _route = (1 << 16) | 0xFFFF;
-    private readonly BlockMidi[] _instEvents = new BlockMidi[1024];
+    private readonly BlockMidi[] _instEvents;
     private int _instCount;
 
     // Scratch output of the per-plug-in MIDI processors (used by one stage at a time, audio thread).
-    private readonly MidiBuffer _procOut = new(2048);
+    private readonly MidiBuffer? _procOut;
     /// <summary>Log of the MIDI passing the log processors, read by the engine thread while the UI watches.</summary>
     public MidiLogRing MidiLog { get; } = new();
 

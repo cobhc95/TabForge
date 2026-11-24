@@ -128,6 +128,25 @@ public sealed class MainWindowSaveTests : IDisposable
     }
 
     [AvaloniaFact]
+    public async Task OpenedModernGpSavesInPlace()
+    {
+        var path = Path.Combine(_folder, "reopened.gp");
+        GuitarProExporter.Save(CharacterizationSong().Project, path);
+        var opened = new DocumentController().Open(path);
+        Assert.Equal(path, opened.SessionPath);
+
+        var document = new SongDocument(() => null) { Project = opened.Project, Path = opened.SessionPath };
+        document.MarkClean();
+        DocumentEdits.Run(document, p => { p.Title = "Edited after reopening"; return true; });
+        var dialogs = new SaveTo(null);
+        var saving = new MainWindowSaving(dialogs, null, _ => { }, NoEngine, TforgeFormat, NoQuestions, NoDegradedGate);
+
+        Assert.True(await saving.Save(document));
+        Assert.Empty(dialogs.Asked);
+        Assert.Equal("Edited after reopening", new DocumentController().Open(path).Project.Title);
+    }
+
+    [AvaloniaFact]
     public async Task FailedSaveIsReportedAndKeepsTheSongUnsaved()
     {
         var path = Path.Combine(_folder, "locked.tforge");

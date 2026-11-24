@@ -46,6 +46,10 @@ internal sealed class SongExtentMeasureCache
         if (!CanCache(project))
         {
             _valid = false;
+            _value = null;
+            _masterBarTrack = null;
+            _tracksList = null;
+            _tracks = Array.Empty<TrackState>();
             return;
         }
 

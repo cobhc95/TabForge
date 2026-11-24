@@ -72,7 +72,7 @@ internal sealed partial class ScoreToMidiCompiler
         if (_opt.SkipClips || _timeline.Bars.Count == 0) return;
         var clipTracks = _players.Where(t => (!t.IsAudio || MixerGroups.InstrumentPlays(t)) && t.AudioClips.Any(c => c.IsMidi && ClipLanes.Audible(t, c))).ToList();   // Q1: an audio track's MIDI clips sound only through its instrument plug-in
         if (clipTracks.Count == 0) return;
-        var full = new ScoreToMidiCompiler(_project, new PlaybackOptions { RespectMuteSolo = false, SkipClips = true, Speed = _opt.Speed }).Build();
+        var full = MidiTimelineBuilder.BuildBarTiming(_project, _opt.Speed);
         var first = _timeline.Bars[0];
         var occurrence = _opt.StartOccurrence is { } started && started > 1 ? started : 1;
         var starts = full.Bars.Where(b => b.Bar == first.Bar).ToList();

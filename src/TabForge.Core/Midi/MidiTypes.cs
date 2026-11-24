@@ -230,9 +230,19 @@ public struct MidiLogEntry
 public sealed class MidiLogRing
 {
     private const int Capacity = 2048;
-    private readonly MidiLogEntry[] _items = new MidiLogEntry[Capacity];
+    private MidiLogEntry[]? _items;
     private int _head, _tail;
-    public volatile bool Watching;
+    private volatile bool _watching;
+
+    public bool Watching
+    {
+        get => _watching;
+        set
+        {
+            if (value) _items ??= new MidiLogEntry[Capacity];   // allocated by the engine thread before the producer can use it
+            _watching = value;
+        }
+    }
 
     public void Write(float timeSec, byte status, byte d1, byte d2, byte stage)
     {
@@ -240,17 +250,18 @@ public sealed class MidiLogRing
         var tail = Volatile.Read(ref _tail);
         var next = (tail + 1) % Capacity;
         if (next == Volatile.Read(ref _head)) return;
-        _items[tail] = new MidiLogEntry { TimeSec = timeSec, Status = status, Data1 = d1, Data2 = d2, Stage = stage };
+        _items![tail] = new MidiLogEntry { TimeSec = timeSec, Status = status, Data1 = d1, Data2 = d2, Stage = stage };
         Volatile.Write(ref _tail, next);
     }
 
     /// <summary>Engine thread: takes up to <paramref name="max"/> entries.</summary>
     public int Read(List<MidiLogEntry> into, int max)
     {
+        if (_items is not { } items) return 0;
         var head = Volatile.Read(ref _head);
         var tail = Volatile.Read(ref _tail);
         var n = 0;
-        while (head != tail && n < max) { into.Add(_items[head]); head = (head + 1) % Capacity; n++; }
+        while (head != tail && n < max) { into.Add(items[head]); head = (head + 1) % Capacity; n++; }
         Volatile.Write(ref _head, head);
         return n;
     }

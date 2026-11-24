@@ -16,7 +16,7 @@ public static class PerformedTransportBars
     /// <summary>The bar map of <paramref name="project"/>: one entry per performed bar, up to the transport's bar limit.</summary>
     public static TransportBar[] From(SongProject project)
     {
-        var timeline = MidiTimelineBuilder.Build(project, new PlaybackOptions { RepeatExpansion = true, RespectMuteSolo = false, SkipClips = true });
+        var timeline = MidiTimelineBuilder.BuildBarTiming(project);
         var count = Math.Min(timeline.Bars.Count, TransportMap.MaxBars);
         var bars = new TransportBar[count];
         var ppq = 0.0;

@@ -68,23 +68,26 @@ internal sealed partial class ScoreToMidiCompiler
         _speedScale = 1.0 / Math.Clamp(opt.Speed <= 0 ? 1.0 : opt.Speed, 0.25, 4.0);
     }
 
-    public ScoreTimeline Build()
+    public ScoreTimeline Build(bool barsOnly = false)
     {
         var order = _playbackOrder?.ToList() ?? PlaybackOrder.Build(_project, _opt);
         if (order.Count == 0) return _timeline;
 
-        SelectPlayersAndChannels();
-
         // Per-source-bar caches: the loop below visits each performed bar (repeats included), so a
         // bar's slot count and written-content length are worked out once per source bar, not per repeat.
         // The project is immutable for the whole Build, so the caches never go stale.
-        var trackIndexByTrack = new Dictionary<TrackModel, int>(ReferenceEqualityComparer.Instance);
-        for (var ti = 0; ti < _project.Tracks.Count; ti++) trackIndexByTrack[_project.Tracks[ti]] = ti;
+        Dictionary<TrackModel, int>? trackIndexByTrack = null;
+        if (!barsOnly)
+        {
+            SelectPlayersAndChannels();
+            trackIndexByTrack = new Dictionary<TrackModel, int>(ReferenceEqualityComparer.Instance);
+            for (var ti = 0; ti < _project.Tracks.Count; ti++) trackIndexByTrack[_project.Tracks[ti]] = ti;
+        }
         var slotsCache = new Dictionary<int, int>();
         var contentCache = new Dictionary<int, double>();
 
         var cursorMs = 0.0;
-        if (_opt.CountIn) for (var bar = Math.Clamp(_opt.CountInBars, SettingRanges.CountInBarsMin, SettingRanges.CountInBarsMax); bar > 0; bar--) cursorMs += CountInMs(order[0], cursorMs);   // every count-in bar clicks
+        if (!barsOnly && _opt.CountIn) for (var bar = Math.Clamp(_opt.CountInBars, SettingRanges.CountInBarsMin, SettingRanges.CountInBarsMax); bar > 0; bar--) cursorMs += CountInMs(order[0], cursorMs);
         _timeline.CountInMs = cursorMs;
 
         var firstBarMs = MusicTime.BarMs(_project, order[0], _speedScale);
@@ -93,9 +96,12 @@ internal sealed partial class ScoreToMidiCompiler
         _timeline.PlayFromMs = cursorMs + FermataSpan.Warp(
             FermataTime.Spans(_project, order[0], _speedScale, MusicTime.TempoAt(_project, order[0])), startSlot * (firstBarMs / firstSlots));
 
-        ChaseBarsBeforeStart();
-        EmitChannelSetup(_timeline.PlayFromMs);
-        ApplyChase();   // before any note is emitted: it appends to the setup, so no recorded event index moves
+        if (!barsOnly)
+        {
+            ChaseBarsBeforeStart();
+            EmitChannelSetup(_timeline.PlayFromMs);
+            ApplyChase();   // chase appends to setup before any note records event indices
+        }
 
         var firstPerformedBar = true;
         // Tempo carries on in playback order until the next change (the reference semantics), so repeats and
@@ -125,14 +131,17 @@ internal sealed partial class ScoreToMidiCompiler
             performedMs += holdMs;
             _timeline.Bars.Add(new ScoreBar(barIndex, barStart, barStart + performedMs,
                 baseMs < barMs ? Math.Max(1, (int)Math.Ceiling(contentSlots - 0.001)) : slots, tempo, _barHolds));
-            if (_opt.Metronome) EmitMetronome(barStart, baseMs < barMs ? baseMs : barMs, num);
-
-            EmitBarOfEveryTrack(trackIndexByTrack, barIndex, barStart, barMs, slots, firstPerformedBar ? startSlot : 0);
+            if (trackIndexByTrack is not null)
+            {
+                if (_opt.Metronome) EmitMetronome(barStart, baseMs < barMs ? baseMs : barMs, num);
+                EmitBarOfEveryTrack(trackIndexByTrack, barIndex, barStart, barMs, slots, firstPerformedBar ? startSlot : 0);
+            }
             firstPerformedBar = false;
             cursorMs += performedMs;
         }
 
         _timeline.TotalMs = cursorMs;
+        if (barsOnly) return _timeline;
         EmitClipNotes();
         if (_clipChased) { _timeline.StartedAfterMixPoints = true; ApplyChase(); }   // the setup carries the mix values in force at the start
         EmitFadeInEnvelopes();
