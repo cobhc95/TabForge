@@ -86,6 +86,7 @@ public sealed partial class BandTrackPanel : Border
     private bool _attached;
     private bool _instrumentSubscribed;
     private int _windowFirst;
+    private long _lastInstrumentShowTicks;
 
     /// <summary>Whether the card is the selected one.</summary>
     public bool IsSelected => _selected;
@@ -237,6 +238,10 @@ public sealed partial class BandTrackPanel : Border
             Instrument.ShowPlayback(null, 0);
             return;
         }
+        // Moving cards update at 60 Hz (as the main strip): at 140 Hz display refresh this halves the fretboard renders; note changes still show at once via the panel's boundary cache.
+        var nowTicks = System.Diagnostics.Stopwatch.GetTimestamp();
+        if (nowTicks - _lastInstrumentShowTicks < System.Diagnostics.Stopwatch.Frequency / 60) return;
+        _lastInstrumentShowTicks = nowTicks;
         Instrument.ShowPlayback(timeline.NotesFor(TrackIndex), session.Transport.PlayheadMs,
             !session.IsPaused && !session.Transport.StartPending && !session.InCountIn);
     }

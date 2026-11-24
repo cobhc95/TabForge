@@ -8,9 +8,8 @@ using TabForge.Services;
 
 namespace TabForge.Avalonia.Platform;
 
-// Owns: the timeline's playhead as two thin layers over the body: the moving part (white line, amber flag, lane arrow, with a blurred black
-//     shadow on the layer), drawn once around its own origin and placed with a sub-pixel translate transform, and the bar number,
-//     drawn once per played bar. A frame only changes the transform, so the clips, ruler and rows are never redrawn for the playhead.
+// Owns: the timeline's playhead as two thin layers over the body: the moving part (white line, amber flag, lane arrow), drawn once around its own
+//     origin and placed with a sub-pixel translate transform, and the bar number, drawn once per played bar. A frame only changes the transform, so the clips, ruler and rows are never redrawn for the playhead.
 // Does not own: the position (TimelineView.PlayheadX), the clock, the cue shapes (TimelinePlayheadMarks).
 // Tests: TabForge.Avalonia.Tests.PlayheadClockTests.
 // Threads: UI only. Redraw runs when the played bar, the selected lane, the size or the theme changes; Place runs every frame and allocates nothing.
@@ -34,19 +33,8 @@ internal sealed class TimelinePlayheadLayer : Decorator
         IsHitTestVisible = false;
         Child = new MarksLayer(this);
         RenderTransform = _move;
-        Effect = new DropShadowEffect
-        {
-            Color = ShadowColour(),
-            BlurRadius = ShadowBlurRadius,
-            OffsetX = 0,
-            OffsetY = 0,
-            Opacity = ShadowOpacity,
-        };
-        ActualThemeVariantChanged += (_, _) => { ((DropShadowEffect)Effect!).Color = ShadowColour(); Redraw(); };
+        ActualThemeVariantChanged += (_, _) => Redraw();
     }
-
-    // The playhead's drop shadow in the theme this layer is shown in (the dark one until the layer is attached).
-    private Color ShadowColour() => AvaloniaPalette.ColorOf(AvaloniaPalette.Get("PlayheadShadow", ActualThemeVariant == ThemeVariant.Light));
 
     /// <summary>The bar-number layer; the timeline adds it to its visual children beside this layer.</summary>
     public Control NumberLayer => _number;
@@ -75,8 +63,6 @@ internal sealed class TimelinePlayheadLayer : Decorator
     {
         _drawnBar = _view.PlayheadBar;
         _drawnPass = _view.PlayheadPass;
-        if (Effect is DropShadowEffect shadow)
-            shadow.Color = AvaloniaPalette.ColorOf(AvaloniaPalette.Get("PlayheadShadow", ActualThemeVariant == ThemeVariant.Light));
         Child!.InvalidateVisual();
         _number.InvalidateVisual();
     }
