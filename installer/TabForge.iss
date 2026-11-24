@@ -104,3 +104,6 @@ Root: HKCU; Subkey: "Software\Classes\.tforge\OpenWithProgids"; ValueType: none;
 
 [Run]
 Filename: "{app}\TabForge.exe"; Description: "{cm:LaunchProgram,TabForge}"; Flags: nowait postinstall skipifsilent
+
+[Code]
+#include "CloseInstalledTabForge.iss"
