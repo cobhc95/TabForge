@@ -72,7 +72,6 @@ public sealed class InstrumentPanelStrip : Grid
     private int _notesBar = -1;
     private int _notesCell;
     private bool _notesMoving;
-    private long _lastNotesShowTicks;
 
     /// <param name="close">What the X button does (the window hides the pane); null leaves the button doing nothing.</param>
     /// <param name="activePlayback">The playback session of the shown tab; the strip follows it while attached and after <see cref="RebindPlayback"/>. Null: no playback.</param>
@@ -233,14 +232,6 @@ public sealed class InstrumentPanelStrip : Grid
         }
         var moving = session.IsPlaying && !session.IsPaused && !transport.StartPending && !session.InCountIn;
         if (_notesShown && _notesTrack == index && _notesMs == nowMs && _notesBar == bar && _notesCell == cell && _notesMoving == moving) return;
-        // At display refresh rates above 60 Hz, moving panels update at 60 Hz: vibration still follows the song clock, but the panel does not rebuild 140 times a second. Note changes (bar/cell) always go through at once.
-        if (moving && _notesShown && _notesTrack == index && _notesBar == bar && _notesCell == cell && _notesMoving == moving)
-        {
-            var now = System.Diagnostics.Stopwatch.GetTimestamp();
-            if (now - _lastNotesShowTicks < System.Diagnostics.Stopwatch.Frequency / 60) return;
-            _lastNotesShowTicks = now;
-        }
-        else _lastNotesShowTicks = System.Diagnostics.Stopwatch.GetTimestamp();
         _notesShown = true;
         _notesTrack = index;
         _notesMs = nowMs;
