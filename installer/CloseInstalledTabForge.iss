@@ -5,7 +5,8 @@ const
   WaitTimeout = 258;
   CloseTimeoutMs = 60000;
 
-function FindWindowEx(Parent, After: HWND; ClassName: NativeUInt; WindowName: String): HWND;
+{ ClassName is always null; HWND is pointer-sized in Inno Setup 6 (the release runner) and 7. }
+function FindWindowEx(Parent, After: HWND; ClassName: HWND; WindowName: String): HWND;
   external 'FindWindowExW@user32.dll stdcall';
 function GetWindowThreadProcessId(Window: HWND; var ProcessId: Cardinal): Cardinal;
   external 'GetWindowThreadProcessId@user32.dll stdcall';
