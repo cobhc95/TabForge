@@ -31,6 +31,7 @@ public sealed partial class ScorePreviewView : Control
     private const int AllBars = int.MaxValue;   // the page draws every system of the song
 
     private readonly AvaloniaDrawContext _draw = new();
+    private readonly RetiredTextures _retiredTextures = new();   // the page picture's dropped GPU tiles, freed by its next draw
     private readonly ScoreGeometryProbe _probe;
     private readonly ScorePreviewEditor _editor;
     private readonly ScorePreviewInput _input;
@@ -467,8 +468,12 @@ public sealed partial class ScorePreviewView : Control
         if (_paperOverride is null) _probe.Light = ActualThemeVariant == ThemeVariant.Light;
         // An edit or a width change changed the page size; invalidating inside the render pass throws, so the reflow is queued after it.
         if (_probe.ContentSize() != _measuredPage) QueueReflow(force: true);
-        using (context.PushTransform(Matrix.CreateScale(Zoom, Zoom)))
-            _probe.DrawPage(_draw.Use(context), AllBars, withPlayhead: false, visibleRows: DrawnRows(), withLitNotes: false);
+        var rows = DrawnRows();
+        RetainedPicture.Draw(context, new Rect(Bounds.Size), RetainedPicture.OptionsOf(this), _retiredTextures, page =>
+        {
+            using (page.PushTransform(Matrix.CreateScale(Zoom, Zoom)))
+                _probe.DrawPage(_draw.Use(page), AllBars, withPlayhead: false, visibleRows: rows, withLitNotes: false);
+        });
         // A page redrawn while playing (an edit, a zoom, a theme): its lit systems follow on the next pass, since invalidating inside the render pass throws.
         if (_probe.Play.Active) global::Avalonia.Threading.Dispatcher.UIThread.Post(_litLayer.InvalidateVisual, global::Avalonia.Threading.DispatcherPriority.Render);
         if (Marquee is { } box) MarqueePainter.Draw(_draw.Use(context), key => AvaloniaPalette.Get(key, ActualThemeVariant == ThemeVariant.Light), box.X, box.Y, box.Width, box.Height);

@@ -41,7 +41,13 @@ public sealed partial class TimelineView
 
     // The thin outline around a clip box (the ClipOutline palette token), so a box of any colour (even black) stays visible.
 
-    public override void Render(DrawingContext context) => DrawBody(_draw.Use(context), ActualThemeVariant == ThemeVariant.Light);
+    private readonly RetiredTextures _retiredTextures = new();   // the body picture's dropped GPU tiles, freed by its next draw
+
+    public override void Render(DrawingContext context)
+    {
+        var light = ActualThemeVariant == ThemeVariant.Light;
+        RetainedPicture.Draw(context, new Rect(Bounds.Size), RetainedPicture.OptionsOf(this), _retiredTextures, body => DrawBody(_draw.Use(body), light));
+    }
 
     /// <summary>Draws the body: the ruler, sections, master lane, track rows and interaction. Rows outside the band and bars outside the viewport are not drawn.</summary>
     internal void DrawBody(IDrawContext d, bool light)

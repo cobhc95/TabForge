@@ -104,6 +104,7 @@ public static class Program
         try { capture = CaptureArguments.TryParse(args) is not null; }
         catch (Exception ex) when (ex is FormatException or ArgumentException or NotSupportedException or IOException) { Console.Error.WriteLine(ex.Message + " " + Capture.CaptureLaunch.Usage); return Capture.CaptureLaunch.NotRunExitCode; }
         if (capture) return Capture.CaptureLaunch.Run(args);
+        if (PerfPlay.Seconds(args) is not null) Services.UserPaths.ApplyProfileArgument(args);
         // A confirmed "Reset entire app" leaves this marker after the window closed; run it before the settings store or any
         // other app file is opened, and before the single-instance lock file is taken (so the wipe may remove stale locks).
         try { TabForge.Services.Reset.PendingAppWipe.TryRun(AppFolders.Current); }

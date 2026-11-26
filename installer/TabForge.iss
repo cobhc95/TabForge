@@ -37,9 +37,8 @@ VersionInfoProductTextVersion={#AppVersion}
 VersionInfoProductName=TabForge
 DefaultDirName={autopf}\TabForge
 DefaultGroupName=TabForge
-; Per-user by default (no admin prompt); the user may choose an all-users install instead.
-PrivilegesRequired=lowest
-PrivilegesRequiredOverridesAllowed=dialog
+; Always for all users (Program Files, one admin prompt); no per-user choice is offered.
+PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 SetupIconFile=..\src\TabForge.Avalonia\Assets\TabForge.ico
@@ -61,7 +60,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
-Name: "associate"; Description: "Open .gp, .gp5, .gp4, .gp3, .gpx and TabForge (.tforge) files with TabForge"; GroupDescription: "Windows integration:"
+Name: "associate"; Description: "Open .gp, .gp5, .gp4, .gp3, .gpx, TuxGuitar (.tg) and TabForge (.tforge) files with TabForge"; GroupDescription: "Windows integration:"
 
 [Files]
 ; The whole publish folder: TabForge.exe, the loose SoundTouch.Net.dll (LGPL, replaceable), the loose native helpers
@@ -76,31 +75,35 @@ Name: "{group}\{cm:UninstallProgram,TabForge}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\TabForge"; Filename: "{app}\TabForge.exe"; Tasks: desktopicon
 
 [Registry]
-; The same per-user entries TabForge's own Settings > Windows integration switch writes and removes.
-Root: HKCU; Subkey: "Software\Classes\TabForge.gp"; ValueType: string; ValueName: ""; ValueData: "Score file (.gp)"; Flags: uninsdeletekey; Tasks: associate
-Root: HKCU; Subkey: "Software\Classes\TabForge.gp\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"",0"; Tasks: associate
-Root: HKCU; Subkey: "Software\Classes\TabForge.gp\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"" ""%1"""; Tasks: associate
-Root: HKCU; Subkey: "Software\Classes\.gp\OpenWithProgids"; ValueType: none; ValueName: "TabForge.gp"; Flags: uninsdeletevalue; Tasks: associate
-Root: HKCU; Subkey: "Software\Classes\TabForge.gp5"; ValueType: string; ValueName: ""; ValueData: "Score file (.gp5)"; Flags: uninsdeletekey; Tasks: associate
-Root: HKCU; Subkey: "Software\Classes\TabForge.gp5\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"",0"; Tasks: associate
-Root: HKCU; Subkey: "Software\Classes\TabForge.gp5\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"" ""%1"""; Tasks: associate
-Root: HKCU; Subkey: "Software\Classes\.gp5\OpenWithProgids"; ValueType: none; ValueName: "TabForge.gp5"; Flags: uninsdeletevalue; Tasks: associate
-Root: HKCU; Subkey: "Software\Classes\TabForge.gp4"; ValueType: string; ValueName: ""; ValueData: "Score file (.gp4)"; Flags: uninsdeletekey; Tasks: associate
-Root: HKCU; Subkey: "Software\Classes\TabForge.gp4\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"",0"; Tasks: associate
-Root: HKCU; Subkey: "Software\Classes\TabForge.gp4\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"" ""%1"""; Tasks: associate
-Root: HKCU; Subkey: "Software\Classes\.gp4\OpenWithProgids"; ValueType: none; ValueName: "TabForge.gp4"; Flags: uninsdeletevalue; Tasks: associate
-Root: HKCU; Subkey: "Software\Classes\TabForge.gp3"; ValueType: string; ValueName: ""; ValueData: "Score file (.gp3)"; Flags: uninsdeletekey; Tasks: associate
-Root: HKCU; Subkey: "Software\Classes\TabForge.gp3\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"",0"; Tasks: associate
-Root: HKCU; Subkey: "Software\Classes\TabForge.gp3\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"" ""%1"""; Tasks: associate
-Root: HKCU; Subkey: "Software\Classes\.gp3\OpenWithProgids"; ValueType: none; ValueName: "TabForge.gp3"; Flags: uninsdeletevalue; Tasks: associate
-Root: HKCU; Subkey: "Software\Classes\TabForge.gpx"; ValueType: string; ValueName: ""; ValueData: "Score file (.gpx)"; Flags: uninsdeletekey; Tasks: associate
-Root: HKCU; Subkey: "Software\Classes\TabForge.gpx\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"",0"; Tasks: associate
-Root: HKCU; Subkey: "Software\Classes\TabForge.gpx\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"" ""%1"""; Tasks: associate
-Root: HKCU; Subkey: "Software\Classes\.gpx\OpenWithProgids"; ValueType: none; ValueName: "TabForge.gpx"; Flags: uninsdeletevalue; Tasks: associate
-Root: HKCU; Subkey: "Software\Classes\TabForge.tforge"; ValueType: string; ValueName: ""; ValueData: "TabForge project"; Flags: uninsdeletekey; Tasks: associate
-Root: HKCU; Subkey: "Software\Classes\TabForge.tforge\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"",0"; Tasks: associate
-Root: HKCU; Subkey: "Software\Classes\TabForge.tforge\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"" ""%1"""; Tasks: associate
-Root: HKCU; Subkey: "Software\Classes\.tforge\OpenWithProgids"; ValueType: none; ValueName: "TabForge.tforge"; Flags: uninsdeletevalue; Tasks: associate
+; For every user (HKA: machine classes in an all-users install); TabForge's own Settings > Windows integration switch writes the same entries per user.
+Root: HKA; Subkey: "Software\Classes\TabForge.gp"; ValueType: string; ValueName: ""; ValueData: "Score file (.gp)"; Flags: uninsdeletekey; Tasks: associate
+Root: HKA; Subkey: "Software\Classes\TabForge.gp\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"",0"; Tasks: associate
+Root: HKA; Subkey: "Software\Classes\TabForge.gp\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"" ""%1"""; Tasks: associate
+Root: HKA; Subkey: "Software\Classes\.gp\OpenWithProgids"; ValueType: none; ValueName: "TabForge.gp"; Flags: uninsdeletevalue; Tasks: associate
+Root: HKA; Subkey: "Software\Classes\TabForge.gp5"; ValueType: string; ValueName: ""; ValueData: "Score file (.gp5)"; Flags: uninsdeletekey; Tasks: associate
+Root: HKA; Subkey: "Software\Classes\TabForge.gp5\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"",0"; Tasks: associate
+Root: HKA; Subkey: "Software\Classes\TabForge.gp5\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"" ""%1"""; Tasks: associate
+Root: HKA; Subkey: "Software\Classes\.gp5\OpenWithProgids"; ValueType: none; ValueName: "TabForge.gp5"; Flags: uninsdeletevalue; Tasks: associate
+Root: HKA; Subkey: "Software\Classes\TabForge.gp4"; ValueType: string; ValueName: ""; ValueData: "Score file (.gp4)"; Flags: uninsdeletekey; Tasks: associate
+Root: HKA; Subkey: "Software\Classes\TabForge.gp4\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"",0"; Tasks: associate
+Root: HKA; Subkey: "Software\Classes\TabForge.gp4\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"" ""%1"""; Tasks: associate
+Root: HKA; Subkey: "Software\Classes\.gp4\OpenWithProgids"; ValueType: none; ValueName: "TabForge.gp4"; Flags: uninsdeletevalue; Tasks: associate
+Root: HKA; Subkey: "Software\Classes\TabForge.gp3"; ValueType: string; ValueName: ""; ValueData: "Score file (.gp3)"; Flags: uninsdeletekey; Tasks: associate
+Root: HKA; Subkey: "Software\Classes\TabForge.gp3\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"",0"; Tasks: associate
+Root: HKA; Subkey: "Software\Classes\TabForge.gp3\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"" ""%1"""; Tasks: associate
+Root: HKA; Subkey: "Software\Classes\.gp3\OpenWithProgids"; ValueType: none; ValueName: "TabForge.gp3"; Flags: uninsdeletevalue; Tasks: associate
+Root: HKA; Subkey: "Software\Classes\TabForge.gpx"; ValueType: string; ValueName: ""; ValueData: "Score file (.gpx)"; Flags: uninsdeletekey; Tasks: associate
+Root: HKA; Subkey: "Software\Classes\TabForge.gpx\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"",0"; Tasks: associate
+Root: HKA; Subkey: "Software\Classes\TabForge.gpx\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"" ""%1"""; Tasks: associate
+Root: HKA; Subkey: "Software\Classes\.gpx\OpenWithProgids"; ValueType: none; ValueName: "TabForge.gpx"; Flags: uninsdeletevalue; Tasks: associate
+Root: HKA; Subkey: "Software\Classes\TabForge.tg"; ValueType: string; ValueName: ""; ValueData: "TuxGuitar file (.tg)"; Flags: uninsdeletekey; Tasks: associate
+Root: HKA; Subkey: "Software\Classes\TabForge.tg\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"",0"; Tasks: associate
+Root: HKA; Subkey: "Software\Classes\TabForge.tg\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"" ""%1"""; Tasks: associate
+Root: HKA; Subkey: "Software\Classes\.tg\OpenWithProgids"; ValueType: none; ValueName: "TabForge.tg"; Flags: uninsdeletevalue; Tasks: associate
+Root: HKA; Subkey: "Software\Classes\TabForge.tforge"; ValueType: string; ValueName: ""; ValueData: "TabForge project"; Flags: uninsdeletekey; Tasks: associate
+Root: HKA; Subkey: "Software\Classes\TabForge.tforge\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"",0"; Tasks: associate
+Root: HKA; Subkey: "Software\Classes\TabForge.tforge\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"" ""%1"""; Tasks: associate
+Root: HKA; Subkey: "Software\Classes\.tforge\OpenWithProgids"; ValueType: none; ValueName: "TabForge.tforge"; Flags: uninsdeletevalue; Tasks: associate
 
 [Run]
 Filename: "{app}\TabForge.exe"; Description: "{cm:LaunchProgram,TabForge}"; Flags: nowait postinstall skipifsilent

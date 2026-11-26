@@ -14,6 +14,9 @@ public sealed class SharedMeterTick : IDisposable
     private readonly HashSet<Action> _listeners = new();
     private IUiTimer? _timer;
 
+    /// <summary>How many times the tick has fired; a frame that sees it move lands in the same frame as the meters' repaint.</summary>
+    public int TickCount { get; private set; }
+
     /// <summary>How many ticks are subscribed now.</summary>
     public int ListenerCount => _listeners.Count;
 
@@ -44,6 +47,7 @@ public sealed class SharedMeterTick : IDisposable
     {
         if (_ticking) return;   // a listener that runs a nested message loop (a modal window) must not start a second pass over the shared copy
         _ticking = true;
+        TickCount++;
         var count = _listeners.Count;
         try
         {

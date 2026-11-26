@@ -214,14 +214,30 @@ public sealed class AvaloniaPlaybackSession : IDisposable
         get
         {
             ThrowIfDisposed();
-            var song = _project();
-            var performed = Services.SongExtent.Timing(song).Performed;
+            var performed = PerformedOf(_project());
             return RepeatMap.FromPerformed(performed, PerformedSecAtScheduler(performed));
         }
     }
 
-    private double PerformedSecAtScheduler(SongProject song) =>
-        PerformedSecAtScheduler(Services.SongExtent.Timing(song).Performed);
+    private double PerformedSecAtScheduler(SongProject song) => PerformedSecAtScheduler(PerformedOf(song));
+
+    // The performed bar order, kept while the song's content revision holds: the views read it every frame, and SongExtent.Timing checks every
+    // cell of the song against its own cache on each call.
+    private SongProject? _performedSong;
+    private int _performedRevision;
+    private PerformedBar[]? _performed;
+
+    private PerformedBar[] PerformedOf(SongProject song)
+    {
+        var revision = song.ContentRevision;
+        if (_performed is null || !ReferenceEquals(song, _performedSong) || revision != _performedRevision)
+        {
+            _performed = Services.SongExtent.Timing(song).Performed;
+            _performedSong = song;
+            _performedRevision = revision;
+        }
+        return _performed;
+    }
 
     private double PerformedSecAtScheduler(PerformedBar[] performed) =>
         TimelineSongClock.SongSecAt(performed, _transport.Timeline, SchedulerSec * 1000.0, _performedSeekSec);

@@ -103,7 +103,12 @@ public sealed class App : Application
                 // place of the empty start-up song; a path that does not exist is reported.
                 // Subscribed before the recovery offer: the requested song is the one the window starts with.
                 var startup = Program.StartupFileFrom(desktop.Args ?? Array.Empty<string>());
-                first.Opened += (_, _) => OpenStartupFile(first, startup);
+                if (PerfPlay.Seconds(desktop.Args ?? Array.Empty<string>()) is { } perfSeconds && startup.SongPath is { } perfSong)
+                {
+                    PerfPlay.Prepare(first);
+                    first.Opened += async (_, _) => { await first.OpenStartupFile(perfSong); await PerfPlay.RunAsync(desktop, first, playback.Sessions, perfSeconds); };
+                }
+                else first.Opened += (_, _) => OpenStartupFile(first, startup);
                 // The start-up recovery offer runs once the first window is on screen; it is made only by the app, never by a window a test opens.
                 first.Opened += (_, _) => _ = first.Autosave.OfferRecoveryAsync();
                 // The icon sets load after the first frame (one idle post), so startup paints first; paints before that draw nothing.

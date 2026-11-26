@@ -60,11 +60,14 @@ public sealed partial class TimelineView
     }
 
     /// <summary>The playhead's x in DIPs, or NaN while it is hidden.</summary>
-    internal double PlayheadX()
+    internal double PlayheadX() => XAt(PlayheadBar, PlayheadFraction);
+
+    /// <summary>The x in DIPs of <paramref name="fraction"/> through <paramref name="bar"/>, or NaN outside the bars.</summary>
+    internal double XAt(int bar, double fraction)
     {
-        if (PlayheadBar < 0 || PlayheadBar >= BarCount) return double.NaN;
-        var barLeft = BarX(PlayheadBar);
-        return barLeft + (_boundaries[PlayheadBar + 1] - barLeft) * Math.Clamp(PlayheadFraction, 0, 1);
+        if (bar < 0 || bar >= BarCount || double.IsNaN(fraction)) return double.NaN;
+        var barLeft = BarX(bar);
+        return barLeft + (_boundaries[bar + 1] - barLeft) * Math.Clamp(fraction, 0, 1);
     }
 
     /// <summary>Whether the [ ] brackets mark the section that holds the playhead (the "section brackets" option, on by default).</summary>

@@ -36,6 +36,7 @@ public sealed partial class ArrangementView : UserControl
     public ArrangementView(SongProject song, IEditableDocument document, ContextMenuHost? contextMenus = null, IUiTimer? zoomSettleTimer = null, Action<Action>? requestFrame = null, SharedMeterTick? meterTick = null)
     {
         _zoomSettle = zoomSettleTimer;
+        _meterTick = meterTick;
         _requestFrame = requestFrame ?? RequestDisplayFrame;
         var parts = ArrangementComposition.Build(this, song, document, contextMenus, meterTick);
         Timeline = parts.Timeline;
@@ -393,11 +394,32 @@ public sealed partial class ArrangementView : UserControl
         }
         else if (Timeline.RepeatShown.ResumeUserChoices()) Timeline.InvalidateVisual();
         if (bar == _shownPlayheadBar && fraction == _shownPlayheadFraction && pass == _shownPlayheadPass) return;
+        if (_playback?.IsPlaying == true && bar == _shownPlayheadBar && pass == _shownPlayheadPass && !PlayheadMoveDue(bar, fraction)) return;
         _shownPlayheadBar = bar;
         _shownPlayheadFraction = fraction;
         _shownPlayheadPass = pass;
         Timeline.SetPlayhead(bar, fraction, pass);
         FollowPlayheadIfAllowed();
+    }
+
+    // The compositor redraws one rectangle per frame that spans every changed area, so this playhead moving each frame (often a tenth of a pixel
+    // at song zoom) made every frame redraw everything between it and the score's playhead. Inside a bar it moves once it has moved a device
+    // pixel, or with the meter tick (whose repaint lands in the same frame), so its sub-pixel motion still shows.
+    private readonly SharedMeterTick? _meterTick;
+    private int _seenMeterTicks;
+    private long _playheadMovedAt;
+    private const double PlayheadSettleMs = UiTiming.SharedMeterTickMs;
+
+    private bool PlayheadMoveDue(int bar, double fraction)
+    {
+        var scaling = (VisualRoot as TopLevel)?.RenderScaling ?? 1;
+        var due = Math.Abs(Timeline.XAt(bar, fraction) - Timeline.XAt(bar, _shownPlayheadFraction)) * scaling >= 1
+            || (_meterTick is { } tick && tick.TickCount != _seenMeterTicks)
+            || System.Diagnostics.Stopwatch.GetElapsedTime(_playheadMovedAt).TotalMilliseconds >= PlayheadSettleMs * 1.5;
+        if (!due) return false;
+        _seenMeterTicks = _meterTick?.TickCount ?? 0;
+        _playheadMovedAt = System.Diagnostics.Stopwatch.GetTimestamp();
+        return true;
     }
 
     private static int LabelPassFor(int bar, RepeatPosition current)
