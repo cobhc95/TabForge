@@ -16,7 +16,7 @@ public static class FileTypes
     public static readonly string[] MusicXml = { ".musicxml", ".mxl", ".xml" };
     /// <summary>Standard MIDI files, read by SmfReader. Not in <see cref="AllOpenable"/> either: no Explorer association is added for them.</summary>
     public static readonly string[] Midi = { ".mid", ".midi" };
-    /// <summary>TuxGuitar files; read by its own reader in Core, not by the worker. Not in <see cref="AllOpenable"/> and not in <see cref="Importable"/>: no Explorer association is added for them.</summary>
+    /// <summary>TuxGuitar files; read by its own reader in Core, not by the worker. Not in <see cref="AllOpenable"/> and not in <see cref="Importable"/>; FileAssociations adds their Explorer association.</summary>
     public static readonly IReadOnlyList<string> TuxGuitar = new[] { ".tg" };
     /// <summary>Everything the import worker reads (Guitar Pro, MusicXML and MIDI).</summary>
     public static readonly string[] Importable = GuitarPro.Concat(MusicXml).Concat(Midi).ToArray();

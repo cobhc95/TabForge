@@ -4,11 +4,11 @@ namespace TabForge.Services;
 // Does not own: the registry writes (adapter: Platform/Windows/WindowsFileAssociations.cs, behind IFileAssociations) or the installer's associations.
 // Tests: TestInstallerAssociationParity.
 /// <summary>
-/// Names of TabForge's Windows file associations for Guitar Pro and TabForge files. Only TabForge's own ProgIDs (TabForge.gp5 and so on) are named here.
+/// Names of TabForge's Windows file associations for Guitar Pro, TuxGuitar and TabForge files. Only TabForge's own ProgIDs (TabForge.gp5 and so on) are named here.
 /// </summary>
 public static class FileAssociations
 {
-    public static readonly string[] Extensions = FileTypes.AllOpenable;
+    public static readonly string[] Extensions = FileTypes.AllOpenable.Concat(FileTypes.TuxGuitar).ToArray();
 
     private const string ProgIdPrefix = "TabForge";
 

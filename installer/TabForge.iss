@@ -96,7 +96,7 @@ Root: HKA; Subkey: "Software\Classes\TabForge.gpx"; ValueType: string; ValueName
 Root: HKA; Subkey: "Software\Classes\TabForge.gpx\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"",0"; Tasks: associate
 Root: HKA; Subkey: "Software\Classes\TabForge.gpx\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"" ""%1"""; Tasks: associate
 Root: HKA; Subkey: "Software\Classes\.gpx\OpenWithProgids"; ValueType: none; ValueName: "TabForge.gpx"; Flags: uninsdeletevalue; Tasks: associate
-Root: HKA; Subkey: "Software\Classes\TabForge.tg"; ValueType: string; ValueName: ""; ValueData: "TuxGuitar file (.tg)"; Flags: uninsdeletekey; Tasks: associate
+Root: HKA; Subkey: "Software\Classes\TabForge.tg"; ValueType: string; ValueName: ""; ValueData: "Score file (.tg)"; Flags: uninsdeletekey; Tasks: associate
 Root: HKA; Subkey: "Software\Classes\TabForge.tg\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"",0"; Tasks: associate
 Root: HKA; Subkey: "Software\Classes\TabForge.tg\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"" ""%1"""; Tasks: associate
 Root: HKA; Subkey: "Software\Classes\.tg\OpenWithProgids"; ValueType: none; ValueName: "TabForge.tg"; Flags: uninsdeletevalue; Tasks: associate
