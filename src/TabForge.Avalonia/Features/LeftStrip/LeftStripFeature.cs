@@ -86,10 +86,7 @@ public sealed class LeftStripFeature
         _vertical[!Border.BorderBrushProperty] = new DynamicResourceExtension("SoftBorder");
         _vertical.ContextMenu = StripMenu();
         _vertical.AttachedToVisualTree += (_, _) => { if (TopLevel.GetTopLevel(_vertical) is Window w) { w.Deactivated -= OnDeactivated; w.Deactivated += OnDeactivated; } };
-        _composer = ComposerPanel.Build(_composerHooks, () => { if (_composerOpen) ToggleComposer(); });
         DockPanel.SetDock(_vertical, Dock.Left);
-        DockPanel.SetDock(_composer, Dock.Left);
-        Left.Children.Add(_composer);
         _row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2, VerticalAlignment = VerticalAlignment.Center, ContextMenu = StripMenu() };
         _toggle = MenuRowToggles.Button(new MenuRowToggles.Toggle(ToggleStripId, "Show / hide the left strip", StripIcon), _commands);
         _host = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 0, 0) };
@@ -253,7 +250,14 @@ public sealed class LeftStripFeature
 
     private void Paint()
     {
-        if (_vertical is null || _row is null || _toggle is null || _composer is null || _host is null) return;
+        if (_vertical is null || _row is null || _toggle is null || _host is null) return;
+        // The Composer's thousands of sample-row controls are built the first time it opens, not at start-up.
+        if (_composerOpen && _composer is null)
+        {
+            _composer = ComposerPanel.Build(_composerHooks, () => { if (_composerOpen) ToggleComposer(); });
+            DockPanel.SetDock(_composer, Dock.Left);
+            Left.Children.Add(_composer);
+        }
         var side = _state.RightSide ? Right : Left;
         if (_vertical.Parent != side)
         {
@@ -264,11 +268,11 @@ public sealed class LeftStripFeature
         _vertical.BorderThickness = _state.RightSide ? new Thickness(1, 0, 0, 0) : new Thickness(0, 0, 1, 0);
         _vertical.IsVisible = _visible && !_state.BesideMenus;
         _row.IsVisible = _visible && _state.BesideMenus;
-        _composer.IsVisible = _composerOpen;
+        if (_composer is not null) _composer.IsVisible = _composerOpen;
         _toggle.IsVisible = _state.ShowButton;
         _toggle.IsChecked = _visible;
         if (_toggle.Content is Control icon) icon.Opacity = _visible ? 1 : ChromeMetrics.DimTextOpacity;   // grey while hidden
-        foreach (var toggle in _composerToggles) toggle.IsChecked = _composer.IsVisible;
+        foreach (var toggle in _composerToggles) toggle.IsChecked = _composerOpen;
         foreach (var toggle in _viewToggles)
             if (toggle.Tag is string id && _commands.CheckStateOf(id) is { } on) toggle.IsChecked = on;
         _host.IsVisible = _toggle.IsVisible || _row.IsVisible;

@@ -15,6 +15,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 - Save and Ctrl+S now write a reopened modern Guitar Pro `.gp` file in place. Save As still opens the file picker.
 - Windows Setup now uses TabForge's normal close flow during upgrades so you can save edits before it replaces the installed files.
 - Playback uses about half the CPU and runs closer to the screen's refresh rate with far fewer stutters. The score page and timeline body are kept as a retained drawing (cached on the graphics card) instead of being redrawn every frame, the timeline playhead moves when it has moved a pixel or with the meters instead of every frame (so the window no longer repaints everything between the two playheads), and the song's bar order is no longer rechecked note by note on every frame.
+- TabForge uses about 25 MB less memory: the Composer panel's drum grooves are built the first time the panel opens instead of at start-up.
 - Windows Setup always installs for all users (no per-user choice at the start), and can open TuxGuitar (.tg) files with TabForge.
 
 ## 0.9.10
