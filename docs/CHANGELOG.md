@@ -7,7 +7,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 ### Changed
 
 - Windows Setup always installs for all users (Program Files, one administrator prompt), with no per-user choice at the start. A copy installed earlier for your account only is left where it is; uninstall it from Windows Settings if you no longer want it.
-- Windows Setup can also make TabForge open TuxGuitar (.tg) files.
+- Windows Setup and Settings > Windows integration can also make TabForge open TuxGuitar (.tg) files.
 
 ### Fixed
 
