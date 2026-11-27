@@ -56,13 +56,14 @@ public sealed class DocumentTabDragFlow
         var tear = _tear;
         // Read before the drag ends: ending it eases the tab back to its place.
         var carried = _strip.DraggedTabOffset;
+        var probeX = tear is null ? _strip.ReorderProbeScreenX(index) : screen.X;
         if (!_drag.Drop(index)) return;   // Escape gave the song back already
         _tear = null;
         var target = _registry.StripWindowAt(screen, tear?.Window ?? _window);
         if (target == _window)
         {
             tear?.Revert();   // back into its own strip: the song never left the source window
-            ReorderOwnTab(index, screen, carried);
+            ReorderOwnTab(index, probeX, carried);
         }
         else if (target is not null && _strip.Settings.MergeAcrossWindows) MergeInto(index, tear, target, screen);
         else if (tear is { IsLone: false })
@@ -72,7 +73,7 @@ public sealed class DocumentTabDragFlow
             tear.Window.Activate();        // and receives focus only now, when the gesture is over
         }
         else if (tear is null && CanDetach(screen)) TearOff(index, screen);
-        else if (tear is null) ReorderOwnTab(index, screen, carried);
+        else if (tear is null) ReorderOwnTab(index, probeX, carried);
     }
 
     // The settings are read here, not cached, so a Preferences change applies to the next drag.
@@ -156,7 +157,7 @@ public sealed class DocumentTabDragFlow
     private void ShowOwnPreview(int index, PixelPoint screen)
     {
         ClearOtherPreview();
-        var slot = _strip.InsertionSlot(screen.X, index);
+        var slot = _strip.InsertionSlot(_tear is null ? _strip.ReorderProbeScreenX(index) : screen.X, index);
         _strip.ShowDropPreview(slot, highlightStrip: false);
         if (slot == _ownSlot) return;
         _ownSlot = slot;
@@ -198,9 +199,9 @@ public sealed class DocumentTabDragFlow
     }
 
     // The released tab keeps its offset from its old place, so the strip rebuilt at the new order eases it into its new slot.
-    private void ReorderOwnTab(int index, PixelPoint screen, double carried)
+    private void ReorderOwnTab(int index, int probeX, double carried)
     {
-        var slot = _strip.InsertionSlot(screen.X, index);
+        var slot = _strip.InsertionSlot(probeX, index);
         var destination = TabDragRules.ReorderDestination(index, slot, _tabs.Songs.Count);
         if (destination < 0 || destination == index) return;
         var displacement = _strip.ReorderDisplacement(index, destination);

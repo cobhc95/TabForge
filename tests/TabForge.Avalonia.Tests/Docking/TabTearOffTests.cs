@@ -120,7 +120,7 @@ public class TabTearOffTests
         Assert.True(source.TabDrag.IsDragging, "the tab drag started");
         Assert.Equal(2, source.Windows.Windows.Count);   // the new window exists while the drag runs
         Assert.Same(moving, Assert.Single(source.Windows.Windows[1].Songs.Songs));
-        Assert.False(source.TabStrip.Tabs[1].IsVisible);   // the source tab is hidden until release
+        Assert.Equal(0, source.TabStrip.Tabs[1].Opacity);   // the source tab is hidden until release, but keeps the capture
         source.MouseUp(below, MouseButton.Left);
 
         Assert.Equal(2, source.Windows.Windows.Count);

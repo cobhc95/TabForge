@@ -75,7 +75,18 @@ public sealed partial class TabStripView : UserControl
     public void SetHiddenTab(int? index)
     {
         _hiddenTab = index;
-        for (var i = 0; i < _tabs.Children.Count; i++) _tabs.Children[i].IsVisible = i != index;
+        for (var i = 0; i < _tabs.Children.Count; i++) _tabs.Children[i].Opacity = i == index ? 0 : 1;
+    }
+
+    // Opacity, not IsVisible: hiding the tab that holds the pointer capture drops the capture, which cancels the tear-off it started.
+
+    /// <summary>The screen X that decides a reorder: the dragged tab's leading edge (right edge moving right, left edge moving left), so a
+    /// neighbour swaps once the tab covers half of it, wherever the tab was grabbed.</summary>
+    public int ReorderProbeScreenX(int index)
+    {
+        if (index < 0 || index >= _tabs.Children.Count) return 0;
+        var tab = _tabs.Children[index];
+        return tab.PointToScreen(new Point(_draggedOffset > 0 ? tab.Bounds.Width : 0, 0)).X;
     }
 
     /// <summary>Shows the drop preview: the insertion marker before the tab at <paramref name="insertionIndex"/> (after the last tab when it

@@ -291,7 +291,7 @@ public sealed partial class TabStripView : UserControl
         var dot = NewUnsavedDot(document);
         var tab = new Border
         {
-            MinWidth = tabMin, MaxWidth = tabMax, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Height = Settings.TabHeight, IsVisible = i != _hiddenTab,
+            MinWidth = tabMin, MaxWidth = tabMax, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Height = Settings.TabHeight, Opacity = i == _hiddenTab ? 0 : 1,
             // The border is always one DIP wide (transparent until lifted) and the padding gives back its width, so the tab's size never changes.
             BorderThickness = new Thickness(TabBorderWidth), BorderBrush = AvaloniaPalette.TransparentBrush,
             // The top corners stay square: a tab's fill reaches the window's top edge, so only its bottom corners round (the top rounded notched the chrome).
