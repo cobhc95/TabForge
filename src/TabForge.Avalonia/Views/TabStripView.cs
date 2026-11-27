@@ -247,14 +247,16 @@ public sealed partial class TabStripView : UserControl
     /// <summary>Rebuilds the tabs; called when the documents or the active one change, never per frame.</summary>
     public void Show(IReadOnlyList<TabStripDocument> documents, int activeIndex, double stripWidth)
     {
-        // A rebuild ends a running drag, and stops every tab's motion on the tabs it is about to remove.
-        if (_press is { Dragging: true }) CancelDrag();
+        var names = documents.Select(document => TabLabelPresenter.Name(document.LabelPath, document.SongTitle)).ToList();
+        // A rebuild ends a running drag only when the dragged tab went away. Song and playback events rebuild the strip mid-drag (a
+        // tear-off's new window touches the song as it opens), and cancelling then closed the torn window the moment it appeared.
+        var keepDrag = _press is { Dragging: true } held0 && held0.Index < names.Count && held0.Index < _shownNames.Count && names[held0.Index] == _shownNames[held0.Index];
+        if (_press is { Dragging: true } && !keepDrag) CancelDrag();
         _motion.ResetAll();
         // The (+) button is built once: its corners still follow the saved tab style on every redraw.
         _add.CornerRadius = new CornerRadius(TabStripPresenter.CornerRadius(Settings));
         // A rebuilt strip has no drop preview: a marker left showing by an earlier drag would stay stuck until the next drag move.
-        HideDropPreview();
-        var names = documents.Select(document => TabLabelPresenter.Name(document.LabelPath, document.SongTitle)).ToList();
+        if (!keepDrag) HideDropPreview();
         FreezeWidthsOnClose(names);
         _shownNames = names;
         _tabs.Children.Clear();
@@ -273,7 +275,12 @@ public sealed partial class TabStripView : UserControl
             _carry = null;
             if (carry.Index < _tabs.Children.Count) _motion.Settle(_tabs.Children[carry.Index], carry.Offset);
         }
-        if (_press is { } held && held.Index < _tabs.Children.Count) held.Pointer.Capture(_tabs.Children[held.Index]);
+        if (_press is { } held && held.Index < _tabs.Children.Count)
+        {
+            held.Pointer.Capture(_tabs.Children[held.Index]);
+            // The rebuilt tab keeps the lift (not a torn-off, hidden one); the next move re-follows the pointer.
+            if (keepDrag && _tabs.Children[held.Index] is Border dragged) { if (held.Index == _hiddenTab) _draggedTab = held.Index; else BeginDrag(held.Index, dragged); }
+        }
     }
 
     /// <summary>One tab: its title, close cross, playing icon and unsaved dot, with the hover, press, drag and middle-click handlers.</summary>
@@ -399,6 +406,8 @@ public sealed partial class TabStripView : UserControl
         tab.PointerCaptureLost += (_, _) =>
         {
             if (_press is not { } held || held.Index != index || !_tabs.Children.Contains(tab)) return;
+            // A torn-off tab keeps its gesture when its new window opens and takes the capture; a real release still ends it.
+            if (held.Dragging && index == _hiddenTab) { held.Pointer.Capture(tab); return; }
             LosePress();
         };
     }
