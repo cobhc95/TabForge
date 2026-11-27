@@ -364,6 +364,7 @@ public sealed partial class TabStripView : UserControl
                 return;
             }
             if (!point.IsLeftButtonPressed) return;
+            e.Handled = true;   // TabPressed can rebuild the strip and detach this tab, so the title bar would take the press as caption and start a native window move
             _press = (index, e.GetPosition(this), false, e.Pointer, e.GetPosition(tab));
             e.Pointer.Capture(tab);
             TabPressed?.Invoke(index);

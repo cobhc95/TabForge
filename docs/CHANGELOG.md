@@ -2,6 +2,17 @@
 
 TabForge is actively developed; please report anything odd on the Issues page.
 
+## 0.9.12
+
+### Added
+
+- Fretboard settings > Note dots has a "Show technique labels" switch. It is on by default; turn it off to hide the hammer-on, pull-off, slide and other technique tags beside playing notes.
+
+### Fixed
+
+- Band view no longer crashes TabForge when a small fretboard uses Blocks or Trapezoids inlays.
+- Dragging a tab that is not the active one out of the tab strip peels it off into a new window again, instead of moving the whole window.
+
 ## 0.9.11
 
 ### Changed

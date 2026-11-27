@@ -159,14 +159,14 @@ public sealed partial class InstrumentPanelView
                 if (FretboardMovementRules.Repeats(_playing.Now, n)) continue;
                 var g = MarkerGeometry(PlaybackMarkerRole.Next, layout);
                 FretboardPlaybackMarkers.DrawNext(d, ink, layout, n, LabelOf(n), g, NumberSize(PlaybackMarkerRole.Next, g), _look.RingDots);
-                FretboardPlaybackMarkers.DrawTag(d, ink, layout, n, g, _look.FretNumberScale, ink("InstrumentNext"));
+                if (_look.TechniqueTags) FretboardPlaybackMarkers.DrawTag(d, ink, layout, n, g, _look.FretNumberScale, ink("InstrumentNext"));
             }
         }
         foreach (var n in _playing.Now)
         {
             var g = MarkerGeometry(PlaybackMarkerRole.Now, layout);
             FretboardPlaybackMarkers.DrawNow(d, ink, layout, n, LabelOf(n), g, NumberSize(PlaybackMarkerRole.Now, g), _look.RingDots);
-            FretboardPlaybackMarkers.DrawTag(d, ink, layout, n, g, _look.FretNumberScale, ink("InstrumentCurrent"));
+            if (_look.TechniqueTags) FretboardPlaybackMarkers.DrawTag(d, ink, layout, n, g, _look.FretNumberScale, ink("InstrumentCurrent"));
         }
         foreach (var n in _playing.Released)
         {

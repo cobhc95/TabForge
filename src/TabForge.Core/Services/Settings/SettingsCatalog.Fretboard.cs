@@ -63,6 +63,8 @@ public static partial class SettingsCatalog
                 FretboardStyles.VibrationSpeeds, "How quickly a sounding string swings.", "fretboard string vibration speed slow normal fast"),
             Bool(Fretboard, "Appearance","fretboard.stringnumbers", "Show string numbers", v => ed.FretboardStringNumbers = v, () => ed.FretboardStringNumbers,
                 "Number the strings in the gutter left of the nut.", "fretboard string numbers labels gutter"),
+            Bool(Fretboard, "Appearance","fretboard.techniquetags", "Show technique labels", v => ed.FretboardTechniqueTags = v, () => ed.FretboardTechniqueTags,
+                "Label hammer-ons, pull-offs, slides and other techniques beside playing notes.", "fretboard technique labels tags hammer pull slide bend palm mute"),
             Bool(Fretboard, "Appearance","editing.lefthanded", "Left-handed fretboard", v => ed.LeftHanded = v, () => ed.LeftHanded,
                 "Mirror the fretboard for left-handed playing.", "left handed mirror orientation"),
             Bool(Fretboard, "Appearance","editing.notenames", "Show note names on the fretboard", v => ed.ShowNoteNames = v, () => ed.ShowNoteNames,

@@ -59,11 +59,12 @@ internal sealed class FretboardInlayPlan
         double w, h;
         switch (s.Look.InlayShape)
         {
+            // Max-then-Min, not Clamp: tiny band-view boards make the upper bound fall below the floor, and Clamp throws.
             case "Blocks":
-                (w, h) = (Math.Clamp(cell * 0.65, 4, cell * 0.85), wood.Height * (doubled ? 0.26 : 0.60));
+                (w, h) = (Math.Min(Math.Max(cell * 0.65, 4), cell * 0.85), wood.Height * (doubled ? 0.26 : 0.60));
                 return Polygon(d, x, y, w, h, new[] { new UiPoint(x - w / 2, y - h / 2), new UiPoint(x + w / 2, y - h / 2), new UiPoint(x + w / 2, y + h / 2), new UiPoint(x - w / 2, y + h / 2) });
             case "Trapezoids":
-                (w, h) = (Math.Clamp(cell * 0.5, 3.5, gap * 1.2), wood.Height * (doubled ? 0.25 : 0.6));
+                (w, h) = (Math.Min(Math.Max(cell * 0.5, 3.5), gap * 1.2), wood.Height * (doubled ? 0.25 : 0.6));
                 return Polygon(d, x, y, w, h, new[] { new UiPoint(x - w * 0.36, y - h / 2), new UiPoint(x + w * 0.36, y - h / 2), new UiPoint(x + w / 2, y + h / 2), new UiPoint(x - w / 2, y + h / 2) });
             case "Shark fins":
                 (w, h) = (cell * 0.72, wood.Height * 0.78);

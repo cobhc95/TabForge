@@ -87,6 +87,8 @@ public sealed class EditingSettings
     public string FretboardVibrationSpeed { get; set; } = "Normal";
     /// <summary>Show the string numbers in the gutter left of the nut; off by default, as on a real neck.</summary>
     public bool FretboardStringNumbers { get; set; }
+    /// <summary>Show technique tags (H, P, PM, …) beside sounding and next notes; on by default, and a file without the key loads as on.</summary>
+    public bool FretboardTechniqueTags { get; set; } = true;
     public int PreviewHorizon { get; set; } = 6;
     public bool PreviewNotesEnabled { get; set; } = true;
     /// <summary>Show the grey trail of notes just played (the legend's "recent"); off by default, and a settings file without the key loads as off.</summary>

@@ -66,6 +66,7 @@ public sealed partial class FretboardSettingsWindow
                 Slide(ahead, "Next notes shown ahead", "FretboardHorizon", 1, 10, 1, e => e.PreviewHorizon, v => ed.PreviewHorizon = v, description: "How many upcoming notes to preview.");
                 Switch(ahead, "FretboardPreviewPrevious", "Show previous notes (a faint trail)", ed.PreviewPreviousNotesEnabled, v => ed.PreviewPreviousNotesEnabled = v, description: "Leave a faint trail for notes that just finished.", last: true);
                 var dots = Card("Note dots");
+                Switch(dots, "FretboardTechniqueTags", "Show technique labels", ed.FretboardTechniqueTags, v => ed.FretboardTechniqueTags = v, description: "Label hammer-ons, pull-offs, slides and other techniques beside playing notes.");
                 Chips(dots, "Note dot label", "FretboardDotSays", new[] { "Fret number", "Note name" }, () => ed.ShowNoteNames ? "Note name" : "Fret number", v => ed.ShowNoteNames = v == "Note name", description: "Labels cursor, playback and pointer-preview notes.");
                 Slide(dots, "Note brightness", "FretboardNoteBrightness", FretboardStyles.MinBrightness, FretboardStyles.MaxBrightness, FretboardStyles.BrightnessStep, e => e.FretboardNoteBrightness, v => ed.FretboardNoteBrightness = v, "%", description: "Brightness of playing and cursor note dots.");
                 Slide(dots, "Dot and number size", "FretboardMarkerSize", SettingRanges.FretMarkerSizePercentMin, SettingRanges.FretMarkerSizePercentMax, 10, e => e.FretMarkerSizePercent, v => ed.FretMarkerSizePercent = v, "%", description: "Overall scale of note dots on the fretboard.");
@@ -270,7 +271,7 @@ public sealed partial class FretboardSettingsWindow
                 break;
             case 1: (ed.PreviewNotesEnabled, ed.PreviewHorizon, ed.PreviewPreviousNotesEnabled, ed.ShowNoteNames, ed.FretboardNoteBrightness, ed.FretMarkerSizePercent, ed.FretNumberSize) =
                     (d.PreviewNotesEnabled, d.PreviewHorizon, d.PreviewPreviousNotesEnabled, d.ShowNoteNames, d.FretboardNoteBrightness, d.FretMarkerSizePercent, d.FretNumberSize);
-                (ed.FretNowColour, ed.FretNextColour, ed.FretUpcomingColour, ed.FretDotStyle, ed.FretLegendMinimised) = (d.FretNowColour, d.FretNextColour, d.FretUpcomingColour, d.FretDotStyle, d.FretLegendMinimised); break;
+                (ed.FretNowColour, ed.FretNextColour, ed.FretUpcomingColour, ed.FretDotStyle, ed.FretLegendMinimised, ed.FretboardTechniqueTags) = (d.FretNowColour, d.FretNextColour, d.FretUpcomingColour, d.FretDotStyle, d.FretLegendMinimised, d.FretboardTechniqueTags); break;
             case 2: (ed.FretboardFrets, ed.LeftHanded, ed.FretStringSpacing, ap.FretboardPosition, ap.FretboardAtBottom, ap.LockInstrumentSize) =
                     (d.FretboardFrets, d.LeftHanded, d.FretStringSpacing, da.FretboardPosition, da.FretboardAtBottom, da.LockInstrumentSize); break;
             case 3: (ed.FretboardStringLook, ed.FretboardCapoLook, ed.FretboardVibration, ed.FretboardVibrationSpeed, ed.FretboardStringNumbers) =
