@@ -11,6 +11,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 ### Fixed
 
 - Band view no longer crashes TabForge when a small fretboard uses Blocks or Trapezoids inlays.
+- Pressing Cancel in Fretboard settings no longer crashes TabForge after a tab was peeled off into a window that later closed.
 - Dragging a tab out of the tab strip peels it off into a new window again. Opening the new window refreshed the tab strip, and that refresh cancelled the drag, so the window closed as soon as it appeared.
 - Reordering tabs is less fiddly: a neighbour swaps once the dragged tab covers half of it, wherever you grabbed the tab.
 

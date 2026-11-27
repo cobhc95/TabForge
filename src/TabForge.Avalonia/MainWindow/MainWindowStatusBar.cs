@@ -122,6 +122,7 @@ public sealed class MainWindowStatusBar : IDisposable, INoticeReceiver
         if (_settings is not null) _settings.SettingsChanged -= OnSettingsChanged;
         if (_engine is not null) _engine.StatusChanged -= RefreshAudioDevice;
         _watch.Dispose();
+        _scale.Pick.Unhook();
     }
 
     // The shown tab changed: the position line follows that song's highlight.

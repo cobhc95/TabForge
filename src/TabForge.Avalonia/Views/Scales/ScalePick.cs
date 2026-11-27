@@ -167,6 +167,9 @@ internal sealed class ScalePick
         else { Settings.ShowOnFretboard = on; ScaleShownChanged(); }
     }
 
+    /// <summary>Stops following the shared settings: a closed window's pick would otherwise read a song list that is empty by then.</summary>
+    public void Unhook() => Hook(null);
+
     private void Hook(EditingSettings? editing)
     {
         if (ReferenceEquals(editing, _hooked)) return;
